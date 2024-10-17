@@ -36,6 +36,7 @@ func create_ui():
 	main_container.add_child(button_container)
 	
 	# Create buttons
+	# in reverse order because I can't figure out else to get them to load correctly
 	create_button("Quit", button_container)
 	create_button("Settings", button_container)
 	create_button("Colony Editor", button_container)
