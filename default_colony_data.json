@@ -1,0 +1,78 @@
+{
+  "colonies": {
+	"Colony A": {
+	  "ant_profiles": [
+		{
+		  "name": "Worker",
+		  "stats": {
+			"sight_range": 5,
+			"pheromone_sense_range": 3,
+			"speed": 2,
+			"strength": 1,
+			"intelligence": 1
+		  },
+		  "behavior_logic": [
+			{
+			  "condition": "if food visible > 0 and carried_food_weight < maximum_weight",
+			  "action": "harvest food",
+			  "priority": 1
+			},
+			{
+			  "condition": "if energy < 50 and food_pheromones sensed == 0",
+			  "action": "move_to_home",
+			  "priority": 2
+			}
+		  ]
+		},
+		{
+		  "name": "Soldier",
+		  "stats": {
+			"sight_range": 7,
+			"pheromone_sense_range": 5,
+			"speed": 3,
+			"strength": 3,
+			"intelligence": 2
+		  },
+		  "behavior_logic": [
+			{
+			  "condition": "if enemy_ant count > friendly_ant count",
+			  "action": "emit danger_pheromone",
+			  "priority": 1
+			},
+			{
+			  "condition": "if danger_pheromone concentration > 0",
+			  "action": "move_to_danger",
+			  "priority": 2
+			}
+		  ]
+		}
+	  ]
+	},
+	"Colony B": {
+	  "ant_profiles": [
+		{
+		  "name": "Scout",
+		  "stats": {
+			"sight_range": 10,
+			"pheromone_sense_range": 8,
+			"speed": 4,
+			"strength": 1,
+			"intelligence": 3
+		  },
+		  "behavior_logic": [
+			{
+			  "condition": "if unexplored_area visible > 0",
+			  "action": "move_to_unexplored",
+			  "priority": 1
+			},
+			{
+			  "condition": "if food visible > 0",
+			  "action": "emit food_pheromone",
+			  "priority": 2
+			}
+		  ]
+		}
+	  ]
+	}
+  }
+}

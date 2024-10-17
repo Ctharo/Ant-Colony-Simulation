@@ -36,6 +36,18 @@ func load_data() -> void:
 				push_error("Error: Malformed save data")
 	else:
 		push_warning("No save file found. Starting with empty data.")
+		# Initialize with default data
+		var default_file = FileAccess.open("res://default_colony_data.json", FileAccess.READ)
+		if default_file:
+			var json_string = default_file.get_as_text()
+			default_file.close()
+			
+			var json_result = JSON.parse_string(json_string)
+			if json_result is Dictionary:
+				current_data = json_result
+				save_data()  # Save the default data
+			else:
+				push_error("Error: Malformed default data")
 
 func get_colony_names() -> Array:
 	return current_data["colonies"].keys()
@@ -86,7 +98,6 @@ func delete_ant_profile(colony_name: String, ant_name: String) -> void:
 	else:
 		push_warning("Attempted to delete ant profile from non-existent colony: " + colony_name)
 
-# Helper function to create a new ant profile
 func create_new_ant_profile(profile_name: String) -> Dictionary:
 	return {
 		"name": profile_name,

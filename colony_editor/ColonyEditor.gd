@@ -9,24 +9,15 @@ var back_button: Button
 var main_container: VBoxContainer
 var details_container: VBoxContainer
 
-# Dummy data for demonstration
-var colony_profiles = ["Colony A", "Colony B", "Colony C"]
-var ant_profiles = {
-	"Colony A": ["Worker", "Soldier", "Queen"],
-	"Colony B": ["Forager", "Guard", "Queen"],
-	"Colony C": ["Scout", "Harvester", "Queen"]
-}
-
-var data_manager: DataManager
+var data_manager: DataManager = DataManager
 
 
 func _ready():
-	data_manager = DataManager
 	create_ui()
 	populate_colony_profiles()
 
 func create_ui():
-	var main_container = VBoxContainer.new()
+	main_container = VBoxContainer.new()
 	main_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
 	add_child(main_container)
 
@@ -119,7 +110,7 @@ func _on_new_profile_pressed():
 	var new_profile = data_manager.create_new_ant_profile("New Ant")
 	data_manager.save_ant_profile(selected_colony, new_profile)
 	_on_profile_selected(profile_dropdown.selected)
-
+	
 func show_ant_details(ant_name: String):
 	# Clear previous details
 	for child in details_container.get_children():
@@ -140,10 +131,23 @@ func show_ant_details(ant_name: String):
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	details_container.add_child(title)
 
+	# Display stats
+	var stats_label = Label.new()
+	stats_label.text = "Stats:"
+	details_container.add_child(stats_label)
 	for stat_name in ant_profile["stats"]:
 		var stat_label = Label.new()
-		stat_label.text = stat_name.capitalize() + ": " + str(ant_profile["stats"][stat_name])
+		stat_label.text = "  " + stat_name.capitalize() + ": " + str(ant_profile["stats"][stat_name])
 		details_container.add_child(stat_label)
+
+	# Display behavior logic
+	var behavior_label = Label.new()
+	behavior_label.text = "Behavior Logic:"
+	details_container.add_child(behavior_label)
+	for behavior in ant_profile["behavior_logic"]:
+		var behavior_item = Label.new()
+		behavior_item.text = "  Priority " + str(behavior["priority"]) + ": " + behavior["condition"] + " then " + behavior["action"]
+		details_container.add_child(behavior_item)
 
 	# Animate main container to the left
 	var tween = create_tween()
@@ -155,3 +159,4 @@ func show_ant_details(ant_name: String):
 func edit_ant_profile(colony_name: String, ant_name: String):
 	# This is a placeholder for the edit functionality
 	push_warning("Edit functionality not yet implemented for " + ant_name + " from " + colony_name)
+	# TODO: Implement edit functionality

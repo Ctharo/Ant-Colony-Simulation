@@ -11,7 +11,8 @@ func _ready():
 func create_ui():
 	# Create a centered container for all UI elements
 	var center_container = CenterContainer.new()
-	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	#center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center_container)
 	
 	# Main vertical container
