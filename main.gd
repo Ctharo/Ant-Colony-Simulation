@@ -11,8 +11,7 @@ func _ready():
 func create_ui():
 	# Create a centered container for all UI elements
 	var center_container = CenterContainer.new()
-	center_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	#center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center_container)
 	
 	# Main vertical container
@@ -42,9 +41,6 @@ func create_ui():
 	create_button("Colony Editor", button_container)
 	create_button("Start Simulation", button_container)
 
-
-
-
 func create_button(text: String, parent: Control) -> Button:
 	var button = Button.new()
 	button.text = text
@@ -66,6 +62,8 @@ func animate_ui_elements():
 	tween.tween_property(title_label, "modulate:a", 1.0, 0.5)
 	tween.tween_property(title_label, "position:y", title_target_y, 0.5).from(title_label.position.y - 50)
 	
+	await tween.finished
+	
 	# Calculate initial button y-position based on the title's position
 	var initial_button_y = title_target_y + 80  # Adjust the offset as needed
 	
@@ -77,8 +75,9 @@ func animate_ui_elements():
 		var target_y = initial_button_y + (50 * (buttons.size() - 1 - i))
 		
 		# Apply the animations with adjusted position
-		tween.tween_property(button, "modulate:a", 1.0, 0.5).set_delay(delay)
-		tween.tween_property(button, "position:y", target_y, 0.5).from(button.position.y).set_delay(delay)
+		tween = create_tween().set_parallel(true)
+		tween.tween_property(button, "modulate:a", 1.0, 0.3).set_delay(delay)
+		tween.tween_property(button, "position:y", target_y, 0.3).from(button.position.y).set_delay(delay)
 
 func _on_start_simulation_button_pressed():
 	push_warning("Start Simulation functionality not yet implemented")

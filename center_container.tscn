@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://qny2ngn3k2rd"]
+
+[node name="_CenterContainer_2" type="CenterContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="_VBoxContainer_3" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="_Label_4" type="Label" parent="_VBoxContainer_3"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Ant Colony Simulation"
+horizontal_alignment = 1
+
+[node name="_Control_5" type="Control" parent="_VBoxContainer_3"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 1
+
+[node name="_VBoxContainer_6" type="VBoxContainer" parent="_VBoxContainer_3"]
+layout_mode = 2
+alignment = 1
+
+[node name="_Button_7" type="Button" parent="_VBoxContainer_3/_VBoxContainer_6"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Quit"
+
+[node name="_Button_8" type="Button" parent="_VBoxContainer_3/_VBoxContainer_6"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Settings"
+
+[node name="_Button_9" type="Button" parent="_VBoxContainer_3/_VBoxContainer_6"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Colony Editor"
+
+[node name="_Button_10" type="Button" parent="_VBoxContainer_3/_VBoxContainer_6"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Start Simulation"

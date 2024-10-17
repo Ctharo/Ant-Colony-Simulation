@@ -89,12 +89,27 @@ func save_ant_profile(colony_name: String, ant_profile: Dictionary) -> void:
 	
 	save_data()
 
-func delete_ant_profile(colony_name: String, ant_name: String) -> void:
+func update_ant_profile(colony_name: String, updated_profile: Dictionary) -> void:
 	if colony_name in current_data["colonies"]:
 		var ant_profiles = current_data["colonies"][colony_name]["ant_profiles"]
-		ant_profiles = ant_profiles.filter(func(profile): return profile["name"] != ant_name)
-		current_data["colonies"][colony_name]["ant_profiles"] = ant_profiles
-		save_data()
+		var existing_index = ant_profiles.find(func(profile): return profile["name"] == updated_profile["name"])
+		
+		if existing_index != -1:
+			ant_profiles[existing_index] = updated_profile
+			save_data()
+		else:
+			push_warning("Ant profile not found for updating: " + updated_profile["name"])
+	else:
+		push_warning("Colony not found: " + colony_name)
+
+func delete_ant_profile(colony_name: String, ant_name: String, index: int) -> void:
+	if colony_name in current_data["colonies"]:
+		var ant_profiles = current_data["colonies"][colony_name]["ant_profiles"]
+		if index >= 0 and index < ant_profiles.size():
+			ant_profiles.remove_at(index)
+			save_data()
+		else:
+			push_warning("Invalid index for ant profile deletion: " + str(index))
 	else:
 		push_warning("Attempted to delete ant profile from non-existent colony: " + colony_name)
 

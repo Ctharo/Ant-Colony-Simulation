@@ -6,5 +6,3 @@
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_bu87y")
-
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
