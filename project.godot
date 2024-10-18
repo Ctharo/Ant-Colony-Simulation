@@ -18,4 +18,4 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-DataManager="*res://Data/DataManager.gd"
+DataManager="*res://data_manager/data_manager.gd"

@@ -1,6 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://cggsooorowk4v"]
 
-[ext_resource type="Script" path="res://AntLogicUI.gd" id="1_4jkqt"]
+[ext_resource type="Script" path="res://ant_logic/ant_logic_ui.gd" id="1_4jkqt"]
+
 
 [node name="AntLogicUI" type="Control"]
 layout_mode = 3

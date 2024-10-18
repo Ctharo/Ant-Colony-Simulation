@@ -103,7 +103,7 @@ func _on_start_simulation_button_pressed():
 	# Add your logic here
 
 func _on_colony_editor_button_pressed():
-	transition_to_scene("ColonyEditor")
+	transition_to_scene("colony_editor")
 
 
 func _on_settings_button_pressed():

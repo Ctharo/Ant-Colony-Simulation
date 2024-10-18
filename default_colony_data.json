@@ -46,7 +46,34 @@
 			}
 		  ]
 		}
-	  ]
+	  ],
+	  "colony_behavior": [
+		{
+		  "condition": {
+			"left": "resources.food",
+			"operator": ">",
+			"right": "ant_profiles.0.stats.strength"
+		  },
+		  "action": {
+			"type": "spawn_ant",
+			"profile": "Worker"
+		  }
+		},
+		{
+		  "condition": {
+			"left": "time_since_last_spawn.Soldier",
+			"operator": ">",
+			"right": 30
+		  },
+		  "action": {
+			"type": "spawn_ant",
+			"profile": "Soldier"
+		  }
+		}
+	  ],
+	  "resources": {
+		"food": 100
+	  }
 	},
 	"Colony B": {
 	  "ant_profiles": [
@@ -72,7 +99,37 @@
 			}
 		  ]
 		}
-	  ]
+	  ],
+	  "colony_behavior": [
+		{
+		  "condition": {
+			"left": "resources.food",
+			"operator": ">",
+			"right": 50
+		  },
+		  "action": {
+			"type": "spawn_ant",
+			"profile": "Scout"
+		  }
+		},
+		{
+		  "condition": {
+			"left": "ant_count",
+			"operator": "<",
+			"right": 10
+		  },
+		  "action": {
+			"type": "set_property",
+			"property": "resources.food_gathering_rate",
+			"value": 2
+		  }
+		}
+	  ],
+	  "resources": {
+		"food": 75,
+		"food_gathering_rate": 1
+	  },
+	  "ant_count": 5
 	}
   }
 }
