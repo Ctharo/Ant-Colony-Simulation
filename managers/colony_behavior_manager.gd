@@ -1,5 +1,5 @@
 extends Node
-
+class_name ColonyBehaviorManager
 var data_manager: DataManager
 
 func _ready():

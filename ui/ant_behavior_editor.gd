@@ -1,4 +1,5 @@
 extends Control
+class_name AntBehaviorEditor
 
 var rule_container: VBoxContainer
 var add_rule_button: Button

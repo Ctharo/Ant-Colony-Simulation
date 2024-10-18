@@ -1,5 +1,10 @@
 extends Control
+class_name ColonyEditor 
 
+
+var behavior_editor: BehaviorEditorUI
+
+var profile_list: ItemList
 var profile_dropdown: OptionButton
 var colony_ant_list: ItemList
 var available_ant_list: ItemList
@@ -152,48 +157,6 @@ func create_ui():
 	back_button.connect("pressed", Callable(self, "_on_back_pressed"))
 	main_container.add_child(back_button)
 
-func create_behavior_editor():
-	behavior_popup = Popup.new()
-	behavior_popup.size = Vector2(800, 600)
-	add_child(behavior_popup)
-
-	var popup_container = VBoxContainer.new()
-	popup_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
-	behavior_popup.add_child(popup_container)
-
-	var popup_title = Label.new()
-	popup_title.text = "Edit Colony Behavior"
-	popup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	popup_title.add_theme_font_size_override("font_size", 24)
-	popup_container.add_child(popup_title)
-
-	behavior_list = ItemList.new()
-	behavior_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	popup_container.add_child(behavior_list)
-
-	var button_container = HBoxContainer.new()
-	popup_container.add_child(button_container)
-
-	add_rule_button = Button.new()
-	add_rule_button.text = "Add Rule"
-	add_rule_button.connect("pressed", Callable(self, "_on_add_rule_pressed"))
-	button_container.add_child(add_rule_button)
-
-	edit_rule_button = Button.new()
-	edit_rule_button.text = "Edit Rule"
-	edit_rule_button.connect("pressed", Callable(self, "_on_edit_rule_pressed"))
-	button_container.add_child(edit_rule_button)
-
-	delete_rule_button = Button.new()
-	delete_rule_button.text = "Delete Rule"
-	delete_rule_button.connect("pressed", Callable(self, "_on_delete_rule_pressed"))
-	button_container.add_child(delete_rule_button)
-
-	save_behavior_button = Button.new()
-	save_behavior_button.text = "Save Behavior"
-	save_behavior_button.connect("pressed", Callable(self, "_on_save_behavior_pressed"))
-	popup_container.add_child(save_behavior_button)
-
 func populate_colony_profiles():
 	profile_dropdown.clear()
 	var colony_names = data_manager.get_colony_names()
@@ -265,13 +228,6 @@ func format_action(action: Dictionary) -> String:
 		return "set %s to %s" % [action["property"], action["value"]]
 	return "Unknown action"
 
-
-func _on_delete_rule_pressed():
-	var selected_items = behavior_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No rule selected for deletion")
-		return
-	behavior_list.remove_item(selected_items[0])
 
 
 
@@ -406,51 +362,6 @@ func show_error(message: String):
 	add_child(error_dialog)
 	error_dialog.popup_centered()
 
-
-# Add this function to create a new rule
-func _on_add_rule_pressed():
-	var new_rule = {
-		"condition": {
-			"left": "property",
-			"operator": ">",
-			"right": "0"
-		},
-		"action": {
-			"type": "spawn",
-			"profile": "default_ant"
-		}
-	}
-	behavior_list.add_item(format_rule(new_rule))
-
-func format_rule(rule: Dictionary) -> String:
-	return rule_manager.format_rule(rule)
-
-func parse_rule(rule_text: String) -> Dictionary:
-	return rule_manager.parse_rule(rule_text)
-
-func _on_edit_rule_pressed():
-	var selected_items = behavior_list.get_selected_items()
-	if selected_items.is_empty():
-		show_error("No rule selected for editing")
-		return
-	
-	var selected_rule = behavior_list.get_item_text(selected_items[0])
-	var rule_data = rule_manager.parse_rule(selected_rule)
-	
-	var edit_dialog = rule_manager.create_edit_rule_dialog(rule_data)
-	var save_button = Button.new()
-	save_button.text = "Save Changes"
-	save_button.connect("pressed", Callable(self, "_on_save_rule_changes").bind(selected_items[0], edit_dialog))
-	edit_dialog.get_child(0).add_child(save_button)
-	
-	add_child(edit_dialog)
-	edit_dialog.popup_centered()
-
-func _on_save_rule_changes(rule_index: int, edit_dialog: Window):
-	var new_rule = rule_manager.get_rule_from_dialog(edit_dialog)
-	behavior_list.set_item_text(rule_index, rule_manager.format_rule(new_rule))
-	edit_dialog.queue_free()
-
 func _on_save_behavior_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
 	var updated_behavior = []
@@ -465,3 +376,33 @@ func show_colony_behavior(colony_name: String):
 	for rule in colony_behavior:
 		behavior_list.add_item(rule_manager.format_rule(rule))
 	behavior_popup.popup_centered()
+	
+func create_behavior_editor():
+	behavior_popup = Popup.new()
+	behavior_popup.size = Vector2(600, 400)
+	add_child(behavior_popup)
+
+	var container = VBoxContainer.new()
+	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
+	behavior_popup.add_child(container)
+
+	behavior_editor = BehaviorEditorUI.new()
+	container.add_child(behavior_editor)
+
+	var save_button = Button.new()
+	save_button.text = "Save Behavior"
+	save_button.connect("pressed", Callable(self, "_on_save_behavior_pressed"))
+	container.add_child(save_button)
+
+func _on_save_behavior():
+	var selected_items = profile_list.get_selected_items()
+	if selected_items.is_empty():
+		show_error("No profile selected for saving behavior")
+		return
+	var selected_profile_name = profile_list.get_item_text(selected_items[0])
+	var selected_profile_id = profile_id_to_name[selected_profile_name]
+	
+	var updated_behavior = behavior_editor.get_rules()
+	
+	rule_manager.save_rules(selected_profile_id, updated_behavior, false)
+	behavior_editor.hide()

@@ -1,6 +1,11 @@
 extends Control
+class_name AntProfileEditor
+
+var behavior_editor: BehaviorEditorUI
+
 
 var data_manager: DataManager
+
 var profile_list: ItemList
 var edit_button: Button
 var new_profile_button: Button
@@ -8,9 +13,9 @@ var delete_button: Button
 var back_button: Button
 
 var stats_editor: Popup
-var behavior_editor: Popup
-var rule_manager: RuleManager
 
+var rule_manager: RuleManager
+var rule_editor: RuleEditorDialog
 var profile_id_to_name: Dictionary = {}
 
 func _ready():
@@ -88,29 +93,6 @@ func create_stats_editor():
 	save_button.connect("pressed", Callable(self, "_on_save_stats"))
 	container.add_child(save_button)
 
-func create_behavior_editor():
-	behavior_editor = Popup.new()
-	behavior_editor.size = Vector2(600, 400)
-	add_child(behavior_editor)
-
-	var container = VBoxContainer.new()
-	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
-	behavior_editor.add_child(container)
-
-	var behavior_list = ItemList.new()
-	behavior_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	container.add_child(behavior_list)
-
-	var add_behavior_button = Button.new()
-	add_behavior_button.text = "Add Behavior"
-	add_behavior_button.connect("pressed", Callable(self, "_on_add_behavior_pressed"))
-	container.add_child(add_behavior_button)
-
-	var save_button = Button.new()
-	save_button.text = "Save Changes"
-	save_button.connect("pressed", Callable(self, "_on_save_behavior"))
-	container.add_child(save_button)
-
 func populate_profile_list():
 	profile_list.clear()
 	profile_id_to_name.clear()
@@ -153,7 +135,6 @@ func show_behavior_editor(profile_data: Dictionary):
 	for behavior in profile_data["behavior_logic"]:
 		behavior_list.add_item(format_behavior(behavior))
 	behavior_editor.popup_centered()
-
 
 func _on_new_profile_pressed():
 	var dialog = ConfirmationDialog.new()
@@ -236,50 +217,16 @@ func _on_save_stats():
 	data_manager.update_ant_profile_stats(selected_profile_id, updated_stats)
 	stats_editor.hide()
 
-
 func _on_add_behavior_pressed():
 	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
 	behavior_list.add_item("If [condition] then [action] (Priority: 1)")
+	
 func format_behavior(behavior: Dictionary) -> String:
 	return rule_manager.format_rule(behavior)
 
 func parse_behavior(behavior_text: String) -> Dictionary:
 	return rule_manager.parse_rule(behavior_text)
 
-func _on_add_rule_pressed():
-	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
-	var new_rule = {
-		"property": BehaviorConfig.property_options[0],
-		"operator": BehaviorConfig.ComparisonOperator.EQUAL,
-		"value": "0",
-		"action": BehaviorConfig.action_options[0]
-	}
-	behavior_list.add_item(rule_manager.format_rule(new_rule))
-
-func _on_edit_rule_pressed():
-	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
-	var selected_items = behavior_list.get_selected_items()
-	if selected_items.is_empty():
-		show_error("No rule selected for editing")
-		return
-	
-	var selected_rule = behavior_list.get_item_text(selected_items[0])
-	var rule_data = rule_manager.parse_rule(selected_rule)
-	
-	var edit_dialog = rule_manager.create_edit_rule_dialog(rule_data)
-	var save_button = Button.new()
-	save_button.text = "Save Changes"
-	save_button.connect("pressed", Callable(self, "_on_save_rule_changes").bind(selected_items[0], edit_dialog))
-	edit_dialog.get_child(0).add_child(save_button)
-	
-	add_child(edit_dialog)
-	edit_dialog.popup_centered()
-
-func _on_save_rule_changes(rule_index: int, edit_dialog: Window):
-	var new_rule = rule_manager.get_rule_from_dialog(edit_dialog)
-	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
-	behavior_list.set_item_text(rule_index, rule_manager.format_rule(new_rule))
-	edit_dialog.queue_free()
 
 func _on_save_behavior():
 	var selected_items = profile_list.get_selected_items()
@@ -303,38 +250,22 @@ func show_error(message: String):
 	add_child(error_dialog)
 	error_dialog.popup_centered()
 
-func create_rule_dialog(rule_data: Dictionary = {}) -> ConfirmationDialog:
-	var dialog = ConfirmationDialog.new()
-	dialog.title = "Edit Rule"
-	dialog.size = Vector2(400, 200)
+func _on_back_pressed():
+	get_tree().change_scene_to_file("res://main.tscn")
+
+func create_behavior_editor():
+	behavior_editor = Popup.new()
+	behavior_editor.size = Vector2(600, 400)
+	add_child(behavior_editor)
 
 	var container = VBoxContainer.new()
 	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
-	dialog.add_child(container)
+	behavior_editor.add_child(container)
 
-	var property = OptionButton.new()
-	for option in BehaviorConfig.property_options:
-		property.add_item(option)
-	property.selected = BehaviorConfig.property_options.find(rule_data.get("property", BehaviorConfig.property_options[0]))
-	container.add_child(property)
+	rule_editor = RuleEditorDialog.new()
+	container.add_child(rule_editor)
 
-	var operator = OptionButton.new()
-	for op in BehaviorConfig.ComparisonOperator.keys():
-		operator.add_item(op)
-	operator.selected = BehaviorConfig.ComparisonOperator.keys().find(rule_data.get("operator", BehaviorConfig.ComparisonOperator.keys()[0]))
-	container.add_child(operator)
-
-	var value = LineEdit.new()
-	value.text = rule_data.get("value", "0")
-	container.add_child(value)
-
-	var action = OptionButton.new()
-	for option in BehaviorConfig.action_options:
-		action.add_item(option)
-	action.selected = BehaviorConfig.action_options.find(rule_data.get("action", BehaviorConfig.action_options[0]))
-	container.add_child(action)
-
-	return dialog
-
-func _on_back_pressed():
-	get_tree().change_scene_to_file("res://main.tscn")
+	var save_button = Button.new()
+	save_button.text = "Save Changes"
+	save_button.connect("pressed", Callable(self, "_on_save_behavior"))
+	container.add_child(save_button)

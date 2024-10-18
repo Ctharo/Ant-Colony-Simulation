@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://diuk2rpsg346j"]
 
-[ext_resource type="Script" path="res://colony_editor/colony_editor.gd" id="1_i26qr"]
+[ext_resource type="Script" path="res://ui/colony_editor.gd" id="1_i26qr"]
 
 [node name="ColonyEditor" type="Control"]
 layout_mode = 3

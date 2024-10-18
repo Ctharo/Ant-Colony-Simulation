@@ -12,11 +12,12 @@ config_version=5
 
 config/name="Ant Colony Simulation"
 config/tags=PackedStringArray("game", "sim")
-run/main_scene="res://main.tscn"
+run/main_scene="res://ui/main.tscn"
 config/features=PackedStringArray("4.2", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
-DataManager="*res://data_manager/data_manager.gd"
-RuleManager="*res://rule_manager/rule_manager.gd"
+DataManager="*res://managers/data_manager.gd"
+RuleManager="*res://managers/rule_manager.gd"
+SimulationState="*res://managers/simulation_state.gd"
