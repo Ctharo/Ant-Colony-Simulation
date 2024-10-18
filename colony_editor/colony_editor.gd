@@ -13,9 +13,6 @@ var main_container: VBoxContainer
 
 var data_manager: DataManager
 
-var profile_id_to_name: Dictionary = {}
-
-
 # Colony Behavior Editor components
 var behavior_popup: Popup
 var behavior_list: ItemList
@@ -23,6 +20,8 @@ var add_rule_button: Button
 var edit_rule_button: Button
 var delete_rule_button: Button
 var save_behavior_button: Button
+
+var profile_id_to_name: Dictionary = {}
 
 func _ready():
 	data_manager = DataManager
@@ -163,49 +162,31 @@ func populate_colony_profiles():
 func _on_profile_selected(index):
 	var selected_profile = profile_dropdown.get_item_text(index)
 	update_colony_ant_list(selected_profile)
-	update_available_ant_list()
+	update_available_ant_list(selected_profile)
 	edit_colony_behavior_button.disabled = false
 	delete_colony_button.disabled = false
 
-func update_available_ant_list():
+func update_colony_ant_list(colony_name: String):
+	colony_ant_list.clear()
+	var ant_profile_ids = data_manager.get_ant_profiles_for_colony(colony_name)
+	var all_profiles = data_manager.get_all_ant_profiles()
+	for profile_id in ant_profile_ids:
+		if profile_id in all_profiles:
+			var profile_name = all_profiles[profile_id]["name"]
+			colony_ant_list.add_item(profile_name)
+			profile_id_to_name[profile_name] = profile_id
+
+func update_available_ant_list(colony_name: String):
 	available_ant_list.clear()
 	profile_id_to_name.clear()
 	var all_profiles = data_manager.get_all_ant_profiles()
+	var colony_profile_ids = data_manager.get_ant_profiles_for_colony(colony_name)
 	for profile_id in all_profiles:
-		var profile_name = all_profiles[profile_id]["name"]
-		available_ant_list.add_item(profile_name)
-		profile_id_to_name[profile_name] = profile_id
+		if profile_id not in colony_profile_ids:
+			var profile_name = all_profiles[profile_id]["name"]
+			available_ant_list.add_item(profile_name)
+			profile_id_to_name[profile_name] = profile_id
 
-func update_colony_ant_list(colony_name: String):
-	colony_ant_list.clear()
-	var profile_ids = data_manager.get_ant_profiles_for_colony(colony_name)
-	var all_profiles = data_manager.get_all_ant_profiles()
-	for profile_id in profile_ids:
-		if profile_id in all_profiles:
-			colony_ant_list.add_item(all_profiles[profile_id]["name"])
-
-func _on_add_ant_profile_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var selected_items = available_ant_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No ant profile selected for addition")
-		return
-	var selected_ant_name = available_ant_list.get_item_text(selected_items[0])
-	var selected_ant_id = profile_id_to_name[selected_ant_name]
-	data_manager.add_ant_profile_to_colony(selected_colony, selected_ant_id)
-	update_colony_ant_list(selected_colony)
-
-func _on_remove_ant_profile_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var selected_items = colony_ant_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No ant profile selected for removal")
-		return
-	var selected_ant_name = colony_ant_list.get_item_text(selected_items[0])
-	var selected_ant_id = profile_id_to_name[selected_ant_name]
-	data_manager.remove_ant_profile_from_colony(selected_colony, selected_ant_id)
-	update_colony_ant_list(selected_colony)
-			
 func _on_edit_colony_behavior_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
 	show_colony_behavior(selected_colony)
@@ -256,6 +237,30 @@ func parse_rule(rule_text: String) -> Dictionary:
 	# Implement parsing logic to convert rule text back to a dictionary
 	# This is a placeholder and needs to be implemented based on your rule format
 	return {}
+
+func _on_add_ant_profile_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var selected_items = available_ant_list.get_selected_items()
+	if selected_items.is_empty():
+		push_warning("No ant profile selected for addition")
+		return
+	var selected_ant_name = available_ant_list.get_item_text(selected_items[0])
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	data_manager.add_ant_profile_to_colony(selected_colony, selected_ant_id)
+	update_colony_ant_list(selected_colony)
+	update_available_ant_list(selected_colony)
+
+func _on_remove_ant_profile_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var selected_items = colony_ant_list.get_selected_items()
+	if selected_items.is_empty():
+		push_warning("No ant profile selected for removal")
+		return
+	var selected_ant_name = colony_ant_list.get_item_text(selected_items[0])
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	data_manager.remove_ant_profile_from_colony(selected_colony, selected_ant_id)
+	update_colony_ant_list(selected_colony)
+	update_available_ant_list(selected_colony)
 
 func _on_new_colony_pressed():
 	var dialog = ConfirmationDialog.new()

@@ -118,6 +118,10 @@ func populate_profile_list():
 		profile_list.add_item(profile_name)
 		profile_id_to_name[profile_name] = profile_id
 
+func _on_profile_selected(index):
+	edit_button.disabled = false
+	delete_button.disabled = false
+
 func _on_edit_pressed():
 	var selected_items = profile_list.get_selected_items()
 	if selected_items.is_empty():
@@ -127,31 +131,8 @@ func _on_edit_pressed():
 	var selected_profile_id = profile_id_to_name[selected_profile_name]
 	show_profile_editor(selected_profile_id)
 
-func _create_new_ant_profile(profile_name: String):
-	var profile_id = data_manager.create_new_ant_profile(profile_name)
-	populate_profile_list()
-	
-	# Select the new profile in the list
-	for i in range(profile_list.get_item_count()):
-		if profile_list.get_item_text(i) == profile_name:
-			profile_list.select(i)
-			_on_profile_selected(i)
-			break
-
-func _confirm_delete_profile(profile_name: String):
-	var profile_id = profile_id_to_name[profile_name]
-	data_manager.delete_ant_profile(profile_id)
-	populate_profile_list()
-	edit_button.disabled = true
-	delete_button.disabled = true
-
-func _on_profile_selected(index):
-	edit_button.disabled = false
-	delete_button.disabled = false
-
-
-func show_profile_editor(profile_name: String):
-	var profile_data = data_manager.get_ant_profile(profile_name)
+func show_profile_editor(profile_id: String):
+	var profile_data = data_manager.get_ant_profile(profile_id)
 	show_stats_editor(profile_data)
 	show_behavior_editor(profile_data)
 
@@ -204,27 +185,45 @@ func _on_new_profile_confirmed(line_edit: LineEdit):
 func _on_overwrite_profile_confirmed(profile_name: String):
 	_create_new_ant_profile(profile_name)
 
+func _create_new_ant_profile(profile_name: String):
+	var profile_id = data_manager.create_new_ant_profile(profile_name)
+	populate_profile_list()
+	
+	# Select the new profile in the list
+	for i in range(profile_list.get_item_count()):
+		if profile_list.get_item_text(i) == profile_name:
+			profile_list.select(i)
+			_on_profile_selected(i)
+			break
 
 func _on_delete_pressed():
 	var selected_items = profile_list.get_selected_items()
 	if selected_items.is_empty():
 		push_warning("No ant profile selected for deletion")
 		return
-	var selected_profile = profile_list.get_item_text(selected_items[0])
+	var selected_profile_name = profile_list.get_item_text(selected_items[0])
 	
 	# Show a confirmation dialog before deleting
 	var confirm_dialog = ConfirmationDialog.new()
-	confirm_dialog.dialog_text = "Are you sure you want to delete the ant profile '%s'? This action cannot be undone." % selected_profile
-	confirm_dialog.connect("confirmed", Callable(self, "_confirm_delete_profile").bind(selected_profile))
+	confirm_dialog.dialog_text = "Are you sure you want to delete the ant profile '%s'? This action cannot be undone." % selected_profile_name
+	confirm_dialog.connect("confirmed", Callable(self, "_confirm_delete_profile").bind(selected_profile_name))
 	add_child(confirm_dialog)
 	confirm_dialog.popup_centered()
+
+func _confirm_delete_profile(profile_name: String):
+	var profile_id = profile_id_to_name[profile_name]
+	data_manager.delete_ant_profile(profile_id)
+	populate_profile_list()
+	edit_button.disabled = true
+	delete_button.disabled = true
 
 func _on_save_stats():
 	var selected_items = profile_list.get_selected_items()
 	if selected_items.is_empty():
 		push_warning("No ant profile selected for saving stats")
 		return
-	var selected_profile = profile_list.get_item_text(selected_items[0])
+	var selected_profile_name = profile_list.get_item_text(selected_items[0])
+	var selected_profile_id = profile_id_to_name[selected_profile_name]
 	
 	var updated_stats = {}
 	var stat_containers = stats_editor.get_node("VBoxContainer").get_children()
@@ -234,7 +233,7 @@ func _on_save_stats():
 			var stat_value = stat_container.get_child(1).value
 			updated_stats[stat_name] = stat_value
 	
-	data_manager.update_ant_profile_stats(selected_profile, updated_stats)
+	data_manager.update_ant_profile_stats(selected_profile_id, updated_stats)
 	stats_editor.hide()
 
 func _on_save_behavior():
@@ -242,14 +241,15 @@ func _on_save_behavior():
 	if selected_items.is_empty():
 		push_warning("No ant profile selected for saving behavior")
 		return
-	var selected_profile = profile_list.get_item_text(selected_items[0])
+	var selected_profile_name = profile_list.get_item_text(selected_items[0])
+	var selected_profile_id = profile_id_to_name[selected_profile_name]
 	
 	var updated_behavior = []
 	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
 	for i in range(behavior_list.get_item_count()):
 		updated_behavior.append(parse_behavior(behavior_list.get_item_text(i)))
 	
-	data_manager.update_ant_profile_behavior(selected_profile, updated_behavior)
+	data_manager.update_ant_profile_behavior(selected_profile_id, updated_behavior)
 	behavior_editor.hide()
 
 func _on_add_behavior_pressed():
