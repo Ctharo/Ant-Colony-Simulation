@@ -1,4 +1,3 @@
-class_name MainMenu
 extends Control
 
 var title_label: Label
@@ -9,6 +8,12 @@ func _ready():
 	animate_ui_elements()
 
 func create_ui():
+	# Create a background
+	var background = ColorRect.new()
+	background.color = Color(0.1, 0.1, 0.1)  # Dark gray background
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(background)
+
 	# Create a centered container for all UI elements
 	var center_container = CenterContainer.new()
 	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -23,6 +28,7 @@ func create_ui():
 	title_label = Label.new()
 	title_label.text = "Ant Colony Simulation"
 	title_label.add_theme_font_size_override("font_size", 48)
+	title_label.add_theme_color_override("font_color", Color(1, 0.8, 0))  # Golden yellow color
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.modulate.a = 0  # Start fully transparent
 	main_container.add_child(title_label)
@@ -36,17 +42,40 @@ func create_ui():
 	main_container.add_child(button_container)
 	
 	# Create buttons
-	# in reverse order because I can't figure out else to get them to load correctly
-	create_button("Quit", button_container)
-	create_button("Settings", button_container)
-	create_button("Colony Editor", button_container)
 	create_button("Start Simulation", button_container)
+	create_button("Colony Editor", button_container)
+	create_button("Settings", button_container)
+	create_button("Quit", button_container)
 
 func create_button(text: String, parent: Control) -> Button:
 	var button = Button.new()
 	button.text = text
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.custom_minimum_size = Vector2(200, 50)
+	button.custom_minimum_size = Vector2(250, 60)
+	button.add_theme_font_size_override("font_size", 24)
+	
+	# Custom styling
+	var normal_style = StyleBoxFlat.new()
+	normal_style.bg_color = Color(0.2, 0.2, 0.2)
+	normal_style.border_width_bottom = 4
+	normal_style.border_color = Color(0.3, 0.3, 0.3)
+	normal_style.corner_radius_top_left = 8
+	normal_style.corner_radius_top_right = 8
+	normal_style.corner_radius_bottom_left = 8
+	normal_style.corner_radius_bottom_right = 8
+	
+	var hover_style = normal_style.duplicate()
+	hover_style.bg_color = Color(0.25, 0.25, 0.25)
+	hover_style.border_color = Color(1, 0.8, 0)  # Golden yellow color
+	
+	var pressed_style = normal_style.duplicate()
+	pressed_style.bg_color = Color(0.15, 0.15, 0.15)
+	pressed_style.border_color = Color(0.8, 0.6, 0)  # Darker golden yellow
+	
+	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("hover", hover_style)
+	button.add_theme_stylebox_override("pressed", pressed_style)
+	
 	button.modulate.a = 0  # Start fully transparent
 	parent.add_child(button)
 	
@@ -59,35 +88,27 @@ func animate_ui_elements():
 	var tween = create_tween().set_parallel(true)
 	
 	# Fade in and slide down the title
-	var title_target_y = title_label.position.y + 50
 	tween.tween_property(title_label, "modulate:a", 1.0, 0.5)
-	tween.tween_property(title_label, "position:y", title_target_y, 0.5).from(title_label.position.y - 50)
 	
-	await tween.finished
 	
-	# Calculate initial button y-position based on the title's position
-	var initial_button_y = title_target_y + 80  # Adjust the offset as needed
-	
-	# Get all buttons and iterate in reverse order
-	var buttons = button_container.get_children()
-	for button in buttons:
-		var i: int = button.get_index()
-		var delay = 0.1 * (buttons.size() - 1 - i)
-		var target_y = initial_button_y + (50 * (buttons.size() - 1 - i))
-		
-		# Apply the animations with adjusted position
-		tween = create_tween().set_parallel(true)
+	var i: int = 0
+	# Fade in and slide up the buttons
+	for button in button_container.get_children():
+		var delay = 0.1 * (i + 1)
 		tween.tween_property(button, "modulate:a", 1.0, 0.3).set_delay(delay)
-		tween.tween_property(button, "position:y", target_y, 0.3).from(button.position.y).set_delay(delay)
+		i += 1
 
 func _on_start_simulation_button_pressed():
-	push_warning("Start Simulation functionality not yet implemented")
+	print("Start Simulation pressed")
+	# Add your logic here
 
 func _on_colony_editor_button_pressed():
-	transition_to_scene("colony_editor")
+	transition_to_scene("ColonyEditor")
+
 
 func _on_settings_button_pressed():
-	push_warning("Settings functionality not yet implemented")
+	print("Settings pressed")
+	# Add your logic here
 
 func _on_quit_button_pressed():
 	get_tree().quit()
