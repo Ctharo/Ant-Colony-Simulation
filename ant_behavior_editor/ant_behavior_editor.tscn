@@ -2,8 +2,6 @@
 
 [ext_resource type="Script" path="res://ant_behavior_editor/ant_behavior_editor.gd" id="1_4jkqt"]
 
-
-
 [node name="AntLogicUI" type="Control"]
 layout_mode = 3
 anchors_preset = 15

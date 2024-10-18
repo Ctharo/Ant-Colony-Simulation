@@ -12,12 +12,16 @@ enum ComparisonOperator {
 	LESS_THAN_OR_EQUAL
 }
 
-var condition_options = [
-	"food_in_view",
-	"food_in_reach",
-	"energy",
-	"food_carrying_mass",
-	"home_within_reach"
+var property_options = [
+	"food.in_view",
+	"food.in_reach",
+	"energy.current",
+	"energy.max",
+	"carry_mass.current",
+	"carry_mass.max",
+	"home.within_reach",
+	"sight_range",
+	"pheromone_sense_range"
 ]
 
 var action_options = [
@@ -25,13 +29,6 @@ var action_options = [
 	"harvest_nearest_food",
 	"return_home",
 	"store_food"
-]
-
-var property_options = [
-	"max_carry_mass",
-	"max_energy",
-	"sight_range",
-	"pheromone_sense_range"
 ]
 
 func _ready():
@@ -70,27 +67,19 @@ func create_rule() -> VBoxContainer:
 	if_label.text = "If"
 	condition_container.add_child(if_label)
 
-	var condition = OptionButton.new()
-	for option in condition_options:
-		condition.add_item(option)
-	condition_container.add_child(condition)
+	var property = OptionButton.new()
+	for option in property_options:
+		property.add_item(option)
+	condition_container.add_child(property)
 
 	var operator = OptionButton.new()
 	for op in ComparisonOperator.keys():
 		operator.add_item(op)
 	condition_container.add_child(operator)
 
-	var value_container = HBoxContainer.new()
-	condition_container.add_child(value_container)
-
 	var value = LineEdit.new()
 	value.placeholder_text = "Value or Expression"
-	value_container.add_child(value)
-
-	var property_button = Button.new()
-	property_button.text = "Insert Property"
-	property_button.connect("pressed", Callable(self, "_on_insert_property_pressed").bind(value))
-	value_container.add_child(property_button)
+	condition_container.add_child(value)
 
 	var action_container = HBoxContainer.new()
 	rule.add_child(action_container)
@@ -132,27 +121,25 @@ func _on_property_selected(id: int, value_field: LineEdit):
 	value_field.text = new_text
 	value_field.caret_column = cursor_pos + selected_property.length()
 
-# Function to get all current rules
 func get_rules() -> Array:
 	var rules = []
 	for rule_node in rule_container.get_children():
 		var condition_container = rule_node.get_child(0)
 		var action_container = rule_node.get_child(1)
 		
-		var condition = condition_container.get_child(1).get_item_text(condition_container.get_child(1).selected)
+		var property = condition_container.get_child(1).get_item_text(condition_container.get_child(1).selected)
 		var operator = ComparisonOperator.keys()[condition_container.get_child(2).selected]
-		var value = condition_container.get_child(3).get_child(0).text
+		var value = condition_container.get_child(3).text
 		var action = action_container.get_child(1).get_item_text(action_container.get_child(1).selected)
 		
 		rules.append({
-			"condition": condition,
+			"property": property,
 			"operator": operator,
 			"value": value,
 			"action": action
 		})
 	return rules
 
-# Function to set rules (for loading saved rules)
 func set_rules(rules: Array):
 	# Clear existing rules
 	for child in rule_container.get_children():
@@ -166,7 +153,7 @@ func set_rules(rules: Array):
 		var condition_container = rule.get_child(0)
 		var action_container = rule.get_child(1)
 		
-		condition_container.get_child(1).select(condition_options.find(rule_data["condition"]))
+		condition_container.get_child(1).select(property_options.find(rule_data["property"]))
 		condition_container.get_child(2).select(ComparisonOperator.keys().find(rule_data["operator"]))
-		condition_container.get_child(3).get_child(0).text = rule_data["value"]
+		condition_container.get_child(3).text = rule_data["value"]
 		action_container.get_child(1).select(action_options.find(rule_data["action"]))
