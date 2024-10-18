@@ -10,7 +10,7 @@ var new_colony_button: Button
 var delete_colony_button: Button
 var back_button: Button
 var main_container: VBoxContainer
-
+var info_label: RichTextLabel
 var data_manager: DataManager
 
 # Colony Behavior Editor components
@@ -45,9 +45,13 @@ func create_ui():
 	profile_dropdown.connect("item_selected", Callable(self, "_on_profile_selected"))
 	main_container.add_child(profile_dropdown)
 
-	var lists_container = HBoxContainer.new()
-	main_container.add_child(lists_container)
+	var lists_and_info_container = HBoxContainer.new()
+	main_container.add_child(lists_and_info_container)
 
+	var lists_container = HBoxContainer.new()
+	lists_and_info_container.add_child(lists_container)
+
+	# Colony Ants List
 	var colony_ant_container = VBoxContainer.new()
 	lists_container.add_child(colony_ant_container)
 	
@@ -61,9 +65,15 @@ func create_ui():
 	colony_ant_list.connect("item_selected", Callable(self, "_on_colony_ant_selected"))
 	colony_ant_container.add_child(colony_ant_list)
 
+	# Arrow Buttons
 	var button_container = VBoxContainer.new()
 	button_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	lists_container.add_child(button_container)
+
+	# Add some spacing at the top to center the buttons
+	var spacer_top = Control.new()
+	spacer_top.custom_minimum_size = Vector2(0, 80)
+	button_container.add_child(spacer_top)
 
 	add_ant_profile_button = Button.new()
 	add_ant_profile_button.text = "◀"
@@ -77,6 +87,7 @@ func create_ui():
 	remove_ant_profile_button.connect("pressed", Callable(self, "_on_remove_ant_profile_pressed"))
 	button_container.add_child(remove_ant_profile_button)
 
+	# Available Ants List
 	var available_ant_container = VBoxContainer.new()
 	lists_container.add_child(available_ant_container)
 	
@@ -89,6 +100,31 @@ func create_ui():
 	available_ant_list.custom_minimum_size = Vector2(200, 200)
 	available_ant_list.connect("item_selected", Callable(self, "_on_available_ant_selected"))
 	available_ant_container.add_child(available_ant_list)
+
+	# Info Panel
+	var info_container = PanelContainer.new()
+	info_container.custom_minimum_size = Vector2(250, 300)  # Set a fixed height
+	lists_and_info_container.add_child(info_container)
+
+	var info_vbox = VBoxContainer.new()
+	info_container.add_child(info_vbox)
+
+	var info_title = Label.new()
+	info_title.text = "Ant Profile Info"
+	info_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_vbox.add_child(info_title)
+
+	var scroll_container = ScrollContainer.new()
+	scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info_vbox.add_child(scroll_container)
+
+
+	info_label = RichTextLabel.new()
+	info_label.bbcode_enabled = true
+	info_label.fit_content = true
+	info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll_container.add_child(info_label)
 
 	var bottom_button_container = HBoxContainer.new()
 	main_container.add_child(bottom_button_container)
@@ -289,6 +325,7 @@ func _create_new_colony(colony_name: String):
 	populate_colony_profiles()
 	profile_dropdown.select(profile_dropdown.get_item_count() - 1)
 	_on_profile_selected(profile_dropdown.get_item_count() - 1)
+	info_label.text = "No profile selected"
 
 func _on_delete_colony_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
@@ -303,14 +340,13 @@ func _on_delete_colony_pressed():
 func _confirm_delete_colony(colony_name: String):
 	data_manager.delete_colony(colony_name)
 	populate_colony_profiles()
-	
-	# Reset UI state
 	colony_ant_list.clear()
 	available_ant_list.clear()
 	edit_colony_behavior_button.disabled = true
 	delete_colony_button.disabled = true
 	add_ant_profile_button.disabled = true
 	remove_ant_profile_button.disabled = true
+	info_label.text = "No profile selected"
 
 func _on_back_pressed():
 	get_tree().change_scene_to_file("res://main.tscn")
@@ -331,12 +367,45 @@ func update_button_states():
 func _on_selection_changed():
 	update_button_states()
 
-# Update the existing selection functions
 func _on_colony_ant_selected(index):
-	_on_selection_changed()
+	remove_ant_profile_button.disabled = false
+	add_ant_profile_button.disabled = true
+	
+	var selected_ant_name = colony_ant_list.get_item_text(index)
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	update_info_panel(selected_ant_id)
 
 func _on_available_ant_selected(index):
-	_on_selection_changed()
+	add_ant_profile_button.disabled = false
+	remove_ant_profile_button.disabled = true
+	
+	var selected_ant_name = available_ant_list.get_item_text(index)
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	update_info_panel(selected_ant_id)
+
+func update_info_panel(profile_id: String):
+	var profile = data_manager.get_ant_profile(profile_id)
+	if profile.is_empty():
+		info_label.text = "No profile selected"
+		return
+	
+	var info_text = "[b]Name:[/b] %s\n\n[b]Stats:[/b]\n" % profile["name"]
+	
+	for stat_name in profile["stats"]:
+		info_text += "• %s: %s\n" % [stat_name.capitalize(), profile["stats"][stat_name]]
+	
+	info_text += "\n[b]Behavior Logic:[/b]\n"
+	if profile["behavior_logic"].is_empty():
+		info_text += "No behaviors defined"
+	else:
+		for behavior in profile["behavior_logic"]:
+			info_text += "• If %s then %s (Priority: %d)\n" % [
+				behavior["condition"],
+				behavior["action"],
+				behavior["priority"]
+			]
+	
+	info_label.text = info_text
 
 func _on_profile_selected(index):
 	var selected_profile = profile_dropdown.get_item_text(index)

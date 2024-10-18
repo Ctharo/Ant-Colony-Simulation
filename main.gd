@@ -44,6 +44,7 @@ func create_ui():
 	# Create buttons
 	create_button("Start Simulation", button_container)
 	create_button("Colony Editor", button_container)
+	create_button("Ant Editor", button_container)
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
 
@@ -105,6 +106,8 @@ func _on_start_simulation_button_pressed():
 func _on_colony_editor_button_pressed():
 	transition_to_scene("colony_editor")
 
+func _on_ant_editor_button_pressed():
+	transition_to_scene("ant_editor")
 
 func _on_settings_button_pressed():
 	print("Settings pressed")

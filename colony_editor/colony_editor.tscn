@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" path="res://colony_editor/colony_editor.gd" id="1_i26qr"]
 
-
 [node name="ColonyEditor" type="Control"]
 layout_mode = 3
 anchors_preset = 0
