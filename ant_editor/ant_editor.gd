@@ -9,11 +9,14 @@ var back_button: Button
 
 var stats_editor: Popup
 var behavior_editor: Popup
+var rule_manager: RuleManager
+
 
 var profile_id_to_name: Dictionary = {}
 
 func _ready():
 	data_manager = DataManager
+	rule_manager = RuleManager
 	create_ui()
 	populate_profile_list()
 
@@ -152,9 +155,7 @@ func show_behavior_editor(profile_data: Dictionary):
 		behavior_list.add_item(format_behavior(behavior))
 	behavior_editor.popup_centered()
 
-func format_behavior(behavior: Dictionary) -> String:
-	return "If %s then %s (Priority: %d)" % [behavior["condition"], behavior["action"], behavior["priority"]]
-	
+
 func _on_new_profile_pressed():
 	var dialog = ConfirmationDialog.new()
 	dialog.title = "New Ant Profile"
@@ -236,6 +237,16 @@ func _on_save_stats():
 	data_manager.update_ant_profile_stats(selected_profile_id, updated_stats)
 	stats_editor.hide()
 
+
+func _on_add_behavior_pressed():
+	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
+	behavior_list.add_item("If [condition] then [action] (Priority: 1)")
+func format_behavior(behavior: Dictionary) -> String:
+	return rule_manager.format_rule(behavior)
+
+func parse_behavior(behavior_text: String) -> Dictionary:
+	return rule_manager.parse_rule(behavior_text)
+
 func _on_save_behavior():
 	var selected_items = profile_list.get_selected_items()
 	if selected_items.is_empty():
@@ -247,28 +258,10 @@ func _on_save_behavior():
 	var updated_behavior = []
 	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
 	for i in range(behavior_list.get_item_count()):
-		updated_behavior.append(parse_behavior(behavior_list.get_item_text(i)))
+		updated_behavior.append(rule_manager.parse_rule(behavior_list.get_item_text(i)))
 	
-	data_manager.update_ant_profile_behavior(selected_profile_id, updated_behavior)
+	rule_manager.save_rules(selected_profile_id, updated_behavior, false)
 	behavior_editor.hide()
-
-func _on_add_behavior_pressed():
-	var behavior_list = behavior_editor.get_node("VBoxContainer/ItemList")
-	behavior_list.add_item("If [condition] then [action] (Priority: 1)")
-
-func parse_behavior(behavior_text: String) -> Dictionary:
-	# This is a placeholder implementation and should be expanded based on your specific behavior format
-	var parts = behavior_text.split(" then ")
-	var condition = parts[0].trim_prefix("If ")
-	var action_priority = parts[1].split(" (Priority: ")
-	var action = action_priority[0]
-	var priority = int(action_priority[1].trim_suffix(")"))
-	
-	return {
-		"condition": condition,
-		"action": action,
-		"priority": priority
-	}
 
 func _on_back_pressed():
 	get_tree().change_scene_to_file("res://main.tscn")

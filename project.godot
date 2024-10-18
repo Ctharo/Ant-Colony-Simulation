@@ -19,3 +19,4 @@ config/icon="res://icon.svg"
 [autoload]
 
 DataManager="*res://data_manager/data_manager.gd"
+RuleManager="*res://rule_manager/rule_manager.gd"

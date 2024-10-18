@@ -20,11 +20,14 @@ var add_rule_button: Button
 var edit_rule_button: Button
 var delete_rule_button: Button
 var save_behavior_button: Button
+var rule_manager: RuleManager
+
 
 var profile_id_to_name: Dictionary = {}
 
 func _ready():
 	data_manager = DataManager
+	rule_manager = RuleManager
 	create_ui()
 	create_behavior_editor()
 	populate_colony_profiles()
@@ -254,17 +257,6 @@ func _on_edit_colony_behavior_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
 	show_colony_behavior(selected_colony)
 
-func show_colony_behavior(colony_name: String):
-	behavior_list.clear()
-	var colony_behavior = data_manager.get_colony_behavior(colony_name)
-	for rule in colony_behavior:
-		behavior_list.add_item(format_rule(rule))
-	behavior_popup.popup_centered()
-
-func format_rule(rule: Dictionary) -> String:
-	var condition = rule["condition"]
-	var action = rule["action"]
-	return "If %s %s %s then %s" % [condition["left"], condition["operator"], condition["right"], format_action(action)]
 
 func format_action(action: Dictionary) -> String:
 	if action["type"] == "spawn_ant":
@@ -281,13 +273,7 @@ func _on_delete_rule_pressed():
 		return
 	behavior_list.remove_item(selected_items[0])
 
-func _on_save_behavior_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var updated_behavior = []
-	for i in range(behavior_list.item_count):
-		updated_behavior.append(parse_rule(behavior_list.get_item_text(i)))
-	data_manager.save_colony_behavior(selected_colony, updated_behavior)
-	behavior_popup.hide()
+
 
 
 func _on_new_colony_pressed():
@@ -420,101 +406,6 @@ func show_error(message: String):
 	add_child(error_dialog)
 	error_dialog.popup_centered()
 
-# Improve rule parsing and formatting
-func parse_rule(rule_text: String) -> Dictionary:
-	var parts = rule_text.split(" then ")
-	var condition_parts = parts[0].trim_prefix("If ").split(" ")
-	var action_parts = parts[1].split(" ")
-	
-	return {
-		"condition": {
-			"left": condition_parts[0],
-			"operator": condition_parts[1],
-			"right": condition_parts[2]
-		},
-		"action": {
-			"type": action_parts[0],
-			"profile" if action_parts[0] == "spawn" else "property": action_parts[3],
-			"value": action_parts[5] if action_parts[0] == "set" else ""
-		}
-	}
-
-# Add functionality to edit existing rules
-func _on_edit_rule_pressed():
-	var selected_items = behavior_list.get_selected_items()
-	if selected_items.is_empty():
-		show_error("No rule selected for editing")
-		return
-	
-	var selected_rule = behavior_list.get_item_text(selected_items[0])
-	var rule_data = parse_rule(selected_rule)
-	
-	var edit_dialog = Window.new()
-	edit_dialog.title = "Edit Rule"
-	edit_dialog.size = Vector2(400, 300)
-	
-	var vbox = VBoxContainer.new()
-	edit_dialog.add_child(vbox)
-	
-	var condition_hbox = HBoxContainer.new()
-	vbox.add_child(condition_hbox)
-	
-	var left_input = LineEdit.new()
-	left_input.text = rule_data["condition"]["left"]
-	condition_hbox.add_child(left_input)
-	
-	var operator_input = OptionButton.new()
-	for op in [">", "<", "==", "!=", ">=", "<="]:
-		operator_input.add_item(op)
-	operator_input.selected = operator_input.get_item_index(rule_data["condition"]["operator"])
-	condition_hbox.add_child(operator_input)
-	
-	var right_input = LineEdit.new()
-	right_input.text = rule_data["condition"]["right"]
-	condition_hbox.add_child(right_input)
-	
-	var action_hbox = HBoxContainer.new()
-	vbox.add_child(action_hbox)
-	
-	var action_type_input = OptionButton.new()
-	action_type_input.add_item("spawn")
-	action_type_input.add_item("set")
-	action_type_input.selected = 0 if rule_data["action"]["type"] == "spawn" else 1
-	action_hbox.add_child(action_type_input)
-	
-	var action_target_input = LineEdit.new()
-	action_target_input.text = rule_data["action"]["profile"] if "profile" in rule_data["action"] else rule_data["action"]["property"]
-	action_hbox.add_child(action_target_input)
-	
-	var action_value_input = LineEdit.new()
-	action_value_input.text = rule_data["action"].get("value", "")
-	action_value_input.visible = rule_data["action"]["type"] == "set"
-	action_hbox.add_child(action_value_input)
-	
-	var save_button = Button.new()
-	save_button.text = "Save Changes"
-	save_button.connect("pressed", Callable(self, "_on_save_rule_changes").bind(selected_items[0], left_input, operator_input, right_input, action_type_input, action_target_input, action_value_input, edit_dialog))
-	vbox.add_child(save_button)
-	
-	add_child(edit_dialog)
-	edit_dialog.popup_centered()
-
-func _on_save_rule_changes(rule_index: int, left_input: LineEdit, operator_input: OptionButton, right_input: LineEdit, action_type_input: OptionButton, action_target_input: LineEdit, action_value_input: LineEdit, edit_dialog: Window):
-	var new_rule = {
-		"condition": {
-			"left": left_input.text,
-			"operator": operator_input.get_item_text(operator_input.selected),
-			"right": right_input.text
-		},
-		"action": {
-			"type": action_type_input.get_item_text(action_type_input.selected),
-			"profile" if action_type_input.selected == 0 else "property": action_target_input.text,
-			"value": action_value_input.text if action_type_input.selected == 1 else ""
-		}
-	}
-	
-	behavior_list.set_item_text(rule_index, format_rule(new_rule))
-	edit_dialog.queue_free()
 
 # Add this function to create a new rule
 func _on_add_rule_pressed():
@@ -530,3 +421,47 @@ func _on_add_rule_pressed():
 		}
 	}
 	behavior_list.add_item(format_rule(new_rule))
+
+func format_rule(rule: Dictionary) -> String:
+	return rule_manager.format_rule(rule)
+
+func parse_rule(rule_text: String) -> Dictionary:
+	return rule_manager.parse_rule(rule_text)
+
+func _on_edit_rule_pressed():
+	var selected_items = behavior_list.get_selected_items()
+	if selected_items.is_empty():
+		show_error("No rule selected for editing")
+		return
+	
+	var selected_rule = behavior_list.get_item_text(selected_items[0])
+	var rule_data = rule_manager.parse_rule(selected_rule)
+	
+	var edit_dialog = rule_manager.create_edit_rule_dialog(rule_data)
+	var save_button = Button.new()
+	save_button.text = "Save Changes"
+	save_button.connect("pressed", Callable(self, "_on_save_rule_changes").bind(selected_items[0], edit_dialog))
+	edit_dialog.get_child(0).add_child(save_button)
+	
+	add_child(edit_dialog)
+	edit_dialog.popup_centered()
+
+func _on_save_rule_changes(rule_index: int, edit_dialog: Window):
+	var new_rule = rule_manager.get_rule_from_dialog(edit_dialog)
+	behavior_list.set_item_text(rule_index, rule_manager.format_rule(new_rule))
+	edit_dialog.queue_free()
+
+func _on_save_behavior_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var updated_behavior = []
+	for i in range(behavior_list.item_count):
+		updated_behavior.append(rule_manager.parse_rule(behavior_list.get_item_text(i)))
+	rule_manager.save_rules(selected_colony, updated_behavior)
+	behavior_popup.hide()
+
+func show_colony_behavior(colony_name: String):
+	behavior_list.clear()
+	var colony_behavior = rule_manager.load_rules(colony_name)
+	for rule in colony_behavior:
+		behavior_list.add_item(rule_manager.format_rule(rule))
+	behavior_popup.popup_centered()
