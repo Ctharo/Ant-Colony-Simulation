@@ -1,0 +1,68 @@
+{
+  "profile1": {
+	"name": "Worker",
+	"stats": {
+	  "sight_range": 5,
+	  "pheromone_sense_range": 3,
+	  "speed": 2,
+	  "strength": 1,
+	  "intelligence": 1
+	},
+	"behavior_logic": [
+	  {
+		"condition": "food visible > 0 and carried_food_weight < maximum_weight",
+		"action": "harvest food",
+		"priority": 1
+	  },
+	  {
+		"condition": "energy < 50 and food_pheromones sensed == 0",
+		"action": "move_to_home",
+		"priority": 2
+	  }
+	]
+  },
+  "profile2": {
+	"name": "Soldier",
+	"stats": {
+	  "sight_range": 7,
+	  "pheromone_sense_range": 5,
+	  "speed": 3,
+	  "strength": 3,
+	  "intelligence": 2
+	},
+	"behavior_logic": [
+	  {
+		"condition": "enemy_ant count > friendly_ant count",
+		"action": "emit danger_pheromone",
+		"priority": 1
+	  },
+	  {
+		"condition": "danger_pheromone concentration > 0",
+		"action": "move_to_danger",
+		"priority": 2
+	  }
+	]
+  },
+  "profile3": {
+	"name": "Scout",
+	"stats": {
+	  "sight_range": 10,
+	  "pheromone_sense_range": 8,
+	  "speed": 4,
+	  "strength": 1,
+	  "intelligence": 3
+	},
+	"behavior_logic": [
+	  {
+		"condition": "unexplored_area visible > 0",
+		"action": "move_to_unexplored",
+		"priority": 1
+	  },
+	  {
+		"condition": "food visible > 0",
+		"action": "emit food_pheromone",
+		"priority": 2
+	  }
+	]
+  }
+}

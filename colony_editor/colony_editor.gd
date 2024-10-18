@@ -58,7 +58,24 @@ func create_ui():
 	colony_ant_list = ItemList.new()
 	colony_ant_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	colony_ant_list.custom_minimum_size = Vector2(200, 200)
+	colony_ant_list.connect("item_selected", Callable(self, "_on_colony_ant_selected"))
 	colony_ant_container.add_child(colony_ant_list)
+
+	var button_container = VBoxContainer.new()
+	button_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lists_container.add_child(button_container)
+
+	add_ant_profile_button = Button.new()
+	add_ant_profile_button.text = "◀"
+	add_ant_profile_button.disabled = true
+	add_ant_profile_button.connect("pressed", Callable(self, "_on_add_ant_profile_pressed"))
+	button_container.add_child(add_ant_profile_button)
+
+	remove_ant_profile_button = Button.new()
+	remove_ant_profile_button.text = "▶"
+	remove_ant_profile_button.disabled = true
+	remove_ant_profile_button.connect("pressed", Callable(self, "_on_remove_ant_profile_pressed"))
+	button_container.add_child(remove_ant_profile_button)
 
 	var available_ant_container = VBoxContainer.new()
 	lists_container.add_child(available_ant_container)
@@ -70,35 +87,26 @@ func create_ui():
 	available_ant_list = ItemList.new()
 	available_ant_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	available_ant_list.custom_minimum_size = Vector2(200, 200)
+	available_ant_list.connect("item_selected", Callable(self, "_on_available_ant_selected"))
 	available_ant_container.add_child(available_ant_list)
 
-	var button_container = HBoxContainer.new()
-	main_container.add_child(button_container)
+	var bottom_button_container = HBoxContainer.new()
+	main_container.add_child(bottom_button_container)
 
 	edit_colony_behavior_button = Button.new()
 	edit_colony_behavior_button.text = "Edit Colony Behavior"
 	edit_colony_behavior_button.connect("pressed", Callable(self, "_on_edit_colony_behavior_pressed"))
-	button_container.add_child(edit_colony_behavior_button)
-
-	add_ant_profile_button = Button.new()
-	add_ant_profile_button.text = "Add Ant Profile"
-	add_ant_profile_button.connect("pressed", Callable(self, "_on_add_ant_profile_pressed"))
-	button_container.add_child(add_ant_profile_button)
-
-	remove_ant_profile_button = Button.new()
-	remove_ant_profile_button.text = "Remove Ant Profile"
-	remove_ant_profile_button.connect("pressed", Callable(self, "_on_remove_ant_profile_pressed"))
-	button_container.add_child(remove_ant_profile_button)
+	bottom_button_container.add_child(edit_colony_behavior_button)
 
 	new_colony_button = Button.new()
 	new_colony_button.text = "New Colony"
 	new_colony_button.connect("pressed", Callable(self, "_on_new_colony_pressed"))
-	main_container.add_child(new_colony_button)
+	bottom_button_container.add_child(new_colony_button)
 
 	delete_colony_button = Button.new()
 	delete_colony_button.text = "Delete Colony"
 	delete_colony_button.connect("pressed", Callable(self, "_on_delete_colony_pressed"))
-	main_container.add_child(delete_colony_button)
+	bottom_button_container.add_child(delete_colony_button)
 
 	back_button = Button.new()
 	back_button.text = "Back to Main Menu"
@@ -159,12 +167,6 @@ func populate_colony_profiles():
 	else:
 		push_warning("No colony profiles found")
 
-func _on_profile_selected(index):
-	var selected_profile = profile_dropdown.get_item_text(index)
-	update_colony_ant_list(selected_profile)
-	update_available_ant_list(selected_profile)
-	edit_colony_behavior_button.disabled = false
-	delete_colony_button.disabled = false
 
 func update_colony_ant_list(colony_name: String):
 	colony_ant_list.clear()
@@ -178,7 +180,6 @@ func update_colony_ant_list(colony_name: String):
 
 func update_available_ant_list(colony_name: String):
 	available_ant_list.clear()
-	profile_id_to_name.clear()
 	var all_profiles = data_manager.get_all_ant_profiles()
 	var colony_profile_ids = data_manager.get_ant_profiles_for_colony(colony_name)
 	for profile_id in all_profiles:
@@ -186,6 +187,32 @@ func update_available_ant_list(colony_name: String):
 			var profile_name = all_profiles[profile_id]["name"]
 			available_ant_list.add_item(profile_name)
 			profile_id_to_name[profile_name] = profile_id
+
+func _on_add_ant_profile_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var selected_items = available_ant_list.get_selected_items()
+	if selected_items.is_empty():
+		push_warning("No ant profile selected for addition")
+		return
+	var selected_ant_name = available_ant_list.get_item_text(selected_items[0])
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	data_manager.add_ant_profile_to_colony(selected_colony, selected_ant_id)
+	update_colony_ant_list(selected_colony)
+	update_available_ant_list(selected_colony)
+	add_ant_profile_button.disabled = true
+
+func _on_remove_ant_profile_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var selected_items = colony_ant_list.get_selected_items()
+	if selected_items.is_empty():
+		push_warning("No ant profile selected for removal")
+		return
+	var selected_ant_name = colony_ant_list.get_item_text(selected_items[0])
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	data_manager.remove_ant_profile_from_colony(selected_colony, selected_ant_id)
+	update_colony_ant_list(selected_colony)
+	update_available_ant_list(selected_colony)
+	remove_ant_profile_button.disabled = true
 
 func _on_edit_colony_behavior_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
@@ -210,13 +237,6 @@ func format_action(action: Dictionary) -> String:
 		return "set %s to %s" % [action["property"], action["value"]]
 	return "Unknown action"
 
-func _on_add_rule_pressed():
-	# Implement rule addition logic
-	pass
-
-func _on_edit_rule_pressed():
-	# Implement rule editing logic
-	pass
 
 func _on_delete_rule_pressed():
 	var selected_items = behavior_list.get_selected_items()
@@ -233,34 +253,6 @@ func _on_save_behavior_pressed():
 	data_manager.save_colony_behavior(selected_colony, updated_behavior)
 	behavior_popup.hide()
 
-func parse_rule(rule_text: String) -> Dictionary:
-	# Implement parsing logic to convert rule text back to a dictionary
-	# This is a placeholder and needs to be implemented based on your rule format
-	return {}
-
-func _on_add_ant_profile_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var selected_items = available_ant_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No ant profile selected for addition")
-		return
-	var selected_ant_name = available_ant_list.get_item_text(selected_items[0])
-	var selected_ant_id = profile_id_to_name[selected_ant_name]
-	data_manager.add_ant_profile_to_colony(selected_colony, selected_ant_id)
-	update_colony_ant_list(selected_colony)
-	update_available_ant_list(selected_colony)
-
-func _on_remove_ant_profile_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var selected_items = colony_ant_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No ant profile selected for removal")
-		return
-	var selected_ant_name = colony_ant_list.get_item_text(selected_items[0])
-	var selected_ant_id = profile_id_to_name[selected_ant_name]
-	data_manager.remove_ant_profile_from_colony(selected_colony, selected_ant_id)
-	update_colony_ant_list(selected_colony)
-	update_available_ant_list(selected_colony)
 
 func _on_new_colony_pressed():
 	var dialog = ConfirmationDialog.new()
@@ -300,8 +292,172 @@ func _create_new_colony(colony_name: String):
 
 func _on_delete_colony_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	data_manager.delete_colony(selected_colony)
+	
+	# Show a confirmation dialog before deleting
+	var confirm_dialog = ConfirmationDialog.new()
+	confirm_dialog.dialog_text = "Are you sure you want to delete the colony '%s'? This action cannot be undone." % selected_colony
+	confirm_dialog.connect("confirmed", Callable(self, "_confirm_delete_colony").bind(selected_colony))
+	add_child(confirm_dialog)
+	confirm_dialog.popup_centered()
+
+func _confirm_delete_colony(colony_name: String):
+	data_manager.delete_colony(colony_name)
 	populate_colony_profiles()
+	
+	# Reset UI state
+	colony_ant_list.clear()
+	available_ant_list.clear()
+	edit_colony_behavior_button.disabled = true
+	delete_colony_button.disabled = true
+	add_ant_profile_button.disabled = true
+	remove_ant_profile_button.disabled = true
 
 func _on_back_pressed():
 	get_tree().change_scene_to_file("res://main.tscn")
+
+# Helper function to update button states
+func update_button_states():
+	var colony_selected = profile_dropdown.selected != -1
+	edit_colony_behavior_button.disabled = !colony_selected
+	delete_colony_button.disabled = !colony_selected
+	
+	var colony_ant_selected = !colony_ant_list.get_selected_items().is_empty()
+	var available_ant_selected = !available_ant_list.get_selected_items().is_empty()
+	
+	add_ant_profile_button.disabled = !available_ant_selected
+	remove_ant_profile_button.disabled = !colony_ant_selected
+
+# Call this function whenever the selection state changes
+func _on_selection_changed():
+	update_button_states()
+
+# Update the existing selection functions
+func _on_colony_ant_selected(index):
+	_on_selection_changed()
+
+func _on_available_ant_selected(index):
+	_on_selection_changed()
+
+func _on_profile_selected(index):
+	var selected_profile = profile_dropdown.get_item_text(index)
+	update_colony_ant_list(selected_profile)
+	update_available_ant_list(selected_profile)
+	_on_selection_changed()
+
+# Error handling and user feedback
+func show_error(message: String):
+	var error_dialog = AcceptDialog.new()
+	error_dialog.dialog_text = message
+	add_child(error_dialog)
+	error_dialog.popup_centered()
+
+# Improve rule parsing and formatting
+func parse_rule(rule_text: String) -> Dictionary:
+	var parts = rule_text.split(" then ")
+	var condition_parts = parts[0].trim_prefix("If ").split(" ")
+	var action_parts = parts[1].split(" ")
+	
+	return {
+		"condition": {
+			"left": condition_parts[0],
+			"operator": condition_parts[1],
+			"right": condition_parts[2]
+		},
+		"action": {
+			"type": action_parts[0],
+			"profile" if action_parts[0] == "spawn" else "property": action_parts[3],
+			"value": action_parts[5] if action_parts[0] == "set" else ""
+		}
+	}
+
+# Add functionality to edit existing rules
+func _on_edit_rule_pressed():
+	var selected_items = behavior_list.get_selected_items()
+	if selected_items.is_empty():
+		show_error("No rule selected for editing")
+		return
+	
+	var selected_rule = behavior_list.get_item_text(selected_items[0])
+	var rule_data = parse_rule(selected_rule)
+	
+	var edit_dialog = Window.new()
+	edit_dialog.title = "Edit Rule"
+	edit_dialog.size = Vector2(400, 300)
+	
+	var vbox = VBoxContainer.new()
+	edit_dialog.add_child(vbox)
+	
+	var condition_hbox = HBoxContainer.new()
+	vbox.add_child(condition_hbox)
+	
+	var left_input = LineEdit.new()
+	left_input.text = rule_data["condition"]["left"]
+	condition_hbox.add_child(left_input)
+	
+	var operator_input = OptionButton.new()
+	for op in [">", "<", "==", "!=", ">=", "<="]:
+		operator_input.add_item(op)
+	operator_input.selected = operator_input.get_item_index(rule_data["condition"]["operator"])
+	condition_hbox.add_child(operator_input)
+	
+	var right_input = LineEdit.new()
+	right_input.text = rule_data["condition"]["right"]
+	condition_hbox.add_child(right_input)
+	
+	var action_hbox = HBoxContainer.new()
+	vbox.add_child(action_hbox)
+	
+	var action_type_input = OptionButton.new()
+	action_type_input.add_item("spawn")
+	action_type_input.add_item("set")
+	action_type_input.selected = 0 if rule_data["action"]["type"] == "spawn" else 1
+	action_hbox.add_child(action_type_input)
+	
+	var action_target_input = LineEdit.new()
+	action_target_input.text = rule_data["action"]["profile"] if "profile" in rule_data["action"] else rule_data["action"]["property"]
+	action_hbox.add_child(action_target_input)
+	
+	var action_value_input = LineEdit.new()
+	action_value_input.text = rule_data["action"].get("value", "")
+	action_value_input.visible = rule_data["action"]["type"] == "set"
+	action_hbox.add_child(action_value_input)
+	
+	var save_button = Button.new()
+	save_button.text = "Save Changes"
+	save_button.connect("pressed", Callable(self, "_on_save_rule_changes").bind(selected_items[0], left_input, operator_input, right_input, action_type_input, action_target_input, action_value_input, edit_dialog))
+	vbox.add_child(save_button)
+	
+	add_child(edit_dialog)
+	edit_dialog.popup_centered()
+
+func _on_save_rule_changes(rule_index: int, left_input: LineEdit, operator_input: OptionButton, right_input: LineEdit, action_type_input: OptionButton, action_target_input: LineEdit, action_value_input: LineEdit, edit_dialog: Window):
+	var new_rule = {
+		"condition": {
+			"left": left_input.text,
+			"operator": operator_input.get_item_text(operator_input.selected),
+			"right": right_input.text
+		},
+		"action": {
+			"type": action_type_input.get_item_text(action_type_input.selected),
+			"profile" if action_type_input.selected == 0 else "property": action_target_input.text,
+			"value": action_value_input.text if action_type_input.selected == 1 else ""
+		}
+	}
+	
+	behavior_list.set_item_text(rule_index, format_rule(new_rule))
+	edit_dialog.queue_free()
+
+# Add this function to create a new rule
+func _on_add_rule_pressed():
+	var new_rule = {
+		"condition": {
+			"left": "property",
+			"operator": ">",
+			"right": "0"
+		},
+		"action": {
+			"type": "spawn",
+			"profile": "default_ant"
+		}
+	}
+	behavior_list.add_item(format_rule(new_rule))
