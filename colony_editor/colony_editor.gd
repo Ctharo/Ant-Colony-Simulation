@@ -13,6 +13,9 @@ var main_container: VBoxContainer
 
 var data_manager: DataManager
 
+var profile_id_to_name: Dictionary = {}
+
+
 # Colony Behavior Editor components
 var behavior_popup: Popup
 var behavior_list: ItemList
@@ -160,23 +163,48 @@ func populate_colony_profiles():
 func _on_profile_selected(index):
 	var selected_profile = profile_dropdown.get_item_text(index)
 	update_colony_ant_list(selected_profile)
-	update_available_ant_list(selected_profile)
+	update_available_ant_list()
 	edit_colony_behavior_button.disabled = false
 	delete_colony_button.disabled = false
 
+func update_available_ant_list():
+	available_ant_list.clear()
+	profile_id_to_name.clear()
+	var all_profiles = data_manager.get_all_ant_profiles()
+	for profile_id in all_profiles:
+		var profile_name = all_profiles[profile_id]["name"]
+		available_ant_list.add_item(profile_name)
+		profile_id_to_name[profile_name] = profile_id
+
 func update_colony_ant_list(colony_name: String):
 	colony_ant_list.clear()
-	var ant_profiles = data_manager.get_ant_profiles_for_colony(colony_name)
-	for ant_profile in ant_profiles:
-		colony_ant_list.add_item(ant_profile)
-		
-func update_available_ant_list(colony_name: String):
-	available_ant_list.clear()
+	var profile_ids = data_manager.get_ant_profiles_for_colony(colony_name)
 	var all_profiles = data_manager.get_all_ant_profiles()
-	var colony_profiles = data_manager.get_ant_profiles_for_colony(colony_name)
-	for profile in all_profiles:
-		if profile not in colony_profiles:
-			available_ant_list.add_item(profile)
+	for profile_id in profile_ids:
+		if profile_id in all_profiles:
+			colony_ant_list.add_item(all_profiles[profile_id]["name"])
+
+func _on_add_ant_profile_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var selected_items = available_ant_list.get_selected_items()
+	if selected_items.is_empty():
+		push_warning("No ant profile selected for addition")
+		return
+	var selected_ant_name = available_ant_list.get_item_text(selected_items[0])
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	data_manager.add_ant_profile_to_colony(selected_colony, selected_ant_id)
+	update_colony_ant_list(selected_colony)
+
+func _on_remove_ant_profile_pressed():
+	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
+	var selected_items = colony_ant_list.get_selected_items()
+	if selected_items.is_empty():
+		push_warning("No ant profile selected for removal")
+		return
+	var selected_ant_name = colony_ant_list.get_item_text(selected_items[0])
+	var selected_ant_id = profile_id_to_name[selected_ant_name]
+	data_manager.remove_ant_profile_from_colony(selected_colony, selected_ant_id)
+	update_colony_ant_list(selected_colony)
 			
 func _on_edit_colony_behavior_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
@@ -229,28 +257,6 @@ func parse_rule(rule_text: String) -> Dictionary:
 	# This is a placeholder and needs to be implemented based on your rule format
 	return {}
 
-func _on_add_ant_profile_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var selected_items = available_ant_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No ant profile selected for addition")
-		return
-	var selected_ant = available_ant_list.get_item_text(selected_items[0])
-	data_manager.add_ant_profile_to_colony(selected_colony, selected_ant)
-	update_colony_ant_list(selected_colony)
-	update_available_ant_list(selected_colony)
-
-func _on_remove_ant_profile_pressed():
-	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
-	var selected_items = colony_ant_list.get_selected_items()
-	if selected_items.is_empty():
-		push_warning("No ant profile selected for removal")
-		return
-	var selected_ant = colony_ant_list.get_item_text(selected_items[0])
-	data_manager.remove_ant_profile_from_colony(selected_colony, selected_ant)
-	update_colony_ant_list(selected_colony)
-	update_available_ant_list(selected_colony)
-
 func _on_new_colony_pressed():
 	var dialog = ConfirmationDialog.new()
 	dialog.title = "New Colony"
@@ -258,6 +264,7 @@ func _on_new_colony_pressed():
 	line_edit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dialog.add_child(line_edit)
 	add_child(dialog)
+	
 	dialog.connect("confirmed", Callable(self, "_on_new_colony_confirmed").bind(line_edit))
 	dialog.popup_centered()
 
@@ -267,6 +274,20 @@ func _on_new_colony_confirmed(line_edit: LineEdit):
 		push_warning("Colony name cannot be empty")
 		return
 	
+	if data_manager.colony_exists(colony_name):
+		# Show overwrite warning
+		var overwrite_dialog = ConfirmationDialog.new()
+		overwrite_dialog.dialog_text = "A colony with the name '%s' already exists. Do you want to overwrite it?" % colony_name
+		overwrite_dialog.connect("confirmed", Callable(self, "_on_overwrite_colony_confirmed").bind(colony_name))
+		add_child(overwrite_dialog)
+		overwrite_dialog.popup_centered()
+	else:
+		_create_new_colony(colony_name)
+
+func _on_overwrite_colony_confirmed(colony_name: String):
+	_create_new_colony(colony_name)
+
+func _create_new_colony(colony_name: String):
 	data_manager.create_new_colony(colony_name)
 	populate_colony_profiles()
 	profile_dropdown.select(profile_dropdown.get_item_count() - 1)
