@@ -1,5 +1,7 @@
-extends Node
+extends Popup
 class_name RuleEditorDialog
+
+signal rule_created
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
