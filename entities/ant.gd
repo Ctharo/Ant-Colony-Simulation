@@ -9,7 +9,6 @@ signal pheromone_sensed
 signal damaged
 signal died
 
-
 ## The unique identifier for this ant
 var id: int
 
@@ -42,6 +41,24 @@ var health: Health
 
 ## The foods being carried by the ant
 var foods: Foods
+
+## The speed capabilities of the ant
+var speed: Speed
+
+func _init(_id: int, _role: String, _position: Vector2, _colony: Colony):
+	id = _id
+	role = _role
+	position = _position
+	colony = _colony
+	
+	reach = Reach.new()
+	vision = Vision.new()
+	sense = Sense.new()
+	energy = Energy.new()
+	strength = Strength.new()
+	health = Health.new()
+	foods = Foods.new()
+	speed = Speed.new()
 
 func _ready() -> void:
 	spawned.emit()
@@ -84,3 +101,48 @@ func ants_in_view() -> Ants:
 ## Check if the ant is at its home colony
 func is_at_home() -> bool:
 	return position.distance_to(colony.position) < reach.distance + colony.radius
+
+## Handle the ant taking damage
+func take_damage(amount: float) -> void:
+	health.current_level -= amount
+	damaged.emit()
+	if health.current_level <= 0:
+		died.emit()
+
+## Handle the ant consuming food for energy
+func consume_food(amount: float) -> void:
+	var consumed = foods.consume(amount)
+	energy.current_level += consumed
+
+## Move the ant to a new position
+func move_to(new_position: Vector2) -> void:
+	var distance = position.distance_to(new_position)
+	var time_taken = distance / speed.movement_rate
+	position = new_position
+	energy.current_level -= time_taken  # Energy consumption based on distance and speed
+
+## Harvest food from a source over a given time period
+func harvest_food(food_source: Food, time: float) -> float:
+	var potential_harvest = speed.harvesting_rate * time
+	var harvested_amount = min(food_source.amount, potential_harvest)
+	harvested_amount = min(harvested_amount, available_carry_mass())
+	
+	food_source.amount -= harvested_amount
+	foods.add(Food.new(harvested_amount))
+		
+	return harvested_amount
+
+## Emit a pheromone at the current position
+func emit_pheromone(type: String, concentration: float) -> void:
+	var new_pheromone = Pheromone.new(position, type, concentration, self)
+	# Add the pheromone to the world (implementation depends on your world management system)
+
+## Perform an action (placeholder for more complex behavior)
+func perform_action() -> void:
+	# Implement ant behavior here
+	action_completed.emit()
+
+# Connect signals
+func _connect_signals() -> void:
+	health.depleted.connect(func(): died.emit())
+	energy.depleted.connect(func(): take_damage(1))  # Ant takes damage when out of energy
