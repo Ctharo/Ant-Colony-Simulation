@@ -285,7 +285,7 @@ func _confirm_delete_colony(colony_name: String):
 	info_label.text = "No profile selected"
 
 func _on_back_pressed():
-	get_tree().change_scene_to_file("res://main.tscn")
+	get_tree().change_scene_to_file("res://ui/main.tscn")
 
 # Helper function to update button states
 func update_button_states():
