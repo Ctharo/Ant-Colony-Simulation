@@ -1,7 +1,7 @@
 class_name Pheromones
 extends Iterator
 
-func _init(initial_pheromones: Pheromones = get_all()):
+func _init(initial_pheromones: Pheromones = all()):
 	super._init()
 	for pheromone in initial_pheromones:
 		self.append(pheromone)
@@ -72,5 +72,5 @@ func furthest(from_position: Vector2) -> Pheromone:
 		return p if p.position.distance_squared_to(from_position) > furthest.position.distance_squared_to(from_position) else furthest
 	)
 
-static func get_all() -> Pheromones:
+static func all() -> Pheromones:
 	return PheromoneManager.get_all()
