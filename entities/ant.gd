@@ -83,4 +83,4 @@ func ants_in_view() -> Ants:
 
 ## Check if the ant is at its home colony
 func is_at_home() -> bool:
-	return position.distance_to(colony.position) < reach.distance
+	return position.distance_to(colony.position) < reach.distance + colony.radius

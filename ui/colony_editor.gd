@@ -17,6 +17,7 @@ var back_button: Button
 var main_container: VBoxContainer
 var info_label: RichTextLabel
 var data_manager: DataManager
+var rule_manager: RuleManager
 
 # Colony Behavior Editor components
 var behavior_popup: Popup
@@ -25,7 +26,7 @@ var add_rule_button: Button
 var edit_rule_button: Button
 var delete_rule_button: Button
 var save_behavior_button: Button
-var rule_manager: RuleManager
+
 
 
 var profile_id_to_name: Dictionary = {}

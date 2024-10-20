@@ -90,8 +90,8 @@ func back() -> Variant:
 	return elements.back() if not is_empty() else null
 
 ## Get a slice of the elements
-func slice(begin: int, end: int = -1, step: int = 1, deep: bool = false) -> Iterator:
-	var sliced = elements.slice(begin, end, step, deep)
+func slice(begin: int, _end: int = -1, step: int = 1, deep: bool = false) -> Iterator:
+	var sliced = elements.slice(begin, _end, step, deep)
 	return Iterator.new(sliced)
 
 ## Find the index of an element

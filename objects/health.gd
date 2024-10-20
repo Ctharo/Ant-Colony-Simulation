@@ -15,7 +15,7 @@ var current_level: float = max_level :
 
 ## Get the health level as a percentage
 func health_percentage() -> float:
-	return (current_health / max_health) * 100.0
+	return (current_level / max_level) * 100.0
 
 ## Check if health is critically low
 func is_critically_low() -> bool:
@@ -23,8 +23,8 @@ func is_critically_low() -> bool:
 
 ## Check if health is at maximum
 func is_full() -> bool:
-	return is_equal_approx(current_health, max_health)
+	return is_equal_approx(current_level, max_level)
 
 ## Get the amount of health that can be restored
 func restorable_amount() -> float:
-	return max_health - current_health
+	return max_level - current_level

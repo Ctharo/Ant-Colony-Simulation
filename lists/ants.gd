@@ -1,7 +1,7 @@
 class_name Ants
 extends Iterator
 
-func _init(initial_ants: Ants = all()):
+func _init(initial_ants: Ants = Ants.all()):
 	super._init()
 	for ant in initial_ants:
 		self.append(ant)
