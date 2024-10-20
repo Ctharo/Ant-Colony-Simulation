@@ -1,5 +1,7 @@
 class_name Sense
 extends Node
+## For sensing pheromones
+
 
 ## The sensing distance of the entity
 var distance: float
