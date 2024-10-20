@@ -57,11 +57,10 @@ func format_value(value) -> String:
 
 ## Format an action into a human-readable string
 func format_action(action: Dictionary) -> String:
-	if action["type"] == "spawn_ant":
-		return "spawn ant of type '%s'" % action["profile"]
-	elif action["type"] == "set_property":
-		return "set %s to %s" % [action["property"], action["value"]]
-	return "Unknown action"
+	var method_name = action["method"]
+	var args = action.get("args", [])
+	var args_str = ", ".join(args.map(func(arg): return str(arg)))
+	return "call %s(%s)" % [method_name, args_str]
 
 ## Parse a rule from a string representation
 func parse_rule(rule_text: String) -> Dictionary:
@@ -100,20 +99,20 @@ func parse_value(value_text: String):
 
 ## Parse an action from a string representation
 func parse_action(action_text: String) -> Dictionary:
-	if action_text.begins_with("spawn ant of type"):
-		var profile = action_text.split("'")[1]  # Extract profile name from between quotes
+	if action_text.begins_with("call "):
+		var method_and_args = action_text.substr(5).split("(")
+		var method_name = method_and_args[0]
+		var args_str = method_and_args[1].trim_suffix(")")
+		var args = []
+		if args_str:
+			args = args_str.split(",")
+			args = args.map(func(arg): return parse_value(arg.strip_edges()))
+		
 		return {
-			"type": "spawn_ant",
-			"profile": profile
+			"method": method_name,
+			"args": args
 		}
-	elif action_text.begins_with("set"):
-		var parts = action_text.split(" to ")
-		return {
-			"type": "set_property",
-			"property": parts[0].substr(4),  # Remove "set " prefix
-			"value": parts[1]
-		}
-	return {"type": "unknown"}
+	return {"method": "unknown_action"}
 
 ## Get the string representation of an operator
 func get_operator_string(op: ComparisonOperator) -> String:
@@ -135,43 +134,56 @@ func create_edit_rule_dialog(existing_rule: Dictionary = {}) -> Window:
 	var vbox = VBoxContainer.new()
 	edit_dialog.add_child(vbox)
 	
-	var property_input = OptionButton.new()
-	for option in BehaviorConfig.property_options:
-		property_input.add_item(option)
-	property_input.selected = BehaviorConfig.property_options.find(existing_rule.get("property", BehaviorConfig.property_options[0]))
-	vbox.add_child(property_input)
+	# Add inputs for condition
+	var condition = existing_rule.get("condition", {})
+	var left_input = LineEdit.new()
+	left_input.text = str(condition.get("left", ""))
+	vbox.add_child(left_input)
 	
 	var operator_input = OptionButton.new()
-	for op in BehaviorConfig.ComparisonOperator.keys():
+	for op in ComparisonOperator.keys():
 		operator_input.add_item(op)
-	operator_input.selected = BehaviorConfig.ComparisonOperator.values().find(existing_rule.get("operator", BehaviorConfig.ComparisonOperator.EQUAL))
+	operator_input.selected = ComparisonOperator.values().find(condition.get("operator", ComparisonOperator.EQUAL))
 	vbox.add_child(operator_input)
 	
-	var value_input = LineEdit.new()
-	value_input.text = str(existing_rule.get("value", ""))
-	vbox.add_child(value_input)
+	var right_input = LineEdit.new()
+	right_input.text = str(condition.get("right", ""))
+	vbox.add_child(right_input)
 	
-	var action_input = OptionButton.new()
-	for action in BehaviorConfig.action_options:
-		action_input.add_item(action)
-	action_input.selected = BehaviorConfig.action_options.find(existing_rule.get("action", BehaviorConfig.action_options[0]))
-	vbox.add_child(action_input)
+	# Add inputs for action
+	var action = existing_rule.get("action", {})
+	var method_input = LineEdit.new()
+	method_input.text = action.get("method", "")
+	vbox.add_child(method_input)
+	
+	var args_input = LineEdit.new()
+	args_input.text = ", ".join(action.get("args", []))
+	vbox.add_child(args_input)
 	
 	return edit_dialog
 
 ## Get the rule from the edit dialog
 func get_rule_from_dialog(dialog: Window) -> Dictionary:
 	var vbox = dialog.get_child(0)
-	var property_input = vbox.get_child(0)
+	var left_input = vbox.get_child(0)
 	var operator_input = vbox.get_child(1)
-	var value_input = vbox.get_child(2)
-	var action_input = vbox.get_child(3)
+	var right_input = vbox.get_child(2)
+	var method_input = vbox.get_child(3)
+	var args_input = vbox.get_child(4)
+	
+	var args = args_input.text.split(",")
+	args = args.map(func(arg): return parse_value(arg.strip_edges()))
 	
 	return {
-		"property": BehaviorConfig.property_options[property_input.selected],
-		"operator": BehaviorConfig.ComparisonOperator.values()[operator_input.selected],
-		"value": value_input.text,
-		"action": BehaviorConfig.action_options[action_input.selected]
+		"condition": {
+			"left": parse_value(left_input.text),
+			"operator": ComparisonOperator.values()[operator_input.selected],
+			"right": parse_value(right_input.text)
+		},
+		"action": {
+			"method": method_input.text,
+			"args": args
+		}
 	}
 
 ## Save rules for a given entity
@@ -238,10 +250,10 @@ func evaluate_value(value, simulation_state: Node):
 
 ## Execute an action based on the current simulation state
 func execute_action(action: Dictionary, simulation_state: Node) -> void:
-	match action["type"]:
-		"spawn_ant":
-			simulation_state.spawn_ant(action["profile"])
-		"set_property":
-			simulation_state.set(action["property"], action["value"])
-		_:
-			push_warning("Unknown action type: " + action["type"])
+	var method_name = action["method"]
+	var args = action.get("args", [])
+	
+	if simulation_state.has_method(method_name):
+		simulation_state.callv(method_name, args)
+	else:
+		push_warning("Unknown action method: " + method_name)
