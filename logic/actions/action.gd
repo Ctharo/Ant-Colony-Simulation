@@ -61,7 +61,7 @@ func is_ready() -> bool:
 	return current_cooldown <= 0
 
 ## Action for moving the ant
-class MoveAction extends Action:
+class Move extends Action:
 	## Target position to move to
 	var target_position: Vector2
 	## Movement rate of the ant
@@ -72,7 +72,8 @@ class MoveAction extends Action:
 	func _init_action(params: Dictionary) -> void:
 		if "target_position" in params:
 			target_position = params["target_position"]
-			
+		if target_position == Vector2.ZERO:
+			push_warning("Target position is ZERO vector")
 	
 	## Start the move action
 	## @param _ant The ant performing the action
@@ -82,7 +83,7 @@ class MoveAction extends Action:
 	
 	## Update the move action
 	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
+	func _update_action(delta: float, params: Dictionary = {}) -> void:
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate
 		ant.energy.deplete(delta * movement_rate * 0.1)  # Energy cost based on movement_rate
@@ -93,7 +94,7 @@ class MoveAction extends Action:
 		return ant.global_position.distance_to(target_position) < 1.0
 
 ## Action for harvesting food
-class HarvestAction extends Action:
+class Harvest extends Action:
 	## The food source to harvest from
 	var food_source: Food
 	## Harvesting rate of the ant
@@ -113,19 +114,21 @@ class HarvestAction extends Action:
 	
 	## Update the harvest action
 	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
-		var amount_to_harvest = min(harvest_rate * delta, ant.available_carry_mass())
-		var harvested = food_source.remove_amount(amount_to_harvest)
-		ant.foods.add(Food.new(harvested))
-		ant.energy.deplete(delta * 0.5)  # Fixed energy cost for harvesting
+	func _update_action(delta: float, params: Dictionary = {}) -> void:
+		var food_source = params.get("target_food")
+		if food_source:
+			var amount_harvested = ant.harvest_food(food_source, delta)
+			print("Harvested %f amount of food" % amount_harvested)
+		else:
+			push_error("No food source to harvest")
 	
 	## Check if the harvest action is completed
 	## @return True if the ant is full or the food source is depleted, false otherwise
 	func is_completed() -> bool:
-		return ant.foods.is_full() or food_source.is_depleted()
+		return not ant.can_carry_more() or food_source.is_depleted()
 
 ## Action for storing food in the colony
-class StoreAction extends Action:
+class Store extends Action:
 	## The location where food should be stored
 	var storage_location: Vector2
 	## The amount of food stored per update
@@ -139,11 +142,9 @@ class StoreAction extends Action:
 	
 	## Update the store action
 	## @param delta Time elapsed since the last update
-	func update(delta: float, params = {}) -> void:
-		var amount_to_store = min(store_rate * delta, ant.foods.total_amount())
-		ant.foods.remove(amount_to_store)
-		ant.colony.add_food(amount_to_store)
-		ant.energy.deplete(delta * 0.2)  # Small energy cost for storing food
+	func _update_action(delta: float, params = {}) -> void:
+		var colony = ant.colony
+		ant.store_food(colony, delta)
 	
 	## Check if the store action is completed
 	## @return True if the ant has no more food to store, false otherwise
@@ -151,7 +152,7 @@ class StoreAction extends Action:
 		return ant.foods.is_empty()
 
 ## Action for attacking another ant or entity
-class AttackAction extends Action:
+class Attack extends Action:
 	## The target location of the attack
 	var target_location: Vector2
 	## The target entity to attack
@@ -213,7 +214,7 @@ class AttackAction extends Action:
 		return ant.energy.is_depleted()
 
 ## Action for emitting pheromones
-class EmitPheromoneAction extends Action:
+class EmitPheromone extends Action:
 	## The type of pheromone to emit
 	var pheromone_type: String
 	## The strength of the pheromone
@@ -248,7 +249,7 @@ class EmitPheromoneAction extends Action:
 		return current_time >= emission_duration
 		
 ## Action for following pheromones
-class FollowPheromoneAction extends Action:
+class FollowPheromone extends Action:
 	## The type of pheromone to follow
 	var pheromone_type: String
 	## The movement speed while following pheromones
@@ -272,8 +273,8 @@ class FollowPheromoneAction extends Action:
 	func is_completed() -> bool:
 		return false
 
-## Action for moving towards visible food
-class MoveToFoodAction extends Action:
+## Action for moving to food
+class MoveToFood extends Action:
 	var target_food: Food = null
 	
 	func _init_action(params: Dictionary) -> void:
@@ -285,7 +286,6 @@ class MoveToFoodAction extends Action:
 			target_food = params["target_food"]
 		
 		if target_food:
-			# Move towards the food
 			var direction = (target_food.global_position - ant.global_position).normalized()
 			ant.global_position += direction * ant.speed.movement_rate * delta
 	
@@ -293,7 +293,7 @@ class MoveToFoodAction extends Action:
 		return target_food == null or ant.global_position.distance_to(target_food.global_position) < 1.0
 
 ## Action for moving randomly
-class RandomMoveAction extends Action:
+class RandomMove extends Action:
 	## The duration of the random movement
 	var move_duration: float = 2.0
 	## The current movement timer
@@ -318,7 +318,7 @@ class RandomMoveAction extends Action:
 		return false
 
 ## Action for resting to regain energy
-class RestAction extends Action:
+class Rest extends Action:
 	## The rate at which energy is regained while resting
 	var energy_gain_rate: float = 10.0  # Energy units per second
 

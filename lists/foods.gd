@@ -6,6 +6,12 @@ func _init(initial_foods: Array[Food] = []):
 	for food in initial_foods:
 		self.append(food)
 
+## Add food by mass to foods, return total stored mass
+func add_food(mass_to_add: float) -> float:
+	var food: Food = Food.new(mass_to_add)
+	append(food)
+	return mass()
+
 func mass() -> float:
 	var _mass: float
 	for food in self:

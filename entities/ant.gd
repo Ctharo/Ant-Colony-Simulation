@@ -59,7 +59,7 @@ func _init():
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	behavior_tree = BehaviorTree.new(self, Behavior.WanderForFoodBehavior.new())
+	behavior_tree = BehaviorTree.new(self, Behavior.WanderForFood.new())
 
 
 func _ready() -> void:
@@ -147,6 +147,16 @@ func harvest_food(food_source: Food, time: float) -> float:
 	foods.add(Food.new(harvested_amount))
 		
 	return harvested_amount
+
+## Store food into colony over a given time period[br]
+##Returns amount stored[br]
+##** Note, not currently using argument _time **
+func store_food(colony: Colony, _time: float) -> float:
+	var storing_amount: float = foods.mass()
+	var total_stored = colony.foods.add_food(storing_amount)
+	print("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
+	foods.clear()
+	return storing_amount
 
 ## Emit a pheromone at the current position
 func emit_pheromone(type: String, concentration: float) -> void:

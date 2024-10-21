@@ -2,7 +2,7 @@ class_name Behavior
 extends RefCounted
 
 ## Enum to represent the current state of a behavior
-enum BehaviorState {
+enum State {
 	INACTIVE,
 	ACTIVE,
 	COMPLETED,
@@ -31,7 +31,7 @@ var actions: Array[Action] = []
 var ant: Ant
 
 ## Current state of the behavior
-var state: BehaviorState = BehaviorState.INACTIVE
+var state: State = State.INACTIVE
 
 ## Currently executing sub-behavior, if any
 var current_sub_behavior: Behavior = null
@@ -46,26 +46,26 @@ var condition_cache: Dictionary
 func start(_ant: Ant) -> void:
 	ant = _ant
 	condition_cache.clear()
-	state = BehaviorState.ACTIVE
+	state = State.ACTIVE
 	current_action_index = 0
 	for sub_behavior in sub_behaviors:
 		sub_behavior.start(ant)
 
 ## Update the behavior, returns true if the behavior is complete or inactive
 func update(delta: float, params: Dictionary) -> bool:
-	if state != BehaviorState.ACTIVE:
+	if state != State.ACTIVE:
 		return true
 
 	if not should_execute(params):
-		state = BehaviorState.INACTIVE
+		state = State.INACTIVE
 		return true
 
 	if current_sub_behavior:
 		if current_sub_behavior.update(delta, params):
 			current_sub_behavior = null
 			return false
-		elif current_sub_behavior.state == BehaviorState.FAILED:
-			state = BehaviorState.FAILED
+		elif current_sub_behavior.state == state.FAILED:
+			state = State.FAILED
 			return true
 		else:
 			return false
@@ -79,7 +79,7 @@ func update(delta: float, params: Dictionary) -> bool:
 			action.update(delta, params)
 			return false
 	else:
-		state = BehaviorState.COMPLETED
+		state = State.COMPLETED
 		return true
 
 ## Check if all conditions for this behavior are met
@@ -103,7 +103,7 @@ func clear_condition_cache() -> void:
 
 ## Reset the behavior to its initial state
 func reset() -> void:
-	state = BehaviorState.INACTIVE
+	state = State.INACTIVE
 	current_sub_behavior = null
 	current_action_index = 0
 	condition_cache.clear()
@@ -119,17 +119,17 @@ func reset() -> void:
 class CollectFoodBehavior extends Behavior:
 	func _init():
 		name = "Collect Food"
-		add_sub_behavior(WanderForFoodBehavior.new())
-		add_sub_behavior(FollowPheromonesBehavior.new())
-		add_sub_behavior(HarvestFoodBehavior.new())
-		add_sub_behavior(ReturnHomeBehavior.new())
-		add_sub_behavior(StoreFoodBehavior.new())
+		add_sub_behavior(WanderForFood.new())
+		add_sub_behavior(FollowPheromones.new())
+		add_sub_behavior(HarvestFood.new())
+		add_sub_behavior(ReturnHome.new())
+		add_sub_behavior(StoreFood.new())
 
 ## Behavior for wandering when searching for food
-class WanderForFoodBehavior extends Behavior:
+class WanderForFood extends Behavior:
 	func _init():
 		name = "Wander for Food"
-		conditions.append(Condition.NotCondition.new(Condition.FoodPheromoneSensedCondition.new()))
+		conditions.append(Condition.Not.new(Condition.FoodPheromoneSensedCondition.new()))
 		conditions.append(Condition.NotCondition.new(Condition.CarryingFoodCondition.new()))
 		actions.append(Action.RandomMoveAction.new())
 
@@ -146,7 +146,7 @@ class HarvestFoodBehavior extends Behavior:
 	func _init():
 		name = "Harvest Food"
 		conditions.append(Condition.FoodInViewCondition.new())
-		#conditions.append(Condition.NotCondition.new(Condition.OverloadedWithFoodCondition.new()))
+		conditions.append(Condition.NotCondition.new(Condition.OverloadedWithFoodCondition.new()))
 		actions.append(Action.MoveToFoodAction.new())
 		actions.append(Action.HarvestAction.new())
 

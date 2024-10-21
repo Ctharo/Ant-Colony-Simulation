@@ -7,9 +7,13 @@ var movement_rate: float
 ## The harvesting rate of the Ant
 var harvesting_rate: float
 
-func _init(_movement_rate: float = 1.0, _harvesting_rate: float = 0.5):
+## The storing food rate of the Ant
+var storing_rate: float
+
+func _init(_movement_rate: float = 1.0, _harvesting_rate: float = 0.5, _storing_rate: float = 10.0):
 	movement_rate = _movement_rate
 	harvesting_rate = _harvesting_rate
+	storing_rate = _storing_rate
 
 ## Adjust movement rate
 func set_movement_rate(rate: float) -> void:
