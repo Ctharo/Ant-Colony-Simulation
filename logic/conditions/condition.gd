@@ -4,8 +4,9 @@ extends RefCounted
 ## Check if the condition is met for the given ant
 ## @param _ant The ant to check the condition for
 ## @param _cache Dictionary to cache condition results
+## @param _params Dictionary containing context parameters
 ## @return True if the condition is met, false otherwise
-func is_met(_ant: Ant, _cache: Dictionary) -> bool:
+func is_met(_ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
 	return false
 
 ## Condition that performs a specific check
@@ -26,11 +27,12 @@ class LeafCondition extends Condition:
 	## Check if the condition is met, using cache if available
 	## @param ant The ant to check the condition for
 	## @param cache Dictionary to cache condition results
+	## @param params Dictionary containing context parameters
 	## @return True if the condition is met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary) -> bool:
+	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
 		if condition_id in cache:
 			return cache[condition_id]
-		var result = check.call(ant)
+		var result = check.call(ant, params)
 		cache[condition_id] = result
 		return result
 
@@ -47,10 +49,11 @@ class AndCondition extends Condition:
 	## Check if all conditions are met
 	## @param ant The ant to check the conditions for
 	## @param cache Dictionary to cache condition results
+	## @param params Dictionary containing context parameters
 	## @return True if all conditions are met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary) -> bool:
+	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
 		for condition in conditions:
-			if not condition.is_met(ant, cache):
+			if not condition.is_met(ant, cache, params):
 				return false
 		return true
 
@@ -67,10 +70,11 @@ class OrCondition extends Condition:
 	## Check if any condition is met
 	## @param ant The ant to check the conditions for
 	## @param cache Dictionary to cache condition results
+	## @param params Dictionary containing context parameters
 	## @return True if any condition is met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary) -> bool:
+	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
 		for condition in conditions:
-			if condition.is_met(ant, cache):
+			if condition.is_met(ant, cache, params):
 				return true
 		return false
 
@@ -87,76 +91,86 @@ class NotCondition extends Condition:
 	## Check if the negated condition is not met
 	## @param ant The ant to check the condition for
 	## @param cache Dictionary to cache condition results
+	## @param params Dictionary containing context parameters
 	## @return True if the negated condition is not met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary) -> bool:
-		return not condition.is_met(ant, cache)
+	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+		return not condition.is_met(ant, cache, params)
 
-## Condition to check if there are no food pheromones sensed
-class NoFoodPheromoneSensedCondition extends Condition:
-	## The range to check for food pheromones
-	var check_range: float = 50.0
-
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		var nearby_pheromones = ant.get_nearby_pheromones("food", check_range)
-		return nearby_pheromones.is_empty()
-
-## Condition to check if there are food pheromones nearby
-class FoodPheromoneNearbyCondition extends Condition:
-	## The range to check for food pheromones
-	var check_range: float = 50.0
-
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		var nearby_pheromones = ant.get_nearby_pheromones("food", check_range)
-		return not nearby_pheromones.is_empty()
+## Condition for comparing numeric values
+class ComparisonCondition extends Condition:
+	enum Operator { LESS, LESS_EQUAL, EQUAL, NOT_EQUAL, GREATER_EQUAL, GREATER }
+	
+	## The left-hand side of the comparison (can be a Callable or a static value)
+	var lhs: Variant
+	
+	## The right-hand side of the comparison (can be a Callable or a static value)
+	var rhs: Variant
+	
+	## The operator to use for comparison
+	var operator: Operator
+	
+	## Initialize the ComparisonCondition
+	## @param _lhs Left-hand side of the comparison
+	## @param _operator The comparison operator
+	## @param _rhs Right-hand side of the comparison
+	func _init(_lhs: Variant, _operator: Operator, _rhs: Variant):
+		lhs = _lhs
+		operator = _operator
+		rhs = _rhs
+	
+	## Check if the comparison condition is met
+	## @param ant The ant to check the condition for
+	## @param cache Dictionary to cache condition results
+	## @param params Dictionary containing context parameters
+	## @return True if the condition is met, false otherwise
+	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+		var lhs_value = lhs.call(ant, params) if lhs is Callable else lhs
+		var rhs_value = rhs.call(ant, params) if rhs is Callable else rhs
+		
+		match operator:
+			Operator.LESS:
+				return lhs_value < rhs_value
+			Operator.LESS_EQUAL:
+				return lhs_value <= rhs_value
+			Operator.EQUAL:
+				return lhs_value == rhs_value
+			Operator.NOT_EQUAL:
+				return lhs_value != rhs_value
+			Operator.GREATER_EQUAL:
+				return lhs_value >= rhs_value
+			Operator.GREATER:
+				return lhs_value > rhs_value
+		
+		return false
 
 ## Condition to check if food is in view
 class FoodInViewCondition extends Condition:
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		return ant.can_see_food()
+	
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+		return ant.is_food_in_view()
 
 ## Condition to check if the ant is carrying food
 class CarryingFoodCondition extends Condition:
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		return not ant.foods.is_empty()
+	
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+		return ant.is_carrying_food()
 
 ## Condition to check if the ant is at the colony
 class AtHomeCondition extends Condition:
-	## The distance threshold to consider the ant at home
-	var home_threshold: float = 10.0
 
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		return ant.global_position.distance_to(ant.colony.global_position) <= home_threshold
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+		return ant.is_at_home()
+
+## Condition to check if there are food pheromones nearby
+class FoodPheromoneSensedCondition extends Condition:
+	
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+		return ant.is_pheromone_sensed("food")
 
 ## Condition to check if there are home pheromones nearby
-class HomePheromoneNearbyCondition extends Condition:
-	## The range to check for home pheromones
-	var check_range: float = 50.0
+class HomePheromoneSensedCondition extends Condition:
+	
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+		return ant.is_pheromone_sensed("home")
 
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		var nearby_pheromones = ant.get_nearby_pheromones("home", check_range)
-		return not nearby_pheromones.is_empty()
 
-## Condition to check if there are no home pheromones nearby
-class NoHomePheromoneNearbyCondition extends Condition:
-	## The range to check for home pheromones
-	var check_range: float = 50.0
-
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		var nearby_pheromones = ant.get_nearby_pheromones("home", check_range)
-		return nearby_pheromones.is_empty()
-
-## Condition to check if the ant's energy is low
-class LowEnergyCondition extends Condition:
-	## The energy threshold to consider as low
-	var energy_threshold: float = 30.0
-
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		return ant.energy.current <= energy_threshold
-
-## Condition to check if the ant is overloaded with food
-class OverloadedWithFoodCondition extends Condition:
-	## The percentage of max capacity to consider as overloaded
-	var overload_threshold: float = 0.9
-
-	func is_met(ant: Ant, _cache: Dictionary) -> bool:
-		return ant.foods.total_amount() >= (ant.foods.capacity * overload_threshold)

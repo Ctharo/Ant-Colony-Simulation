@@ -4,15 +4,38 @@ extends RefCounted
 ## Reference to the ant performing the action
 var ant: Ant
 
+## Cooldown time for the action (in seconds)
+var cooldown: float = 0.0
+
+## Current cooldown timer
+var current_cooldown: float = 0.0
+
 ## Start the action for the given ant
 ## @param _ant The ant performing the action
-func start(_ant: Ant) -> void:
+## @param params Dictionary of parameters for the action
+func start(_ant: Ant, params: Dictionary = {}) -> void:
 	ant = _ant
+	current_cooldown = cooldown
+	_init_action(params)
+
+## Initialize the action with given parameters
+## @param params Dictionary of parameters for the action
+func _init_action(_params: Dictionary) -> void:
+	pass  # Override in subclasses if needed
 
 ## Update the action
-## @param _delta Time elapsed since the last update
-func update(_delta: float) -> void:
-	pass
+## @param delta Time elapsed since the last update
+## @param params Dictionary of parameters for the action
+func update(delta: float, params: Dictionary = {}) -> void:
+	if current_cooldown > 0:
+		current_cooldown -= delta
+	_update_action(delta, params)
+
+## Update logic for the specific action
+## @param delta Time elapsed since the last update
+## @param params Dictionary of parameters for the action
+func _update_action(_delta: float, _params: Dictionary) -> void:
+	pass  # Override in subclasses
 
 ## Check if the action is completed
 ## @return True if the action is completed, false otherwise
@@ -23,6 +46,20 @@ func is_completed() -> bool:
 func cancel() -> void:
 	pass
 
+## Interrupt the action
+func interrupt() -> void:
+	cancel()
+	current_cooldown = cooldown
+
+## Reset the action
+func reset() -> void:
+	current_cooldown = 0.0
+
+## Check if the action is ready (not on cooldown)
+## @return True if the action is ready, false otherwise
+func is_ready() -> bool:
+	return current_cooldown <= 0
+
 ## Action for moving the ant
 class MoveAction extends Action:
 	## Target position to move to
@@ -32,18 +69,20 @@ class MoveAction extends Action:
 	
 	## Initialize the MoveAction
 	## @param _target_position The position to move to
-	func _init(_target_position: Vector2):
-		target_position = _target_position
+	func _init_action(params: Dictionary) -> void:
+		if "target_position" in params:
+			target_position = params["target_position"]
+			
 	
 	## Start the move action
 	## @param _ant The ant performing the action
-	func start(_ant: Ant) -> void:
-		super.start(_ant)
+	func start(_ant: Ant, params: Dictionary = {}) -> void:
+		super.start(_ant, params)
 		movement_rate = ant.speed.movement_rate
 	
 	## Update the move action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate
 		ant.energy.deplete(delta * movement_rate * 0.1)  # Energy cost based on movement_rate
@@ -62,18 +101,19 @@ class HarvestAction extends Action:
 	
 	## Initialize the HarvestAction
 	## @param _food_source The food source to harvest from
-	func _init(_food_source: Food):
-		food_source = _food_source
+	func _init_action(params: Dictionary) -> void:
+		if "food_source" in params:
+			food_source = params["food_source"]
 	
 	## Start the harvest action
 	## @param _ant The ant performing the action
-	func start(_ant: Ant) -> void:
+	func start(_ant: Ant, params: Dictionary = {}) -> void:
 		super.start(_ant)
 		harvest_rate = ant.speed.harvesting_rate
 	
 	## Update the harvest action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		var amount_to_harvest = min(harvest_rate * delta, ant.available_carry_mass())
 		var harvested = food_source.remove_amount(amount_to_harvest)
 		ant.foods.add(Food.new(harvested))
@@ -93,12 +133,13 @@ class StoreAction extends Action:
 	
 	## Initialize the StoreAction
 	## @param _storage_location The location to store food
-	func _init(_storage_location: Vector2):
-		storage_location = _storage_location
+	func _init_action(params: Dictionary = {}):
+		if "storage_location" in params:
+			storage_location = params["storage_location"]
 	
 	## Update the store action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params = {}) -> void:
 		var amount_to_store = min(store_rate * delta, ant.foods.total_amount())
 		ant.foods.remove(amount_to_store)
 		ant.colony.add_food(amount_to_store)
@@ -121,19 +162,20 @@ class AttackAction extends Action:
 	var attack_damage: float = 1.0
 	## The time between attacks
 	var attack_cooldown: float = 1.0
-	## The current cooldown timer
-	var current_cooldown: float = 0.0
+
 	
 	## Initialize the AttackAction
 	## @param _target_location The location to attack
 	## @param _target_entity The entity to attack (optional)
-	func _init(_target_location: Vector2, _target_entity: Node2D = null):
-		target_location = _target_location
-		target_entity = _target_entity
+	func _init_action(params: Dictionary) -> void:
+		if "target_location" in params:
+			target_location = params["target_location"]
+		if "target_entity" in params:
+			target_entity = params["target_entity"]
 	
 	## Update the attack action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		if current_cooldown > 0:
 			current_cooldown -= delta
 			return
@@ -185,14 +227,17 @@ class EmitPheromoneAction extends Action:
 	## @param _pheromone_type The type of pheromone to emit
 	## @param _pheromone_strength The strength of the pheromone
 	## @param _emission_duration The duration of the pheromone emission
-	func _init(_pheromone_type: String, _pheromone_strength: float, _emission_duration: float):
-		pheromone_type = _pheromone_type
-		pheromone_strength = _pheromone_strength
-		emission_duration = _emission_duration
+	func _init_action(params: Dictionary = {}):
+		if "pheromone_type" in params:
+			pheromone_type = params["pheromone_type"]
+		if "pheromone_strength" in params:
+			pheromone_strength = params["pheromone_strength"]
+		if "emission_duration" in params:
+			emission_duration = params["emission_duration"]
 	
 	## Update the pheromone emission action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		ant.emit_pheromone(pheromone_type, pheromone_strength)
 		current_time += delta
 		ant.energy.deplete(delta * 0.1)  # Small energy cost for emitting pheromones
@@ -211,12 +256,13 @@ class FollowPheromoneAction extends Action:
 
 	## Initialize the FollowPheromoneAction
 	## @param _pheromone_type The type of pheromone to follow
-	func _init(_pheromone_type: String):
-		pheromone_type = _pheromone_type
+	func _init_action(params: Dictionary = {}):
+		if "pheromone_type" in params:
+			pheromone_type = params["pheromone_type"]
 
 	## Update the follow pheromone action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		var pheromone_direction = ant.get_strongest_pheromone_direction(pheromone_type)
 		ant.velocity = pheromone_direction * follow_speed * ant.speed.movement_rate
 		ant.energy.deplete(delta * follow_speed * 0.1)
@@ -228,24 +274,23 @@ class FollowPheromoneAction extends Action:
 
 ## Action for moving towards visible food
 class MoveToFoodAction extends Action:
-	## The current target food
 	var target_food: Food = null
-
-	## Update the move to food action
-	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
-		if target_food == null or not is_instance_valid(target_food):
-			target_food = ant.get_nearest_visible_food()
+	
+	func _init_action(params: Dictionary) -> void:
+		if "target_food" in params:
+			target_food = params["target_food"]
+	
+	func _update_action(delta: float, params: Dictionary) -> void:
+		if target_food == null and "target_food" in params:
+			target_food = params["target_food"]
 		
 		if target_food:
-			var direction = ant.global_position.direction_to(target_food.global_position)
-			ant.velocity = direction * ant.speed.movement_rate
-			ant.energy.deplete(delta * ant.speed.movement_rate * 0.1)
-
-	## Check if the move to food action is completed
-	## @return True if the ant has reached the food, false otherwise
+			# Move towards the food
+			var direction = (target_food.global_position - ant.global_position).normalized()
+			ant.global_position += direction * ant.speed.movement_rate * delta
+	
 	func is_completed() -> bool:
-		return target_food and ant.global_position.distance_to(target_food.global_position) < 1.0
+		return target_food == null or ant.global_position.distance_to(target_food.global_position) < 1.0
 
 ## Action for moving randomly
 class RandomMoveAction extends Action:
@@ -258,7 +303,7 @@ class RandomMoveAction extends Action:
 
 	## Update the random move action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		current_time += delta
 		if current_time >= move_duration or current_direction == Vector2.ZERO:
 			current_time = 0
@@ -279,7 +324,7 @@ class RestAction extends Action:
 
 	## Update the rest action
 	## @param delta Time elapsed since the last update
-	func update(delta: float) -> void:
+	func update(delta: float, params: Dictionary = {}) -> void:
 		ant.energy.replenish(energy_gain_rate * delta)
 
 	## Check if the rest action is completed

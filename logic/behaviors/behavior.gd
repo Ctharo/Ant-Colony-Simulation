@@ -15,6 +15,9 @@ var id: String
 ## Name of the behavior
 var name: String
 
+## Priority of the behavior (higher values indicate higher priority)
+var priority: int = 0
+
 ## List of conditions that must be met for this behavior to execute
 var conditions: Array[Condition] = []
 
@@ -49,16 +52,16 @@ func start(_ant: Ant) -> void:
 		sub_behavior.start(ant)
 
 ## Update the behavior, returns true if the behavior is complete or inactive
-func update(delta: float) -> bool:
+func update(delta: float, params: Dictionary) -> bool:
 	if state != BehaviorState.ACTIVE:
 		return true
 
-	if not should_execute():
+	if not should_execute(params):
 		state = BehaviorState.INACTIVE
 		return true
 
 	if current_sub_behavior:
-		if current_sub_behavior.update(delta):
+		if current_sub_behavior.update(delta, params):
 			current_sub_behavior = null
 			return false
 		elif current_sub_behavior.state == BehaviorState.FAILED:
@@ -73,18 +76,16 @@ func update(delta: float) -> bool:
 			current_action_index += 1
 			return false
 		else:
-			action.update(delta)
+			action.update(delta, params)
 			return false
 	else:
 		state = BehaviorState.COMPLETED
 		return true
 
-	return false  # This line should never be reached
-
 ## Check if all conditions for this behavior are met
-func should_execute() -> bool:
+func should_execute(params: Dictionary) -> bool:
 	for condition in conditions:
-		if not condition.is_met(ant, condition_cache):
+		if not condition.is_met(ant, condition_cache, params):
 			return false
 	return true
 
@@ -99,6 +100,20 @@ func add_action(action: Action) -> void:
 ## Clear the condition cache at the end of each update cycle
 func clear_condition_cache() -> void:
 	condition_cache.clear()
+
+## Reset the behavior to its initial state
+func reset() -> void:
+	state = BehaviorState.INACTIVE
+	current_sub_behavior = null
+	current_action_index = 0
+	condition_cache.clear()
+	
+	for sub_behavior in sub_behaviors:
+		sub_behavior.reset()
+	
+	for action in actions:
+		action.reset()
+
 
 ## Base class for food collection behaviors
 class CollectFoodBehavior extends Behavior:
@@ -124,7 +139,7 @@ class FollowPheromonesBehavior extends Behavior:
 		name = "Follow Pheromones"
 		conditions.append(Condition.FoodPheromoneNearbyCondition.new())
 		conditions.append(Condition.NotCondition.new(Condition.CarryingFoodCondition.new()))
-		actions.append(Action.FollowPheromoneAction.new("food"))
+		actions.append(Action.FollowPheromoneAction.new())
 
 ## Behavior for harvesting food
 class HarvestFoodBehavior extends Behavior:
@@ -157,13 +172,13 @@ class FollowHomePheromonesBehavior extends Behavior:
 		name = "Follow Home Pheromones"
 		conditions.append(Condition.HomePheromoneNearbyCondition.new())
 		conditions.append(Condition.CarryingFoodCondition.new())
-		actions.append(Action.FollowPheromoneAction.new("home"))
+		actions.append(Action.FollowPheromoneAction.new())
 
 ## Behavior for wandering when searching for home
 class WanderForHomeBehavior extends Behavior:
 	func _init():
 		name = "Wander for Home"
-		conditions.append(Condition.NoHomePheromoneNearbyCondition.new())
+		conditions.append(Condition.NotCondition.new(Condition.HomePheromoneNearbyCondition.new()))
 		conditions.append(Condition.CarryingFoodCondition.new())
 		actions.append(Action.RandomMoveAction.new())
 
@@ -172,7 +187,7 @@ class EmitFoodPheromonesBehavior extends Behavior:
 	func _init():
 		name = "Emit Food Pheromones"
 		conditions.append(Condition.CarryingFoodCondition.new())
-		actions.append(Action.EmitPheromoneAction.new("food", 1.0, 5.0))
+		actions.append(Action.EmitPheromoneAction.new())
 
 ## Behavior for resting when energy is low
 class RestBehavior extends Behavior:

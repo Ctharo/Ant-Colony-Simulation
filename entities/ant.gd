@@ -45,10 +45,10 @@ var foods: Foods
 ## The speed capabilities of the ant
 var speed: Speed
 
-## The decision maker for this ant
-var decision_maker: AntDecisionMaker
+## The behavior tree for this ant
+var behavior_tree: BehaviorTree
 
-func _init(config_manager: AntConfigManager):
+func _init():
 	
 	reach = Reach.new()
 	vision = Vision.new()
@@ -59,14 +59,14 @@ func _init(config_manager: AntConfigManager):
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	decision_maker = AntDecisionMaker.new(self, config_manager)
+	behavior_tree = BehaviorTree.new(self, Behavior.WanderForFoodBehavior.new())
 
 
 func _ready() -> void:
 	spawned.emit()
 
 func _process(delta: float) -> void:
-	decision_maker.update(delta)
+	behavior_tree.update(delta)
 
 ## Check if the ant is carrying food
 func is_carrying_food() -> bool:
@@ -92,11 +92,22 @@ func food_in_reach() -> Foods:
 func food_in_view() -> Foods:
 	return Foods.new(foods.in_range(position, vision.distance))
 
+## Return true if food is in view
+func is_food_in_view() -> bool:
+	return not food_in_view().is_empty()
+
 ## Get pheromones sensed by the ant
 func pheromones_sensed(type: String = "") -> Pheromones:
 	var all_pheromones = Pheromones.new() # Assume this is populated from the world
 	var sensed = all_pheromones.sensed(position, sense.distance)
 	return sensed if type.is_empty() else sensed.of_type(type)
+
+## Returns true if pheromones are sensed.
+##@unoptimized
+func is_pheromone_sensed(type: String = "") -> bool:
+	var all_pheromones = Pheromones.new() # Assume this is populated from the world
+	var sensed = all_pheromones.sensed(position, sense.distance)
+	return !sensed.is_empty() if type.is_empty() else !sensed.of_type(type).is_empty()
 
 ## Get ants in view
 func ants_in_view() -> Ants:
