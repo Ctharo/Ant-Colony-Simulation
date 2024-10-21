@@ -1,0 +1,39 @@
+{
+  "behaviors": [
+	{
+	  "id": "searchForFood",
+	  "name": "Search for Food",
+	  "conditions": [
+		{"check": "not ant.is_carrying_food()", "priority": 1},
+		{"check": "ant.energy > 30", "priority": 2}
+	  ],
+	  "actions": [
+		{"type": "move", "target": "nearest_food"},
+		{"type": "harvest", "target": "current_food"}
+	  ]
+	},
+	{
+	  "id": "returnHome",
+	  "name": "Return Home",
+	  "conditions": [
+		{"check": "ant.is_carrying_food()", "priority": 1},
+		{"check": "ant.energy < 20", "priority": 2}
+	  ],
+	  "actions": [
+		{"type": "move", "target": "colony"},
+		{"type": "store", "target": "colony_storage"}
+	  ]
+	},
+	{
+	  "id": "defendColony",
+	  "name": "Defend Colony",
+	  "conditions": [
+		{"check": "ant.enemy_in_range()", "priority": 1}
+	  ],
+	  "actions": [
+		{"type": "move", "target": "nearest_enemy"},
+		{"type": "attack", "target": "current_enemy"}
+	  ]
+	}
+  ]
+}

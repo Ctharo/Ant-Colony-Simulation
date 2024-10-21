@@ -101,7 +101,7 @@ func animate_ui_elements():
 
 func _on_start_simulation_button_pressed():
 	print("Start Simulation pressed")
-	# Add your logic here
+	transition_to_scene("sandbox")
 
 func _on_colony_editor_button_pressed():
 	transition_to_scene("colony_editor")

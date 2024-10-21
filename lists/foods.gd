@@ -1,7 +1,7 @@
 class_name Foods
 extends Iterator
 
-func _init(initial_foods: Foods = Foods.all()):
+func _init(initial_foods: Array[Food] = []):
 	super._init()
 	for food in initial_foods:
 		self.append(food)

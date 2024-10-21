@@ -17,16 +17,16 @@ func cancel() -> void:
 
 class MoveAction extends AntAction:
 	var target_position: Vector2
-	var speed: float
+	var movement_rate: float
 	
-	func _init(_target_position: Vector2, _speed: float):
+	func _init(_target_position: Vector2):
 		target_position = _target_position
-		speed = _speed
+		movement_rate = ant.speed.movement_rate
 	
 	func update(delta: float) -> void:
-		var direction = (target_position - ant.global_position).normalized()
-		ant.velocity = direction * speed
-		ant.energy.deplete(delta * speed * 0.1)  # Energy cost based on speed
+		var direction = ant.global_position.direction_to(target_position)
+		ant.velocity = direction * movement_rate
+		ant.energy.deplete(delta * movement_rate * 0.1)  # Energy cost based on movement_rate
 	
 	func is_completed() -> bool:
 		return ant.global_position.distance_to(target_position) < 1.0
@@ -35,9 +35,9 @@ class HarvestAction extends AntAction:
 	var food_source: Food
 	var harvest_rate: float
 	
-	func _init(_food_source: Food, _harvest_rate: float):
+	func _init(_food_source: Food):
 		food_source = _food_source
-		harvest_rate = _harvest_rate
+		harvest_rate = ant.speed.harvesting_rate
 	
 	func update(delta: float) -> void:
 		var amount_to_harvest = min(harvest_rate * delta, ant.available_carry_mass())
@@ -47,3 +47,15 @@ class HarvestAction extends AntAction:
 	
 	func is_completed() -> bool:
 		return ant.foods.is_full() or food_source.is_depleted()
+
+class StoreAction extends AntAction:
+	var storage_location: Vector2
+	
+	func _init(_storage_location: Vector2):
+		storage_location = _storage_location
+
+class AttackAction extends AntAction:
+	var target_location: Vector2
+	
+	func _init(_target_location: Vector2):
+		target_location = _target_location

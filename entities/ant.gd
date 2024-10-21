@@ -45,11 +45,10 @@ var foods: Foods
 ## The speed capabilities of the ant
 var speed: Speed
 
-func _init(_id: int, _role: String, _position: Vector2, _colony: Colony):
-	id = _id
-	role = _role
-	position = _position
-	colony = _colony
+## The decision maker for this ant
+var decision_maker: AntDecisionMaker
+
+func _init(config_manager: AntConfigManager):
 	
 	reach = Reach.new()
 	vision = Vision.new()
@@ -59,9 +58,15 @@ func _init(_id: int, _role: String, _position: Vector2, _colony: Colony):
 	health = Health.new()
 	foods = Foods.new()
 	speed = Speed.new()
+	
+	decision_maker = AntDecisionMaker.new(self, config_manager)
+
 
 func _ready() -> void:
 	spawned.emit()
+
+func _process(delta: float) -> void:
+	decision_maker.update(delta)
 
 ## Check if the ant is carrying food
 func is_carrying_food() -> bool:
@@ -134,7 +139,8 @@ func harvest_food(food_source: Food, time: float) -> float:
 
 ## Emit a pheromone at the current position
 func emit_pheromone(type: String, concentration: float) -> void:
-	var new_pheromone = Pheromone.new(position, type, concentration, self)
+	print("Emitting pheromone")
+	#var new_pheromone = Pheromone.new(position, type, concentration, self)
 	# Add the pheromone to the world (implementation depends on your world management system)
 
 ## Perform an action (placeholder for more complex behavior)
