@@ -24,10 +24,27 @@ func update(delta: float) -> void:
 ## @return Dictionary containing context information
 func _gather_context() -> Dictionary:
 	var context = {}
-	context["visible_food"] = ant.get_visible_food()
-	context["nearby_ants"] = ant.get_nearby_ants()
-	context["current_location"] = ant.global_position
-	# Add more context information as needed
+	
+	# Ant's basic properties
+	context["current_position"] = ant.global_position
+	context["current_energy"] = ant.energy.current_level
+	context["max_energy"] = ant.energy.max_level
+	context["carried_food_mass"] = ant.foods.mass()
+	context["max_carry_capacity"] = ant.strength.carry_max()
+	
+	# Environment information
+	context["visible_food"] = ant.food_in_view()
+	context["food_in_reach"] = ant.food_in_reach()
+	context["ants_in_view"] = ant.ants_in_view()
+	context["food_pheromones"] = ant.pheromones_sensed("food")
+	context["home_pheromones"] = ant.pheromones_sensed("home")
+	context["distance_to_home"] = ant.global_position.distance_to(ant.colony.global_position)
+	
+	# Thresholds and configuration
+	context["home_threshold"] = 10.0  # Distance to be considered "at home"
+	context["low_energy_threshold"] = 30.0
+	context["overload_threshold"] = 0.9
+	
 	return context
 
 ## Reset the behavior tree

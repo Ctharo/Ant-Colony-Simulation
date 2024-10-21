@@ -146,26 +146,27 @@ class ComparisonCondition extends Condition:
 ## Condition to check if food is in view
 class FoodInViewCondition extends Condition:
 	
-	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
-		return ant.is_food_in_view()
+	func is_met(ant: Ant, _cache: Dictionary, params: Dictionary) -> bool:
+		var is_food_visible: bool = not params.get("food_in_view", []).is_empty()
+		return is_food_visible
 
 ## Condition to check if the ant is carrying food
 class CarryingFoodCondition extends Condition:
-	
-	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
-		return ant.is_carrying_food()
+	func is_met(_ant: Ant, _cache: Dictionary, params: Dictionary) -> bool:
+		var carried_food = params.get("carried_food", 0)
+		return carried_food > 0
 
 ## Condition to check if the ant is at the colony
 class AtHomeCondition extends Condition:
-
-	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
-		return ant.is_at_home()
+	func is_met(_ant: Ant, _cache: Dictionary, params: Dictionary) -> bool:
+		var distance_to_home = params.get("distance_to_home", float('inf'))
+		return distance_to_home <= params.get("home_threshold", 0.0)
 
 ## Condition to check if there are food pheromones nearby
 class FoodPheromoneSensedCondition extends Condition:
-	
-	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
-		return ant.is_pheromone_sensed("food")
+	func is_met(_ant: Ant, _cache: Dictionary, params: Dictionary) -> bool:
+		var food_pheromones = params.get("food_pheromones", [])
+		return notfood_pheromones.is_empty()
 
 ## Condition to check if there are home pheromones nearby
 class HomePheromoneSensedCondition extends Condition:
@@ -173,4 +174,9 @@ class HomePheromoneSensedCondition extends Condition:
 	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
 		return ant.is_pheromone_sensed("home")
 
+## Condition to check if there are home pheromones nearby
+class LowEnergyCondition extends Condition:
+	var low_energy_threshold: float = 20.0
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+		return ant.energy.precentage < low_energy_threshold
 

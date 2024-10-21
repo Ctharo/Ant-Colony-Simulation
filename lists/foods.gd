@@ -7,7 +7,10 @@ func _init(initial_foods: Array[Food] = []):
 		self.append(food)
 
 func mass() -> float:
-	return 0.0
+	var _mass: float
+	for food in self:
+		_mass += food.mass()
+	return _mass
 	
 func locations() -> Array[Vector2]:
 	return [] as Array[Vector2]

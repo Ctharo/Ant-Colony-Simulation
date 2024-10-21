@@ -129,7 +129,7 @@ class CollectFoodBehavior extends Behavior:
 class WanderForFoodBehavior extends Behavior:
 	func _init():
 		name = "Wander for Food"
-		conditions.append(Condition.NoFoodPheromoneSensedCondition.new())
+		conditions.append(Condition.NotCondition.new(Condition.FoodPheromoneSensedCondition.new()))
 		conditions.append(Condition.NotCondition.new(Condition.CarryingFoodCondition.new()))
 		actions.append(Action.RandomMoveAction.new())
 
@@ -137,7 +137,7 @@ class WanderForFoodBehavior extends Behavior:
 class FollowPheromonesBehavior extends Behavior:
 	func _init():
 		name = "Follow Pheromones"
-		conditions.append(Condition.FoodPheromoneNearbyCondition.new())
+		conditions.append(Condition.FoodPheromoneSensedCondition.new())
 		conditions.append(Condition.NotCondition.new(Condition.CarryingFoodCondition.new()))
 		actions.append(Action.FollowPheromoneAction.new())
 
@@ -146,7 +146,7 @@ class HarvestFoodBehavior extends Behavior:
 	func _init():
 		name = "Harvest Food"
 		conditions.append(Condition.FoodInViewCondition.new())
-		conditions.append(Condition.NotCondition.new(Condition.OverloadedWithFoodCondition.new()))
+		#conditions.append(Condition.NotCondition.new(Condition.OverloadedWithFoodCondition.new()))
 		actions.append(Action.MoveToFoodAction.new())
 		actions.append(Action.HarvestAction.new())
 
@@ -170,7 +170,7 @@ class StoreFoodBehavior extends Behavior:
 class FollowHomePheromonesBehavior extends Behavior:
 	func _init():
 		name = "Follow Home Pheromones"
-		conditions.append(Condition.HomePheromoneNearbyCondition.new())
+		conditions.append(Condition.HomePheromoneSensedCondition.new())
 		conditions.append(Condition.CarryingFoodCondition.new())
 		actions.append(Action.FollowPheromoneAction.new())
 
@@ -178,7 +178,7 @@ class FollowHomePheromonesBehavior extends Behavior:
 class WanderForHomeBehavior extends Behavior:
 	func _init():
 		name = "Wander for Home"
-		conditions.append(Condition.NotCondition.new(Condition.HomePheromoneNearbyCondition.new()))
+		conditions.append(Condition.NotCondition.new(Condition.HomePheromoneSensedCondition.new()))
 		conditions.append(Condition.CarryingFoodCondition.new())
 		actions.append(Action.RandomMoveAction.new())
 
