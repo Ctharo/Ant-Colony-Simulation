@@ -64,7 +64,7 @@ func update(delta: float, params: Dictionary) -> bool:
 		if current_sub_behavior.update(delta, params):
 			current_sub_behavior = null
 			return false
-		elif current_sub_behavior.state == state.FAILED:
+		elif current_sub_behavior.state == State.FAILED:
 			state = State.FAILED
 			return true
 		else:
@@ -129,70 +129,70 @@ class CollectFoodBehavior extends Behavior:
 class WanderForFood extends Behavior:
 	func _init():
 		name = "Wander for Food"
-		conditions.append(Condition.Not.new(Condition.FoodPheromoneSensedCondition.new()))
-		conditions.append(Condition.NotCondition.new(Condition.CarryingFoodCondition.new()))
-		actions.append(Action.RandomMoveAction.new())
+		conditions.append(Operator.Not.new(Condition.FoodPheromoneSensed.new()))
+		conditions.append(Operator.Not.new(Condition.CarryingFood.new()))
+		actions.append(Action.RandomMove.new())
 
 ## Behavior for following food pheromones
-class FollowPheromonesBehavior extends Behavior:
+class FollowPheromones extends Behavior:
 	func _init():
 		name = "Follow Pheromones"
-		conditions.append(Condition.FoodPheromoneSensedCondition.new())
-		conditions.append(Condition.NotCondition.new(Condition.CarryingFoodCondition.new()))
-		actions.append(Action.FollowPheromoneAction.new())
+		conditions.append(Condition.FoodPheromoneSensed.new())
+		conditions.append(Operator.Not.new(Condition.CarryingFood.new()))
+		actions.append(Action.FollowPheromone.new())
 
 ## Behavior for harvesting food
-class HarvestFoodBehavior extends Behavior:
+class HarvestFood extends Behavior:
 	func _init():
 		name = "Harvest Food"
-		conditions.append(Condition.FoodInViewCondition.new())
-		conditions.append(Condition.NotCondition.new(Condition.OverloadedWithFoodCondition.new()))
-		actions.append(Action.MoveToFoodAction.new())
-		actions.append(Action.HarvestAction.new())
+		conditions.append(Condition.FoodInView.new())
+		conditions.append(Operator.Not.new(Condition.OverloadedWithFood.new()))
+		actions.append(Action.MoveToFood.new())
+		actions.append(Action.Harvest.new())
 
 ## Behavior for returning to the colony
-class ReturnHomeBehavior extends Behavior:
+class ReturnHome extends Behavior:
 	func _init():
 		name = "Return Home"
-		conditions.append(Condition.CarryingFoodCondition.new())
-		add_sub_behavior(FollowHomePheromonesBehavior.new())
-		add_sub_behavior(WanderForHomeBehavior.new())
+		conditions.append(Condition.CarryingFood.new())
+		add_sub_behavior(FollowHomePheromones.new())
+		add_sub_behavior(WanderForHome.new())
 
 ## Behavior for storing food in the colony
-class StoreFoodBehavior extends Behavior:
+class StoreFood extends Behavior:
 	func _init():
 		name = "Store Food"
-		conditions.append(Condition.AtHomeCondition.new())
-		conditions.append(Condition.CarryingFoodCondition.new())
-		actions.append(Action.StoreAction.new())
+		conditions.append(Condition.AtHome.new())
+		conditions.append(Condition.CarryingFood.new())
+		actions.append(Action.Store.new())
 
 ## Behavior for following home pheromones
-class FollowHomePheromonesBehavior extends Behavior:
+class FollowHomePheromones extends Behavior:
 	func _init():
 		name = "Follow Home Pheromones"
-		conditions.append(Condition.HomePheromoneSensedCondition.new())
-		conditions.append(Condition.CarryingFoodCondition.new())
-		actions.append(Action.FollowPheromoneAction.new())
+		conditions.append(Condition.HomePheromoneSensed.new())
+		conditions.append(Condition.CarryingFood.new())
+		actions.append(Action.FollowPheromone.new())
 
 ## Behavior for wandering when searching for home
-class WanderForHomeBehavior extends Behavior:
+class WanderForHome extends Behavior:
 	func _init():
 		name = "Wander for Home"
-		conditions.append(Condition.NotCondition.new(Condition.HomePheromoneSensedCondition.new()))
-		conditions.append(Condition.CarryingFoodCondition.new())
-		actions.append(Action.RandomMoveAction.new())
+		conditions.append(Operator.Not.new(Condition.HomePheromoneSensed.new()))
+		conditions.append(Condition.CarryingFood.new())
+		actions.append(Action.RandomMove.new())
 
 ## Behavior for emitting food pheromones
 class EmitFoodPheromonesBehavior extends Behavior:
 	func _init():
 		name = "Emit Food Pheromones"
-		conditions.append(Condition.CarryingFoodCondition.new())
-		actions.append(Action.EmitPheromoneAction.new())
+		conditions.append(Condition.CarryingFood.new())
+		actions.append(Action.EmitPheromone.new())
 
 ## Behavior for resting when energy is low
-class RestBehavior extends Behavior:
+class Rest extends Behavior:
 	func _init():
 		name = "Rest"
-		conditions.append(Condition.LowEnergyCondition.new())
-		conditions.append(Condition.AtHomeCondition.new())
-		actions.append(Action.RestAction.new())
+		conditions.append(Condition.LowEnergy.new())
+		conditions.append(Condition.AtHome.new())
+		actions.append(Action.Rest.new())

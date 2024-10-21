@@ -9,6 +9,7 @@ extends RefCounted
 func is_met(_ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
 	return false
 
+
 ## Condition for comparing numeric values
 class Comparison extends Condition:
 	enum ComparisonType { LESS, LESS_EQUAL, EQUAL, NOT_EQUAL, GREATER_EQUAL, GREATER }

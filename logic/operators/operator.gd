@@ -4,6 +4,7 @@ extends Condition
 ## List of conditions or operators to be evaluated
 var operands: Array[Condition] = []
 
+
 ## Add an operand to the operator
 ## @param operand The condition or operator to add
 func add_operand(operand: Condition) -> void:
@@ -124,3 +125,4 @@ class Comparison extends Condition:
 				return lhs_value > rhs_value
 		
 		return false
+
