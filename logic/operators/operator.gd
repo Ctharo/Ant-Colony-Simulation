@@ -66,10 +66,6 @@ class Or extends Operator:
 
 ## Logical NOT operator
 class Not extends Operator:
-	## Initialize the NOT operator
-	## @param operand The condition to negate
-	func _init(operand: Condition):
-		add_operand(operand)
 	
 	## Check if the negated condition is not met
 	## @param ant The ant to check the condition for
