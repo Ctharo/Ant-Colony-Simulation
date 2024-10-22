@@ -101,7 +101,7 @@ func animate_ui_elements():
 
 func _on_start_simulation_button_pressed():
 	print("Start Simulation pressed")
-	# Add your logic here
+	transition_to_scene("sandbox")
 
 func _on_colony_editor_button_pressed():
 	transition_to_scene("colony_editor")
@@ -122,6 +122,6 @@ func transition_to_scene(scene_name: String):
 	tween.tween_callback(Callable(self, "_change_scene").bind(scene_name))
 
 func _change_scene(scene_name: String):
-	var error = get_tree().change_scene_to_file("res://" + scene_name + "/" + scene_name + ".tscn")
+	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
 		push_error("Failed to load scene: " + scene_name)

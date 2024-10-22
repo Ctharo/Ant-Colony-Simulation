@@ -2,7 +2,7 @@ extends Control
 class_name ColonyEditor 
 
 
-var behavior_editor: BehaviorEditorUI
+var behavior_editor: BehaviorEditor
 
 var profile_list: ItemList
 var profile_dropdown: OptionButton
@@ -17,6 +17,7 @@ var back_button: Button
 var main_container: VBoxContainer
 var info_label: RichTextLabel
 var data_manager: DataManager
+var rule_manager: RuleManager
 
 # Colony Behavior Editor components
 var behavior_popup: Popup
@@ -25,7 +26,7 @@ var add_rule_button: Button
 var edit_rule_button: Button
 var delete_rule_button: Button
 var save_behavior_button: Button
-var rule_manager: RuleManager
+
 
 
 var profile_id_to_name: Dictionary = {}
@@ -48,6 +49,11 @@ func create_ui():
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 24)
 	main_container.add_child(title)
+
+	behavior_list = ItemList.new()
+	behavior_list.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	behavior_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main_container.add_child(behavior_list)
 
 	profile_dropdown = OptionButton.new()
 	profile_dropdown.connect("item_selected", Callable(self, "_on_profile_selected"))
@@ -185,7 +191,7 @@ func update_available_ant_list(colony_name: String):
 	var all_profiles = data_manager.get_all_ant_profiles()
 	var colony_profile_ids = data_manager.get_ant_profiles_for_colony(colony_name)
 	for profile_id in all_profiles:
-		if profile_id not in colony_profile_ids:
+		if profile_id not in colony_profile_ids: # Show ants not already found in colony
 			var profile_name = all_profiles[profile_id]["name"]
 			available_ant_list.add_item(profile_name)
 			profile_id_to_name[profile_name] = profile_id
@@ -219,18 +225,6 @@ func _on_remove_ant_profile_pressed():
 func _on_edit_colony_behavior_pressed():
 	var selected_colony = profile_dropdown.get_item_text(profile_dropdown.selected)
 	show_colony_behavior(selected_colony)
-
-
-func format_action(action: Dictionary) -> String:
-	if action["type"] == "spawn_ant":
-		return "spawn ant of type '%s'" % action["profile"]
-	elif action["type"] == "set_property":
-		return "set %s to %s" % [action["property"], action["value"]]
-	return "Unknown action"
-
-
-
-
 
 func _on_new_colony_pressed():
 	var dialog = ConfirmationDialog.new()
@@ -291,7 +285,7 @@ func _confirm_delete_colony(colony_name: String):
 	info_label.text = "No profile selected"
 
 func _on_back_pressed():
-	get_tree().change_scene_to_file("res://main.tscn")
+	get_tree().change_scene_to_file("res://ui/main.tscn")
 
 # Helper function to update button states
 func update_button_states():
@@ -371,11 +365,7 @@ func _on_save_behavior_pressed():
 	behavior_popup.hide()
 
 func show_colony_behavior(colony_name: String):
-	behavior_list.clear()
-	var colony_behavior = rule_manager.load_rules(colony_name)
-	for rule in colony_behavior:
-		behavior_list.add_item(rule_manager.format_rule(rule))
-	behavior_popup.popup_centered()
+	behavior_editor.show_behavior(colony_name, true)
 	
 func create_behavior_editor():
 	behavior_popup = Popup.new()
@@ -386,7 +376,7 @@ func create_behavior_editor():
 	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
 	behavior_popup.add_child(container)
 
-	behavior_editor = BehaviorEditorUI.new()
+	behavior_editor = BehaviorEditor.new()
 	container.add_child(behavior_editor)
 
 	var save_button = Button.new()

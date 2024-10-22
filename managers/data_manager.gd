@@ -31,9 +31,9 @@ func load_data() -> void:
 	current_colony_data = load_file(COLONY_SAVE_FILE, "res://default_colony_profiles.json")
 	current_ant_data = load_file(ANT_SAVE_FILE, "res://default_ant_profiles.json")
 
-func load_file(save_file: String, default_file: String) -> Dictionary:
-	if FileAccess.file_exists(SAVE_DIR + save_file):
-		var file = FileAccess.open(SAVE_DIR + save_file, FileAccess.READ)
+func load_file(_save_file: String, default_file: String) -> Dictionary:
+	if FileAccess.file_exists(SAVE_DIR + _save_file):
+		var file = FileAccess.open(SAVE_DIR + _save_file, FileAccess.READ)
 		if file:
 			var json_string = file.get_as_text()
 			file.close()
@@ -41,16 +41,16 @@ func load_file(save_file: String, default_file: String) -> Dictionary:
 			if json_result is Dictionary:
 				return json_result
 			else:
-				push_error("Error: Malformed save data in " + save_file)
+				push_error("Error: Malformed save data in " + _save_file)
 	
-	push_warning("No save file found for " + save_file + ". Loading default data.")
+	push_warning("No save file found for " + _save_file + ". Loading default data.")
 	var default_data = FileAccess.open(default_file, FileAccess.READ)
 	if default_data:
 		var json_string = default_data.get_as_text()
 		default_data.close()
 		var json_result = JSON.parse_string(json_string)
 		if json_result is Dictionary:
-			save_file(save_file, json_result)  # Save the default data
+			save_file(_save_file, json_result)  # Save the default data
 			return json_result
 		else:
 			push_error("Error: Malformed default data in " + default_file)
