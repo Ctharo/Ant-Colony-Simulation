@@ -10,33 +10,46 @@ var operands: Array[Condition] = []
 func add_operand(operand: Condition) -> void:
 	operands.append(operand)
 
-## Condition that performs a specific check
-class LeafCondition extends Operator:
-	## The actual check to be performed
-	var check: Callable
-	
-	## Unique identifier for this condition
-	var condition_id: String
-	
-	## Initialize the LeafCondition
-	## @param _check The callable to use for the condition check
-	## @param _condition_id Unique identifier for this condition
-	func _init(_check: Callable, _condition_id: String):
-		check = _check
-		condition_id = _condition_id
-	
-	## Check if the condition is met, using cache if available
-	## @param ant The ant to check the condition for
-	## @param cache Dictionary to cache condition results
-	## @param params Dictionary containing context parameters
-	## @return True if the condition is met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
-		if condition_id in cache:
-			return cache[condition_id]
-		var result = check.call(ant, params)
-		cache[condition_id] = result
-		return result
+## Serialize the operator to a dictionary
+func to_dict() -> Dictionary:
+	var base_dict := {
+		"type": get_script().resource_path,
+		"operator_type": _get_operator_type(),
+		"operands": []
+	}
+	for operand in operands:
+		base_dict["operands"].append(operand.to_dict())
+	return base_dict
 
+## Create an operator from a dictionary
+## @param data Dictionary containing serialized operator data
+## @return New operator instance
+static func from_dict(data: Dictionary) -> Operator:
+	var operator_type: String = data["operator_type"]
+	var operator: Operator
+	
+	match operator_type:
+		"and":
+			operator = And.new()
+		"or":
+			operator = Or.new()
+		"not":
+			operator = Not.new()
+		_:
+			push_error("Unknown operator type: %s" % operator_type)
+			return null
+	
+	for operand_data in data["operands"]:
+		var operand := Condition.from_dict(operand_data)
+		if operand:
+			operator.add_operand(operand)
+	
+	return operator
+
+
+## Get the type of operator for serialization
+func _get_operator_type() -> String:
+	return "base"
 
 ## Logical AND operator
 class And extends Operator:
@@ -50,6 +63,9 @@ class And extends Operator:
 			if not operand.is_met(ant, cache, params):
 				return false
 		return true
+	
+	func _get_operator_type() -> String:
+		return "and"
 
 ## Logical OR operator
 class Or extends Operator:
@@ -63,17 +79,25 @@ class Or extends Operator:
 			if operand.is_met(ant, cache, params):
 				return true
 		return false
+	
+	func _get_operator_type() -> String:
+		return "or"
 
 ## Logical NOT operator
 class Not extends Operator:
-	
 	## Check if the negated condition is not met
 	## @param ant The ant to check the condition for
 	## @param cache Dictionary to cache condition results
 	## @param params Dictionary containing context parameters
 	## @return True if the negated condition is not met, false otherwise
 	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+		if operands.size() != 1:
+			push_error("NOT operator must have exactly one operand")
+			return false
 		return not operands[0].is_met(ant, cache, params)
+	
+	func _get_operator_type() -> String:
+		return "not"
 
 ## Condition for comparing numeric values
 class Comparison extends Condition:
@@ -142,3 +166,4 @@ static func not_condition(condition: Condition) -> Condition:
 	var not_op = Operator.Not.new()
 	not_op.add_operand(condition)
 	return not_op
+	
