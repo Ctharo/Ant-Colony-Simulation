@@ -59,7 +59,7 @@ func _init():
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	behavior_tree = BehaviorTree.new(self, Behavior.WanderForFood.new())
+	behavior_tree = BehaviorTree.new()
 
 
 func _ready() -> void:

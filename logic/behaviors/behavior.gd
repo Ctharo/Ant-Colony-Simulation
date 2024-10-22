@@ -330,7 +330,13 @@ class BehaviorBuilder:
 class CollectFood extends Behavior:
 	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
 		return BehaviorBuilder.new(CollectFood, priority)\
-			.with_condition(Operator.not_condition(Condition.LowEnergy.new()))\
+			.with_condition(
+				Operator.not_condition(
+					Condition.LowEnergy.create()\
+						.with_param("threshold", 20.0)\
+						.build()
+				)
+			)\
 			.with_sub_behavior(
 				SearchForFood.create(Priority.MEDIUM).build()
 			)\
@@ -348,9 +354,13 @@ class SearchForFood extends Behavior:
 			.with_condition(
 				Operator.not_condition(
 					Operator.or_condition([
-						Condition.OverloadedWithFood.new(),
-						Condition.LowEnergy.new(),
-						Condition.CarryingFood.new()
+						Condition.OverloadedWithFood.create()\
+							.with_param("threshold", 0.9)\
+							.build(),
+						Condition.LowEnergy.create()\
+							.with_param("threshold", 20.0)\
+							.build(),
+						Condition.CarryingFood.create().build()
 					])
 				)
 			)\
@@ -361,39 +371,35 @@ class SearchForFood extends Behavior:
 				WanderForFood.create(Priority.LOW).build()
 			)
 
-## Behavior for wandering when searching for food
-class WanderForFood extends Behavior:
-	static func create(priority: Priority = Priority.LOW) -> BehaviorBuilder:
-		return BehaviorBuilder.new(WanderForFood, priority)\
-			.with_condition(
-				Operator.not_condition(Condition.FoodPheromoneSensed.new())
-			)\
-			.with_action(Action.RandomMove.new())
-
-## Behavior for following food pheromones
-class FollowFoodPheromones extends Behavior:
-	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
-		return BehaviorBuilder.new(FollowFoodPheromones, priority)\
-			.with_condition(Condition.FoodPheromoneSensed.new())\
-			.with_action(Action.FollowPheromone.new())
-
 ## Behavior for harvesting food
 class HarvestFood extends Behavior:
 	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
 		return BehaviorBuilder.new(HarvestFood, priority)\
 			.with_condition(
 				Operator.and_condition([
-					Condition.FoodInView.new(),
+					Condition.FoodInView.create().build(),
 					Operator.not_condition(
 						Operator.or_condition([
-							Condition.OverloadedWithFood.new(),
-							Condition.LowEnergy.new()
+							Condition.OverloadedWithFood.create()\
+								.with_param("threshold", 0.9)\
+								.build(),
+							Condition.LowEnergy.create()\
+								.with_param("threshold", 20.0)\
+								.build()
 						])
 					)
 				])
 			)\
-			.with_action(Action.MoveToFood.new())\
-			.with_action(Action.Harvest.new())
+			.with_action(
+				Action.MoveToFood.create()\
+					.with_param("movement_rate", 1.0)\
+					.build()
+			)\
+			.with_action(
+				Action.Harvest.create()\
+					.with_param("harvest_rate", 1.0)\
+					.build()
+			)
 
 ## Behavior for returning to the colony
 class ReturnToColony extends Behavior:
@@ -401,8 +407,12 @@ class ReturnToColony extends Behavior:
 		return BehaviorBuilder.new(ReturnToColony, priority)\
 			.with_condition(
 				Operator.or_condition([
-					Condition.LowEnergy.new(),
-					Condition.OverloadedWithFood.new()
+					Condition.LowEnergy.create()\
+						.with_param("threshold", 20.0)\
+						.build(),
+					Condition.OverloadedWithFood.create()\
+						.with_param("threshold", 0.9)\
+						.build()
 				])
 			)\
 			.with_sub_behavior(
@@ -421,11 +431,17 @@ class StoreFood extends Behavior:
 		return BehaviorBuilder.new(StoreFood, priority)\
 			.with_condition(
 				Operator.and_condition([
-					Condition.AtHome.new(),
-					Condition.CarryingFood.new()
+					Condition.AtHome.create()\
+						.with_param("home_threshold", 10.0)\
+						.build(),
+					Condition.CarryingFood.create().build()
 				])
 			)\
-			.with_action(Action.Store.new())
+			.with_action(
+				Action.Store.create()\
+					.with_param("store_rate_modifier", 1.0)\
+					.build()
+			)
 
 ## Behavior for resting when energy is low
 class Rest extends Behavior:
@@ -433,24 +449,76 @@ class Rest extends Behavior:
 		return BehaviorBuilder.new(Rest, priority)\
 			.with_condition(
 				Operator.and_condition([
-					Condition.LowEnergy.new(),
-					Condition.AtHome.new()
+					Condition.LowEnergy.create()\
+						.with_param("threshold", 20.0)\
+						.build(),
+					Condition.AtHome.create()\
+						.with_param("home_threshold", 10.0)\
+						.build()
 				])
 			)\
-			.with_action(Action.Rest.new())
+			.with_action(
+				Action.Rest.create()\
+					.with_param("energy_gain_rate", 10.0)\
+					.build()
+			)
 
 ## Behavior for following home pheromones
 class FollowHomePheromones extends Behavior:
 	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
 		return BehaviorBuilder.new(FollowHomePheromones, priority)\
-			.with_condition(Condition.HomePheromoneSensed.new())\
-			.with_action(Action.FollowPheromone.new()._init_action({"pheromone:type": "home"}))
+			.with_condition(
+				Condition.HomePheromoneSensed.create().build()
+			)\
+			.with_action(
+				Action.FollowPheromone.create()\
+					.with_param("pheromone_type", "home")\
+					.with_param("follow_speed_modifier", 1.0)\
+					.build()
+			)
 
+## Behavior for following food pheromones
+class FollowFoodPheromones extends Behavior:
+	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(FollowFoodPheromones, priority)\
+			.with_condition(
+				Condition.FoodPheromoneSensed.create().build()
+			)\
+			.with_action(
+				Action.FollowPheromone.create()\
+					.with_param("pheromone_type", "food")\
+					.with_param("follow_speed_modifier", 1.0)\
+					.build()
+			)
+			
 ## Behavior for wandering when searching for home
 class WanderForHome extends Behavior:
 	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
 		return BehaviorBuilder.new(WanderForHome, priority)\
 			.with_condition(
-				Operator.not_condition(Condition.HomePheromoneSensed.new())
+				Operator.not_condition(
+					Condition.HomePheromoneSensed.create().build()
+				)
 			)\
-			.with_action(Action.RandomMove.new())
+			.with_action(
+				Action.RandomMove.create()\
+					.with_param("move_duration", 2.0)\
+					.with_param("movement_rate_modifier", 1.0)\
+					.build()
+			)
+
+## Behavior for wandering when searching for food
+class WanderForFood extends Behavior:
+	static func create(priority: Priority = Priority.LOW) -> BehaviorBuilder:
+		return BehaviorBuilder.new(WanderForFood, priority)\
+			.with_condition(
+				Operator.not_condition(
+					Condition.FoodPheromoneSensed.create().build()
+				)
+			)\
+			.with_action(
+				Action.RandomMove.create()\
+					.with_param("move_duration", 2.0)\
+					.with_param("movement_rate_modifier", 1.0)\
+					.build()
+			)
