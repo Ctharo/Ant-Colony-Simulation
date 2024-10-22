@@ -1,10 +1,9 @@
-extends Node
 class_name Pheromone
+extends Node2D
 
 signal spawned
 signal died
 
-var position: Vector2
 var type: String
 var concentration: float
 var emitted_by: Ant

@@ -1,5 +1,5 @@
 class_name Ant
-extends Node
+extends Node2D
 
 signal spawned
 signal food_spotted
@@ -14,9 +14,6 @@ var id: int
 
 ## The role of this ant in the colony
 var role: String
-
-## The current position of the ant
-var position: Vector2
 
 ## The colony this ant belongs to
 var colony: Colony
@@ -86,11 +83,11 @@ func is_friendly(other_colony: Colony) -> bool:
 
 ## Get food items within reach
 func food_in_reach() -> Foods:
-	return Foods.new(foods.in_range(position, reach.distance))
+	return Foods.in_reach(position, reach.distance)
 
 ## Get food items in view
 func food_in_view() -> Foods:
-	return foods.reachable(self)
+	return Foods.in_view(position, vision.distance)
 
 ## Return true if food is in view
 func is_food_in_view() -> bool:
@@ -111,8 +108,7 @@ func is_pheromone_sensed(type: String = "") -> bool:
 
 ## Get ants in view
 func ants_in_view() -> Ants:
-	var all_ants = Ants.new() # Assume this is populated from the world
-	return all_ants.in_range(position, vision.distance)
+	return Ants.in_view(position, vision.distance)
 
 ## Check if the ant is at its home colony
 func is_at_home() -> bool:

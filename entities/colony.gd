@@ -1,5 +1,5 @@
 class_name Colony
-extends Node
+extends Node2D
 
 var radius: float = 10.0
 var foods: Foods

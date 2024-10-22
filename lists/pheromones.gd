@@ -1,22 +1,32 @@
 class_name Pheromones
 extends Iterator
 
-func _init(initial_pheromones: Pheromones = Pheromones.all()):
+func _init(initial_pheromones: Array[Pheromone] = []):
 	super._init()
 	for pheromone in initial_pheromones:
 		self.append(pheromone)
 
 # Filtering methods
-func sensed(sensing_position: Vector2, sense_range: float) -> Pheromones:
-	return Pheromones.new(self.filter(func(p): 
-		return p.position.distance_to(sensing_position) <= sense_range
-	))
+static func sensed(sensing_position: Vector2, sense_range: float) -> Pheromones:
+	var p: Pheromones = Pheromones.new()
+	for pheromone: Pheromone in Pheromones.all():
+		if pheromone.get_position().distance_to(sensing_position) <= sense_range:
+			p.append(pheromone)
+	return p
 
-func of_type(pheromone_type: String) -> Pheromones:
-	return Pheromones.new(self.filter(func(p): return p.type == pheromone_type))
+static func of_type(pheromone_type: String) -> Pheromones:
+	var p: Pheromones = Pheromones.new()
+	for pheromone: Pheromone in Pheromones.all():
+		if pheromone.type == pheromone_type:
+			p.append(pheromone)
+	return p
 
-func emitted_by_colony(colony: Colony) -> Pheromones:
-	return Pheromones.new(self.filter(func(p): return p.emitted_by.colony == colony))
+static func emitted_by_colony(colony: Colony) -> Pheromones:
+	var p: Pheromones = Pheromones.new()
+	for pheromone: Pheromone in Pheromones.all():
+		if pheromone.emitted_by.ant.colony == colony:
+			p.append(pheromone)
+	return p
 
 # Sorting methods
 func sort_by_concentration(descending: bool = true) -> Pheromones:
@@ -55,8 +65,6 @@ func total_concentration() -> float:
 	return self.reduce(func(acc, p): return acc + p.concentration, 0.0)
 
 # Utility methods
-func limit(count: int) -> Pheromones:
-	return Pheromones.new(self.slice(0, count))
 
 func nearest(to_position: Vector2) -> Pheromone:
 	if self.is_empty():

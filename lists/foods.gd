@@ -21,11 +21,26 @@ func mass() -> float:
 func locations() -> Array[Vector2]:
 	return [] as Array[Vector2]
 
-func are_available() -> Foods:
-	return Foods.new(reduce(func (food): return food.is_available))
+static func are_available() -> Foods:
+	var f: Foods = Foods.new()
+	for food: Food in all():
+		if food.is_available():
+			f.append(food)
+	return f
 
-func reachable(ant: Ant) -> Foods:
-	return Foods.new(reduce(func (food): return food.distance_to(ant) < ant.reach.distance))
+static func in_reach(location: Vector2, reach_distance: float) -> Foods:
+	var f: Foods = Foods.new()
+	for food: Food in all():
+		if food.get_position().distance_to(location) <= reach_distance:
+			f.append(food)
+	return f
+
+static func in_view(location: Vector2, view_distance: float) -> Foods:
+	var f: Foods = Foods.new()
+	for food: Food in all():
+		if food.get_position().distance_to(location) <= view_distance:
+			f.append(food)
+	return f
 
 static func all() -> Foods:
 	return FoodManager.get_all()
