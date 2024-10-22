@@ -4,7 +4,7 @@ extends Node
 signal depleted
 
 ## The maximum energy level
-var max_level: float
+var max_level: float = 100.0
 
 ## The current energy level
 var current_level: float = max_level :

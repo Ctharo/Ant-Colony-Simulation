@@ -21,8 +21,14 @@ var ant: Ant:
 	set(value):
 		ant = value
 
+## Configuration manager for behaviors
+var behavior_config: BehaviorConfig
+
 ## Last known active behavior for change detection
 var _last_active_behavior: Behavior
+
+## Default configuration file path
+const DEFAULT_CONFIG_PATH = "res://behaviors.json"
 
 ## Context builder for gathering ant state and environment information
 class ContextBuilder:
@@ -41,7 +47,6 @@ class ContextBuilder:
 			push_error("ContextBuilder: Invalid ant reference")
 			return self
 			
-		context["current_position"] = ant.global_position
 		context["current_energy"] = ant.energy.current_level
 		context["max_energy"] = ant.energy.max_level
 		context["carried_food_mass"] = ant.foods.mass()
@@ -78,22 +83,47 @@ class Builder:
 	## The ant for this behavior tree
 	var ant: Ant
 	
-	## The root behavior for this tree
-	var root_behavior: Behavior
+	## Configuration path for behaviors
+	var config_path: String = DEFAULT_CONFIG_PATH
 	
 	func _init(_ant: Ant):
 		ant = _ant
 	
-	## Set the root behavior for the tree
-	func with_root_behavior(behavior: Behavior) -> Builder:
-		root_behavior = behavior
+	## Set a custom configuration file path
+	func with_config_path(path: String) -> Builder:
+		config_path = path
 		return self
 	
 	## Build and return the configured behavior tree
 	func build() -> BehaviorTree:
 		var tree := BehaviorTree.new()
 		tree.ant = ant
-		tree.root_behavior = root_behavior
+		
+		# Load behavior configuration
+		tree.behavior_config = BehaviorConfig.new()
+		var load_result = tree.behavior_config.load_from_json(config_path)
+		if load_result != OK:
+			push_error("Failed to load behavior config from: %s" % config_path)
+			return tree
+		
+		# Create root behavior (CollectFood is the main behavior)
+		tree.root_behavior = tree.behavior_config.create_behavior(
+			"CollectFood", 
+			Behavior.Priority.MEDIUM
+		)
+		
+		# Add Rest behavior as a high-priority alternative
+		var rest_behavior = tree.behavior_config.create_behavior(
+			"Rest",
+			Behavior.Priority.CRITICAL
+		)
+		
+		# Create a composite root that includes both CollectFood and Rest
+		var composite_root = Behavior.new(Behavior.Priority.MEDIUM)
+		composite_root.add_sub_behavior(rest_behavior)
+		composite_root.add_sub_behavior(tree.root_behavior)
+		tree.root_behavior = composite_root
+		
 		return tree
 
 ## Initialize the BehaviorTree with an ant
@@ -101,7 +131,7 @@ static func create(ant: Ant) -> Builder:
 	return Builder.new(ant)
 
 ## Update the behavior tree
-func _process(delta: float) -> void:
+func update(delta: float) -> void:
 	if not is_instance_valid(ant) or not root_behavior:
 		push_warning("BehaviorTree: Ant or root behavior not set")
 		return
@@ -180,48 +210,12 @@ func print_active_behavior_chain() -> void:
 ## Serialize the behavior tree to a dictionary
 func to_dict() -> Dictionary:
 	return {
+		"config_path": behavior_config.get_path() if behavior_config else DEFAULT_CONFIG_PATH,
 		"root_behavior": root_behavior.to_dict() if root_behavior else null
 	}
 
 ## Create a behavior tree from a dictionary
 static func from_dict(data: Dictionary, ant: Ant) -> BehaviorTree:
-	var tree := BehaviorTree.new()
-	tree.ant = ant
-	
-	if data.has("root_behavior") and data["root_behavior"] != null:
-		tree.root_behavior = Behavior.from_dict(data["root_behavior"])
-	
-	return tree
-
-## Save behavior tree to a JSON file
-static func save_to_json(tree: BehaviorTree, filepath: String) -> Error:
-	if not tree:
-		return ERR_INVALID_PARAMETER
-		
-	var file := FileAccess.open(filepath, FileAccess.WRITE)
-	if file == null:
-		return FileAccess.get_open_error()
-	
-	var json := JSON.new()
-	var data := tree.to_dict()
-	var json_string := json.stringify(data, "\t")
-	
-	file.store_string(json_string)
-	return OK
-
-## Load behavior tree from a JSON file
-static func load_from_json(filepath: String, ant: Ant) -> BehaviorTree:
-	var file := FileAccess.open(filepath, FileAccess.READ)
-	if file == null:
-		push_error("Failed to open file: %s" % filepath)
-		return null
-	
-	var json := JSON.new()
-	var json_string := file.get_as_text()
-	var parse_result := json.parse(json_string)
-	
-	if parse_result != OK:
-		push_error("Failed to parse JSON: %s" % json.get_error_message())
-		return null
-	
-	return BehaviorTree.from_dict(json.data, ant)
+	return create(ant)\
+		.with_config_path(data.get("config_path", DEFAULT_CONFIG_PATH))\
+		.build()

@@ -59,7 +59,7 @@ func _init():
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	behavior_tree = BehaviorTree.new()
+	behavior_tree = BehaviorTree.Builder.new(self).build()
 
 
 func _ready() -> void:
@@ -90,7 +90,7 @@ func food_in_reach() -> Foods:
 
 ## Get food items in view
 func food_in_view() -> Foods:
-	return Foods.new(foods.in_range(position, vision.distance))
+	return foods.reachable(self)
 
 ## Return true if food is in view
 func is_food_in_view() -> bool:

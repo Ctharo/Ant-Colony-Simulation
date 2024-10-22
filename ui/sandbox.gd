@@ -17,3 +17,4 @@ func spawn_ants(num_to_spawn: int = 1) -> void:
 		add_child(ant)
 
 		i += 1
+		

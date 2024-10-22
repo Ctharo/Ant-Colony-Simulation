@@ -323,10 +323,9 @@ class MoveToFood extends Action:
 			push_error("No target food to move to")
 			return
 			
-		var movement_rate = params.get("movement_rate", ant.speed.movement_rate)
+		var movement_rate_modifier = params.get("movement_rate_modifier", 1.0)
 		var direction = (current_target_food.global_position - ant.global_position).normalized()
-		ant.global_position += direction * movement_rate * delta
-		ant.energy.deplete(delta * movement_rate * 0.1)
+		ant.global_position += direction * movement_rate_modifier * ant.speed.movement_rate * delta 
 	
 	func is_completed() -> bool:
 		return not is_instance_valid(current_target_food) or\
@@ -354,7 +353,6 @@ class EmitPheromone extends Action:
 		
 		ant.emit_pheromone(pheromone_type, pheromone_strength)
 		current_time += delta
-		ant.energy.deplete(delta * 0.1)
 	
 	func is_completed() -> bool:
 		return current_time >= params.get("emission_duration", 0.0)
