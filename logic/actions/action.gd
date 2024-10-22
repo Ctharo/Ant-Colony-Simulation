@@ -1,41 +1,101 @@
 class_name Action
 extends RefCounted
 
+## Signal emitted when action starts
+signal started
+
+## Signal emitted when action completes
+signal completed
+
+## Signal emitted when action is interrupted
+signal interrupted
+
 ## Reference to the ant performing the action
-var ant: Ant
+var ant: Ant:
+	get:
+		return ant
+	set(value):
+		ant = value
 
 ## Cooldown time for the action (in seconds)
-var cooldown: float = 0.0
+var cooldown: float = 0.0:
+	get:
+		return cooldown
+	set(value):
+		cooldown = value
 
 ## Current cooldown timer
-var current_cooldown: float = 0.0
+var current_cooldown: float = 0.0:
+	get:
+		return current_cooldown
+	set(value):
+		current_cooldown = value
+
+## Parameters passed to the action
+var params: Dictionary = {}:
+	get:
+		return params
+	set(value):
+		params = value
+
+## Builder class for constructing actions
+class ActionBuilder:
+	## The action being built
+	var action: Action
+	
+	## Parameters to be passed to the action
+	var params: Dictionary = {}
+	
+	## Initialize the builder with an action class
+	## @param action_class The class of action to build
+	func _init(action_class: GDScript):
+		action = action_class.new()
+	
+	## Add a parameter to the action
+	## @param key The parameter key
+	## @param value The parameter value
+	## @return The builder for method chaining
+	func with_param(key: String, value: Variant) -> ActionBuilder:
+		params[key] = value
+		return self
+	
+	## Set the cooldown time for the action
+	## @param time The cooldown time in seconds
+	## @return The builder for method chaining
+	func with_cooldown(time: float) -> ActionBuilder:
+		action.cooldown = time
+		return self
+	
+	## Build and return the configured action
+	## @return The configured action
+	func build() -> Action:
+		action.params = params
+		return action
+
+## Create a new action builder
+## @param action_class The class of action to build
+## @return A new action builder
+static func create(action_class: GDScript) -> ActionBuilder:
+	return Action.create(action_class)
 
 ## Start the action for the given ant
 ## @param _ant The ant performing the action
-## @param params Dictionary of parameters for the action
-func start(_ant: Ant, params: Dictionary = {}) -> void:
+func start(_ant: Ant) -> void:
 	ant = _ant
 	current_cooldown = cooldown
-	_init_action(params)
-
-## Initialize the action with given parameters
-## @param params Dictionary of parameters for the action
-func _init_action(_params: Dictionary) -> void:
-	pass  # Override in subclasses if needed
+	started.emit()
 
 ## Update the action
 ## @param delta Time elapsed since the last update
-## @param params Dictionary of parameters for the action
-func update(delta: float, params: Dictionary = {}) -> void:
+func update(delta: float) -> void:
 	if current_cooldown > 0:
 		current_cooldown -= delta
-	_update_action(delta, params)
+	_update_action(delta)
 
-## Update logic for the specific action
+## Internal update logic for the specific action (to be overridden)
 ## @param delta Time elapsed since the last update
-## @param params Dictionary of parameters for the action
-func _update_action(_delta: float, _params: Dictionary) -> void:
-	pass  # Override in subclasses
+func _update_action(_delta: float) -> void:
+	pass
 
 ## Check if the action is completed
 ## @return True if the action is completed, false otherwise
@@ -50,8 +110,9 @@ func cancel() -> void:
 func interrupt() -> void:
 	cancel()
 	current_cooldown = cooldown
+	interrupted.emit()
 
-## Reset the action
+## Reset the action to its initial state
 func reset() -> void:
 	current_cooldown = 0.0
 
@@ -60,274 +121,272 @@ func reset() -> void:
 func is_ready() -> bool:
 	return current_cooldown <= 0
 
+## Serialize the action to a dictionary
+func to_dict() -> Dictionary:
+	return {
+		"type": get_script().resource_path,
+		"cooldown": cooldown,
+		"params": params
+	}
+
+## Create an action from a dictionary
+static func from_dict(data: Dictionary) -> Action:
+	var action = load(data["type"]).new()
+	action.cooldown = data["cooldown"]
+	action.params = data["params"]
+	return action
+
 ## Action for moving the ant
+## Movement action for moving to a specific position
 class Move extends Action:
-	## Target position to move to
-	var target_position: Vector2
-	## Movement rate of the ant
-	var movement_rate: float
+	## Get movement parameters from params
+	func _init() -> void:
+		assert("target_position" in params, "Move action requires target_position")
 	
-	## Initialize the MoveAction
-	## @param _target_position The position to move to
-	func _init_action(params: Dictionary) -> void:
-		if "target_position" in params:
-			target_position = params["target_position"]
-		if target_position == Vector2.ZERO:
-			push_warning("Target position is ZERO vector")
-	
-	## Start the move action
-	## @param _ant The ant performing the action
-	func start(_ant: Ant, params: Dictionary = {}) -> void:
-		super.start(_ant, params)
-		movement_rate = ant.speed.movement_rate
-	
-	## Update the move action
-	## @param delta Time elapsed since the last update
-	func _update_action(delta: float, params: Dictionary = {}) -> void:
+	## Update the movement
+	func _update_action(delta: float) -> void:
+		var target_position = params["target_position"]
+		var movement_rate = params.get("movement_rate", ant.speed.movement_rate)
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate
-		ant.energy.deplete(delta * movement_rate * 0.1)  # Energy cost based on movement_rate
+		ant.energy.deplete(delta * movement_rate * 0.1)
 	
-	## Check if the move action is completed
-	## @return True if the ant has reached the target position, false otherwise
+	## Check if we've reached the target
 	func is_completed() -> bool:
-		return ant.global_position.distance_to(target_position) < 1.0
+		return ant.global_position.distance_to(params["target_position"]) < 1.0
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(Move)
 
 ## Action for harvesting food
 class Harvest extends Action:
-	## The food source to harvest from
-	var food_source: Food
-	## Harvesting rate of the ant
-	var harvest_rate: float
+	var current_food_source: Food
 	
-	## Initialize the HarvestAction
-	## @param _food_source The food source to harvest from
-	func _init_action(params: Dictionary) -> void:
-		if "food_source" in params:
-			food_source = params["food_source"]
+	func _init() -> void:
+		assert("target_food" in params, "Harvest action requires target_food parameter")
+		current_food_source = params["target_food"]
 	
 	## Start the harvest action
-	## @param _ant The ant performing the action
-	func start(_ant: Ant, params: Dictionary = {}) -> void:
+	func start(_ant: Ant) -> void:
 		super.start(_ant)
-		harvest_rate = ant.speed.harvesting_rate
+		params["harvest_rate"] = params.get("harvest_rate", ant.speed.harvesting_rate)
 	
 	## Update the harvest action
-	## @param delta Time elapsed since the last update
-	func _update_action(delta: float, params: Dictionary = {}) -> void:
-		var food_source = params.get("target_food")
-		if food_source:
-			var amount_harvested = ant.harvest_food(food_source, delta)
-			print("Harvested %f amount of food" % amount_harvested)
+	func _update_action(delta: float) -> void:
+		if current_food_source and not current_food_source.is_depleted():
+			var amount_harvested = ant.harvest_food(
+				current_food_source, 
+				delta * params["harvest_rate"]
+			)
+			if amount_harvested > 0:
+				if params.get("debug_harvest", false):
+					print("Harvested %f amount of food" % amount_harvested)
+				ant.energy.deplete(delta * 0.2)  # Energy cost for harvesting
 		else:
-			push_error("No food source to harvest")
+			push_error("No valid food source to harvest")
 	
-	## Check if the harvest action is completed
-	## @return True if the ant is full or the food source is depleted, false otherwise
+	## Check if harvesting is completed
 	func is_completed() -> bool:
-		return not ant.can_carry_more() or food_source.is_depleted()
+		return not ant.can_carry_more() or current_food_source.is_depleted()
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(Harvest)
 
 ## Action for storing food in the colony
 class Store extends Action:
-	## The location where food should be stored
-	var storage_location: Vector2
-	## The amount of food stored per update
-	var store_rate: float = 1.0  # Food units per second
-	
-	## Initialize the StoreAction
-	## @param _storage_location The location to store food
-	func _init_action(params: Dictionary = {}):
-		if "storage_location" in params:
-			storage_location = params["storage_location"]
+	func _init() -> void:
+		params["store_rate"] = params.get("store_rate", 1.0)
 	
 	## Update the store action
-	## @param delta Time elapsed since the last update
-	func _update_action(delta: float, params = {}) -> void:
+	func _update_action(delta: float) -> void:
 		var colony = ant.colony
-		ant.store_food(colony, delta)
+		var store_rate = params["store_rate"]
+		ant.store_food(colony, delta * store_rate)
 	
-	## Check if the store action is completed
-	## @return True if the ant has no more food to store, false otherwise
+	## Check if storing is completed
 	func is_completed() -> bool:
 		return ant.foods.is_empty()
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(Store)
 
 ## Action for attacking another ant or entity
 class Attack extends Action:
-	## The target location of the attack
-	var target_location: Vector2
-	## The target entity to attack
-	var target_entity: Node2D
-	## The attack range of the ant
-	var attack_range: float = 10.0
-	## The attack damage of the ant
-	var attack_damage: float = 1.0
-	## The time between attacks
-	var attack_cooldown: float = 1.0
-
+	var current_target_entity: Node2D
+	var current_target_location: Vector2
 	
-	## Initialize the AttackAction
-	## @param _target_location The location to attack
-	## @param _target_entity The entity to attack (optional)
-	func _init_action(params: Dictionary) -> void:
-		if "target_location" in params:
-			target_location = params["target_location"]
-		if "target_entity" in params:
-			target_entity = params["target_entity"]
+	func _init() -> void:
+		assert("target_entity" in params or "target_location" in params,
+			   "Attack action requires either target_entity or target_location")
+		
+		# Set up attack parameters with defaults
+		params["attack_range"] = params.get("attack_range", 10.0)
+		params["attack_damage"] = params.get("attack_damage", 1.0)
+		params["attack_cooldown"] = params.get("attack_cooldown", 1.0)
+		
+		current_target_entity = params.get("target_entity")
+		current_target_location = params.get("target_location", Vector2.ZERO)
 	
 	## Update the attack action
-	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
-		if current_cooldown > 0:
-			current_cooldown -= delta
+	func _update_action(delta: float) -> void:
+		if not is_ready():
 			return
 		
-		if target_entity and ant.global_position.distance_to(target_entity.global_position) <= attack_range:
-			perform_attack()
-		elif ant.global_position.distance_to(target_location) <= attack_range:
-			perform_attack()
-		else:
-			move_towards_target(delta)
+		var attack_range = params["attack_range"]
+		
+		if current_target_entity and is_instance_valid(current_target_entity):
+			if ant.global_position.distance_to(current_target_entity.global_position) <= attack_range:
+				_perform_attack()
+			else:
+				_move_towards_target(delta)
+		elif current_target_location != Vector2.ZERO:
+			if ant.global_position.distance_to(current_target_location) <= attack_range:
+				_perform_attack()
+			else:
+				_move_towards_target(delta)
 	
-	## Perform the attack
-	func perform_attack() -> void:
-		if target_entity and target_entity.has_method("take_damage"):
-			target_entity.take_damage(attack_damage)
-		current_cooldown = attack_cooldown
+	## Perform the actual attack
+	func _perform_attack() -> void:
+		if current_target_entity and current_target_entity.has_method("take_damage"):
+			current_target_entity.take_damage(params["attack_damage"])
+		
+		current_cooldown = params["attack_cooldown"]
 		ant.energy.deplete(0.5)  # Energy cost for attacking
 	
-	## Move towards the target
-	## @param delta Time elapsed since the last update
-	func move_towards_target(delta: float) -> void:
-		var direction
-		if target_entity:
-			direction = ant.global_position.direction_to(target_entity.global_position)
-		else:
-			direction = ant.global_position.direction_to(target_location)
+	## Move towards the current target
+	func _move_towards_target(delta: float) -> void:
+		var target_pos = current_target_entity.global_position if current_target_entity\
+						else current_target_location
+		var direction = ant.global_position.direction_to(target_pos)
 		ant.velocity = direction * ant.speed.movement_rate
 		ant.energy.deplete(delta * ant.speed.movement_rate * 0.1)
 	
-	## Check if the attack action is completed
-	## @return True if the target is destroyed or the ant is out of energy, false otherwise
+	## Check if attack is completed
 	func is_completed() -> bool:
-		if target_entity and not is_instance_valid(target_entity):
+		if current_target_entity and not is_instance_valid(current_target_entity):
 			return true
 		return ant.energy.is_depleted()
-
-## Action for emitting pheromones
-class EmitPheromone extends Action:
-	## The type of pheromone to emit
-	var pheromone_type: String
-	## The strength of the pheromone
-	var pheromone_strength: float
-	## The duration of the pheromone emission
-	var emission_duration: float
-	## The current emission timer
-	var current_time: float = 0.0
 	
-	## Initialize the EmitPheromoneAction
-	## @param _pheromone_type The type of pheromone to emit
-	## @param _pheromone_strength The strength of the pheromone
-	## @param _emission_duration The duration of the pheromone emission
-	func _init_action(params: Dictionary = {}):
-		if "pheromone_type" in params:
-			pheromone_type = params["pheromone_type"]
-		if "pheromone_strength" in params:
-			pheromone_strength = params["pheromone_strength"]
-		if "emission_duration" in params:
-			emission_duration = params["emission_duration"]
-	
-	## Update the pheromone emission action
-	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
-		ant.emit_pheromone(pheromone_type, pheromone_strength)
-		current_time += delta
-		ant.energy.deplete(delta * 0.1)  # Small energy cost for emitting pheromones
-	
-	## Check if the pheromone emission action is completed
-	## @return True if the emission duration has elapsed, false otherwise
-	func is_completed() -> bool:
-		return current_time >= emission_duration
-		
-## Action for following pheromones
-class FollowPheromone extends Action:
-	## The type of pheromone to follow
-	var pheromone_type: String
-	## The movement speed while following pheromones
-	var follow_speed: float = 1.0
-
-	## Initialize the FollowPheromoneAction
-	## @param _pheromone_type The type of pheromone to follow
-	func _init_action(params: Dictionary = {}):
-		if "pheromone_type" in params:
-			pheromone_type = params["pheromone_type"]
-
-	## Update the follow pheromone action
-	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
-		var pheromone_direction = ant.get_strongest_pheromone_direction(pheromone_type)
-		ant.velocity = pheromone_direction * follow_speed * ant.speed.movement_rate
-		ant.energy.deplete(delta * follow_speed * 0.1)
-
-	## Check if the follow pheromone action is completed
-	## @return Always false, as this action continues until interrupted
-	func is_completed() -> bool:
-		return false
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(Attack)
 
 ## Action for moving to food
 class MoveToFood extends Action:
-	var target_food: Food = null
+	var current_target_food: Food = null
 	
-	func _init_action(params: Dictionary) -> void:
-		if "target_food" in params:
-			target_food = params["target_food"]
+	func _init() -> void:
+		assert("target_food" in params, "MoveToFood action requires target_food parameter")
+		current_target_food = params["target_food"]
 	
-	func _update_action(delta: float, params: Dictionary) -> void:
-		if target_food == null and "target_food" in params:
-			target_food = params["target_food"]
-		
-		if target_food:
-			var direction = (target_food.global_position - ant.global_position).normalized()
-			ant.global_position += direction * ant.speed.movement_rate * delta
+	func _update_action(delta: float) -> void:
+		if not current_target_food:
+			push_error("No target food to move to")
+			return
+			
+		var movement_rate = params.get("movement_rate", ant.speed.movement_rate)
+		var direction = (current_target_food.global_position - ant.global_position).normalized()
+		ant.global_position += direction * movement_rate * delta
+		ant.energy.deplete(delta * movement_rate * 0.1)
 	
 	func is_completed() -> bool:
-		return target_food == null or ant.global_position.distance_to(target_food.global_position) < 1.0
+		return not is_instance_valid(current_target_food) or\
+			   ant.global_position.distance_to(current_target_food.global_position) < 1.0
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(MoveToFood)
 
-## Action for moving randomly
+## Action for random movement
 class RandomMove extends Action:
-	## The duration of the random movement
-	var move_duration: float = 2.0
-	## The current movement timer
 	var current_time: float = 0.0
-	## The current random direction
 	var current_direction: Vector2 = Vector2.ZERO
-
-	## Update the random move action
-	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
+	
+	func _init() -> void:
+		params["move_duration"] = params.get("move_duration", 2.0)
+		params["movement_rate"] = params.get("movement_rate", 1.0)
+	
+	func _update_action(delta: float) -> void:
 		current_time += delta
-		if current_time >= move_duration or current_direction == Vector2.ZERO:
+		
+		if current_time >= params["move_duration"] or current_direction == Vector2.ZERO:
 			current_time = 0
 			current_direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
 		
-		ant.velocity = current_direction * ant.speed.movement_rate
-		ant.energy.deplete(delta * ant.speed.movement_rate * 0.1)
-
-	## Check if the random move action is completed
-	## @return Always false, as this action continues until interrupted
+		var movement_rate = params["movement_rate"] * ant.speed.movement_rate
+		ant.velocity = current_direction * movement_rate
+		ant.energy.deplete(delta * movement_rate * 0.1)
+	
 	func is_completed() -> bool:
 		return false
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(RandomMove)
+
+## Action for following pheromones
+class FollowPheromone extends Action:
+	func _init() -> void:
+		assert("pheromone_type" in params, "FollowPheromone action requires pheromone_type parameter")
+		params["follow_speed"] = params.get("follow_speed", 1.0)
+	
+	func _update_action(delta: float) -> void:
+		var pheromone_type = params["pheromone_type"]
+		var follow_speed = params["follow_speed"]
+		
+		var pheromone_direction = ant.get_strongest_pheromone_direction(pheromone_type)
+		var movement_rate = follow_speed * ant.speed.movement_rate
+		
+		ant.velocity = pheromone_direction * movement_rate
+		ant.energy.deplete(delta * movement_rate * 0.1)
+	
+	func is_completed() -> bool:
+		return false
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(FollowPheromone)
+
+## Action for emitting pheromones
+class EmitPheromone extends Action:
+	var current_time: float = 0.0
+	
+	func _init() -> void:
+		assert("pheromone_type" in params, "EmitPheromone action requires pheromone_type parameter")
+		assert("emission_duration" in params, "EmitPheromone action requires emission_duration parameter")
+		
+		params["pheromone_strength"] = params.get("pheromone_strength", 1.0)
+	
+	func _update_action(delta: float) -> void:
+		var pheromone_type = params["pheromone_type"]
+		var pheromone_strength = params["pheromone_strength"]
+		
+		ant.emit_pheromone(pheromone_type, pheromone_strength)
+		current_time += delta
+		ant.energy.deplete(delta * 0.1)
+	
+	func is_completed() -> bool:
+		return current_time >= params["emission_duration"]
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(EmitPheromone)
 
 ## Action for resting to regain energy
 class Rest extends Action:
-	## The rate at which energy is regained while resting
-	var energy_gain_rate: float = 10.0  # Energy units per second
-
-	## Update the rest action
-	## @param delta Time elapsed since the last update
-	func update(delta: float, params: Dictionary = {}) -> void:
+	func _init() -> void:
+		params["energy_gain_rate"] = params.get("energy_gain_rate", 10.0)
+	
+	func _update_action(delta: float) -> void:
+		var energy_gain_rate = params["energy_gain_rate"]
 		ant.energy.replenish(energy_gain_rate * delta)
-
-	## Check if the rest action is completed
-	## @return True if the ant's energy is full, false otherwise
+	
 	func is_completed() -> bool:
 		return ant.energy.is_full()
+	
+	## Static creator method
+	static func create(_action_class: GDScript) -> ActionBuilder:
+		return Action.create(Rest)

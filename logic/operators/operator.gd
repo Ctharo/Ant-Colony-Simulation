@@ -122,3 +122,23 @@ class Comparison extends Condition:
 		
 		return false
 
+
+## Create a compound condition using AND operator
+static func and_condition(conditions: Array[Condition]) -> Condition:
+	var and_op = Operator.And.new()
+	for condition in conditions:
+		and_op.add_operand(condition)
+	return and_op
+
+## Create a compound condition using OR operator
+static func or_condition(conditions: Array[Condition]) -> Condition:
+	var or_op = Operator.Or.new()
+	for condition in conditions:
+		or_op.add_operand(condition)
+	return or_op
+
+## Create a NOT condition
+static func not_condition(condition: Condition) -> Condition:
+	var not_op = Operator.Not.new()
+	not_op.add_operand(condition)
+	return not_op

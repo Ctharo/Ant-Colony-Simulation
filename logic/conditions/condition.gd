@@ -1,14 +1,70 @@
 class_name Condition
 extends RefCounted
+## Signal emitted when condition evaluation changes
+signal evaluation_changed(is_met: bool)
+
+## Previous evaluation result for change detection
+var _previous_result: bool = false
 
 ## Check if the condition is met for the given ant
-## @param _ant The ant to check the condition for
-## @param _cache Dictionary to cache condition results
-## @param _params Dictionary containing context parameters
+## @param ant The ant to check the condition for
+## @param cache Dictionary to cache condition results
+## @param params Dictionary containing context parameters
 ## @return True if the condition is met, false otherwise
-func is_met(_ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
+func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+	var result := _evaluate(ant, cache, params)
+	if result != _previous_result:
+		_previous_result = result
+		evaluation_changed.emit(result)
+	return result
+
+## Internal evaluation logic (to be overridden by specific conditions)
+## @param ant The ant to evaluate the condition for
+## @param cache Dictionary to cache condition results
+## @param params Dictionary containing context parameters
+## @return True if the condition is met, false otherwise
+func _evaluate(_ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
 	return false
 
+## Serialize the condition to a dictionary
+func to_dict() -> Dictionary:
+	return {
+		"type": get_script().resource_path
+	}
+
+## Create a condition from a dictionary
+static func from_dict(data: Dictionary) -> Condition:
+	return load(data["type"]).new()
+
+## Base class for composite conditions
+class CompositeCondition extends Operator:
+	## Name of the composite condition
+	var name: String:
+		get:
+			return name
+		set(value):
+			name = value
+	
+	## Description of the condition's purpose
+	var description: String:
+		get:
+			return description
+		set(value):
+			description = value
+	
+	## Initialize the composite condition
+	## @param _name Name of the condition
+	## @param _description Description of the condition's purpose
+	func _init(_name: String = "", _description: String = "") -> void:
+		name = _name
+		description = _description
+	
+	## Serialize the composite condition to a dictionary
+	func to_dict() -> Dictionary:
+		var base_dict := super.to_dict()
+		base_dict["name"] = name
+		base_dict["description"] = description
+		return base_dict
 
 ## Condition for comparing numeric values
 class Comparison extends Condition:

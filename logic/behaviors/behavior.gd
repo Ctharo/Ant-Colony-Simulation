@@ -1,37 +1,101 @@
+## Extended behavior.gd with JSON serialization and improved documentation
 class_name Behavior
 extends RefCounted
 
+## Signal emitted when behavior state changes
+signal state_changed(new_state: State)
+
+## Signal emitted when behavior starts executing
+signal started
+
+## Signal emitted when behavior completes
+signal completed
+
+## Signal emitted when behavior fails
+signal failed
+
 ## Enum to represent the current state of a behavior
 enum State {
-	INACTIVE,
-	ACTIVE,
-	COMPLETED,
-	FAILED
+	INACTIVE,   ## Behavior is not currently active
+	ACTIVE,     ## Behavior is currently executing
+	COMPLETED,  ## Behavior has completed successfully
+	FAILED      ## Behavior has failed to complete
+}
+
+## Priority levels for different behaviors
+enum Priority {
+	VERY_LOW = 0,    ## Lowest priority behaviors (e.g., idle wandering)
+	LOW = 25,        ## Low priority behaviors (e.g., exploration)
+	MEDIUM = 50,     ## Medium priority behaviors (e.g., routine tasks)
+	HIGH = 75,       ## High priority behaviors (e.g., responding to threats)
+	VERY_HIGH = 100, ## Very high priority behaviors (e.g., critical resource gathering)
+	CRITICAL = 200   ## Survival-critical behaviors (e.g., energy management)
 }
 
 ## Unique identifier for this behavior
-var id: String
+var id: String:
+	get:
+		return id
+	set(value):
+		id = value
 
 ## Name of the behavior
-var name: String
+var name: String:
+	get:
+		return name
+	set(value):
+		name = value
 
 ## Priority of the behavior (higher values indicate higher priority)
-var priority: int = 0
+var priority: int = 0:
+	get:
+		return priority
+	set(value):
+		priority = value
 
 ## List of conditions that must be met for this behavior to execute
-var conditions: Array[Condition] = []
+var conditions: Array[Condition] = []:
+	get:
+		return conditions
+	set(value):
+		conditions = value
 
 ## List of sub-behaviors that this behavior may execute
-var sub_behaviors: Array[Behavior] = []
+var sub_behaviors: Array[Behavior] = []:
+	get:
+		return sub_behaviors
+	set(value):
+		sub_behaviors = value
 
 ## List of actions that this behavior will perform
-var actions: Array[Action] = []
+var actions: Array[Action] = []:
+	get:
+		return actions
+	set(value):
+		actions = value
 
 ## Reference to the ant executing this behavior
-var ant: Ant
+var ant: Ant:
+	get:
+		return ant
+	set(value):
+		ant = value
 
 ## Current state of the behavior
-var state: State = State.INACTIVE
+var state: State = State.INACTIVE:
+	get:
+		return state
+	set(value):
+		if state != value:
+			state = value
+			state_changed.emit(state)
+			match state:
+				State.ACTIVE:
+					started.emit()
+				State.COMPLETED:
+					completed.emit()
+				State.FAILED:
+					failed.emit()
 
 ## Currently executing sub-behavior, if any
 var current_sub_behavior: Behavior = null
@@ -40,7 +104,15 @@ var current_sub_behavior: Behavior = null
 var current_action_index: int = 0
 
 ## Cache for condition results during a single update cycle
-var condition_cache: Dictionary
+var condition_cache: Dictionary = {}
+
+## Initialize the behavior with a priority level
+func _init(_priority: Priority) -> void:
+	priority = _priority
+	name = get_class()
+	if "@" in name:
+		name = name.split("@")[0]
+	name = "%s (Priority: %d)" % [name, priority]
 
 ## Start the behavior for the given ant
 func start(_ant: Ant) -> void:
@@ -50,6 +122,90 @@ func start(_ant: Ant) -> void:
 	current_action_index = 0
 	for sub_behavior in sub_behaviors:
 		sub_behavior.start(ant)
+
+## Serialize the behavior to a dictionary
+func to_dict() -> Dictionary:
+	var data := {
+		"id": id,
+		"name": name,
+		"priority": priority,
+		"state": state,
+		"conditions": [],
+		"actions": [],
+		"sub_behaviors": []
+	}
+	
+	# Serialize conditions
+	for condition in conditions:
+		if condition.has_method("to_dict"):
+			data["conditions"].append(condition.to_dict())
+	
+	# Serialize actions
+	for action in actions:
+		if action.has_method("to_dict"):
+			data["actions"].append(action.to_dict())
+	
+	# Serialize sub-behaviors
+	for sub_behavior in sub_behaviors:
+		data["sub_behaviors"].append(sub_behavior.to_dict())
+	
+	return data
+
+## Create a behavior from a dictionary
+static func from_dict(data: Dictionary) -> Behavior:
+	var behavior := Behavior.new(data["priority"])
+	behavior.id = data["id"]
+	behavior.name = data["name"]
+	behavior.state = data["state"]
+	
+	# Deserialize conditions
+	for condition_data in data["conditions"]:
+		if condition_data.has("type"):
+			var condition = load(condition_data["type"]).new()
+			condition.from_dict(condition_data)
+			behavior.conditions.append(condition)
+	
+	# Deserialize actions
+	for action_data in data["actions"]:
+		if action_data.has("type"):
+			var action = load(action_data["type"]).new()
+			action.from_dict(action_data)
+			behavior.actions.append(action)
+	
+	# Deserialize sub-behaviors
+	for sub_behavior_data in data["sub_behaviors"]:
+		behavior.sub_behaviors.append(Behavior.from_dict(sub_behavior_data))
+	
+	return behavior
+
+## Save behavior tree to JSON file
+static func save_to_json(behavior: Behavior, filepath: String) -> Error:
+	var json = JSON.new()
+	var data := behavior.to_dict()
+	var json_string := json.stringify(data, "\t")
+	
+	var file := FileAccess.open(filepath, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+		
+	file.store_string(json_string)
+	return OK
+
+## Load behavior tree from JSON file
+static func load_from_json(filepath: String) -> Behavior:
+	var json = JSON.new()
+	var file := FileAccess.open(filepath, FileAccess.READ)
+	if file == null:
+		push_error("Failed to open file: %s" % filepath)
+		return null
+		
+	var json_string := file.get_as_text()
+	var parse_result := json.parse(json_string)
+	if parse_result != OK:
+		push_error("Failed to parse JSON: %s" % json.get_error_message())
+		return null
+		
+	return Behavior.from_dict(json.data)
 
 ## Update the behavior, returns true if the behavior is complete or inactive
 func update(delta: float, params: Dictionary) -> bool:
@@ -76,7 +232,7 @@ func update(delta: float, params: Dictionary) -> bool:
 			current_action_index += 1
 			return false
 		else:
-			action.update(delta, params)
+			action.update(delta)
 			return false
 	else:
 		state = State.COMPLETED
@@ -97,6 +253,14 @@ func add_sub_behavior(behavior: Behavior) -> void:
 func add_action(action: Action) -> void:
 	actions.append(action)
 
+## Add a condition to this behavior
+func add_condition(condition: Condition) -> void:
+	conditions.append(condition)
+
+## Add multiple conditions to this behavior
+func add_conditions(new_conditions: Array[Condition]) -> void:
+	conditions.append_array(new_conditions)
+
 ## Clear the condition cache at the end of each update cycle
 func clear_condition_cache() -> void:
 	condition_cache.clear()
@@ -114,85 +278,179 @@ func reset() -> void:
 	for action in actions:
 		action.reset()
 
+## Builder class for constructing behaviors
+class BehaviorBuilder:
+	var behavior: Behavior
+	var behavior_class: GDScript
+	var _priority: Priority
+	var _conditions: Array[Condition] = []
+	var _actions: Array[Action] = []
+	var _sub_behaviors: Array[Dictionary] = []  # Array of {behavior: Behavior, priority: Priority}
+	
+	func _init(b_class: GDScript, p: Priority) -> void:
+		behavior_class = b_class
+		_priority = p
+	
+	## Add a condition to the behavior
+	func with_condition(condition: Condition) -> BehaviorBuilder:
+		_conditions.append(condition)
+		return self
+	
+	## Add an action to the behavior
+	func with_action(action: Action) -> BehaviorBuilder:
+		_actions.append(action)
+		return self
+	
+	## Add a sub-behavior with custom priority
+	func with_sub_behavior(sub_behavior: Behavior, priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		_sub_behaviors.append({"behavior": sub_behavior, "priority": priority})
+		return self
+	
+	## Build and return the configured behavior
+	func build() -> Behavior:
+		behavior = behavior_class.new(_priority)
+		
+		# Add conditions
+		for condition in _conditions:
+			behavior.add_condition(condition)
+		
+		# Add actions
+		for action in _actions:
+			behavior.add_action(action)
+		
+		# Add sub-behaviors with their custom priorities
+		for sub_behavior_data in _sub_behaviors:
+			var sub_behavior = sub_behavior_data["behavior"]
+			sub_behavior.priority = sub_behavior_data["priority"]
+			behavior.add_sub_behavior(sub_behavior)
+		
+		return behavior
 
 ## Base class for food collection behaviors
-class CollectFoodBehavior extends Behavior:
-	func _init():
-		name = "Collect Food"
-		add_sub_behavior(WanderForFood.new())
-		add_sub_behavior(FollowPheromones.new())
-		add_sub_behavior(HarvestFood.new())
-		add_sub_behavior(ReturnHome.new())
-		add_sub_behavior(StoreFood.new())
+class CollectFood extends Behavior:
+	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(CollectFood, priority)\
+			.with_condition(Operator.not_condition(Condition.LowEnergy.new()))\
+			.with_sub_behavior(
+				SearchForFood.create(Priority.MEDIUM).build()
+			)\
+			.with_sub_behavior(
+				HarvestFood.create(Priority.HIGH).build()
+			)\
+			.with_sub_behavior(
+				ReturnToColony.create(Priority.VERY_HIGH).build()
+			)
+
+## Search behavior and its sub-behaviors
+class SearchForFood extends Behavior:
+	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(SearchForFood, priority)\
+			.with_condition(
+				Operator.not_condition(
+					Operator.or_condition([
+						Condition.OverloadedWithFood.new(),
+						Condition.LowEnergy.new(),
+						Condition.CarryingFood.new()
+					])
+				)
+			)\
+			.with_sub_behavior(
+				FollowFoodPheromones.create(Priority.HIGH).build()
+			)\
+			.with_sub_behavior(
+				WanderForFood.create(Priority.LOW).build()
+			)
 
 ## Behavior for wandering when searching for food
 class WanderForFood extends Behavior:
-	func _init():
-		name = "Wander for Food"
-		conditions.append(Operator.Not.new(Condition.FoodPheromoneSensed.new()))
-		conditions.append(Operator.Not.new(Condition.CarryingFood.new()))
-		actions.append(Action.RandomMove.new())
+	static func create(priority: Priority = Priority.LOW) -> BehaviorBuilder:
+		return BehaviorBuilder.new(WanderForFood, priority)\
+			.with_condition(
+				Operator.not_condition(Condition.FoodPheromoneSensed.new())
+			)\
+			.with_action(Action.RandomMove.new())
 
 ## Behavior for following food pheromones
-class FollowPheromones extends Behavior:
-	func _init():
-		name = "Follow Pheromones"
-		conditions.append(Condition.FoodPheromoneSensed.new())
-		conditions.append(Operator.Not.new(Condition.CarryingFood.new()))
-		actions.append(Action.FollowPheromone.new())
+class FollowFoodPheromones extends Behavior:
+	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(FollowFoodPheromones, priority)\
+			.with_condition(Condition.FoodPheromoneSensed.new())\
+			.with_action(Action.FollowPheromone.new())
 
 ## Behavior for harvesting food
 class HarvestFood extends Behavior:
-	func _init():
-		name = "Harvest Food"
-		conditions.append(Condition.FoodInView.new())
-		conditions.append(Operator.Not.new(Condition.OverloadedWithFood.new()))
-		actions.append(Action.MoveToFood.new())
-		actions.append(Action.Harvest.new())
+	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(HarvestFood, priority)\
+			.with_condition(
+				Operator.and_condition([
+					Condition.FoodInView.new(),
+					Operator.not_condition(
+						Operator.or_condition([
+							Condition.OverloadedWithFood.new(),
+							Condition.LowEnergy.new()
+						])
+					)
+				])
+			)\
+			.with_action(Action.MoveToFood.new())\
+			.with_action(Action.Harvest.new())
 
 ## Behavior for returning to the colony
-class ReturnHome extends Behavior:
-	func _init():
-		name = "Return Home"
-		conditions.append(Condition.CarryingFood.new())
-		add_sub_behavior(FollowHomePheromones.new())
-		add_sub_behavior(WanderForHome.new())
+class ReturnToColony extends Behavior:
+	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(ReturnToColony, priority)\
+			.with_condition(
+				Operator.or_condition([
+					Condition.LowEnergy.new(),
+					Condition.OverloadedWithFood.new()
+				])
+			)\
+			.with_sub_behavior(
+				FollowHomePheromones.create(Priority.HIGH).build()
+			)\
+			.with_sub_behavior(
+				WanderForHome.create(Priority.MEDIUM).build()
+			)\
+			.with_sub_behavior(
+				StoreFood.create(Priority.VERY_HIGH).build()
+			)
 
 ## Behavior for storing food in the colony
 class StoreFood extends Behavior:
-	func _init():
-		name = "Store Food"
-		conditions.append(Condition.AtHome.new())
-		conditions.append(Condition.CarryingFood.new())
-		actions.append(Action.Store.new())
-
-## Behavior for following home pheromones
-class FollowHomePheromones extends Behavior:
-	func _init():
-		name = "Follow Home Pheromones"
-		conditions.append(Condition.HomePheromoneSensed.new())
-		conditions.append(Condition.CarryingFood.new())
-		actions.append(Action.FollowPheromone.new())
-
-## Behavior for wandering when searching for home
-class WanderForHome extends Behavior:
-	func _init():
-		name = "Wander for Home"
-		conditions.append(Operator.Not.new(Condition.HomePheromoneSensed.new()))
-		conditions.append(Condition.CarryingFood.new())
-		actions.append(Action.RandomMove.new())
-
-## Behavior for emitting food pheromones
-class EmitFoodPheromonesBehavior extends Behavior:
-	func _init():
-		name = "Emit Food Pheromones"
-		conditions.append(Condition.CarryingFood.new())
-		actions.append(Action.EmitPheromone.new())
+	static func create(priority: Priority = Priority.VERY_HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(StoreFood, priority)\
+			.with_condition(
+				Operator.and_condition([
+					Condition.AtHome.new(),
+					Condition.CarryingFood.new()
+				])
+			)\
+			.with_action(Action.Store.new())
 
 ## Behavior for resting when energy is low
 class Rest extends Behavior:
-	func _init():
-		name = "Rest"
-		conditions.append(Condition.LowEnergy.new())
-		conditions.append(Condition.AtHome.new())
-		actions.append(Action.Rest.new())
+	static func create(priority: Priority = Priority.CRITICAL) -> BehaviorBuilder:
+		return BehaviorBuilder.new(Rest, priority)\
+			.with_condition(
+				Operator.and_condition([
+					Condition.LowEnergy.new(),
+					Condition.AtHome.new()
+				])
+			)\
+			.with_action(Action.Rest.new())
+
+## Behavior for following home pheromones
+class FollowHomePheromones extends Behavior:
+	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(FollowHomePheromones, priority)\
+			.with_condition(Condition.HomePheromoneSensed.new())\
+			.with_action(Action.FollowPheromone.new()._init_action({"pheromone:type": "home"}))
+
+## Behavior for wandering when searching for home
+class WanderForHome extends Behavior:
+	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(WanderForHome, priority)\
+			.with_condition(
+				Operator.not_condition(Condition.HomePheromoneSensed.new())
+			)\
+			.with_action(Action.RandomMove.new())
