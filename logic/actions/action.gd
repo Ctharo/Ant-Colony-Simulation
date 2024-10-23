@@ -147,7 +147,7 @@ class Move extends Action:
 			return
 			
 		var target_position = params["target_position"]
-		var movement_rate_modifier = params.get("movement_rate_modifier", 1.0)
+		var movement_rate_modifier = params.get("rate_modifier", 1.0)
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate_modifier * ant.speed.movement_rate
 		ant.energy.deplete(delta * movement_rate_modifier * 0.1)
@@ -273,32 +273,17 @@ class Attack extends Action:
 		var attack_range = attack_range_modifier * ant.reach.distance
 		if current_target_entity and is_instance_valid(current_target_entity):
 			if ant.global_position.distance_to(current_target_entity.global_position) <= attack_range_modifier:
-				_perform_attack()
+				ant.attack(current_target_entity, delta)
 			else:
-				_move_towards_target(delta)
+				ant.move_to(current_target_location, delta)
 		elif current_target_location != Vector2.ZERO:
 			if ant.global_position.distance_to(current_target_location) <= attack_range_modifier:
-				_perform_attack()
+				ant.attack(current_target_entity, delta)
 			else:
-				_move_towards_target(delta)
+				ant.move_to(current_target_location, delta)
 	
-	## Perform the actual attack
-	func _perform_attack() -> void:
-		if current_target_entity and current_target_entity.has_method("take_damage"):
-			var attack_damage = params.get("attack_damage", 1.0)
-			current_target_entity.take_damage(attack_damage)
-		
 		current_cooldown = params.get("attack_cooldown", 1.0)
-		ant.energy.deplete(0.5)  # Energy cost for attacking
-	
-	## Move towards the current target
-	func _move_towards_target(delta: float) -> void:
-		var target_pos = current_target_entity.global_position if current_target_entity\
-						else current_target_location
-		var direction = ant.global_position.direction_to(target_pos)
-		ant.velocity = direction * ant.speed.movement_rate
-		ant.energy.deplete(delta * ant.speed.movement_rate * 0.1)
-	
+		
 	## Check if attack is completed
 	func is_completed() -> bool:
 		if current_target_entity and not is_instance_valid(current_target_entity):
@@ -323,8 +308,8 @@ class MoveToFood extends Action:
 			push_error("No target food to move to")
 			return
 			
-		var movement_rate_modifier = params.get("movement_rate_modifier", 1.0)
-		var direction = (current_target_food.global_position - ant.global_position).normalized()
+		var movement_rate_modifier = params.get("rate_modifier", 1.0)
+		var direction = ant.global_position.direction_to(current_target_food.global_position)
 		ant.global_position += direction * movement_rate_modifier * ant.speed.movement_rate * delta 
 	
 	func is_completed() -> bool:

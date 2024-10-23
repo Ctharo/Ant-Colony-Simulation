@@ -459,42 +459,42 @@ class Rest extends Behavior:
 			)\
 			.with_action(
 				Action.Rest.create()\
-					.with_param("energy_gain_rate", 10.0)\
+					.with_param("rate_modifier", 10.0)\
 					.build()
 			)
 
 ## Behavior for following home pheromones
 class FollowHomePheromones extends Behavior:
-	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
-		return BehaviorBuilder.new(FollowHomePheromones, priority)\
+	static func create(_priority: Priority = Priority.HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(FollowHomePheromones, _priority)\
 			.with_condition(
 				Condition.HomePheromoneSensed.create().build()
 			)\
 			.with_action(
 				Action.FollowPheromone.create()\
 					.with_param("pheromone_type", "home")\
-					.with_param("follow_speed_modifier", 1.0)\
+					.with_param("rate_modifier", 1.0)\
 					.build()
 			)
 
 ## Behavior for following food pheromones
 class FollowFoodPheromones extends Behavior:
-	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
-		return BehaviorBuilder.new(FollowFoodPheromones, priority)\
+	static func create(_priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(FollowFoodPheromones, _priority)\
 			.with_condition(
 				Condition.FoodPheromoneSensed.create().build()
 			)\
 			.with_action(
 				Action.FollowPheromone.create()\
 					.with_param("pheromone_type", "food")\
-					.with_param("follow_speed_modifier", 1.0)\
+					.with_param("rate_modifier", 1.0)\
 					.build()
 			)
 			
 ## Behavior for wandering when searching for home
 class WanderForHome extends Behavior:
-	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
-		return BehaviorBuilder.new(WanderForHome, priority)\
+	static func create(_priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(WanderForHome, _priority)\
 			.with_condition(
 				Operator.not_condition(
 					Condition.HomePheromoneSensed.create().build()
@@ -503,14 +503,14 @@ class WanderForHome extends Behavior:
 			.with_action(
 				Action.RandomMove.create()\
 					.with_param("move_duration", 2.0)\
-					.with_param("movement_rate_modifier", 1.0)\
+					.with_param("rate_modifier", 1.0)\
 					.build()
 			)
 
 ## Behavior for wandering when searching for food
 class WanderForFood extends Behavior:
-	static func create(priority: Priority = Priority.LOW) -> BehaviorBuilder:
-		return BehaviorBuilder.new(WanderForFood, priority)\
+	static func create(_priority: Priority = Priority.LOW) -> BehaviorBuilder:
+		return BehaviorBuilder.new(WanderForFood, _priority)\
 			.with_condition(
 				Operator.not_condition(
 					Condition.FoodPheromoneSensed.create().build()
@@ -519,6 +519,6 @@ class WanderForFood extends Behavior:
 			.with_action(
 				Action.RandomMove.create()\
 					.with_param("move_duration", 2.0)\
-					.with_param("movement_rate_modifier", 1.0)\
+					.with_param("rate_modifier", 1.0)\
 					.build()
 			)

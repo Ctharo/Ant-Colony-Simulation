@@ -45,6 +45,9 @@ var speed: Speed
 ## The behavior tree for this ant
 var behavior_tree: BehaviorTree
 
+## The navigation agent for this ant
+var nav_agent: NavigationAgent2D
+
 func _init():
 	
 	reach = Reach.new()
@@ -127,11 +130,12 @@ func consume_food(amount: float) -> void:
 	energy.current_level += consumed
 
 ## Move the ant to a new position
-func move_to(new_position: Vector2) -> void:
-	var distance = position.distance_to(new_position)
-	var time_taken = distance / speed.movement_rate
-	position = new_position
-	energy.current_level -= time_taken  # Energy consumption based on distance and speed
+func move(direction: Vector2, delta: float) -> void:
+	var vector = direction * speed.movement_rate * delta 
+	move_to(vector)
+
+func move_to(location: Vector2) -> void:
+	nav_agent.target_position = global_position + location
 
 ## Harvest food from a source over a given time period
 func harvest_food(food_source: Food, time: float) -> float:
