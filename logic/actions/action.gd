@@ -42,7 +42,7 @@ var params: Dictionary = {}:
 class ActionBuilder:
 	## The action being built
 	var action: Action
-	
+	var ant: Ant
 	## Parameters to be passed to the action
 	var params: Dictionary = {}
 	
@@ -230,7 +230,7 @@ class RandomMove extends Action:
 			current_direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
 		
 		var movement_rate_modifier = params.get("movement_rate_modifier", 1.0) 
-		ant.velocity = current_direction * movement_rate_modifier * ant.speed.movement_rate
+		ant.move(current_direction, delta)
 	
 	func is_completed() -> bool:
 		return false

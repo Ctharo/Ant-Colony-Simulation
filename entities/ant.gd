@@ -1,5 +1,5 @@
 class_name Ant
-extends Node2D
+extends CharacterBody2D
 
 signal spawned
 signal food_spotted
@@ -59,7 +59,7 @@ func _init():
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	behavior_tree = BehaviorTree.Builder.new(self).build()
+	behavior_tree = BehaviorTree.create(self).with_root_behavior("CollectFood").build()
 
 
 func _ready() -> void:

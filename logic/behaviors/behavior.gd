@@ -270,8 +270,6 @@ func update(delta: float, params: Dictionary) -> bool:
 		state = State.COMPLETED
 		return true
 
-	return false
-
 ## Check if all conditions for this behavior are met
 func should_execute(params: Dictionary) -> bool:
 	print("Checking %d conditions for %s" % [conditions.size(), name])
@@ -345,6 +343,7 @@ class BehaviorBuilder:
 	## Build and return the configured behavior
 	func build() -> Behavior:
 		behavior = behavior_class.new(_priority)
+		
 		# Add conditions
 		for condition in _conditions:
 			behavior.add_condition(condition)
@@ -352,13 +351,7 @@ class BehaviorBuilder:
 		# Add actions
 		for action in _actions:
 			behavior.add_action(action)
-		
-		# Add sub-behaviors with their custom priorities
-		for sub_behavior_data in _sub_behaviors:
-			var sub_behavior = sub_behavior_data["behavior"]
-			sub_behavior.priority = sub_behavior_data["priority"]
-			behavior.add_sub_behavior(sub_behavior)
-		
+				
 		return behavior
 
 ## Base class for food collection behaviors
@@ -371,15 +364,6 @@ class CollectFood extends Behavior:
 						.with_param("threshold", 20.0)\
 						.build()
 				)
-			)\
-			.with_sub_behavior(
-				SearchForFood.create(Priority.MEDIUM).build()
-			)\
-			.with_sub_behavior(
-				HarvestFood.create(Priority.HIGH).build()
-			)\
-			.with_sub_behavior(
-				ReturnToColony.create(Priority.VERY_HIGH).build()
 			)
 
 ## Search behavior and its sub-behaviors
@@ -398,12 +382,6 @@ class SearchForFood extends Behavior:
 						Condition.CarryingFood.create().build()
 					])
 				)
-			)\
-			.with_sub_behavior(
-				FollowFoodPheromones.create(Priority.HIGH).build()
-			)\
-			.with_sub_behavior(
-				WanderForFood.create(Priority.LOW).build()
 			)
 
 ## Behavior for harvesting food
@@ -449,15 +427,6 @@ class ReturnToColony extends Behavior:
 						.with_param("threshold", 0.9)\
 						.build()
 				])
-			)\
-			.with_sub_behavior(
-				FollowHomePheromones.create(Priority.HIGH).build()
-			)\
-			.with_sub_behavior(
-				WanderForHome.create(Priority.MEDIUM).build()
-			)\
-			.with_sub_behavior(
-				StoreFood.create(Priority.VERY_HIGH).build()
 			)
 
 ## Behavior for storing food in the colony
