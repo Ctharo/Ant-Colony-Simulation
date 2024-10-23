@@ -124,8 +124,8 @@ class HomePheromoneSensed extends Condition:
 ## Condition to check if ant's energy is low
 class LowEnergy extends Condition:
 	func _evaluate(ant: Ant, _cache: Dictionary, context: Dictionary) -> bool:
-		var threshold = params.get("threshold", context.get("low_energy_threshold", 20.0))
-		return ant.energy.percentage < threshold
+		var threshold = params.get("threshold", ant.energy.low_energy_threshold)
+		return ant.energy.current_level < threshold
 	
 	static func create(_condition_class: GDScript = null) -> ConditionBuilder:
 		return Condition.create(LowEnergy)\

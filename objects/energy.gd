@@ -6,6 +6,8 @@ signal depleted
 ## The maximum energy level
 var max_level: float = 100.0
 
+var low_energy_threshold = 20.0
+
 ## The current energy level
 var current_level: float = max_level :
 	set(value):
@@ -14,12 +16,12 @@ var current_level: float = max_level :
 			depleted.emit()
 
 ## Get the energy level as a percentage
-func energy_percentage() -> float:
+func percentage() -> float:
 	return (current_level / max_level) * 100.0
 
 ## Check if energy is critically low
 func is_critically_low() -> bool:
-	return energy_percentage() < 10.0
+	return percentage() < low_energy_threshold
 
 ## Check if energy is at maximum
 func is_full() -> bool:
