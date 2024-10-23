@@ -7,23 +7,23 @@ func _init(initial_pheromones: Array[Pheromone] = []):
 		self.append(pheromone)
 
 # Filtering methods
-static func sensed(sensing_position: Vector2, sense_range: float) -> Pheromones:
+func sensed(sensing_position: Vector2, sense_range: float) -> Pheromones:
 	var p: Pheromones = Pheromones.new()
-	for pheromone: Pheromone in Pheromones.all():
+	for pheromone: Pheromone in elements:
 		if pheromone.get_position().distance_to(sensing_position) <= sense_range:
 			p.append(pheromone)
 	return p
 
-static func of_type(pheromone_type: String) -> Pheromones:
+func of_type(pheromone_type: String) -> Pheromones:
 	var p: Pheromones = Pheromones.new()
-	for pheromone: Pheromone in Pheromones.all():
+	for pheromone: Pheromone in elements:
 		if pheromone.type == pheromone_type:
 			p.append(pheromone)
 	return p
 
-static func emitted_by_colony(colony: Colony) -> Pheromones:
+func emitted_by_colony(colony: Colony) -> Pheromones:
 	var p: Pheromones = Pheromones.new()
-	for pheromone: Pheromone in Pheromones.all():
+	for pheromone: Pheromone in elements:
 		if pheromone.emitted_by.ant.colony == colony:
 			p.append(pheromone)
 	return p

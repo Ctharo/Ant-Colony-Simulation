@@ -7,6 +7,11 @@ signal behaviors_loaded
 ## Dictionary of loaded behavior configurations
 var behavior_configs: Dictionary = {}
 
+var ant: Ant
+
+func _init(_ant: Ant):
+	ant = _ant
+
 ## Dictionary mapping behavior types to their classes
 const BEHAVIOR_TYPES = {
 	"CollectFood": Behavior.CollectFood,
@@ -54,6 +59,7 @@ const OPERATOR_TYPES = {
 
 ## Load behavior configurations from JSON file
 func load_from_json(filepath: String) -> Error:
+	print("Attempting to load behaviors from: ", filepath)
 	var file := FileAccess.open(filepath, FileAccess.READ)
 	if file == null:
 		push_error("Failed to open behavior config file: %s" % filepath)
@@ -61,6 +67,7 @@ func load_from_json(filepath: String) -> Error:
 	
 	var json := JSON.new()
 	var json_string := file.get_as_text()
+	print("Loaded JSON content: %s" % json_string.substr(0, 100)) # Print first 100 chars
 	var parse_result := json.parse(json_string)
 	
 	if parse_result != OK:
@@ -68,11 +75,16 @@ func load_from_json(filepath: String) -> Error:
 		return parse_result
 	
 	behavior_configs = json.data
+	print("Successfully loaded behavior types: ", behavior_configs.keys())
 	behaviors_loaded.emit()
 	return OK
 
 ## Create a behavior from its configuration
 func create_behavior(behavior_type: String, priority: int) -> Behavior:
+	print("Creating behavior type: %s" % behavior_type)
+	print("Available configs: %s" % behavior_configs.keys())
+	print("Available behavior types: %s" % BEHAVIOR_TYPES.keys())
+	
 	if not behavior_type in behavior_configs:
 		push_error("Unknown behavior type: %s" % behavior_type)
 		return null
@@ -82,15 +94,27 @@ func create_behavior(behavior_type: String, priority: int) -> Behavior:
 		return null
 	
 	var config = behavior_configs[behavior_type]
+	print("Config found for: ", behavior_type)
+	if "conditions" in config:
+		print("Number of conditions: ", config["conditions"].size())
+	if "actions" in config:
+		print("Number of actions: ", config["actions"].size())
+	if "sub_behaviors" in config:
+		print("Number of sub_behaviors: ", config["sub_behaviors"].size())
+
 	var behavior_class = BEHAVIOR_TYPES[behavior_type]
 	var builder = Behavior.BehaviorBuilder.new(behavior_class, priority)
 	
 	# Add conditions
 	if "conditions" in config:
+		print("Adding %d conditions for %s" % [config["conditions"].size(), behavior_type])
 		for condition_data in config["conditions"]:
+			print("Creating condition: ", condition_data.get("type", "unknown type"))
 			var condition = _create_condition(condition_data)
 			if condition:
 				builder.with_condition(condition)
+			else:
+				print("Failed to create condition")
 	
 	# Add actions
 	if "actions" in config:
@@ -109,7 +133,10 @@ func create_behavior(behavior_type: String, priority: int) -> Behavior:
 			if sub_behavior:
 				builder.with_sub_behavior(sub_behavior)
 	
-	return builder.build()
+	# Add actions and sub-behaviors tracking
+	var final_behavior = builder.build()
+	print("Created behavior: ", behavior_type, " with ", final_behavior.conditions.size(), " conditions")
+	return final_behavior
 
 ## Create a condition from configuration data
 func _create_condition(condition_data: Dictionary) -> Condition:
@@ -186,8 +213,7 @@ func save_to_json(filepath: String) -> Error:
 		push_error("Failed to open file for writing: %s" % filepath)
 		return FileAccess.get_open_error()
 	
-	var json := JSON.new()
-	var json_string := json.stringify(behavior_configs, "\t")
+	var json_string := JSON.stringify(behavior_configs, "\t")
 	file.store_string(json_string)
 	return OK
 

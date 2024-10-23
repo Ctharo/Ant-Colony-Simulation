@@ -42,6 +42,6 @@ func save_state() -> Dictionary:
 	# Serialize the current state to a dictionary
 	return {}
 
-func load_state(state_data: Dictionary) -> void:
+func load_state(_state_data: Dictionary) -> void:
 	# Deserialize and apply the provided state data
 	return

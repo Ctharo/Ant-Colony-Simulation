@@ -109,9 +109,9 @@ var condition_cache: Dictionary = {}
 ## Initialize the behavior with a priority level
 func _init(_priority: Priority) -> void:
 	priority = _priority
-	name = get_class()
-	if "@" in name:
-		name = name.split("@")[0]
+	name = get_script().get_path().get_file().get_basename()
+	if name.begins_with("@"):
+		name = "Behavior"
 	name = "%s (Priority: %d)" % [name, priority]
 
 ## Start the behavior for the given ant
@@ -180,9 +180,8 @@ static func from_dict(data: Dictionary) -> Behavior:
 
 ## Save behavior tree to JSON file
 static func save_to_json(behavior: Behavior, filepath: String) -> Error:
-	var json = JSON.new()
 	var data := behavior.to_dict()
-	var json_string := json.stringify(data, "\t")
+	var json_string := JSON.stringify(data, "\t")
 	
 	var file := FileAccess.open(filepath, FileAccess.WRITE)
 	if file == null:
@@ -208,24 +207,56 @@ static func load_from_json(filepath: String) -> Behavior:
 	return Behavior.from_dict(json.data)
 
 ## Update the behavior, returns true if the behavior is complete or inactive
+# In behavior.gd
 func update(delta: float, params: Dictionary) -> bool:
+	print("\nUpdating behavior: %s (State: %s)" % [name, State.keys()[state]])
+	print("Number of conditions: %d" % conditions.size())
+	print("Number of sub-behaviors: %d" % sub_behaviors.size())
+	
 	if state != State.ACTIVE:
+		print("%s not active, returning" % name)
 		return true
 
+	print("Checking conditions for: %s" % name)
 	if not should_execute(params):
+		print("Conditions not met for: %s" % name)
 		state = State.INACTIVE
 		return true
+	print("Conditions met for: %s" % name)
 
+	# Handle current sub-behavior if one exists
 	if current_sub_behavior:
+		print("Updating current sub-behavior: %s" % current_sub_behavior.name)
 		if current_sub_behavior.update(delta, params):
+			print("Sub-behavior completed, clearing current sub-behavior")
 			current_sub_behavior = null
-			return false
+			return true  # Important: Return true when sub-behavior completes
 		elif current_sub_behavior.state == State.FAILED:
+			print("Sub-behavior failed, failing this behavior")
 			state = State.FAILED
 			return true
 		else:
 			return false
 
+	# Try to select and start a new sub-behavior
+	var highest_priority := -1
+	var selected_behavior: Behavior = null
+	
+	print("Checking %d sub-behaviors for %s" % [sub_behaviors.size(), name])
+	for sub_behavior in sub_behaviors:
+		print("  Checking sub-behavior: %s (Priority: %d)" % [sub_behavior.name, sub_behavior.priority])
+		if sub_behavior.should_execute(params) and sub_behavior.priority > highest_priority:
+			highest_priority = sub_behavior.priority
+			selected_behavior = sub_behavior
+	
+	if selected_behavior:
+		print("Selected sub-behavior: %s" % selected_behavior.name)
+		current_sub_behavior = selected_behavior
+		current_sub_behavior.state = State.ACTIVE
+		current_sub_behavior.start(ant)
+		return false
+
+	# If we have actions, execute them
 	if current_action_index < actions.size():
 		var action = actions[current_action_index]
 		if action.is_completed():
@@ -235,12 +266,17 @@ func update(delta: float, params: Dictionary) -> bool:
 			action.update(delta)
 			return false
 	else:
+		# No more actions to execute
 		state = State.COMPLETED
 		return true
 
+	return false
+
 ## Check if all conditions for this behavior are met
 func should_execute(params: Dictionary) -> bool:
+	print("Checking %d conditions for %s" % [conditions.size(), name])
 	for condition in conditions:
+		print("Checking condition type: %s" % condition.get_class())
 		if not condition.is_met(ant, condition_cache, params):
 			return false
 	return true
@@ -309,7 +345,6 @@ class BehaviorBuilder:
 	## Build and return the configured behavior
 	func build() -> Behavior:
 		behavior = behavior_class.new(_priority)
-		
 		# Add conditions
 		for condition in _conditions:
 			behavior.add_condition(condition)
@@ -328,8 +363,8 @@ class BehaviorBuilder:
 
 ## Base class for food collection behaviors
 class CollectFood extends Behavior:
-	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
-		return BehaviorBuilder.new(CollectFood, priority)\
+	static func create(_priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(CollectFood, _priority)\
 			.with_condition(
 				Operator.not_condition(
 					Condition.LowEnergy.create()\
@@ -349,8 +384,8 @@ class CollectFood extends Behavior:
 
 ## Search behavior and its sub-behaviors
 class SearchForFood extends Behavior:
-	static func create(priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
-		return BehaviorBuilder.new(SearchForFood, priority)\
+	static func create(_priority: Priority = Priority.MEDIUM) -> BehaviorBuilder:
+		return BehaviorBuilder.new(SearchForFood, _priority)\
 			.with_condition(
 				Operator.not_condition(
 					Operator.or_condition([
@@ -373,8 +408,8 @@ class SearchForFood extends Behavior:
 
 ## Behavior for harvesting food
 class HarvestFood extends Behavior:
-	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
-		return BehaviorBuilder.new(HarvestFood, priority)\
+	static func create(_priority: Priority = Priority.HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(HarvestFood, _priority)\
 			.with_condition(
 				Operator.and_condition([
 					Condition.FoodInView.create().build(),
@@ -403,8 +438,8 @@ class HarvestFood extends Behavior:
 
 ## Behavior for returning to the colony
 class ReturnToColony extends Behavior:
-	static func create(priority: Priority = Priority.HIGH) -> BehaviorBuilder:
-		return BehaviorBuilder.new(ReturnToColony, priority)\
+	static func create(_priority: Priority = Priority.HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(ReturnToColony, _priority)\
 			.with_condition(
 				Operator.or_condition([
 					Condition.LowEnergy.create()\
@@ -427,8 +462,8 @@ class ReturnToColony extends Behavior:
 
 ## Behavior for storing food in the colony
 class StoreFood extends Behavior:
-	static func create(priority: Priority = Priority.VERY_HIGH) -> BehaviorBuilder:
-		return BehaviorBuilder.new(StoreFood, priority)\
+	static func create(_priority: Priority = Priority.VERY_HIGH) -> BehaviorBuilder:
+		return BehaviorBuilder.new(StoreFood, _priority)\
 			.with_condition(
 				Operator.and_condition([
 					Condition.AtHome.create()\
@@ -445,8 +480,8 @@ class StoreFood extends Behavior:
 
 ## Behavior for resting when energy is low
 class Rest extends Behavior:
-	static func create(priority: Priority = Priority.CRITICAL) -> BehaviorBuilder:
-		return BehaviorBuilder.new(Rest, priority)\
+	static func create(_priority: Priority = Priority.CRITICAL) -> BehaviorBuilder:
+		return BehaviorBuilder.new(Rest, _priority)\
 			.with_condition(
 				Operator.and_condition([
 					Condition.LowEnergy.create()\

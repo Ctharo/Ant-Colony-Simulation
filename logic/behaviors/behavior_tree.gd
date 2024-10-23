@@ -12,14 +12,22 @@ var root_behavior: Behavior:
 	get:
 		return root_behavior
 	set(value):
-		root_behavior = value
+		if value != root_behavior:
+			root_behavior = value
+			# Ensure the root behavior is properly initialized
+			if root_behavior:
+				root_behavior.start(ant)
 
 ## The ant associated with this behavior tree
 var ant: Ant:
 	get:
 		return ant
 	set(value):
-		ant = value
+		if value != ant:
+			ant = value
+			# Reinitialize root behavior with new ant if it exists
+			if root_behavior:
+				root_behavior.start(ant)
 
 ## Configuration manager for behaviors
 var behavior_config: BehaviorConfig
@@ -100,35 +108,39 @@ class Builder:
 		tree.ant = ant
 		
 		# Load behavior configuration
-		tree.behavior_config = BehaviorConfig.new()
+		tree.behavior_config = BehaviorConfig.new(ant)
 		var load_result = tree.behavior_config.load_from_json(config_path)
 		if load_result != OK:
 			push_error("Failed to load behavior config from: %s" % config_path)
 			return tree
 		
 		# Create root behavior (CollectFood is the main behavior)
-		tree.root_behavior = tree.behavior_config.create_behavior(
+		var collect_food = tree.behavior_config.create_behavior(
 			"CollectFood", 
 			Behavior.Priority.MEDIUM
 		)
-		
+			
 		# Add Rest behavior as a high-priority alternative
 		var rest_behavior = tree.behavior_config.create_behavior(
 			"Rest",
 			Behavior.Priority.CRITICAL
 		)
 		
-		# Create a composite root that includes both CollectFood and Rest
-		var composite_root = Behavior.new(Behavior.Priority.MEDIUM)
-		composite_root.add_sub_behavior(rest_behavior)
-		composite_root.add_sub_behavior(tree.root_behavior)
-		tree.root_behavior = composite_root
+		# Create composite root using BehaviorBuilder
+		var composite_builder = Behavior.BehaviorBuilder.new(Behavior, Behavior.Priority.MEDIUM)
+		composite_builder\
+			.with_sub_behavior(rest_behavior)\
+			.with_sub_behavior(collect_food)
+			
+		# Build and assign the composite root
+		tree.root_behavior = composite_builder.build()
+		tree.root_behavior.name = "CompositeRoot"  # Give it a proper name
 		
 		return tree
 
 ## Initialize the BehaviorTree with an ant
-static func create(ant: Ant) -> Builder:
-	return Builder.new(ant)
+static func create(_ant: Ant) -> Builder:
+	return Builder.new(_ant)
 
 ## Update the behavior tree
 func update(delta: float) -> void:
@@ -137,11 +149,26 @@ func update(delta: float) -> void:
 		return
 		
 	var params := gather_context()
+	print("\n--- Behavior Tree Update ---")
+	print("Root behavior: ", root_behavior.name)
+	print("Sub-behaviors: ", root_behavior.sub_behaviors.map(func(b): return b.name))
 	root_behavior.update(delta, params)
 	
+	# Update root behavior and track state changes
+	if root_behavior.state != Behavior.State.ACTIVE:
+		root_behavior.start(ant)
+		
+	if not root_behavior.update(delta, params):
+		print("behavior is finished or inactive, should change?")
+	
 	# Check for active behavior changes
-	var current_active := get_active_behavior()
+	var current_active: Behavior = get_active_behavior()
+	print("Current active behavior: ", current_active.name if current_active else "None")
 	if current_active != _last_active_behavior:
+		if current_active:
+			print("Active behavior changed to: ", current_active.name)
+		else:
+			print("No active behavior")
 		_last_active_behavior = current_active
 		active_behavior_changed.emit(current_active)
 	
@@ -189,7 +216,7 @@ func _get_active_behavior_recursive(behavior: Behavior) -> Behavior:
 	var highest_priority: int = -1
 	
 	for sub_behavior in behavior.sub_behaviors:
-		var active_sub_behavior := _get_active_behavior_recursive(sub_behavior)
+		var active_sub_behavior: Behavior = _get_active_behavior_recursive(sub_behavior)
 		if active_sub_behavior and active_sub_behavior.priority > highest_priority:
 			highest_priority_behavior = active_sub_behavior
 			highest_priority = active_sub_behavior.priority
@@ -215,7 +242,7 @@ func to_dict() -> Dictionary:
 	}
 
 ## Create a behavior tree from a dictionary
-static func from_dict(data: Dictionary, ant: Ant) -> BehaviorTree:
-	return create(ant)\
+static func from_dict(data: Dictionary, _ant: Ant) -> BehaviorTree:
+	return create(_ant)\
 		.with_config_path(data.get("config_path", DEFAULT_CONFIG_PATH))\
 		.build()

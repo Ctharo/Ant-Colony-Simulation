@@ -56,11 +56,11 @@ class And extends Operator:
 	## Check if all operands are met
 	## @param ant The ant to check the conditions for
 	## @param cache Dictionary to cache condition results
-	## @param params Dictionary containing context parameters
+	## @param _params Dictionary containing context parameters
 	## @return True if all operands are met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+	func is_met(ant: Ant, cache: Dictionary, _params: Dictionary) -> bool:
 		for operand in operands:
-			if not operand.is_met(ant, cache, params):
+			if not operand.is_met(ant, cache, _params):
 				return false
 		return true
 	
@@ -72,11 +72,11 @@ class Or extends Operator:
 	## Check if any operand is met
 	## @param ant The ant to check the conditions for
 	## @param cache Dictionary to cache condition results
-	## @param params Dictionary containing context parameters
+	## @param _params Dictionary containing context parameters
 	## @return True if any operand is met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+	func is_met(ant: Ant, cache: Dictionary, _params: Dictionary) -> bool:
 		for operand in operands:
-			if operand.is_met(ant, cache, params):
+			if operand.is_met(ant, cache, _params):
 				return true
 		return false
 	
@@ -88,13 +88,13 @@ class Not extends Operator:
 	## Check if the negated condition is not met
 	## @param ant The ant to check the condition for
 	## @param cache Dictionary to cache condition results
-	## @param params Dictionary containing context parameters
+	## @param _params Dictionary containing context parameters
 	## @return True if the negated condition is not met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+	func is_met(ant: Ant, cache: Dictionary, _params: Dictionary) -> bool:
 		if operands.size() != 1:
 			push_error("NOT operator must have exactly one operand")
 			return false
-		return not operands[0].is_met(ant, cache, params)
+		return not operands[0].is_met(ant, cache, _params)
 	
 	func _get_operator_type() -> String:
 		return "not"
@@ -126,7 +126,7 @@ class Comparison extends Condition:
 	## @param cache Dictionary to cache condition results
 	## @param params Dictionary containing context parameters
 	## @return True if the condition is met, false otherwise
-	func is_met(ant: Ant, cache: Dictionary, params: Dictionary) -> bool:
+	func is_met(ant: Ant, _cache: Dictionary, _params: Dictionary) -> bool:
 		var lhs_value = lhs.call(ant, params) if lhs is Callable else lhs
 		var rhs_value = rhs.call(ant, params) if rhs is Callable else rhs
 		

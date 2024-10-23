@@ -49,6 +49,7 @@ static func create(condition_class: GDScript) -> ConditionBuilder:
 ## @param context Dictionary containing context parameters
 ## @return True if the condition is met, false otherwise
 func is_met(ant: Ant, cache: Dictionary, context: Dictionary) -> bool:
+	print("Base is_met called for condition type: %s" % get_class())
 	var result := _evaluate(ant, cache, context)
 	if result != _previous_result:
 		_previous_result = result
@@ -123,9 +124,12 @@ class HomePheromoneSensed extends Condition:
 
 ## Condition to check if ant's energy is low
 class LowEnergy extends Condition:
-	func _evaluate(ant: Ant, _cache: Dictionary, context: Dictionary) -> bool:
+	func _evaluate(ant: Ant, _cache: Dictionary, _context: Dictionary) -> bool:
 		var threshold = params.get("threshold", ant.energy.low_energy_threshold)
-		return ant.energy.current_level < threshold
+		var is_low = ant.energy.current_level < threshold
+		print("LowEnergy check: current=%f threshold=%f result=%s" % 
+			  [ant.energy.current_level, threshold, is_low])
+		return is_low
 	
 	static func create(_condition_class: GDScript = null) -> ConditionBuilder:
 		return Condition.create(LowEnergy)\

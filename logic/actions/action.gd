@@ -204,13 +204,11 @@ class FollowPheromone extends Action:
 			return
 			
 		var pheromone_type = params["pheromone_type"]
-		var follow_speed_modifier = params.get("follow_speed_modifier", 1.0)
 		
 		var pheromone_direction = ant.get_strongest_pheromone_direction(pheromone_type)
-		var movement_rate = follow_speed_modifier * ant.speed.movement_rate
 		
-		ant.velocity = pheromone_direction * movement_rate
-	
+		ant.move(pheromone_direction, delta)
+		
 	func is_completed() -> bool:
 		return false
 	
@@ -272,12 +270,12 @@ class Attack extends Action:
 		var attack_range_modifier = params.get("attack_range_modifier", 1.0)
 		var attack_range = attack_range_modifier * ant.reach.distance
 		if current_target_entity and is_instance_valid(current_target_entity):
-			if ant.global_position.distance_to(current_target_entity.global_position) <= attack_range_modifier:
+			if ant.global_position.distance_to(current_target_entity.global_position) <= attack_range:
 				ant.attack(current_target_entity, delta)
 			else:
 				ant.move_to(current_target_location, delta)
 		elif current_target_location != Vector2.ZERO:
-			if ant.global_position.distance_to(current_target_location) <= attack_range_modifier:
+			if ant.global_position.distance_to(current_target_location) <= attack_range:
 				ant.attack(current_target_entity, delta)
 			else:
 				ant.move_to(current_target_location, delta)

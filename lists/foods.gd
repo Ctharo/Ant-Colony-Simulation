@@ -13,7 +13,7 @@ func add_food(mass_to_add: float) -> float:
 	return mass()
 
 func mass() -> float:
-	var _mass: float
+	var _mass: float = 0.0
 	for food in self:
 		_mass += food.mass()
 	return _mass
