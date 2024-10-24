@@ -1,0 +1,72 @@
+{
+	"tasks": {
+		"CollectFood": {
+			"priority": "MEDIUM",
+			"conditions": [
+				{
+					"type": "Operator",
+					"operator_type": "not",
+					"operands": [
+						{
+							"type": "Operator",
+							"operator_type": "or",
+							"operands": [
+								{"type": "OverloadedWithFood"},
+								{"type": "LowEnergy"}
+							]
+						}
+					]
+				}
+			],
+			"behaviors": [
+				{
+					"type": "WanderForFood",
+					"priority": "LOWEST"
+				},
+				{
+					"type": "FollowFoodPheromone",
+					"priority": "LOW"
+				},
+				{
+					"type": "MoveToFood",
+					"priority": "HIGH"
+				},
+				{
+					"type": "HarvestFood",
+					"priority": "HIGHEST"
+				}
+			]
+		},
+		"ReturnHome": {
+			"priority": "MEDIUM",
+			"conditions": [
+				{
+					"type": "Operator",
+					"operator_type": "or",
+					"operands": [
+						{"type": "CarryingFood"},
+						{"type": "LowEnergy"}
+					]
+				}
+			],
+			"behaviors": [
+				{
+					"type": "WanderForHome",
+					"priority": "LOWEST"
+				},
+				{
+					"type": "FollowHomePheromone",
+					"priority": "LOW"
+				},
+				{
+					"type": "StoreFood",
+					"priority": "HIGH"
+				},
+				{
+					"type": "Rest",
+					"priority": "HIGHEST"
+				}
+			]
+		}
+	}
+}
