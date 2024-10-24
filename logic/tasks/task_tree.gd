@@ -64,8 +64,8 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 			_print_task_recursive(behavior, depth + 1)
 			
 ## Initialize the BehaviorTree with an ant
-static func create(ant: Ant) -> BehaviorTreeBuilder:
-	return BehaviorTreeBuilder.new(ant)
+static func create(ant: Ant) -> TaskTreeBuilder:
+	return TaskTreeBuilder.new(ant)
 
 ## Update the behavior tree
 func update(delta: float) -> void:

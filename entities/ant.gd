@@ -59,14 +59,14 @@ func _init():
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	behavior_tree = BehaviorTree.create(self).with_root_behavior("CollectFood").build()
-	behavior_tree.active_behavior_changed.connect(_on_active_behavior_changed)
+	task_tree = TaskTree.create(self).with_root_behavior("CollectFood").build()
+	task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
 
 func _ready() -> void:
 	spawned.emit()
 
 func _process(delta: float) -> void:
-	behavior_tree.update(delta)
+	task_tree.update(delta)
 
 func _on_active_behavior_changed() -> void:
 	pass
