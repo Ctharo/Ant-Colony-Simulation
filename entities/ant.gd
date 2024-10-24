@@ -42,8 +42,8 @@ var foods: Foods
 ## The speed capabilities of the ant
 var speed: Speed
 
-## The behavior tree for this ant
-var behavior_tree: BehaviorTree
+## The task tree for this ant
+var task_tree: TaskTree
 
 ## The navigation agent for this ant
 var nav_agent: NavigationAgent2D

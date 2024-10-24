@@ -1,4 +1,5 @@
 class_name BehaviorBuilder
+extends RefCounted
 ## Builder class for constructing behaviors
 
 var behavior: Behavior

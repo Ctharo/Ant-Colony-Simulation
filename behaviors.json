@@ -1,67 +1,38 @@
 {
   "behaviors": {
-	  "CollectFood": {
+	  "MoveToFood": {
 		"conditions": [
 		  {
 			"type": "Operator",
-			"operator_type": "not",
+			"operator_type": "and",
 			"operands": [
 			  {
-				"type": "LowEnergy"
-			  }
-			]
-		  }
-		],
-		"sub_behaviors": [
-		  {
-			"type": "SearchForFood",
-			"priority": 50
-		  },
-		  {
-			"type": "HarvestFood",
-			"priority": 75
-		  },
-		  {
-			"type": "ReturnToColony",
-			"priority": 100
-		  }
-		]
-	  },
-
-	  "SearchForFood": {
-		"conditions": [
-		  {
-			"type": "Operator",
-			"operator_type": "not",
-			"operands": [
+				"type": "FoodInView"
+			  },
 			  {
 				"type": "Operator",
-				"operator_type": "or",
+				"operator_type": "not",
 				"operands": [
 				  {
-					"type": "OverloadedWithFood"
-				  },
-				  {
-					"type": "LowEnergy"
-				  },
-				  {
-					"type": "CarryingFood"
+					"type": "Operator",
+					"operator_type": "or",
+					"operands": [
+					  {
+						"type": "OverloadedWithFood"
+					  },
+					  {
+						"type": "LowEnergy"
+					  }
+					]
 				  }
 				]
 			  }
 			]
 		  }
 		],
-		"sub_behaviors": [
-		  {
-			"type": "FollowFoodPheromones",
-			"priority": 75
-		  },
-		  {
-			"type": "WanderForFood",
-			"priority": 25
-		  }
-		]
+		"action": {
+		  "type": "MoveToFood"
+		}
 	  },
 
 	  "HarvestFood": {
@@ -94,45 +65,9 @@
 			]
 		  }
 		],
-		"actions": [
-		  {
-			"type": "MoveToFood"
-		  },
-		  {
-			"type": "Harvest"
-		  }
-		]
-	  },
-
-	  "ReturnToColony": {
-		"conditions": [
-		  {
-			"type": "Operator",
-			"operator_type": "or",
-			"operands": [
-			  {
-				"type": "LowEnergy"
-			  },
-			  {
-				"type": "OverloadedWithFood"
-			  }
-			]
-		  }
-		],
-		"sub_behaviors": [
-		  {
-			"type": "FollowHomePheromones",
-			"priority": 75
-		  },
-		  {
-			"type": "WanderForHome",
-			"priority": 50
-		  },
-		  {
-			"type": "StoreFood",
-			"priority": 100
-		  }
-		]
+		"action": {
+		  "type": "Harvest"
+		}
 	  },
 
 	  "StoreFood": {
@@ -150,11 +85,9 @@
 			]
 		  }
 		],
-		"actions": [
-		  {
-			"type": "Store"
-		  }
-		]
+		"action": {
+		  "type": "Store"
+		}
 	  },
 
 	  "Rest": {
@@ -172,11 +105,9 @@
 			]
 		  }
 		],
-		"actions": [
-		  {
-			"type": "Rest"
-		  }
-		]
+		"action": {
+		  "type": "Rest"
+		}
 	  },
 
 	  "FollowHomePheromones": {
@@ -185,11 +116,9 @@
 			"type": "HomePheromoneSensed"
 		  }
 		],
-		"actions": [
-		  {
-			"type": "FollowPheromone"
-		  }
-		]
+		"action": {
+		  "type": "FollowPheromone"
+		}
 	  },
 
 	  "FollowFoodPheromones": {
@@ -198,11 +127,9 @@
 			"type": "FoodPheromoneSensed"
 		  }
 		],
-		"actions": [
-		  {
-			"type": "FollowPheromone"
-		  }
-		]
+		"action": {
+		  "type": "FollowPheromone"
+		}
 	  },
 
 	  "WanderForHome": {
@@ -217,11 +144,9 @@
 			]
 		  }
 		],
-		"actions": [
-		  {
-			"type": "RandomMove"
-		  }
-		]
+		"action": {
+		  "type": "RandomMove"
+		}
 	  },
 
 	  "WanderForFood": {
@@ -236,11 +161,9 @@
 			]
 		  }
 		],
-		"actions": [
-		  {
-			"type": "RandomMove"
-		  }
-		]
+		"action": {
+		  "type": "RandomMove"
+		}
 	  }
 	}
 }
