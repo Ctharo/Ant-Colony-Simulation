@@ -7,7 +7,10 @@
 			"operator_type": "not",
 			"operands": [
 			  {
-				"type": "LowEnergy"
+				"type": "LowEnergy",
+				"params": {
+				  "threshold": 20.0
+				}
 			  }
 			]
 		  }
@@ -39,10 +42,16 @@
 				"operator_type": "or",
 				"operands": [
 				  {
-					"type": "OverloadedWithFood"
+					"type": "OverloadedWithFood",
+					"params": {
+					  "threshold": 0.9
+					}
 				  },
 				  {
-					"type": "LowEnergy"
+					"type": "LowEnergy",
+					"params": {
+					  "threshold": 20.0
+					}
 				  },
 				  {
 					"type": "CarryingFood"
@@ -82,10 +91,16 @@
 					"operator_type": "or",
 					"operands": [
 					  {
-						"type": "OverloadedWithFood"
+						"type": "OverloadedWithFood",
+						"params": {
+						  "threshold": 0.9
+						}
 					  },
 					  {
-						"type": "LowEnergy"
+						"type": "LowEnergy",
+						"params": {
+						  "threshold": 20.0
+						}
 					  }
 					]
 				  }
@@ -96,10 +111,16 @@
 		],
 		"actions": [
 		  {
-			"type": "MoveToFood"
+			"type": "MoveToFood",
+			"params": {
+			  "movement_rate": 1.0
+			}
 		  },
 		  {
-			"type": "Harvest"
+			"type": "Harvest",
+			"params": {
+			  "harvest_rate": 1.0
+			}
 		  }
 		]
 	  },
@@ -111,10 +132,16 @@
 			"operator_type": "or",
 			"operands": [
 			  {
-				"type": "LowEnergy"
+				"type": "LowEnergy",
+				"params": {
+				  "threshold": 20.0
+				}
 			  },
 			  {
-				"type": "OverloadedWithFood"
+				"type": "OverloadedWithFood",
+				"params": {
+				  "threshold": 0.9
+				}
 			  }
 			]
 		  }
@@ -142,7 +169,10 @@
 			"operator_type": "and",
 			"operands": [
 			  {
-				"type": "AtHome"
+				"type": "AtHome",
+				"params": {
+				  "home_threshold": 10.0
+				}
 			  },
 			  {
 				"type": "CarryingFood"
@@ -152,7 +182,10 @@
 		],
 		"actions": [
 		  {
-			"type": "Store"
+			"type": "Store",
+			"params": {
+			  "store_rate_modifier": 1.0
+			}
 		  }
 		]
 	  },
@@ -164,17 +197,26 @@
 			"operator_type": "and",
 			"operands": [
 			  {
-				"type": "LowEnergy"
+				"type": "LowEnergy",
+				"params": {
+				  "threshold": 20.0
+				}
 			  },
 			  {
-				"type": "AtHome"
+				"type": "AtHome",
+				"params": {
+				  "home_threshold": 10.0
+				}
 			  }
 			]
 		  }
 		],
 		"actions": [
 		  {
-			"type": "Rest"
+			"type": "Rest",
+			"params": {
+			  "energy_gain_rate_modifier": 1.0
+			}
 		  }
 		]
 	  },
@@ -187,7 +229,11 @@
 		],
 		"actions": [
 		  {
-			"type": "FollowPheromone"
+			"type": "FollowPheromone",
+			"params": {
+			  "pheromone_type": "home",
+			  "follow_speed_modifier": 1.0
+			}
 		  }
 		]
 	  },
@@ -200,7 +246,11 @@
 		],
 		"actions": [
 		  {
-			"type": "FollowPheromone"
+			"type": "FollowPheromone",
+			"params": {
+			  "pheromone_type": "food",
+			  "follow_speed_modifier": 1.0
+			}
 		  }
 		]
 	  },
@@ -219,7 +269,11 @@
 		],
 		"actions": [
 		  {
-			"type": "RandomMove"
+			"type": "RandomMove",
+			"params": {
+			  "move_duration": 2.0,
+			  "movement_rate_modifier": 1.0
+			}
 		  }
 		]
 	  },
@@ -238,7 +292,11 @@
 		],
 		"actions": [
 		  {
-			"type": "RandomMove"
+			"type": "RandomMove",
+			"params": {
+			  "move_duration": 2.0,
+			  "movement_rate_modifier": 1.0
+			}
 		  }
 		]
 	  }

@@ -60,13 +60,16 @@ func _init():
 	speed = Speed.new()
 	
 	behavior_tree = BehaviorTree.create(self).with_root_behavior("CollectFood").build()
-
+	behavior_tree.active_behavior_changed.connect(_on_active_behavior_changed)
 
 func _ready() -> void:
 	spawned.emit()
 
 func _process(delta: float) -> void:
 	behavior_tree.update(delta)
+
+func _on_active_behavior_changed() -> void:
+	pass
 
 ## Check if the ant is carrying food
 func is_carrying_food() -> bool:
@@ -98,14 +101,26 @@ func is_food_in_view() -> bool:
 
 ## Get pheromones sensed by the ant
 func pheromones_sensed(type: String = "") -> Pheromones:
-	var all_pheromones = Pheromones.new() # Assume this is populated from the world
+	var all_pheromones = Pheromones.all() 
 	var sensed = all_pheromones.sensed(position, sense.distance)
 	return sensed if type.is_empty() else sensed.of_type(type)
+
+## Get pheromones sensed by the ant
+func _pheromones_sensed_count(type: String = "") -> int:
+	var all_pheromones = Pheromones.all() 
+	var sensed = all_pheromones.sensed(position, sense.distance)
+	return sensed.size() if type.is_empty() else sensed.of_type(type).size()
+
+func food_pheromones_sensed_count() -> int:
+	return _pheromones_sensed_count("food")
+
+func home_pheromones_sensed_count() -> int:
+	return _pheromones_sensed_count("home")
 
 ## Returns true if pheromones are sensed.
 ##@unoptimized
 func is_pheromone_sensed(type: String = "") -> bool:
-	var all_pheromones = Pheromones.new() # Assume this is populated from the world
+	var all_pheromones = Pheromones.all() 
 	var sensed = all_pheromones.sensed(position, sense.distance)
 	return !sensed.is_empty() if type.is_empty() else !sensed.of_type(type).is_empty()
 
@@ -132,7 +147,7 @@ func consume_food(amount: float) -> void:
 ## Move the ant to a new position
 func move(direction: Vector2, delta: float) -> void:
 	var vector = direction * speed.movement_rate * delta 
-	_move_to(vector)
+	_move_to(global_position + vector)
 
 func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
@@ -172,6 +187,9 @@ func perform_action() -> void:
 
 func attack(current_target_entity: Ant, _delta: float) -> void:
 	print("Attack action called against %s" % current_target_entity.name)
+
+func get_all_properties() -> Dictionary:
+	return {}
 
 # Connect signals
 func _connect_signals() -> void:

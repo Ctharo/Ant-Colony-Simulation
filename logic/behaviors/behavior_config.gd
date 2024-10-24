@@ -4,33 +4,9 @@ extends RefCounted
 ## Signal emitted when behaviors are loaded
 signal behaviors_loaded
 
-## Dictionary of loaded behavior configurations
+## Dictionary of loaded behavior and condition configurations
 var behavior_configs: Dictionary = {}
-
-## Dictionary mapping behavior types to their classes
-const BEHAVIOR_TYPES = {
-	"CollectFood": Behavior.CollectFood,
-	"SearchForFood": Behavior.SearchForFood,
-	"HarvestFood": Behavior.HarvestFood,
-	"ReturnToColony": Behavior.ReturnToColony,
-	"StoreFood": Behavior.StoreFood,
-	"Rest": Behavior.Rest,
-	"FollowHomePheromones": Behavior.FollowHomePheromones,
-	"FollowFoodPheromones": Behavior.FollowFoodPheromones,
-	"WanderForHome": Behavior.WanderForHome,
-	"WanderForFood": Behavior.WanderForFood
-}
-
-## Dictionary mapping condition types to their classes
-const CONDITION_TYPES = {
-	"FoodInView": Condition.FoodInView,
-	"CarryingFood": Condition.CarryingFood,
-	"AtHome": Condition.AtHome,
-	"FoodPheromoneSensed": Condition.FoodPheromoneSensed,
-	"HomePheromoneSensed": Condition.HomePheromoneSensed,
-	"LowEnergy": Condition.LowEnergy,
-	"OverloadedWithFood": Condition.OverloadedWithFood
-}
+var condition_configs: Dictionary = {}
 
 ## Dictionary mapping action types to their classes
 const ACTION_TYPES = {
@@ -45,25 +21,34 @@ const ACTION_TYPES = {
 	"Rest": Action.Rest
 }
 
-## Load behavior configurations from JSON file
-func load_from_json(filepath: String) -> Error:
-	print("Loading behavior configurations from: ", filepath)
-	
-	var file := FileAccess.open(filepath, FileAccess.READ)
-	if file == null:
-		push_error("Failed to open behavior config file: %s" % filepath)
-		return FileAccess.get_open_error()
+## Load behavior and condition configurations from JSON files
+func load_configs(behaviors_path: String, conditions_path: String) -> Error:
+	# Load conditions first
+	var conditions_file := FileAccess.open(conditions_path, FileAccess.READ)
+	if not conditions_file:
+		push_error("Failed to open conditions config file: %s" % conditions_path)
+		return ERR_FILE_NOT_FOUND
 	
 	var json := JSON.new()
-	var json_string := file.get_as_text()
-	var parse_result := json.parse(json_string)
+	var result := json.parse(conditions_file.get_as_text())
+	if result != OK:
+		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
+		return result
 	
-	if parse_result != OK:
-		push_error("Failed to parse behavior config JSON: %s" % json.get_error_message())
-		return parse_result
+	condition_configs = json.data.conditions
 	
-	behavior_configs = json.data
-	print("Successfully loaded behavior configurations")
+	# Load behaviors
+	var behaviors_file := FileAccess.open(behaviors_path, FileAccess.READ)
+	if not behaviors_file:
+		push_error("Failed to open behaviors config file: %s" % behaviors_path)
+		return ERR_FILE_NOT_FOUND
+	
+	result = json.parse(behaviors_file.get_as_text())
+	if result != OK:
+		push_error("Failed to parse behaviors JSON: %s" % json.get_error_message())
+		return result
+	
+	behavior_configs = json.data.behaviors
 	behaviors_loaded.emit()
 	return OK
 
@@ -75,99 +60,71 @@ func create_behavior(behavior_type: String, priority: int, ant: Ant = null) -> B
 		push_error("No configuration found for behavior type: %s" % behavior_type)
 		return null
 	
-	if not behavior_type in BEHAVIOR_TYPES:
-		push_error("No behavior class found for type: %s" % behavior_type)
-		return null
-	
 	var config = behavior_configs[behavior_type]
-	var behavior_class = BEHAVIOR_TYPES[behavior_type]
+	var behavior = Behavior.new(priority)
 	
-	# Create behavior builder
-	var builder = Behavior.BehaviorBuilder.new(behavior_class, priority)
+	# Set basic properties
+	behavior.name = behavior_type
+	behavior.ant = ant
 	
 	# Add conditions from configuration
 	if "conditions" in config:
-		_add_conditions_from_config(builder, config["conditions"])
+		_add_conditions_from_config(behavior, config.conditions)
 	
 	# Add actions from configuration
 	if "actions" in config:
-		_add_actions_from_config(builder, config["actions"], ant)
-	
-	# Build the behavior first
-	var behavior = builder.build()
-	
-	# Set name and initialize
-	behavior.name = behavior_type
-	if ant:
-		behavior.ant = ant
+		_add_actions_from_config(behavior, config.actions, ant)
 	
 	# Add sub-behaviors after initial creation
 	if "sub_behaviors" in config:
-		_add_sub_behaviors_from_config(behavior, config["sub_behaviors"], ant)
+		_add_sub_behaviors_from_config(behavior, config.sub_behaviors, ant)
 	
 	return behavior
 
-## Add conditions to the behavior builder from configuration
-func _add_conditions_from_config(builder: Behavior.BehaviorBuilder, conditions_config: Array) -> void:
+## Add conditions to the behavior from configuration
+func _add_conditions_from_config(behavior: Behavior, conditions_config: Array) -> void:
 	for condition_data in conditions_config:
-		var condition = create_condition(condition_data)
-		if condition:
-			builder.with_condition(condition)
+		var condition_config = _resolve_condition_config(condition_data)
+		if condition_config:
+			behavior.add_condition_config(condition_config)
 
-## Create a condition from configuration data
-func create_condition(condition_data: Dictionary) -> Condition:
-	# Handle operator conditions (AND, OR, NOT)
-	if condition_data.get("type") == "Operator":
-		return _create_operator_condition(condition_data)
+## Resolve condition configuration from various formats
+func _resolve_condition_config(condition_data: Variant) -> Dictionary:
+	# Handle string condition names (reference to predefined conditions)
+	if condition_data is String:
+		if not condition_data in condition_configs:
+			push_error("Unknown condition: %s" % condition_data)
+			return {}
+		return condition_configs[condition_data]
 	
-	# Handle regular conditions
-	var condition_type = condition_data["type"]
-	if not condition_type in CONDITION_TYPES:
-		push_error("Unknown condition type: %s" % condition_type)
-		return null
+	# Handle direct condition objects
+	if condition_data is Dictionary:
+		if condition_data.get("type") == "Operator":
+			match condition_data.operator_type.to_upper():
+				"AND":
+					var subconds = []
+					for subcond in condition_data.operands:
+						subconds.append(_resolve_condition_config(subcond))
+					return Operator.and_condition(subconds)
+				"OR":
+					var subconds = []
+					for subcond in condition_data.operands:
+						subconds.append(_resolve_condition_config(subcond))
+					return Operator.or_condition(subconds)
+				"NOT":
+					var subcond = _resolve_condition_config(condition_data.operands[0])
+					return Operator.not_condition(subcond)
+		return condition_data
 	
-	var condition_class = CONDITION_TYPES[condition_type]
-	var builder = condition_class.create()
-	
-	# Add parameters if specified
-	if "params" in condition_data:
-		for param_key in condition_data["params"]:
-			builder.with_param(param_key, condition_data["params"][param_key])
-	
-	return builder.build()
+	push_error("Invalid condition data: %s" % condition_data)
+	return {}
 
-## Create an operator condition (AND, OR, NOT)
-func _create_operator_condition(operator_data: Dictionary) -> Condition:
-	var operator_type = operator_data["operator_type"]
-	var operands: Array[Condition] = []
-	
-	# Create conditions for all operands
-	for operand_data in operator_data["operands"]:
-		var operand = create_condition(operand_data)
-		if operand:
-			operands.append(operand)
-	
-	# Create the appropriate operator
-	match operator_type:
-		"and":
-			return Operator.and_condition(operands)
-		"or":
-			return Operator.or_condition(operands)
-		"not":
-			if operands.size() != 1:
-				push_error("NOT operator must have exactly one operand")
-				return null
-			return Operator.not_condition(operands[0])
-		_:
-			push_error("Unknown operator type: %s" % operator_type)
-			return null
-
-## Add actions to the behavior builder from configuration
-func _add_actions_from_config(builder: Behavior.BehaviorBuilder, actions_config: Array, ant: Ant) -> void:
+## Add actions to the behavior from configuration
+func _add_actions_from_config(behavior: Behavior, actions_config: Array, ant: Ant) -> void:
 	for action_data in actions_config:
 		var action = create_action(action_data, ant)
 		if action:
-			builder.with_action(action)
+			behavior.actions.append(action)
 
 ## Create an action from configuration data
 func create_action(action_data: Dictionary, ant: Ant) -> Action:
