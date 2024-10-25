@@ -41,7 +41,7 @@ func print_behavior_hierarchy() -> void:
 	else:
 		print("No root behavior set")
 
-## Recursively print task hierarchy with improved formatting
+## Recursively print task hierarchy
 func _print_task_recursive(task: Task, depth: int) -> void:
 	var indent = "  ".repeat(depth)
 	print("%s- %s (Priority: %d)" % [
@@ -54,7 +54,7 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 	if not task.conditions.is_empty():
 		print("%s  Conditions:" % indent)
 		for condition in task.conditions:
-			var condition_name = condition.get_script().get_path().get_file().get_basename()
+			var condition_name = condition
 			print("%s    - %s" % [indent, condition_name])
 	
 	# Recursively print behaviors
@@ -63,11 +63,11 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 		for behavior in task.behaviors:
 			_print_task_recursive(behavior, depth + 1)
 			
-## Initialize the BehaviorTree with an ant
+## Initialize the TaskTree with an ant
 static func create(ant: Ant) -> TaskTreeBuilder:
 	return TaskTreeBuilder.new(ant)
 
-## Update the behavior tree
+## Update the task tree
 func update(delta: float) -> void:
 	if not is_instance_valid(ant):
 		push_warning("BehaviorTree: Ant reference is invalid")
