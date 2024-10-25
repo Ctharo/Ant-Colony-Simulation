@@ -5,8 +5,8 @@ extends RefCounted
 ## @param config The condition configuration from JSON
 ## @param context The context dictionary with property values
 ## @return Whether the condition is met
-static func evaluate(config: Dictionary, context: Dictionary) -> bool:
-	var evaluation = config.evaluation
+static func evaluate(condition: Dictionary, context: Dictionary) -> bool:
+	var evaluation = condition
 	
 	# Handle property check evaluation
 	if evaluation.type == "PropertyCheck":
