@@ -59,7 +59,8 @@ func _init():
 	foods = Foods.new()
 	speed = Speed.new()
 	
-	task_tree = TaskTree.create(self).with_root_behavior("CollectFood").build()
+	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
+	task_tree.active_task_changed.connect(_on_active_task_changed)
 	task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
 
 func _ready() -> void:
@@ -69,6 +70,9 @@ func _process(delta: float) -> void:
 	task_tree.update(delta)
 
 func _on_active_behavior_changed() -> void:
+	pass
+	
+func _on_active_task_changed() -> void:
 	pass
 
 ## Check if the ant is carrying food
@@ -89,11 +93,11 @@ func is_friendly(other_colony: Colony) -> bool:
 
 ## Get food items within reach
 func food_in_reach() -> Foods:
-	return Foods.in_reach(position, reach.distance)
+	return Foods.in_reach(global_position, reach.distance)
 
 ## Get food items in view
 func food_in_view() -> Foods:
-	return Foods.in_view(position, vision.distance)
+	return Foods.in_view(global_position, vision.distance)
 
 ## Return true if food is in view
 func is_food_in_view() -> bool:
@@ -102,13 +106,13 @@ func is_food_in_view() -> bool:
 ## Get pheromones sensed by the ant
 func pheromones_sensed(type: String = "") -> Pheromones:
 	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(position, sense.distance)
+	var sensed = all_pheromones.sensed(global_position, sense.distance)
 	return sensed if type.is_empty() else sensed.of_type(type)
 
 ## Get pheromones sensed by the ant
 func _pheromones_sensed_count(type: String = "") -> int:
 	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(position, sense.distance)
+	var sensed = all_pheromones.sensed(global_position, sense.distance)
 	return sensed.size() if type.is_empty() else sensed.of_type(type).size()
 
 func food_pheromones_sensed_count() -> int:
@@ -121,16 +125,16 @@ func home_pheromones_sensed_count() -> int:
 ##@unoptimized
 func is_pheromone_sensed(type: String = "") -> bool:
 	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(position, sense.distance)
+	var sensed = all_pheromones.sensed(global_position, sense.distance)
 	return !sensed.is_empty() if type.is_empty() else !sensed.of_type(type).is_empty()
 
 ## Get ants in view
 func ants_in_view() -> Ants:
-	return Ants.in_view(position, vision.distance)
+	return Ants.in_view(global_position, vision.distance)
 
 ## Check if the ant is at its home colony
 func is_at_home() -> bool:
-	return position.distance_to(colony.position) < reach.distance + colony.radius
+	return global_position.distance_to(colony.global_position) < reach.distance + colony.radius
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:

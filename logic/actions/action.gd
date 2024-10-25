@@ -1,5 +1,6 @@
 class_name Action
 extends RefCounted
+## Interface between [class Behavior]s and [class Ant] action methods
 
 ## Signal emitted when action starts
 signal started

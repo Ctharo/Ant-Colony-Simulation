@@ -24,7 +24,7 @@
 					"priority": "LOWEST"
 				},
 				{
-					"type": "FollowFoodPheromone",
+					"type": "FollowFoodPheromones",
 					"priority": "LOW"
 				},
 				{
@@ -55,7 +55,7 @@
 					"priority": "LOWEST"
 				},
 				{
-					"type": "FollowHomePheromone",
+					"type": "FollowHomePheromones",
 					"priority": "LOW"
 				},
 				{

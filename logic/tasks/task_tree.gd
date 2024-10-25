@@ -4,6 +4,9 @@ extends Node
 ## Signal emitted when the tree's active task changes
 signal active_task_changed(task: Task)
 
+## Signal emitted when the tree's active behavior changes
+signal active_behavior_changed(behavior: Behavior)
+
 ## Signal emitted when the tree updates
 signal tree_updated
 

@@ -4,11 +4,11 @@ extends RefCounted
 
 var task: Task
 var task_class: GDScript
-var _priority: Behavior.Priority
+var _priority: Task.Priority
 var _conditions: Array[Condition] = []
 var _behaviors: Array[Behavior] = []
 
-func _init(t_class: GDScript, p: Behavior.Priority) -> void:
+func _init(t_class: GDScript, p: Task.Priority) -> void:
 	task_class = t_class
 	_priority = p
 

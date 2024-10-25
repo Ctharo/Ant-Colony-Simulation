@@ -1,5 +1,6 @@
 class_name Behavior
 extends RefCounted
+## Interface between the [class Task] and the [class Action], passing parameters 
 
 ## Signals for behavior state changes
 signal started
