@@ -48,6 +48,9 @@ var task_tree: TaskTree
 ## The navigation agent for this ant
 var nav_agent: NavigationAgent2D
 
+## Task update timer
+var task_update_timer: float = 0.0
+
 func _init():
 	
 	reach = Reach.new()
@@ -60,14 +63,21 @@ func _init():
 	speed = Speed.new()
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
-	task_tree.active_task_changed.connect(_on_active_task_changed)
-	task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
+	
+	if task_tree:
+		print("Successfully loaded task %s to ant %d" % [task_tree.get_active_task().name, id])
+		task_tree.print_task_hierarchy()
+		task_tree.active_task_changed.connect(_on_active_task_changed)
+		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
 
 func _ready() -> void:
 	spawned.emit()
 
 func _process(delta: float) -> void:
-	task_tree.update(delta)
+	task_update_timer += delta
+	if task_update_timer >= 1.0:
+		task_tree.update(delta)
+		task_update_timer = 0.0
 
 func _on_active_behavior_changed() -> void:
 	pass

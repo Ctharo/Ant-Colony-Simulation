@@ -78,8 +78,7 @@ func build() -> TaskTree:
 		push_error("Task hierarchy verification failed")
 		return tree
 	
-	print("Successfully built task tree:")
-	tree.print_task_hierarchy()
+	print("Successfully built task tree")
 	return tree
 
 ## Validate that all required tasks and their behaviors are configured
