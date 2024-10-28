@@ -15,16 +15,25 @@ static func evaluate(condition: Dictionary, context: Dictionary) -> bool:
 	if condition_type:
 		var condition_configs = context.get("condition_configs", {})
 		if condition_type in condition_configs:
-			# Get the full condition config and evaluate it
 			var full_condition = condition_configs[condition_type]
-			if "evaluation" in full_condition:
+			# Check for raw evaluation object
+			if full_condition.has("evaluation"):
 				return _evaluate_property_check(full_condition.evaluation, context)
-		push_error("Unknown condition type: %s" % condition_type)
+			# If it's a direct dictionary of evaluation parameters
+			elif full_condition.has("property"):
+				return _evaluate_property_check(full_condition, context)
+		else:
+			push_error("Unknown condition type: %s (Available types: %s)" % [
+				condition_type, 
+				condition_configs.keys()
+			])
 		return false
 	
 	# Handle direct property check evaluation
 	if condition.has("evaluation"):
 		return _evaluate_property_check(condition.evaluation, context)
+	elif condition.has("property"):
+		return _evaluate_property_check(condition, context)
 	
 	push_error("Invalid condition format: %s" % condition)
 	return false
@@ -65,12 +74,21 @@ static func _evaluate_operator_condition(condition: Dictionary, context: Diction
 ## @param context The context dictionary
 ## @return Result of the property check
 static func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
-	if evaluation.type != "PropertyCheck":
-		push_error("Invalid evaluation type: %s" % evaluation.type)
+	if not evaluation.has("property"):
+		push_error("Property check missing 'property' field: %s" % evaluation)
 		return false
 		
 	var property_value = context.get(evaluation.property)
 	var operator = evaluation.get("operator", "EQUALS")
+	
+	# Add debugging for property check
+	if OS.is_debug_build():
+		print("Checking property '%s' with operator '%s'" % [evaluation.property, operator])
+		print("Property value: ", property_value)
+		if "value" in evaluation:
+			print("Compare value: ", evaluation.value)
+		elif "value_from" in evaluation:
+			print("Compare value from: ", evaluation.value_from, " = ", context.get(evaluation.value_from))
 	
 	# Handle different value sources
 	if "value" in evaluation:
@@ -81,7 +99,7 @@ static func _evaluate_property_check(evaluation: Dictionary, context: Dictionary
 	elif operator in ["NOT_EMPTY", "IS_EMPTY"]:
 		return _compare_values(property_value, null, operator)
 	
-	push_error("Invalid property check configuration")
+	push_error("Invalid property check configuration: %s" % evaluation)
 	return false
 
 ## Compare two values using the specified operator
@@ -90,6 +108,10 @@ static func _evaluate_property_check(evaluation: Dictionary, context: Dictionary
 ## @param operator The comparison operator to use
 ## @return Result of the comparison
 static func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
+	# Add debug output for comparison
+	if OS.is_debug_build():
+		print("Comparing values: %s %s %s" % [value_a, operator, value_b])
+		
 	match operator:
 		"EQUALS":
 			return value_a == value_b

@@ -1,72 +1,59 @@
 {
-	"tasks": {
-		"CollectFood": {
-			"priority": "MEDIUM",
-			"conditions": [
-				{
-					"type": "Operator",
-					"operator_type": "not",
-					"operands": [
-						{
-							"type": "Operator",
-							"operator_type": "or",
-							"operands": [
-								{"type": "OverloadedWithFood"},
-								{"type": "LowEnergy"}
-							]
-						}
-					]
-				}
-			],
-			"behaviors": [
-				{
-					"type": "WanderForFood",
-					"priority": "LOWEST"
-				},
-				{
-					"type": "FollowFoodPheromones",
-					"priority": "LOW"
-				},
-				{
-					"type": "MoveToFood",
-					"priority": "HIGH"
-				},
-				{
-					"type": "HarvestFood",
-					"priority": "HIGHEST"
-				}
-			]
-		},
-		"ReturnHome": {
-			"priority": "MEDIUM",
-			"conditions": [
-				{
-					"type": "Operator",
-					"operator_type": "or",
-					"operands": [
-						{"type": "CarryingFood"},
-						{"type": "LowEnergy"}
-					]
-				}
-			],
-			"behaviors": [
-				{
-					"type": "WanderForHome",
-					"priority": "LOWEST"
-				},
-				{
-					"type": "FollowHomePheromones",
-					"priority": "LOW"
-				},
-				{
-					"type": "StoreFood",
-					"priority": "HIGH"
-				},
-				{
-					"type": "Rest",
-					"priority": "HIGHEST"
-				}
-			]
+  "tasks": {
+	"CollectFood": {
+	  "priority": "MEDIUM",
+	  "conditions": [
+		{
+		  "type": "Operator",
+		  "operator_type": "not",
+		  "operands": [
+			{
+			  "type": "Operator",
+			  "operator_type": "or",
+			  "operands": [
+				{"type": "OverloadedWithFood"},
+				{"type": "LowEnergy"}
+			  ]
+			}
+		  ]
 		}
+	  ],
+	  "behaviors": [
+		{
+		  "type": "WanderForFood",
+		  "priority": "LOWEST",
+		  "conditions": [
+			{
+			  "type": "Operator",
+			  "operator_type": "not",
+			  "operands": [
+				{"type": "FoodPheromoneSensed"}
+			  ]
+			}
+		  ]
+		},
+		{
+		  "type": "FollowPheromones",
+		  "priority": "LOW",
+		  "conditions": [
+			{"type": "FoodPheromoneSensed"}
+		  ]
+		},
+		{
+		  "type": "MoveToFood",
+		  "priority": "HIGH",
+		  "conditions": [
+			{"type": "FoodInView"}
+		  ]
+		},
+		{
+		  "type": "HarvestFood",
+		  "priority": "HIGHEST",
+		  "conditions": [
+			{"type": "FoodInView"}
+		  ]
+		}
+	  ]
 	}
+  }
 }

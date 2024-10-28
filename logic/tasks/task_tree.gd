@@ -36,7 +36,7 @@ var task_config: TaskConfig
 ## Last known active task for change detection
 var _last_active_task: Task
 
-## Print task hierarchy
+## Print task hierarchy 
 func print_task_hierarchy() -> void:
 	if root_task:
 		print("\nTask Tree Hierarchy:")
@@ -44,7 +44,6 @@ func print_task_hierarchy() -> void:
 	else:
 		print("No root task set")
 
-## Recursively print task hierarchy with improved formatting
 func _print_task_recursive(task: Task, depth: int) -> void:
 	var indent = "  ".repeat(depth)
 	print("%s- %s (Priority: %d)" % [
@@ -53,21 +52,43 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 		task.priority
 	])
 	
-	# Print conditions
-	if not task.conditions.is_empty():
+	# Print task conditions
+	var task_conditions = task.get_conditions() # Assume Task has a get_conditions() method
+	if not task_conditions.is_empty():
 		print("%s  Conditions:" % indent)
-		for condition in task.conditions:
-			print("%s    - %s" % [indent, condition.get("type", "Unknown")])
+		for condition in task_conditions:
+			_print_condition_recursive(condition, indent + "    ")
 	
-	# Print behaviors
-	if not task.behaviors.is_empty():
+	# Print behaviors with their conditions
+	var behaviors = task.behaviors # Assuming behaviors is accessible
+	if not behaviors.is_empty():
 		print("%s  Behaviors:" % indent)
-		for behavior in task.behaviors:
+		for behavior in behaviors:
 			print("%s    - %s (Priority: %d)" % [
 				indent,
 				behavior.name,
 				behavior.priority
 			])
+			var behavior_conditions = behavior.get_conditions() # Assume Behavior has a get_conditions() method
+			if not behavior_conditions.is_empty():
+				print("%s      Conditions:" % indent)
+				for condition in behavior_conditions:
+					_print_condition_recursive(condition, indent + "        ")
+
+## Recursively print condition hierarchy
+func _print_condition_recursive(condition: Dictionary, indent: String) -> void:
+	var condition_type = condition.get("type", "Unknown")
+	
+	match condition_type:
+		"Operator":
+			var operator = condition.get("operator_type", "Unknown").to_upper()
+			print("%s- %s: %s" % [indent, condition_type, operator])
+			
+			if condition.has("operands"):
+				for operand in condition.operands:
+					_print_condition_recursive(operand, indent + "  ")
+		_:
+			print("%s- %s" % [indent, condition_type])
 
 ## Initialize the TaskTree with an ant
 static func create(ant: Ant) -> TaskTreeBuilder:

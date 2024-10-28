@@ -47,12 +47,6 @@ var condition_configs: Array[Dictionary] = []
 ## Array of actions to perform
 var actions: Array[Action] = []
 
-## Array of sub-behaviors
-var sub_behaviors: Array[Behavior] = []
-
-## Currently active sub-behavior
-var current_sub_behavior: Behavior
-
 ## Cache for condition evaluation results
 var _condition_cache: Dictionary = {}
 
@@ -64,9 +58,9 @@ func _init(_priority: int = Priority.MEDIUM):
 func add_condition_config(config: Dictionary) -> void:
 	condition_configs.append(config)
 
-## Add a sub-behavior
-func add_sub_behavior(behavior: Behavior) -> void:
-	sub_behaviors.append(behavior)
+## Get all conditions for this behavior
+func get_conditions() -> Array[Dictionary]:
+	return condition_configs
 
 ## Start the behavior
 func start(_ant: Ant) -> void:
@@ -78,7 +72,7 @@ func start(_ant: Ant) -> void:
 	for action in actions:
 		action.start(ant)
 
-## Update the behavior and its sub-behaviors
+## Update the behavior
 func update(delta: float, context: Dictionary) -> void:
 	if state != State.ACTIVE:
 		return
@@ -88,29 +82,8 @@ func update(delta: float, context: Dictionary) -> void:
 		interrupt()
 		return
 	
-	# Update actions if no sub-behaviors are active
-	if sub_behaviors.is_empty():
-		_update_actions(delta)
-		return
-	
-	# Try to activate a sub-behavior
-	var activated_sub = false
-	for sub_behavior in sub_behaviors:
-		if sub_behavior.should_activate(context):
-			if current_sub_behavior != sub_behavior:
-				if current_sub_behavior:
-					current_sub_behavior.interrupt()
-				current_sub_behavior = sub_behavior
-				sub_behavior.start(ant)
-			activated_sub = true
-			break
-	
-	# Update current sub-behavior if one is active
-	if current_sub_behavior and current_sub_behavior.state == State.ACTIVE:
-		current_sub_behavior.update(delta, context)
-	# Otherwise update actions
-	elif not activated_sub:
-		_update_actions(delta)
+	# Update actions
+	_update_actions(delta)
 
 ## Check if the behavior should activate
 func should_activate(context: Dictionary) -> bool:
@@ -121,11 +94,6 @@ func interrupt() -> void:
 	if state == State.ACTIVE:
 		state = State.INTERRUPTED
 		
-		# Interrupt current sub-behavior if any
-		if current_sub_behavior:
-			current_sub_behavior.interrupt()
-			current_sub_behavior = null
-		
 		# Cancel all actions
 		for action in actions:
 			action.interrupt()
@@ -135,16 +103,11 @@ func interrupt() -> void:
 ## Reset the behavior to its initial state
 func reset() -> void:
 	state = State.INACTIVE
-	current_sub_behavior = null
 	clear_condition_cache()
 	
 	# Reset all actions
 	for action in actions:
 		action.reset()
-	
-	# Reset all sub-behaviors
-	for sub_behavior in sub_behaviors:
-		sub_behavior.reset()
 
 ## Clear the condition evaluation cache
 func clear_condition_cache() -> void:
@@ -173,18 +136,6 @@ func _update_actions(delta: float) -> void:
 		state = State.COMPLETED
 		completed.emit()
 
-## Check if any sub-behaviors are active
-func has_active_sub_behaviors() -> bool:
-	if current_sub_behavior and current_sub_behavior.state == State.ACTIVE:
-		return true
-	return false
-
-## Get the current active sub-behavior (if any)
-func get_active_sub_behavior() -> Behavior:
-	if current_sub_behavior and current_sub_behavior.state == State.ACTIVE:
-		return current_sub_behavior
-	return null
-
 ## Get debug information about the behavior
 func get_debug_info() -> Dictionary:
 	return {
@@ -192,7 +143,5 @@ func get_debug_info() -> Dictionary:
 		"priority": priority,
 		"state": State.keys()[state],
 		"conditions": condition_configs.size(),
-		"actions": actions.size(),
-		"sub_behaviors": sub_behaviors.size(),
-		"current_sub": current_sub_behavior.name if current_sub_behavior else "None"
+		"actions": actions.size()
 	}

@@ -91,12 +91,19 @@ func create_task(task_type: String, priority: int, ant: Ant = null) -> Task:
 	
 	return task
 
-## Add conditions to the task from configuration
-func _add_conditions_from_config(task: Task, conditions_config: Array) -> void:
+## Add conditions to a target (Task or Behavior) from configuration
+func _add_conditions_from_config(target: RefCounted, conditions_config: Array) -> void:
+	if not (target is Task or target is Behavior):
+		push_error("Target must be either Task or Behavior")
+		return
+		
 	for condition_data in conditions_config:
 		var condition_config = _resolve_condition_config(condition_data)
 		if condition_config:
-			task.add_condition(condition_config)
+			if target is Task:
+				target.add_condition(condition_config)  # Assuming Task has add_condition method
+			elif target is Behavior:
+				target.add_condition_config(condition_config)
 
 ## Resolve condition configuration from various formats
 func _resolve_condition_config(condition_data: Variant) -> Dictionary:

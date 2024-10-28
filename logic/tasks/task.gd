@@ -188,3 +188,6 @@ func print_hierarchy(indent: int = 0) -> void:
 				behavior.name,
 				behavior.priority
 			])
+
+func get_conditions() -> Array[Dictionary]:
+	return conditions
