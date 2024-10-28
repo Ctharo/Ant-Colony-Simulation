@@ -8,6 +8,14 @@
 		"operator": "NOT_EMPTY"
 	  }
 	},
+	"FoodInReach": {
+		  "description": "Check if food is reachable by ant",
+		  "evaluation": {
+			"type": "PropertyCheck",
+			"property": "food_in_reach",
+			"operator": "NOT_EMPTY"
+		  }
+		},
 	"CarryingFood": {
 	  "description": "Check if ant is carrying any food",
 	  "evaluation": {

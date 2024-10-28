@@ -2,9 +2,17 @@
   "behaviors": {
 	"MoveToFood": {
 	  "action": {
-		"type": "MoveToFood",
+		"type": "Move",
 		"params": {
 		  "target_type": "food"
+		}
+	  }
+	},
+	"MoveToHome": {
+	  "action": {
+		"type": "Move",
+		"params": {
+		  "target_type": "colony"
 		}
 	  }
 	},
@@ -29,14 +37,24 @@
 		"type": "Rest",
 		"params": {
 		  "rest_duration": 3.0
-		}
+	  	}
 	  }
 	},
-	"FollowPheromones": {
+	"FollowHomePheromones": {
 	  "action": {
 		"type": "FollowPheromone",
 		"params": {
+		  "pheromone": "home",
 		  "attraction_strength": 1.0
+		  }
+		}
+	  },
+	  "FollowFoodPheromones": {
+		"action": {
+		  "type": "FollowPheromone",
+		  "params": {
+			"pheromone": "food",
+			"attraction_strength": 1.0
 		}
 	  }
 	},

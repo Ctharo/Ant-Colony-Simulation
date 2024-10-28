@@ -40,7 +40,7 @@ var params: Dictionary = {}:
 		params = value
 
 ## Builder class for constructing actions
-class ActionBuilder:
+class Builder:
 	## The action being built
 	var action: Action
 	var ant: Ant
@@ -56,14 +56,14 @@ class ActionBuilder:
 	## @param key The parameter key
 	## @param value The parameter value
 	## @return The builder for method chaining
-	func with_param(key: String, value: Variant) -> ActionBuilder:
+	func with_param(key: String, value: Variant) -> Builder:
 		params[key] = value
 		return self
 	
 	## Set the cooldown time for the action
 	## @param time The cooldown time in seconds
 	## @return The builder for method chaining
-	func with_cooldown(time: float) -> ActionBuilder:
+	func with_cooldown(time: float) -> Builder:
 		action.cooldown = time
 		return self
 	
@@ -76,8 +76,8 @@ class ActionBuilder:
 ## Create a new action builder
 ## @param action_class The class of action to build
 ## @return A new action builder
-static func create(action_class: GDScript) -> ActionBuilder:
-	return ActionBuilder.new(action_class)
+static func create(action_class: GDScript) -> Builder:
+	return Builder.new(action_class)
 
 
 ## Start the action for the given ant
@@ -160,7 +160,7 @@ class Move extends Action:
 		return ant.global_position.distance_to(params["target_position"]) < 1.0
 	
 	## Static creator method
-	static func create(_action_class: GDScript) -> ActionBuilder:
+	static func create(_action_class: GDScript) -> Builder:
 		return Action.create(Move)  # Fixed to not pass unnecessary parameter
 
 
@@ -194,7 +194,7 @@ class Harvest extends Action:
 		return not ant.can_carry_more() or current_food_source.is_depleted()
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Harvest)
 
 ## Action for following pheromones
@@ -214,7 +214,7 @@ class FollowPheromone extends Action:
 		return false
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(FollowPheromone)
 
 ## Action for random movement
@@ -237,7 +237,7 @@ class RandomMove extends Action:
 		return false
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(RandomMove)
 		
 ## Action for storing food in the colony
@@ -250,7 +250,7 @@ class Store extends Action:
 		return ant.foods.is_empty()
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Store)
 
 ## Action for attacking another ant or entity
@@ -290,7 +290,7 @@ class Attack extends Action:
 		return ant.energy.is_depleted()
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Attack)
 
 ## Action for moving to food
@@ -316,7 +316,7 @@ class MoveToFood extends Action:
 			   ant.global_position.distance_to(current_target_food.global_position) < 1.0
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(MoveToFood)
 
 ## Action for emitting pheromones
@@ -342,7 +342,7 @@ class EmitPheromone extends Action:
 		return current_time >= params.get("emission_duration", 0.0)
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(EmitPheromone)
 
 ## Action for resting to regain energy
@@ -355,5 +355,5 @@ class Rest extends Action:
 		return ant.energy.is_full()
 	
 	## Static creator method
-	static func create(_action_class: GDScript = null) -> ActionBuilder:
+	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Rest)

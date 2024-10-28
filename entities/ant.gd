@@ -64,7 +64,7 @@ func _init():
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
-	if task_tree:
+	if task_tree and task_tree.get_active_task():
 		print("Successfully loaded task %s to ant %d" % [task_tree.get_active_task().name, id])
 		task_tree.print_task_hierarchy()
 		task_tree.active_task_changed.connect(_on_active_task_changed)

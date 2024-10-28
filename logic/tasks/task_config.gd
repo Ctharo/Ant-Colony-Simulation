@@ -12,12 +12,15 @@ var condition_configs: Dictionary = {}
 ## Dictionary mapping action types to their classes
 const ACTION_TYPES = {
 	"Move": Action.Move,
-	"Harvest": Action.Harvest,
-	"FollowPheromone": Action.FollowPheromone,
+	"MoveToFood": Action.Move,
+	"MoveToHome": Action.Move,
 	"RandomMove": Action.RandomMove,
+	"FollowPheromone": Action.FollowPheromone,
+	"FollowFoodPheromone": Action.FollowPheromone,
+	"FollowHomePheromone": Action.FollowPheromone,
+	"Harvest": Action.Harvest,
 	"Store": Action.Store,
 	"Attack": Action.Attack,
-	"MoveToFood": Action.MoveToFood,
 	"EmitPheromone": Action.EmitPheromone,
 	"Rest": Action.Rest
 }
@@ -184,8 +187,9 @@ func create_action(action_data: Dictionary, ant: Ant) -> Action:
 		push_error("Unknown action type: %s" % action_type)
 		return null
 	
-	var action_class = ACTION_TYPES[action_type]
-	var builder = action_class.create()
+	var action_class: GDScript = ACTION_TYPES[action_type]
+	# Each action class has its own static create() method that returns a Builder
+	var builder: Action.Builder = action_class.create(action_class)  # The parameter is not needed
 	
 	# Add parameters if specified
 	if "params" in action_data:

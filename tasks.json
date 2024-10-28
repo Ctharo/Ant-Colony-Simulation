@@ -33,7 +33,7 @@
 		  ]
 		},
 		{
-		  "type": "FollowPheromones",
+		  "type": "FollowFoodPheromones",
 		  "priority": "LOW",
 		  "conditions": [
 			{"type": "FoodPheromoneSensed"}
@@ -50,7 +50,14 @@
 		  "type": "HarvestFood",
 		  "priority": "HIGHEST",
 		  "conditions": [
-			{"type": "FoodInView"}
+			{"type": "FoodInReach"}
+		  ]
+		},
+		{
+		  "type": "MoveToHome",
+		  "priority": "HIGHEST",
+		  "conditions": [
+			{"type": "OverloadedWithFood"}
 		  ]
 		}
 	  ]
