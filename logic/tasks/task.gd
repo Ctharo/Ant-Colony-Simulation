@@ -32,45 +32,81 @@ var state: State = State.INACTIVE:
 			state_changed.emit(state)
 
 ## Name of the task for debugging
-var name: String = ""
+var name: String = "":
+	set(value):
+		name = value
 
 ## Priority level of this task
-var priority: int = Priority.MEDIUM
+var priority: int = Priority.MEDIUM:
+	set(value):
+		priority = value
 
 ## Reference to the ant performing the task
-var ant: Ant
+var ant: Ant:
+	set(value):
+		ant = value
+		_update_behavior_references()
 
 ## Array of behaviors available to this task
-var behaviors: Array[Behavior] = []
+var behaviors: Array[Behavior] = []:
+	set(value):
+		behaviors = value
+		if is_instance_valid(ant):
+			_update_behavior_references()
 
-## Array of condition configurations for this task
-var conditions: Array[Dictionary] = []
+## Array of conditions for this task
+var conditions: Array[Condition] = []:
+	set(value):
+		conditions = value
 
 ## Currently active behavior
-var active_behavior: Behavior
+var active_behavior: Behavior:
+	set(value):
+		var old_behavior = active_behavior
+		active_behavior = value
+		if old_behavior != value:
+			if old_behavior:
+				old_behavior.interrupt()
+			if value and is_instance_valid(ant):
+				value.start(ant)
 
 ## Cache for condition evaluation results
 var _condition_cache: Dictionary = {}
 
 ## Initialize the task with a priority
-func _init(_priority: int = Priority.MEDIUM) -> void:
-	priority = _priority
+func _init(p_priority: int = Priority.MEDIUM) -> void:
+	priority = p_priority
 
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
+	if not is_instance_valid(behavior):
+		push_error("Cannot add invalid behavior to task")
+		return
+		
 	behaviors.append(behavior)
-	behavior.name = behavior.name if behavior.name else "Behavior" + str(behaviors.size())
+	behavior.name = behavior.name if not behavior.name.is_empty() else "Behavior" + str(behaviors.size())
+	
+	if is_instance_valid(ant):
+		behavior.ant = ant
 
-## Add a condition configuration to this task
-func add_condition(config: Dictionary) -> void:
-	conditions.append(config)
+## Add a condition to this task
+func add_condition(condition: Condition) -> void:
+	if not is_instance_valid(condition):
+		push_error("Cannot add invalid condition to task")
+		return
+		
+	conditions.append(condition)
 
 ## Start the task
-func start(_ant: Ant) -> void:
+func start(p_ant: Ant) -> void:
 	if state == State.ACTIVE:
 		return
 		
-	ant = _ant
+	if not is_instance_valid(p_ant):
+		push_error("Cannot start task with invalid ant reference")
+		return
+		
+	ant = p_ant
 	state = State.ACTIVE
 	started.emit()
 
@@ -89,52 +125,48 @@ func update(delta: float, context: Dictionary) -> void:
 	var highest_priority: int = -1
 	
 	for behavior in behaviors:
+		if not is_instance_valid(behavior):
+			continue
+			
 		if behavior.should_activate(context) and behavior.priority > highest_priority:
 			highest_priority_behavior = behavior
 			highest_priority = behavior.priority
 	
 	# Switch behaviors if needed
 	if highest_priority_behavior != active_behavior:
-		if active_behavior:
-			active_behavior.interrupt()
 		active_behavior = highest_priority_behavior
-		if active_behavior:
-			active_behavior.start(ant)
 	
 	# Update active behavior
-	if active_behavior:
+	if is_instance_valid(active_behavior):
 		active_behavior.update(delta, context)
 		
 		# Check if behavior completed
 		if active_behavior.state == Behavior.State.COMPLETED:
 			active_behavior = null
-			# Task might complete here depending on your requirements
-			# For now, we'll keep looking for new behaviors to run
-	elif behaviors.is_empty():
-		# No behaviors left to run
-		state = State.COMPLETED
-		completed.emit()
+			# Check if we should complete the task
+			if behaviors.is_empty() or _all_behaviors_completed():
+				state = State.COMPLETED
+				completed.emit()
 
 ## Interrupt the task
 func interrupt() -> void:
 	if state == State.ACTIVE:
 		state = State.INTERRUPTED
-		if active_behavior:
+		if is_instance_valid(active_behavior):
 			active_behavior.interrupt()
-			active_behavior = null
+		active_behavior = null
 		interrupted.emit()
 
 ## Reset the task to its initial state
 func reset() -> void:
 	state = State.INACTIVE
-	if active_behavior:
-		active_behavior.interrupt()
 	active_behavior = null
 	clear_condition_cache()
 	
 	# Reset all behaviors
 	for behavior in behaviors:
-		behavior.reset()
+		if is_instance_valid(behavior):
+			behavior.reset()
 
 ## Clear the condition evaluation cache
 func clear_condition_cache() -> void:
@@ -146,13 +178,39 @@ func _check_conditions(context: Dictionary) -> bool:
 		return true
 	
 	for condition in conditions:
-		if not ConditionEvaluator.evaluate(condition, context):
+		if not is_instance_valid(condition):
+			continue
+			
+		if not condition.is_met(ant, _condition_cache, context):
 			return false
 	return true
+
+## Check if all behaviors have completed
+func _all_behaviors_completed() -> bool:
+	for behavior in behaviors:
+		if not is_instance_valid(behavior):
+			continue
+			
+		if behavior.state != Behavior.State.COMPLETED:
+			return false
+	return true
+
+## Update ant references in all behaviors
+func _update_behavior_references() -> void:
+	if not is_instance_valid(ant):
+		return
+		
+	for behavior in behaviors:
+		if is_instance_valid(behavior):
+			behavior.ant = ant
 
 ## Get the current active behavior
 func get_active_behavior() -> Behavior:
 	return active_behavior
+
+## Get all conditions for this task
+func get_conditions() -> Array[Condition]:
+	return conditions
 
 ## Get debug information about the task
 func get_debug_info() -> Dictionary:
@@ -161,7 +219,7 @@ func get_debug_info() -> Dictionary:
 		"state": State.keys()[state],
 		"priority": priority,
 		"behavior_count": behaviors.size(),
-		"active_behavior": active_behavior.name if active_behavior else "None",
+		"active_behavior": active_behavior.name if is_instance_valid(active_behavior) else "None",
 		"condition_count": conditions.size()
 	}
 
@@ -178,16 +236,17 @@ func print_hierarchy(indent: int = 0) -> void:
 	if not conditions.is_empty():
 		print("%s  Conditions:" % indent_str)
 		for condition in conditions:
-			print("%s    - %s" % [indent_str, condition.get("type", "Unknown")])
+			if is_instance_valid(condition):
+				var config = condition.config
+				print("%s    - %s" % [indent_str, config.get("type", "Unknown")])
 	
 	if not behaviors.is_empty():
 		print("%s  Behaviors:" % indent_str)
 		for behavior in behaviors:
-			print("%s    - %s (Priority: %d)" % [
-				indent_str,
-				behavior.name,
-				behavior.priority
-			])
-
-func get_conditions() -> Array[Dictionary]:
-	return conditions
+			if is_instance_valid(behavior):
+				print("%s    - %s (Priority: %d, State: %s)" % [
+					indent_str,
+					behavior.name,
+					behavior.priority,
+					Behavior.State.keys()[behavior.state]
+				])

@@ -44,51 +44,84 @@ func print_task_hierarchy() -> void:
 	else:
 		print("No root task set")
 
+## Print task hierarchy recursively
 func _print_task_recursive(task: Task, depth: int) -> void:
+	if not is_instance_valid(task):
+		push_warning("Invalid task reference in hierarchy")
+		return
+		
 	var indent = "  ".repeat(depth)
-	print("%s- %s (Priority: %d)" % [
+	print("%s- %s (Priority: %d, State: %s)" % [
 		indent, 
 		task.name if not task.name.is_empty() else "Unnamed",
-		task.priority
+		task.priority,
+		Task.State.keys()[task.state]
 	])
 	
 	# Print task conditions
-	var task_conditions = task.get_conditions() # Assume Task has a get_conditions() method
+	var task_conditions = task.get_conditions()
 	if not task_conditions.is_empty():
 		print("%s  Conditions:" % indent)
 		for condition in task_conditions:
 			_print_condition_recursive(condition, indent + "    ")
 	
 	# Print behaviors with their conditions
-	var behaviors = task.behaviors # Assuming behaviors is accessible
+	var behaviors = task.behaviors
 	if not behaviors.is_empty():
 		print("%s  Behaviors:" % indent)
 		for behavior in behaviors:
-			print("%s    - %s (Priority: %d)" % [
+			if not is_instance_valid(behavior):
+				continue
+				
+			print("%s    - %s (Priority: %d, State: %s)" % [
 				indent,
 				behavior.name,
-				behavior.priority
+				behavior.priority,
+				Behavior.State.keys()[behavior.state]
 			])
-			var behavior_conditions = behavior.get_conditions() # Assume Behavior has a get_conditions() method
+			
+			# Print behavior conditions
+			var behavior_conditions = behavior.get_conditions()
 			if not behavior_conditions.is_empty():
 				print("%s      Conditions:" % indent)
 				for condition in behavior_conditions:
 					_print_condition_recursive(condition, indent + "        ")
+			
+			# Print behavior actions
+			if not behavior.actions.is_empty():
+				print("%s      Actions:" % indent)
+				for action in behavior.actions:
+					if is_instance_valid(action):
+						print("%s        - %s" % [indent, action.get_script().resource_path.get_file()])
 
 ## Recursively print condition hierarchy
-func _print_condition_recursive(condition: Dictionary, indent: String) -> void:
-	var condition_type = condition.get("type", "Unknown")
+func _print_condition_recursive(condition: Condition, indent: String) -> void:
+	if not is_instance_valid(condition):
+		return
+		
+	var condition_config = condition.config
+	var condition_type = condition_config.get("type", "Unknown")
 	
 	match condition_type:
 		"Operator":
-			var operator = condition.get("operator_type", "Unknown").to_upper()
+			var operator = condition_config.get("operator_type", "Unknown").to_upper()
 			print("%s- %s: %s" % [indent, condition_type, operator])
 			
-			if condition.has("operands"):
-				for operand in condition.operands:
-					_print_condition_recursive(operand, indent + "  ")
+			if condition_config.has("operands"):
+				for operand in condition_config.operands:
+					# Create temporary condition to print sub-conditions
+					var sub_condition = Condition.create_from_config(operand)
+					_print_condition_recursive(sub_condition, indent + "  ")
 		_:
-			print("%s- %s" % [indent, condition_type])
+			# For property checks, print more detailed information
+			if condition_config.has("evaluation"):
+				var eval = condition_config.evaluation
+				var property_name = eval.get("property", "unknown")
+				var operator = eval.get("operator", "EQUALS")
+				var value = eval.get("value", "N/A")
+				print("%s- PropertyCheck: %s %s %s" % [indent, property_name, operator, value])
+			else:
+				print("%s- %s" % [indent, condition_type])
 
 ## Initialize the TaskTree with an ant
 static func create(ant: Ant) -> TaskTreeBuilder:

@@ -33,38 +33,61 @@ var state: State = State.INACTIVE:
 			state_changed.emit(state)
 
 ## Name of the behavior for debugging
-var name: String = ""
+var name: String = "":
+	set(value):
+		name = value
 
 ## Priority level of this behavior
-var priority: int = Priority.MEDIUM
+var priority: int = Priority.MEDIUM:
+	set(value):
+		priority = value
 
 ## Reference to the ant performing the behavior
-var ant: Ant
+var ant: Ant:
+	set(value):
+		ant = value
+		_update_action_references()
 
-## Array of condition configurations for this behavior
-var condition_configs: Array[Dictionary] = []
+## Array of conditions for this behavior
+var conditions: Array[Condition] = []:
+	set(value):
+		conditions = value
 
 ## Array of actions to perform
-var actions: Array[Action] = []
+var actions: Array[Action] = []:
+	set(value):
+		actions = value
+		if is_instance_valid(ant):
+			_update_action_references()
 
 ## Cache for condition evaluation results
 var _condition_cache: Dictionary = {}
 
 ## Initialize the behavior with a priority
-func _init(_priority: int = Priority.MEDIUM):
-	priority = _priority
+func _init(p_priority: int = Priority.MEDIUM) -> void:
+	priority = p_priority
 
-## Add a condition configuration to this behavior
-func add_condition_config(config: Dictionary) -> void:
-	condition_configs.append(config)
+## Add a condition to this behavior
+func add_condition(condition: Condition) -> void:
+	conditions.append(condition)
+
+## Add an action to this behavior
+func add_action(action: Action) -> void:
+	actions.append(action)
+	if is_instance_valid(ant):
+		action.ant = ant
 
 ## Get all conditions for this behavior
-func get_conditions() -> Array[Dictionary]:
-	return condition_configs
+func get_conditions() -> Array[Condition]:
+	return conditions
 
 ## Start the behavior
-func start(_ant: Ant) -> void:
-	ant = _ant
+func start(p_ant: Ant) -> void:
+	if not is_instance_valid(p_ant):
+		push_error("Cannot start behavior with invalid ant reference")
+		return
+		
+	ant = p_ant
 	state = State.ACTIVE
 	started.emit()
 	
@@ -115,11 +138,11 @@ func clear_condition_cache() -> void:
 
 ## Check if all conditions are met using the context
 func _check_conditions(context: Dictionary) -> bool:
-	if condition_configs.is_empty():
+	if conditions.is_empty():
 		return true
 	
-	for config in condition_configs:
-		if not ConditionEvaluator.evaluate(config, context):
+	for condition in conditions:
+		if not condition.is_met(ant, _condition_cache, context):
 			return false
 	return true
 
@@ -136,12 +159,20 @@ func _update_actions(delta: float) -> void:
 		state = State.COMPLETED
 		completed.emit()
 
+## Update ant references in actions when ant changes
+func _update_action_references() -> void:
+	if not is_instance_valid(ant):
+		return
+		
+	for action in actions:
+		action.ant = ant
+
 ## Get debug information about the behavior
 func get_debug_info() -> Dictionary:
 	return {
 		"name": name,
 		"priority": priority,
 		"state": State.keys()[state],
-		"conditions": condition_configs.size(),
+		"conditions": conditions.size(),
 		"actions": actions.size()
 	}
