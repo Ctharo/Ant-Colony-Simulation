@@ -87,30 +87,52 @@ func start(p_ant: Ant) -> void:
 		push_error("Cannot start behavior with invalid ant reference")
 		return
 		
+	if OS.is_debug_build():
+		print("Starting behavior %s (Current state: %s)" % [name, State.keys()[state]])
+		
 	ant = p_ant
 	state = State.ACTIVE
+	
+	if OS.is_debug_build():
+		print("Behavior %s state set to: %s" % [name, State.keys()[state]])
+	
 	started.emit()
 	
 	# Start all actions
 	for action in actions:
 		action.start(ant)
 
+## Check if the behavior should activate
+func should_activate(context: Dictionary) -> bool:
+	var should_activate = state != State.COMPLETED and _check_conditions(context)
+	if OS.is_debug_build():
+		print("Checking should_activate for %s:" % name)
+		print("  Current state: %s" % State.keys()[state])
+		print("  Conditions met: %s" % _check_conditions(context))
+		print("  Should activate: %s" % should_activate)
+	return should_activate
+
 ## Update the behavior
 func update(delta: float, context: Dictionary) -> void:
+	if OS.is_debug_build():
+		print("Updating behavior %s (Current state: %s)" % [name, State.keys()[state]])
+		
 	if state != State.ACTIVE:
 		return
 	
 	# Check conditions
 	if not _check_conditions(context):
+		if OS.is_debug_build():
+			print("Conditions no longer met for %s, interrupting" % name)
 		interrupt()
 		return
 	
 	# Update actions
 	_update_actions(delta)
+	
+	if OS.is_debug_build():
+		print("After update - Behavior %s state: %s" % [name, State.keys()[state]])
 
-## Check if the behavior should activate
-func should_activate(context: Dictionary) -> bool:
-	return _check_conditions(context)
 
 ## Interrupt the behavior
 func interrupt() -> void:

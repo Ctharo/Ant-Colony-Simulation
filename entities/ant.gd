@@ -105,12 +105,12 @@ func is_friendly(other_colony: Colony) -> bool:
 	return other_colony == colony
 
 ## Get food items within reach
-func food_in_reach() -> Foods:
-	return Foods.in_reach(global_position, reach.distance)
+func food_in_reach() -> Array:
+	return Foods.in_reach(global_position, reach.distance).as_array()
 
 ## Get food items in view
-func food_in_view() -> Foods:
-	return Foods.in_view(global_position, vision.distance)
+func food_in_view() -> Array:
+	return Foods.in_view(global_position, vision.distance).as_array()
 
 ## Return true if food is in view
 func is_food_in_view() -> bool:
@@ -142,8 +142,8 @@ func is_pheromone_sensed(type: String = "") -> bool:
 	return !sensed.is_empty() if type.is_empty() else !sensed.of_type(type).is_empty()
 
 ## Get ants in view
-func ants_in_view() -> Ants:
-	return Ants.in_view(global_position, vision.distance)
+func ants_in_view() -> Array:
+	return Ants.in_view(global_position, vision.distance).as_array()
 
 ## Check if the ant is at its home colony
 func is_at_home() -> bool:

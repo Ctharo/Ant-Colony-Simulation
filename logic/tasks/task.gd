@@ -77,6 +77,154 @@ var _condition_cache: Dictionary = {}
 func _init(p_priority: int = Priority.MEDIUM) -> void:
 	priority = p_priority
 
+## Whether higher priority behaviors can interrupt lower priority ones
+var allow_interruption: bool = true
+
+## Update the task and its behaviors
+func update(delta: float, context: Dictionary) -> void:
+	if state != Task.State.ACTIVE:
+		return
+	
+	if OS.is_debug_build():
+		print("\nUpdating Task: %s" % name)
+		print("Current active behavior: %s (State: %s)" % [
+			active_behavior.name if active_behavior else "None",
+			Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
+		])
+	
+	# Check task conditions
+	if not _check_conditions(context):
+		interrupt()
+		return
+	
+	# First check if current behavior should continue
+	if active_behavior and active_behavior.should_activate(context):
+		if OS.is_debug_build():
+			print("Current behavior valid, checking for higher priority behaviors")
+		
+		var higher_priority_behavior = _check_higher_priority_behaviors(active_behavior.priority, context)
+		if higher_priority_behavior:
+			_switch_behavior(higher_priority_behavior)
+		else:
+			if OS.is_debug_build():
+				print("No higher priority behaviors to activate, continuing current behavior")
+			active_behavior.update(delta, context)
+		return
+	
+	# If we get here, either there's no active behavior or it's no longer valid
+	var next_behavior = _find_next_valid_behavior(context)
+	if next_behavior:
+		_switch_behavior(next_behavior)
+	elif active_behavior:
+		active_behavior.interrupt()
+		active_behavior = null
+
+## Check only behaviors with higher priority than the current one
+func _check_higher_priority_behaviors(current_priority: int, context: Dictionary) -> Behavior:
+	# Group behaviors by priority
+	var priority_groups: Dictionary = {}
+	for behavior in behaviors:
+		if not is_instance_valid(behavior):
+			continue
+		if behavior.priority <= current_priority:
+			continue
+		if not behavior.priority in priority_groups:
+			priority_groups[behavior.priority] = []
+		priority_groups[behavior.priority].append(behavior)
+	
+	# Sort priorities in descending order
+	var priorities = priority_groups.keys()
+	priorities.sort()
+	priorities.reverse()
+	
+	if OS.is_debug_build():
+		print("\nChecking higher priority behaviors (current priority: %d)" % current_priority)
+	
+	# Check behaviors by priority level
+	for priority in priorities:
+		if OS.is_debug_build():
+			print("\nChecking priority level: %d" % priority)
+		
+		var behaviors_at_priority = priority_groups[priority]
+		var any_conditions_met = false
+		
+		for behavior in behaviors_at_priority:
+			if OS.is_debug_build():
+				print("Checking behavior: %s" % behavior.name)
+			
+			var should_activate = behavior.should_activate(context)
+			
+			if OS.is_debug_build():
+				print("  Should activate: %s" % should_activate)
+			
+			if should_activate:
+				return behavior
+			
+			any_conditions_met = any_conditions_met or should_activate
+		
+		# If no behaviors at this priority level could activate,
+		# we can skip all lower priorities
+		if not any_conditions_met:
+			if OS.is_debug_build():
+				print("  No behaviors at priority %d could activate, stopping checks" % priority)
+			break
+	
+	return null
+	
+## Find the next valid behavior
+func _find_next_valid_behavior(context: Dictionary) -> Behavior:
+	# Group behaviors by priority
+	var priority_groups: Dictionary = {}
+	for behavior in behaviors:
+		if not is_instance_valid(behavior):
+			continue
+		if not behavior.priority in priority_groups:
+			priority_groups[behavior.priority] = []
+		priority_groups[behavior.priority].append(behavior)
+	
+	# Sort priorities in descending order
+	var priorities = priority_groups.keys()
+	priorities.sort()
+	priorities.reverse()
+	
+	# Check behaviors in priority order
+	for priority in priorities:
+		var behaviors_at_priority = priority_groups[priority]
+		for behavior in behaviors_at_priority:
+			if OS.is_debug_build():
+				print("\nChecking behavior: %s" % behavior.name)
+				print("  Priority: %d" % behavior.priority)
+			
+			if behavior.should_activate(context):
+				return behavior
+		
+		if OS.is_debug_build() and not behaviors_at_priority.is_empty():
+			print("  No behaviors at priority %d could activate" % priority)
+	
+	return null
+
+## Switch to a new behavior
+func _switch_behavior(new_behavior: Behavior) -> void:
+	if OS.is_debug_build():
+		print("\nSwitching behaviors:")
+		print("  From: %s (State: %s)" % [
+			active_behavior.name if active_behavior else "None",
+			Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
+		])
+		print("  To: %s" % new_behavior.name)
+	
+	if active_behavior:
+		active_behavior.interrupt()
+	
+	active_behavior = new_behavior
+	active_behavior.start(ant)
+	
+	if OS.is_debug_build():
+		print("  After switch - New behavior: %s (State: %s)" % [
+			active_behavior.name,
+			Behavior.State.keys()[active_behavior.state]
+		])
+
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
 	if not is_instance_valid(behavior):
@@ -110,44 +258,6 @@ func start(p_ant: Ant) -> void:
 	state = State.ACTIVE
 	started.emit()
 
-## Update the task and its behaviors
-func update(delta: float, context: Dictionary) -> void:
-	if state != State.ACTIVE:
-		return
-	
-	# Check task conditions
-	if not _check_conditions(context):
-		interrupt()
-		return
-	
-	# Find highest priority valid behavior
-	var highest_priority_behavior: Behavior = null
-	var highest_priority: int = -1
-	
-	for behavior in behaviors:
-		if not is_instance_valid(behavior):
-			continue
-			
-		if behavior.should_activate(context) and behavior.priority > highest_priority:
-			highest_priority_behavior = behavior
-			highest_priority = behavior.priority
-	
-	# Switch behaviors if needed
-	if highest_priority_behavior != active_behavior:
-		active_behavior = highest_priority_behavior
-	
-	# Update active behavior
-	if is_instance_valid(active_behavior):
-		active_behavior.update(delta, context)
-		
-		# Check if behavior completed
-		if active_behavior.state == Behavior.State.COMPLETED:
-			active_behavior = null
-			# Check if we should complete the task
-			if behaviors.is_empty() or _all_behaviors_completed():
-				state = State.COMPLETED
-				completed.emit()
-
 ## Interrupt the task
 func interrupt() -> void:
 	if state == State.ACTIVE:
@@ -157,16 +267,21 @@ func interrupt() -> void:
 		active_behavior = null
 		interrupted.emit()
 
+
 ## Reset the task to its initial state
 func reset() -> void:
 	state = State.INACTIVE
+	
+	if active_behavior:
+		active_behavior.interrupt()
 	active_behavior = null
-	clear_condition_cache()
 	
 	# Reset all behaviors
 	for behavior in behaviors:
 		if is_instance_valid(behavior):
 			behavior.reset()
+	
+	clear_condition_cache()
 
 ## Clear the condition evaluation cache
 func clear_condition_cache() -> void:
@@ -206,6 +321,12 @@ func _update_behavior_references() -> void:
 
 ## Get the current active behavior
 func get_active_behavior() -> Behavior:
+	if not is_instance_valid(active_behavior):
+		return null
+		
+	if active_behavior.state != Behavior.State.ACTIVE:
+		return null
+		
 	return active_behavior
 
 ## Get all conditions for this task
@@ -250,3 +371,20 @@ func print_hierarchy(indent: int = 0) -> void:
 					behavior.priority,
 					Behavior.State.keys()[behavior.state]
 				])
+
+## Print task hierarchy recursively
+func _print_task_recursive(task: Task, depth: int) -> void:
+	if not is_instance_valid(task):
+		push_warning("Invalid task reference in hierarchy")
+		return
+		
+	var indent = "  ".repeat(depth)
+	print("\n%s╔══ Task: %s" % [indent, task.name if not task.name.is_empty() else "Unnamed"])
+	print("%s║   Priority: %d" % [indent, task.priority])
+	print("%s║   State: %s" % [indent, Task.State.keys()[task.state]])
+	
+	if OS.is_debug_build():
+		print("%s║   Current Active Behavior: %s" % [
+			indent,
+			active_behavior.name if active_behavior else "None"
+		])
