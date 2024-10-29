@@ -59,6 +59,20 @@ var nav_agent: NavigationAgent2D
 ## Task update timer
 var task_update_timer: float = 0.0
 
+## Cache storage for various sensory and contextual data
+var _cache: Dictionary = {}
+
+## Track when cache entries were last updated (in seconds)
+var _cache_timestamps: Dictionary = {}
+
+## How long cached values remain valid (in seconds)
+const CACHE_DURATIONS = {
+	"pheromones": 0.1,  # Pheromone data stays valid for 0.1 seconds
+	"food": 0.1,        # Food detection stays valid for 0.1 seconds
+	"ants": 0.1,        # Nearby ants data stays valid for 0.1 seconds
+	"colony": 0.2,      # Colony-related data stays valid for 0.2 seconds
+	"stats": 0.0        # Stats are always recalculated (0.0 means no caching)
+}
 
 
 func _init():
@@ -87,6 +101,32 @@ func _process(delta: float) -> void:
 	if task_update_timer >= 1.0:
 		task_tree.update(delta)
 		task_update_timer = 0.0
+
+## Clear all cached data
+func clear_cache() -> void:
+	_cache.clear()
+	_cache_timestamps.clear()
+
+## Get cached value or compute if expired
+func _get_cached(key: String, category: String, computer: Callable) -> Variant:
+	var cache_duration = CACHE_DURATIONS[category]
+	var current_time = Time.get_ticks_msec() / 1000.0
+	
+	# Always recompute if cache duration is 0
+	if cache_duration == 0.0:
+		return computer.call()
+	
+	# Check if cache exists and is still valid
+	if key in _cache and key in _cache_timestamps:
+		var age = current_time - _cache_timestamps[key]
+		if age < cache_duration:
+			return _cache[key]
+	
+	# Compute new value and cache it
+	var value = computer.call()
+	_cache[key] = value
+	_cache_timestamps[key] = current_time
+	return value
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
@@ -157,80 +197,146 @@ func _connect_signals() -> void:
 	health.depleted.connect(func(): died.emit())
 	energy.depleted.connect(func(): take_damage(1))  # Ant takes damage when out of energy
 
-## Get food items within reach
-func _food_in_reach() -> Foods:
-	return Foods.in_reach(global_position, reach.distance)
 
-## Get food items in view
-func _food_in_view() -> Foods:
-	return Foods.in_view(global_position, vision.distance)
 
 #region Sensory helper methods
 ## Get pheromones sensed by the ant
 func _pheromones_sensed(type: String = "") -> Pheromones:
-	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(global_position, sense.distance)
-	return sensed if type.is_empty() else sensed.of_type(type)
+	var cache_key = "pheromones_sensed_%s" % type
+	return _get_cached(cache_key, "pheromones", func():
+		var all_pheromones = Pheromones.all() 
+		var sensed = all_pheromones.sensed(global_position, sense.distance)
+		return sensed if type.is_empty() else sensed.of_type(type)
+	)
+
+## Get food items within reach
+func _food_in_reach() -> Foods:
+	return _get_cached("food_in_reach", "food", func():
+		return Foods.in_reach(global_position, reach.distance)
+	)
+
+## Get food items in view
+func _food_in_view() -> Foods:
+	return _get_cached("food_in_view", "food", func():
+		return Foods.in_view(global_position, vision.distance)
+	)
 
 ## Get pheromones sensed by the ant
 func _pheromones_sensed_count(type: String = "") -> int:
-	return _pheromones_sensed(type).size()
+	var cache_key = "pheromones_count_%s" % type
+	return _get_cached(cache_key, "pheromones", func():
+		return _pheromones_sensed(type).size()
+	)
 
 func _ants_in_view() -> Ants:
-	return Ants.in_view(global_position, vision.distance)
+	return _get_cached("ants_in_view", "ants", func():
+		return Ants.in_view(global_position, vision.distance)
+	)
 
 #endregion
 
 #region Contextual Information
+## Get distance to colony
 func distance_to_colony() -> float:
-	return global_position.distance_to(colony.global_position)
-	
+	return _get_cached("colony_distance", "colony", func():
+		return global_position.distance_to(colony.global_position)
+	)
+
+## Get colony radius
 func colony_radius() -> float:
-	return colony.radius
+	return _get_cached("colony_radius", "colony", func():
+		return colony.radius
+	)
 
+## Get current energy level
 func energy_level() -> float:
-	return energy.current_level
-	
+	return _get_cached("energy_level", "stats", func():
+		return energy.current_level
+	)
+
+## Get low energy threshold
 func low_energy_threshold() -> float:
-	return energy.low_energy_threshold
-	
+	return _get_cached("low_energy_threshold", "stats", func():
+		return energy.low_energy_threshold
+	)
+
+## Get carry capacity
 func carry_capacity() -> float:
-	return strength.carry_max()
-	
-func ants_in_view() -> Array:
-	return _ants_in_view().as_array()
-	
+	return _get_cached("carry_capacity", "stats", func():
+		return strength.carry_max()
+	)
+
+## Get array of ants in view
+func ants_in_view_array() -> Array:
+	return _get_cached("ants_in_view_array", "ants", func():
+		return _ants_in_view().as_array()
+	)
+
+## Get food pheromones sensed
 func food_pheromones_sensed() -> Array:
-	return _pheromones_sensed("food").to_array()
-	
+	return _get_cached("food_pheromones", "pheromones", func():
+		return _pheromones_sensed("food").to_array()
+	)
+
+## Get food pheromones count
 func food_pheromones_sensed_count() -> int:
-	return _pheromones_sensed_count("food")
-	
+	return _get_cached("food_pheromones_count", "pheromones", func():
+		return _pheromones_sensed_count("food")
+	)
+
+## Check if food pheromones are sensed
 func is_food_pheromones_sensed() -> bool:
-	return not _pheromones_sensed("food").is_empty()
+	return _get_cached("is_food_pheromones", "pheromones", func():
+		return not _pheromones_sensed("food").is_empty()
+	)
 
+## Get home pheromones sensed
 func home_pheromones_sensed() -> Array:
-	return _pheromones_sensed("home").to_array()
+	return _get_cached("home_pheromones", "pheromones", func():
+		return _pheromones_sensed("home").to_array()
+	)
 
+## Get home pheromones count
 func home_pheromones_sensed_count() -> int:
-	return _pheromones_sensed_count("home")
-	
+	return _get_cached("home_pheromones_count", "pheromones", func():
+		return _pheromones_sensed_count("home")
+	)
+
+## Check if home pheromones are sensed
 func is_home_pheromones_sensed() -> bool:
-	return not _pheromones_sensed("home").is_empty()
+	return _get_cached("is_home_pheromones", "pheromones", func():
+		return not _pheromones_sensed("home").is_empty()
+	)
 
+## Get carried food mass
 func carried_food_mass() -> float:
-	return carried_food.mass()
+	return _get_cached("carried_food_mass", "stats", func():
+		return carried_food.mass()
+	)
 
+## Check if carrying food
 func is_carrying_food() -> bool:
-	return carried_food.mass() > 0
+	return _get_cached("is_carrying_food", "stats", func():
+		return carried_food.mass() > 0
+	)
 
+## Get available carry mass
 func available_carry_mass() -> float:
-	return strength.carry_max() - carried_food.mass()
-	
-func food_in_view_count() -> int:
-	return _food_in_view().size()
+	return _get_cached("available_carry_mass", "stats", func():
+		return strength.carry_max() - carried_food.mass()
+	)
 
+## Get food in view count
+func food_in_view_count() -> int:
+	return _get_cached("food_in_view_count", "food", func():
+		return _food_in_view().size()
+	)
+
+## Get food in reach count
 func food_in_reach_count() -> int:
-	return _food_in_reach().size()
+	return _get_cached("food_in_reach_count", "food", func():
+		return _food_in_reach().size()
+	)
+
 	
 #endregion
