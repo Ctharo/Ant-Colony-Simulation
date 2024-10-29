@@ -41,7 +41,11 @@ var strength: Strength
 var health: Health
 
 ## The foods being carried by the ant
-var foods: Foods
+var carried_food: Foods :
+	get:
+		if not carried_food:
+			carried_food = Foods.new()
+		return carried_food
 
 ## The speed capabilities of the ant
 var speed: Speed
@@ -55,8 +59,7 @@ var nav_agent: NavigationAgent2D
 ## Task update timer
 var task_update_timer: float = 0.0
 
-## Food objects currently carried
-var carried_food: Array[Food] = [] 
+
 
 func _init():
 	
@@ -66,7 +69,6 @@ func _init():
 	energy = Energy.new()
 	strength = Strength.new()
 	health = Health.new()
-	foods = Foods.new()
 	speed = Speed.new()
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
@@ -103,7 +105,7 @@ func take_damage(amount: float) -> void:
 
 ## Handle the ant consuming food for energy
 func consume_food(amount: float) -> void:
-	var consumed = foods.consume(amount)
+	var consumed = carried_food.consume(amount)
 	energy.current_level += consumed
 
 ## Move the ant to a new position
@@ -122,7 +124,7 @@ func harvest_food(food_source: Food, time: float) -> float:
 	harvested_amount = min(harvested_amount, available_carry_mass())
 	
 	food_source.amount -= harvested_amount
-	foods.add(Food.new(harvested_amount))
+	carried_food.add(Food.new(harvested_amount))
 		
 	return harvested_amount
 
@@ -130,10 +132,10 @@ func harvest_food(food_source: Food, time: float) -> float:
 ##Returns amount stored[br]
 ##** Note, not currently using argument _time **
 func store_food(_colony: Colony, _time: float) -> float:
-	var storing_amount: float = foods.mass()
+	var storing_amount: float = carried_food.mass()
 	var total_stored = _colony.foods.add_food(storing_amount)
 	print("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
-	foods.clear()
+	carried_food.clear()
 	return storing_amount
 
 ## Emit a pheromone at the current position
@@ -203,6 +205,9 @@ func food_pheromones_sensed() -> Array:
 	
 func food_pheromones_sensed_count() -> int:
 	return _pheromones_sensed_count("food")
+	
+func is_food_pheromones_sensed() -> bool:
+	return not _pheromones_sensed("food").is_empty()
 
 func home_pheromones_sensed() -> Array:
 	return _pheromones_sensed("home").to_array()
@@ -210,11 +215,17 @@ func home_pheromones_sensed() -> Array:
 func home_pheromones_sensed_count() -> int:
 	return _pheromones_sensed_count("home")
 	
+func is_home_pheromones_sensed() -> bool:
+	return not _pheromones_sensed("home").is_empty()
+
 func carried_food_mass() -> float:
-	return foods.mass()
+	return carried_food.mass()
+
+func is_carrying_food() -> bool:
+	return carried_food.mass() > 0
 
 func available_carry_mass() -> float:
-	return strength.carry_max() - foods.mass()
+	return strength.carry_max() - carried_food.mass()
 	
 func food_in_view_count() -> int:
 	return _food_in_view().size()

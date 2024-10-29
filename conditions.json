@@ -1,6 +1,6 @@
 {
   "conditions": {
-	"FoodInView": {
+	"IsFoodInView": {
 	  "description": "Check if food is visible to ant",
 	  "evaluation": {
 		"type": "PropertyCheck",
@@ -9,7 +9,7 @@
 		"value": 0
 	  }
 	},
-	"FoodInReach": {
+	"IsFoodInReach": {
 		  "description": "Check if food is reachable by ant",
 		  "evaluation": {
 			"type": "PropertyCheck",
@@ -18,13 +18,13 @@
 			"value": 0
 		  }
 		},
-	"CarryingFood": {
+	"IsCarryingFood": {
 	  "description": "Check if ant is carrying any food",
 	  "evaluation": {
 		"type": "PropertyCheck",
-		"property": "carried_food_mass",
-		"operator": "GREATER_THAN",
-		"value": 0
+		"property": "is_carrying_food",
+		"operator": "EQUALS",
+		"value": true
 	  }
 	},
 	"AtHome": {
@@ -54,20 +54,22 @@
 		"value_from": "carry_capacity"
 	  }
 	},
-	"FoodPheromoneSensed": {
+	"IsFoodPheromoneSensed": {
 	  "description": "Check if food pheromones are detected",
 	  "evaluation": {
 		"type": "PropertyCheck",
-		"property": "food_pheromones_sensed",
-		"operator": "NOT_EMPTY"
+		"property": "is_food_pheromones_sensed",
+		"operator": "EQUALS",
+		"value": true
 	  }
 	},
-	"HomePheromoneSensed": {
+	"IsHomePheromoneSensed": {
 	  "description": "Check if home pheromones are detected",
 	  "evaluation": {
 		"type": "PropertyCheck",
-		"property": "home_pheromones_sensed",
-		"operator": "NOT_EMPTY"
+		"property": "is_home_pheromones_sensed",
+		"operator": "EQUALS",
+		"value": true
 	  }
 	}
   }

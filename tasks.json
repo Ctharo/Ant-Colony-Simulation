@@ -27,7 +27,7 @@
 			  "type": "Operator",
 			  "operator_type": "not",
 			  "operands": [
-				{"type": "FoodPheromoneSensed"}
+				{"type": "IsFoodPheromoneSensed"}
 			  ]
 			}
 		  ]
@@ -36,21 +36,21 @@
 		  "type": "FollowFoodPheromones",
 		  "priority": "LOW",
 		  "conditions": [
-			{"type": "FoodPheromoneSensed"}
+			{"type": "IsFoodPheromoneSensed"}
 		  ]
 		},
 		{
 		  "type": "MoveToFood",
 		  "priority": "HIGH",
 		  "conditions": [
-			{"type": "FoodInView"}
+			{"type": "IsFoodInView"}
 		  ]
 		},
 		{
 		  "type": "HarvestFood",
 		  "priority": "HIGHEST",
 		  "conditions": [
-			{"type": "FoodInReach"}
+			{"type": "IsFoodInReach"}
 		  ]
 		},
 		{
