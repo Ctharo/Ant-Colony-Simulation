@@ -65,13 +65,38 @@ var _cache: Dictionary = {}
 ## Track when cache entries were last updated (in seconds)
 var _cache_timestamps: Dictionary = {}
 
+## Dependencies between cached values - base methods provide for derived methods
+const CACHE_DEPENDENCIES = {
+	# Food sensing dependencies
+	"food_in_view": ["_food_in_view"],
+	"food_in_view_count": ["food_in_view"],
+	"food_in_reach": ["_food_in_reach"],
+	"food_in_reach_count": ["food_in_reach"],
+	
+	# Pheromone sensing dependencies
+	"food_pheromones_sensed": ["_pheromones_sensed_food"],
+	"food_pheromones_sensed_count": ["food_pheromones_sensed"],
+	"is_food_pheromones_sensed": ["food_pheromones_sensed"],
+	"home_pheromones_sensed": ["_pheromones_sensed_home"],
+	"home_pheromones_sensed_count": ["home_pheromones_sensed"],
+	"is_home_pheromones_sensed": ["home_pheromones_sensed"],
+	
+	# Ant sensing dependencies
+	"ants_in_view": ["_ants_in_view"],
+	"ants_in_view_count": ["ants_in_view"],
+	
+	# Food carrying dependencies
+	"is_carrying_food": ["carried_food_mass"],
+	"available_carry_mass": ["carried_food_mass"]
+}
+
 ## How long cached values remain valid (in seconds)
 const CACHE_DURATIONS = {
 	"pheromones": 0.1,  # Pheromone data stays valid for 0.1 seconds
 	"food": 0.1,        # Food detection stays valid for 0.1 seconds
 	"ants": 0.1,        # Nearby ants data stays valid for 0.1 seconds
 	"colony": 0.2,      # Colony-related data stays valid for 0.2 seconds
-	"stats": 0.0        # Stats are always recalculated (0.0 means no caching)
+	"stats": 0.0        # Stats are always recalculated
 }
 
 
@@ -102,31 +127,7 @@ func _process(delta: float) -> void:
 		task_tree.update(delta)
 		task_update_timer = 0.0
 
-## Clear all cached data
-func clear_cache() -> void:
-	_cache.clear()
-	_cache_timestamps.clear()
 
-## Get cached value or compute if expired
-func _get_cached(key: String, category: String, computer: Callable) -> Variant:
-	var cache_duration = CACHE_DURATIONS[category]
-	var current_time = Time.get_ticks_msec() / 1000.0
-	
-	# Always recompute if cache duration is 0
-	if cache_duration == 0.0:
-		return computer.call()
-	
-	# Check if cache exists and is still valid
-	if key in _cache and key in _cache_timestamps:
-		var age = current_time - _cache_timestamps[key]
-		if age < cache_duration:
-			return _cache[key]
-	
-	# Compute new value and cache it
-	var value = computer.call()
-	_cache[key] = value
-	_cache_timestamps[key] = current_time
-	return value
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
@@ -221,13 +222,6 @@ func _food_in_view() -> Foods:
 		return Foods.in_view(global_position, vision.distance)
 	)
 
-## Get pheromones sensed by the ant
-func _pheromones_sensed_count(type: String = "") -> int:
-	var cache_key = "pheromones_count_%s" % type
-	return _get_cached(cache_key, "pheromones", func():
-		return _pheromones_sensed(type).size()
-	)
-
 func _ants_in_view() -> Ants:
 	return _get_cached("ants_in_view", "ants", func():
 		return Ants.in_view(global_position, vision.distance)
@@ -267,45 +261,50 @@ func carry_capacity() -> float:
 	)
 
 ## Get array of ants in view
-func ants_in_view_array() -> Array:
-	return _get_cached("ants_in_view_array", "ants", func():
+func ants_in_view() -> Array:
+	return _get_cached("ants_in_view", "ants", func():
 		return _ants_in_view().as_array()
+	)
+	
+func ants_in_view_count() -> int:
+	return _get_cached("ants_in_view_count", "ants", func():
+		return ants_in_view().size()
 	)
 
 ## Get food pheromones sensed
 func food_pheromones_sensed() -> Array:
-	return _get_cached("food_pheromones", "pheromones", func():
+	return _get_cached("food_pheromones_sensed", "pheromones", func():
 		return _pheromones_sensed("food").to_array()
 	)
 
 ## Get food pheromones count
 func food_pheromones_sensed_count() -> int:
-	return _get_cached("food_pheromones_count", "pheromones", func():
-		return _pheromones_sensed_count("food")
+	return _get_cached("food_pheromones_sensed_count", "pheromones", func():
+		return food_pheromones_sensed().size()
 	)
 
 ## Check if food pheromones are sensed
 func is_food_pheromones_sensed() -> bool:
-	return _get_cached("is_food_pheromones", "pheromones", func():
-		return not _pheromones_sensed("food").is_empty()
+	return _get_cached("is_food_pheromones_sensed", "pheromones", func():
+		return not food_pheromones_sensed().is_empty()
 	)
 
 ## Get home pheromones sensed
 func home_pheromones_sensed() -> Array:
-	return _get_cached("home_pheromones", "pheromones", func():
+	return _get_cached("home_pheromones_sensed", "pheromones", func():
 		return _pheromones_sensed("home").to_array()
 	)
 
 ## Get home pheromones count
 func home_pheromones_sensed_count() -> int:
-	return _get_cached("home_pheromones_count", "pheromones", func():
-		return _pheromones_sensed_count("home")
+	return _get_cached("home_pheromones_sensed_count", "pheromones", func():
+		return home_pheromones_sensed().size()
 	)
 
 ## Check if home pheromones are sensed
 func is_home_pheromones_sensed() -> bool:
-	return _get_cached("is_home_pheromones", "pheromones", func():
-		return not _pheromones_sensed("home").is_empty()
+	return _get_cached("is_home_pheromones_sensed", "pheromones", func():
+		return not home_pheromones_sensed().is_empty()
 	)
 
 ## Get carried food mass
@@ -317,26 +316,96 @@ func carried_food_mass() -> float:
 ## Check if carrying food
 func is_carrying_food() -> bool:
 	return _get_cached("is_carrying_food", "stats", func():
-		return carried_food.mass() > 0
+		return carried_food_mass() > 0
 	)
 
 ## Get available carry mass
 func available_carry_mass() -> float:
 	return _get_cached("available_carry_mass", "stats", func():
-		return strength.carry_max() - carried_food.mass()
+		return strength.carry_max() - carried_food_mass()
+	)
+	
+func food_in_view() -> Array:
+	return _get_cached("food_in_view", "food", func():
+		return _food_in_view().to_array()
 	)
 
 ## Get food in view count
 func food_in_view_count() -> int:
 	return _get_cached("food_in_view_count", "food", func():
-		return _food_in_view().size()
+		return food_in_view().size()
+	)
+
+func food_in_reach() -> Array:
+	return _get_cached("food_in_reach", "food", func():
+		return _food_in_reach().to_array()
 	)
 
 ## Get food in reach count
 func food_in_reach_count() -> int:
 	return _get_cached("food_in_reach_count", "food", func():
-		return _food_in_reach().size()
+		return food_in_reach().size()
 	)
-
 	
+#endregion
+
+#region Caching methods
+## Clear all cached data
+func clear_cache() -> void:
+	_cache.clear()
+	_cache_timestamps.clear()
+
+## Get cached value or compute if expired
+func _get_cached(key: String, category: String, computer: Callable) -> Variant:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	
+	# Check dependencies first
+	if key in CACHE_DEPENDENCIES:
+		for dep_key in CACHE_DEPENDENCIES[key]:
+			if not _is_cache_valid(dep_key, current_time):
+				# If any dependency is invalid, we need to recompute
+				if OS.is_debug_build():
+					print("Cache miss for %s (dependency %s invalid)" % [key, dep_key])
+				break
+			# If all dependencies are valid, we can use cached value if it exists
+			if _is_cache_valid(key, current_time):
+				if OS.is_debug_build():
+					print("Cache hit for %s (using dependencies)" % key)
+				return _cache[key]
+	
+	# If we have a valid cached value, use it
+	if _is_cache_valid(key, current_time):
+		if OS.is_debug_build():
+			print("Cache hit for %s" % key)
+		return _cache[key]
+	
+	# Compute new value
+	if OS.is_debug_build():
+		print("Cache miss for %s (computing new value)" % key)
+	var value = computer.call()
+	_cache[key] = value
+	_cache_timestamps[key] = current_time
+	return value
+
+## Check if a cached value is still valid
+func _is_cache_valid(key: String, current_time: float) -> bool:
+	if not key in _cache or not key in _cache_timestamps:
+		return false
+		
+	var category = _get_category_for_key(key)
+	var cache_duration = CACHE_DURATIONS[category]
+	
+	# Always invalid if duration is 0
+	if cache_duration == 0.0:
+		return false
+		
+	var age = current_time - _cache_timestamps[key]
+	return age < cache_duration
+
+## Get the category for a cache key
+func _get_category_for_key(key: String) -> String:
+	for category in CACHE_DURATIONS:
+		if key.begins_with(category):
+			return category
+	return "stats"  # Default category
 #endregion
