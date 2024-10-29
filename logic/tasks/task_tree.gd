@@ -224,8 +224,8 @@ func update(delta: float) -> void:
 
 
 ## Initialize the TaskTree with an ant
-static func create(ant: Ant) -> TaskTreeBuilder:
-	return TaskTreeBuilder.new(ant)
+static func create(_ant: Ant) -> TaskTreeBuilder:
+	return TaskTreeBuilder.new(_ant)
 
 
 ## Gather context information for tasks and behaviors

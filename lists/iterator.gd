@@ -107,7 +107,7 @@ func clear() -> void:
 	elements.clear()
 	end = 0
 	
-func as_array() -> Array:
+func to_array() -> Array:
 	var a: Array = []
 	for element in elements:
 		a.append(element)

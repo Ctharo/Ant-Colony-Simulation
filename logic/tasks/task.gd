@@ -141,11 +141,11 @@ func _check_higher_priority_behaviors(current_priority: int, context: Dictionary
 		print("\nChecking higher priority behaviors (current priority: %d)" % current_priority)
 	
 	# Check behaviors by priority level
-	for priority in priorities:
+	for _priority in priorities:
 		if OS.is_debug_build():
-			print("\nChecking priority level: %d" % priority)
+			print("\nChecking priority level: %d" % _priority)
 		
-		var behaviors_at_priority = priority_groups[priority]
+		var behaviors_at_priority = priority_groups[_priority]
 		var any_conditions_met = false
 		
 		for behavior in behaviors_at_priority:

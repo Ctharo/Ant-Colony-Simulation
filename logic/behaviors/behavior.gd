@@ -104,13 +104,13 @@ func start(p_ant: Ant) -> void:
 
 ## Check if the behavior should activate
 func should_activate(context: Dictionary) -> bool:
-	var should_activate = state != State.COMPLETED and _check_conditions(context)
+	var _should_activate = state != State.COMPLETED and _check_conditions(context)
 	if OS.is_debug_build():
 		print("Checking should_activate for %s:" % name)
 		print("  Current state: %s" % State.keys()[state])
 		print("  Conditions met: %s" % _check_conditions(context))
-		print("  Should activate: %s" % should_activate)
-	return should_activate
+		print("  Should activate: %s" % _should_activate)
+	return _should_activate
 
 ## Update the behavior
 func update(delta: float, context: Dictionary) -> void:

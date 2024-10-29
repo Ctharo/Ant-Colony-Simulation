@@ -4,16 +4,28 @@ extends RefCounted
 ## Reference to the ant and conditions configuration
 var ant: Ant
 var condition_configs: Dictionary
-var context: Dictionary = {}
 
-## Cache for ant property and method access
+## Cache for ant property and method access types
 var _access_cache: Dictionary = {}
+
+## Cache for evaluated context values
+var _context_cache: Dictionary = {}
+
+## Set of required properties for this update cycle
+var _required_properties: Dictionary = {}
 
 ## Initialize with ant and conditions configuration
 func _init(_ant: Ant, _condition_configs: Dictionary) -> void:
 	ant = _ant
 	condition_configs = _condition_configs
 	_cache_ant_accessors()
+
+## Types of property/method access
+enum AccessorType {
+	PROPERTY,  ## Direct property access
+	GETTER,    ## Via get_property method
+	METHOD     ## Via method call
+}
 
 ## Cache both properties and methods for faster lookup
 func _cache_ant_accessors() -> void:
@@ -31,7 +43,7 @@ func _cache_ant_accessors() -> void:
 		else:
 			_access_cache[name] = AccessorType.PROPERTY
 	
-	# Cache methods by getting method list
+	# Cache methods
 	for method in ant.get_method_list():
 		var name = method.name
 		if name.begins_with("_"):  # Skip private methods
@@ -41,15 +53,40 @@ func _cache_ant_accessors() -> void:
 		if name.begins_with("get_") and name.trim_prefix("get_") in _access_cache:
 			continue
 			
-		# Cache callable methods
 		_access_cache[name] = AccessorType.METHOD
 
-## Types of property/method access
-enum AccessorType {
-	PROPERTY,  ## Direct property access
-	GETTER,    ## Via get_property method
-	METHOD     ## Via method call
-}
+## Register properties needed for condition evaluation
+func register_required_properties(condition: Dictionary) -> void:
+	match condition.get("type", ""):
+		"PropertyCheck":
+			if "property" in condition:
+				_required_properties[condition.property] = true
+			if "value_from" in condition:
+				_required_properties[condition.value_from] = true
+		"Operator":
+			for operand in condition.get("operands", []):
+				if "evaluation" in operand:
+					register_required_properties(operand.evaluation)
+
+## Get context value, evaluating only if needed
+func get_context_value(property_name: String) -> Variant:
+	# Return cached value if available
+	if property_name in _context_cache:
+		if OS.is_debug_build():
+			print("    Using cached value for %s" % property_name)
+		return _context_cache[property_name]
+	
+	# Evaluate and cache if this is a required property
+	if property_name in _required_properties:
+		var value = _get_value(property_name)
+		_context_cache[property_name] = value
+		if OS.is_debug_build():
+			print("    Evaluating and caching %s = %s" % [property_name, value])
+		return value
+	
+	if OS.is_debug_build():
+		print("    Warning: Accessing unrequired property %s" % property_name)
+	return null
 
 ## Get value using the cached access type
 func _get_value(name: String) -> Variant:
@@ -78,61 +115,48 @@ func build() -> Dictionary:
 		push_error("ContextBuilder: Invalid ant reference")
 		return {}
 	
-	# Add condition configs to context for the evaluator
+	var context = {}
+	
+	# Add condition configs reference
 	context["condition_configs"] = condition_configs
 	
-	# Process each condition configuration
+	# Process each condition configuration to register required properties
+	_required_properties.clear()
 	for condition_name in condition_configs:
 		var config = condition_configs[condition_name]
 		if "evaluation" in config:
-			_gather_values_from_evaluation(config.evaluation)
+			register_required_properties(config.evaluation)
+	
+	if OS.is_debug_build():
+		print("\nRequired properties for this update: ", _required_properties.keys())
+	
+	# Only evaluate required properties
+	for property_name in _required_properties:
+		context[property_name] = get_context_value(property_name)
 	
 	return context
 
-## Recursively gather values from evaluation configuration
-func _gather_values_from_evaluation(evaluation: Dictionary) -> void:
-	if not evaluation is Dictionary:
-		return
-		
-	match evaluation.get("type", ""):
-		"PropertyCheck":
-			# Get main property or method value
-			if "property" in evaluation:
-				var name = evaluation.property
-				var value = _get_value(name)
-				if value != null:
-					context[name] = value
-			
-			# Get comparison value if needed
-			if "value_from" in evaluation:
-				var name = evaluation.value_from
-				var value = _get_value(name)
-				if value != null:
-					context[name] = value
-		
-		"Operator":
-			# Recursively process operands for compound conditions
-			for operand in evaluation.get("operands", []):
-				if "evaluation" in operand:
-					_gather_values_from_evaluation(operand.evaluation)
+## Clear the context cache
+func clear_cache() -> void:
+	_context_cache.clear()
 
-## Debug method to print all available accessors
-func print_available_accessors() -> void:
-	print("\nAvailable Accessors:")
+## Debug method to analyze context usage
+func print_context_analysis() -> void:
+	print("\nContext Analysis:")
+	print("  Registered properties:", _required_properties.keys())
+	print("  Cached values:", _context_cache.keys())
+	print("  Available accessors:", _access_cache.keys())
 	
-	var properties := []
-	var getters := []
-	var methods := []
+	# Analyze cache hits/misses
+	var hits = 0
+	var misses = 0
+	for prop in _required_properties:
+		if prop in _context_cache:
+			hits += 1
+		else:
+			misses += 1
 	
-	for name in _access_cache:
-		match _access_cache[name]:
-			AccessorType.PROPERTY:
-				properties.append(name)
-			AccessorType.GETTER:
-				getters.append(name)
-			AccessorType.METHOD:
-				methods.append(name)
-	
-	print("Properties:", properties)
-	print("Getters:", getters)
-	print("Methods:", methods)
+	print("  Cache statistics:")
+	print("    Hits: ", hits)
+	print("    Misses: ", misses)
+	print("    Hit ratio: %.1f%%" % (100.0 * hits / (hits + misses) if (hits + misses) > 0 else 0))

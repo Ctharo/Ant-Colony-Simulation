@@ -230,7 +230,7 @@ class RandomMove extends Action:
 			current_time = 0
 			current_direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
 		
-		var movement_rate_modifier = params.get("movement_rate_modifier", 1.0) 
+		#var movement_rate_modifier = params.get("movement_rate_modifier", 1.0) 
 		ant.move(current_direction, delta)
 	
 	func is_completed() -> bool:

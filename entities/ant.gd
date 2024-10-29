@@ -16,7 +16,11 @@ var id: int
 var role: String
 
 ## The colony this ant belongs to
-var colony: Colony
+var colony: Colony :
+	get:
+		if not colony:
+			colony = Colony.new()
+		return colony
 
 ## The reach capabilities of the ant
 var reach: Reach
@@ -82,72 +86,13 @@ func _process(delta: float) -> void:
 		task_tree.update(delta)
 		task_update_timer = 0.0
 
-func _on_active_behavior_changed() -> void:
+func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
 	
-func _on_active_task_changed() -> void:
+func _on_active_task_changed(_new_task: Task) -> void:
 	pass
 
-## Check if the ant is carrying food
-func is_carrying_food() -> bool:
-	return not foods.is_empty()
 
-## Check if the ant can carry more food
-func can_carry_more() -> bool:
-	return foods.mass() < strength.carry_max()
-
-## Get the available carry capacity
-func available_carry_mass() -> float:
-	return strength.carry_max() - foods.mass()
-
-## Check if the ant is from a friendly colony
-func is_friendly(other_colony: Colony) -> bool:
-	return other_colony == colony
-
-## Get food items within reach
-func food_in_reach() -> Array:
-	return Foods.in_reach(global_position, reach.distance).as_array()
-
-## Get food items in view
-func food_in_view() -> Array:
-	return Foods.in_view(global_position, vision.distance).as_array()
-
-## Return true if food is in view
-func is_food_in_view() -> bool:
-	return not food_in_view().is_empty()
-
-## Get pheromones sensed by the ant
-func pheromones_sensed(type: String = "") -> Pheromones:
-	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(global_position, sense.distance)
-	return sensed if type.is_empty() else sensed.of_type(type)
-
-## Get pheromones sensed by the ant
-func _pheromones_sensed_count(type: String = "") -> int:
-	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(global_position, sense.distance)
-	return sensed.size() if type.is_empty() else sensed.of_type(type).size()
-
-func food_pheromones_sensed_count() -> int:
-	return _pheromones_sensed_count("food")
-
-func home_pheromones_sensed_count() -> int:
-	return _pheromones_sensed_count("home")
-
-## Returns true if pheromones are sensed.
-##@unoptimized
-func is_pheromone_sensed(type: String = "") -> bool:
-	var all_pheromones = Pheromones.all() 
-	var sensed = all_pheromones.sensed(global_position, sense.distance)
-	return !sensed.is_empty() if type.is_empty() else !sensed.of_type(type).is_empty()
-
-## Get ants in view
-func ants_in_view() -> Array:
-	return Ants.in_view(global_position, vision.distance).as_array()
-
-## Check if the ant is at its home colony
-func is_at_home() -> bool:
-	return global_position.distance_to(colony.global_position) < reach.distance + colony.radius
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:
@@ -209,3 +154,72 @@ func attack(current_target_entity: Ant, _delta: float) -> void:
 func _connect_signals() -> void:
 	health.depleted.connect(func(): died.emit())
 	energy.depleted.connect(func(): take_damage(1))  # Ant takes damage when out of energy
+
+## Get food items within reach
+func _food_in_reach() -> Foods:
+	return Foods.in_reach(global_position, reach.distance)
+
+## Get food items in view
+func _food_in_view() -> Foods:
+	return Foods.in_view(global_position, vision.distance)
+
+#region Sensory helper methods
+## Get pheromones sensed by the ant
+func _pheromones_sensed(type: String = "") -> Pheromones:
+	var all_pheromones = Pheromones.all() 
+	var sensed = all_pheromones.sensed(global_position, sense.distance)
+	return sensed if type.is_empty() else sensed.of_type(type)
+
+## Get pheromones sensed by the ant
+func _pheromones_sensed_count(type: String = "") -> int:
+	return _pheromones_sensed(type).size()
+
+func _ants_in_view() -> Ants:
+	return Ants.in_view(global_position, vision.distance)
+
+#endregion
+
+#region Contextual Information
+func distance_to_colony() -> float:
+	return global_position.distance_to(colony.global_position)
+	
+func colony_radius() -> float:
+	return colony.radius
+
+func energy_level() -> float:
+	return energy.current_level
+	
+func low_energy_threshold() -> float:
+	return energy.low_energy_threshold
+	
+func carry_capacity() -> float:
+	return strength.carry_max()
+	
+func ants_in_view() -> Array:
+	return _ants_in_view().as_array()
+	
+func food_pheromones_sensed() -> Array:
+	return _pheromones_sensed("food").to_array()
+	
+func food_pheromones_sensed_count() -> int:
+	return _pheromones_sensed_count("food")
+
+func home_pheromones_sensed() -> Array:
+	return _pheromones_sensed("home").to_array()
+
+func home_pheromones_sensed_count() -> int:
+	return _pheromones_sensed_count("home")
+	
+func carried_food_mass() -> float:
+	return foods.mass()
+
+func available_carry_mass() -> float:
+	return strength.carry_max() - foods.mass()
+	
+func food_in_view_count() -> int:
+	return _food_in_view().size()
+
+func food_in_reach_count() -> int:
+	return _food_in_reach().size()
+	
+#endregion
