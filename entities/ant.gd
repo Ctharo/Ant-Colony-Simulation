@@ -51,6 +51,9 @@ var nav_agent: NavigationAgent2D
 ## Task update timer
 var task_update_timer: float = 0.0
 
+## Food objects currently carried
+var carried_food: Array[Food] = [] 
+
 func _init():
 	
 	reach = Reach.new()
@@ -201,9 +204,6 @@ func perform_action() -> void:
 
 func attack(current_target_entity: Ant, _delta: float) -> void:
 	print("Attack action called against %s" % current_target_entity.name)
-
-func get_all_properties() -> Dictionary:
-	return {}
 
 # Connect signals
 func _connect_signals() -> void:

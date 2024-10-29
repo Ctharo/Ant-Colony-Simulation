@@ -101,12 +101,17 @@ func _add_conditions_from_config(target: RefCounted, conditions_config: Array) -
 		return
 		
 	for condition_data in conditions_config:
-		var condition_config = _resolve_condition_config(condition_data)
-		if condition_config:
-			if target is Task:
-				target.add_condition(condition_config)
-			elif target is Behavior:
-				target.add_condition_config(condition_config)
+		var condition = _create_condition(condition_data)
+		if condition:
+			target.add_condition(condition)
+
+
+## Create a condition instance from configuration data
+func _create_condition(condition_data: Variant) -> Condition:
+	var config = _resolve_condition_config(condition_data)
+	if config.is_empty():
+		return null
+	return Condition.create_from_config(config)
 
 ## Resolve condition configuration from various formats
 func _resolve_condition_config(condition_data: Variant) -> Dictionary:
@@ -146,7 +151,7 @@ func _add_behaviors_from_config(task: Task, behaviors_config: Array, ant: Ant) -
 		if behavior:
 			task.add_behavior(behavior)
 
-## Create a behavior instance for a task using BehaviorBuilder
+## Create a behavior instance for a task
 func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 	var behavior_type = behavior_data.type
 	if not behavior_type in behavior_configs:
@@ -155,15 +160,15 @@ func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 	
 	var config = behavior_configs[behavior_type]
 	var priority = Task.Priority[behavior_data.get("priority", "MEDIUM")]
+	var behavior = Behavior.new(priority)
 	
-	# Create behavior builder
-	var builder = BehaviorBuilder.new(Behavior, priority)
+	# Set basic properties
+	behavior.name = behavior_type
+	behavior.ant = ant
 	
 	# Add behavior-specific conditions if specified
 	if "conditions" in behavior_data:
-		for condition_config in behavior_data.conditions:
-			var condition = Condition.create_from_config(_resolve_condition_config(condition_config))
-			builder.with_condition(condition)
+		_add_conditions_from_config(behavior, behavior_data.conditions)
 	
 	# Create and add action
 	if "action" in config:
@@ -176,12 +181,7 @@ func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 		
 		var action = create_action(action_data, ant)
 		if action:
-			builder.with_action(action)
-	
-	# Build the behavior
-	var behavior = builder.build()
-	behavior.name = behavior_type
-	behavior.ant = ant
+			behavior.actions.append(action)
 	
 	return behavior
 
