@@ -99,6 +99,17 @@ const CACHE_DURATIONS = {
 	"stats": 0.0        # Stats are always recalculated
 }
 
+## TODO: Meant to be used as a way to access children for later when
+## we have a UI and will allow a user to design conditions based on their data
+var exposed_attributes = {
+	"reach": reach,
+	"vision": vision,
+	"sense": sense,
+	"energy": energy,
+	"strength": strength,
+	"health": health,
+	"speed": speed
+}
 
 func _init():
 	
@@ -126,6 +137,33 @@ func _process(delta: float) -> void:
 	if task_update_timer >= 1.0:
 		task_tree.update(delta)
 		task_update_timer = 0.0
+		
+#region Attribute helpers
+# Get all exposed properties from an attribute
+func get_attribute_properties(attribute_name: String) -> Dictionary:
+	if attribute_name in exposed_attributes:
+		return exposed_attributes[attribute_name].get_exposed_properties()
+	return {}
+
+# Get a specific property from an attribute
+func get_attribute_property(attribute_name: String, property_name: String):
+	if attribute_name in exposed_attributes:
+		return exposed_attributes[attribute_name].get_property(property_name)
+	return null
+
+# Set a specific property on an attribute
+func set_attribute_property(attribute_name: String, property_name: String, value) -> bool:
+	if attribute_name in exposed_attributes:
+		return exposed_attributes[attribute_name].set_property(property_name, value)
+	return false
+
+# Get all exposed properties from all attributes
+func get_all_attribute_properties() -> Dictionary:
+	var properties = {}
+	for attr_name in exposed_attributes:
+		properties[attr_name] = get_attribute_properties(attr_name)
+	return properties
+#endregion
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
