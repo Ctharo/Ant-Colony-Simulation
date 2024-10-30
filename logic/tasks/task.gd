@@ -296,7 +296,7 @@ func _check_conditions(context: Dictionary) -> bool:
 		if not is_instance_valid(condition):
 			continue
 			
-		if not condition.is_met(ant, _condition_cache, context):
+		if not condition.is_met(_condition_cache, context):
 			return false
 	return true
 

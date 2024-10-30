@@ -135,7 +135,7 @@ func _print_condition_recursive(condition: Condition, indent: String, result: bo
 					print("%s║   └── Operand %d:" % [indent, i + 1])
 					var context = gather_context()
 					var sub_condition = Condition.create_from_config(operand)
-					var sub_result = sub_condition.is_met(ant, {}, context)
+					var sub_result = sub_condition.is_met({}, context)
 					_print_condition_recursive(sub_condition, indent + "    ", sub_result)
 		_:
 			if condition_config.has("evaluation"):
@@ -168,7 +168,7 @@ func _log_behavior_transition(previous_behavior: Behavior, current_behavior: Beh
 		print("║   Conditions:")
 		var context = gather_context()
 		for condition in conditions:
-			var result = condition.is_met(ant, {}, context)
+			var result = condition.is_met({}, context)
 			_print_condition_recursive(condition, "║   ", result)
 	print("╚══")
 

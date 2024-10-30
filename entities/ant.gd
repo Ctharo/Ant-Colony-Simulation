@@ -127,15 +127,11 @@ func _process(delta: float) -> void:
 		task_tree.update(delta)
 		task_update_timer = 0.0
 
-
-
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
 	
 func _on_active_task_changed(_new_task: Task) -> void:
 	pass
-
-
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:
@@ -143,6 +139,19 @@ func take_damage(amount: float) -> void:
 	damaged.emit()
 	if health.current_level <= 0:
 		died.emit()
+	
+## Emit a pheromone at the current position
+func emit_pheromone(type: String, concentration: float) -> void:
+	print("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
+	#var new_pheromone = Pheromone.new(position, type, concentration, self)
+	# Add the pheromone to the world (implementation depends on your world management system)
+	
+#region Action methods
+## Perform an action (placeholder for more complex behavior)
+## Meant to serve as access for all actions prompted by the TaskManager
+func perform_action(_action: Action) -> void:
+	# Implement ant behavior here
+	action_completed.emit()
 
 ## Handle the ant consuming food for energy
 func consume_food(amount: float) -> void:
@@ -154,10 +163,11 @@ func move(direction: Vector2, delta: float) -> void:
 	var vector = direction * speed.movement_rate * delta 
 	_move_to(global_position + vector)
 
+
 func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
 	print("Ant would be moving now to location %s" % location)
-	
+
 ## Harvest food from a source over a given time period
 func harvest_food(food_source: Food, time: float) -> float:
 	var potential_harvest = speed.harvesting_rate * time
@@ -179,21 +189,12 @@ func store_food(_colony: Colony, _time: float) -> float:
 	carried_food.clear()
 	return storing_amount
 
-## Emit a pheromone at the current position
-func emit_pheromone(type: String, concentration: float) -> void:
-	print("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
-	#var new_pheromone = Pheromone.new(position, type, concentration, self)
-	# Add the pheromone to the world (implementation depends on your world management system)
-
-## Perform an action (placeholder for more complex behavior)
-func perform_action() -> void:
-	# Implement ant behavior here
-	action_completed.emit()
-
 func attack(current_target_entity: Ant, _delta: float) -> void:
 	print("Attack action called against %s" % current_target_entity.name)
 
-# Connect signals
+#endregion
+
+## Connect signals
 func _connect_signals() -> void:
 	health.depleted.connect(func(): died.emit())
 	energy.depleted.connect(func(): take_damage(1))  # Ant takes damage when out of energy
@@ -201,7 +202,9 @@ func _connect_signals() -> void:
 
 
 #region Sensory helper methods
-## Get pheromones sensed by the ant
+## These methods return custom lists, meant to serve
+## as the initial access point for these objects
+
 func _pheromones_sensed(type: String = "") -> Pheromones:
 	var cache_key = "pheromones_sensed_%s" % type
 	return _get_cached(cache_key, "pheromones", func():
@@ -210,13 +213,11 @@ func _pheromones_sensed(type: String = "") -> Pheromones:
 		return sensed if type.is_empty() else sensed.of_type(type)
 	)
 
-## Get food items within reach
 func _food_in_reach() -> Foods:
 	return _get_cached("food_in_reach", "food", func():
 		return Foods.in_reach(global_position, reach.distance)
 	)
 
-## Get food items in view
 func _food_in_view() -> Foods:
 	return _get_cached("food_in_view", "food", func():
 		return Foods.in_view(global_position, vision.distance)
@@ -265,7 +266,7 @@ func ants_in_view() -> Array:
 	return _get_cached("ants_in_view", "ants", func():
 		return _ants_in_view().as_array()
 	)
-	
+## Returns count of ants in view
 func ants_in_view_count() -> int:
 	return _get_cached("ants_in_view_count", "ants", func():
 		return ants_in_view().size()
@@ -324,7 +325,8 @@ func available_carry_mass() -> float:
 	return _get_cached("available_carry_mass", "stats", func():
 		return strength.carry_max() - carried_food_mass()
 	)
-	
+
+## Get food in view as an Array
 func food_in_view() -> Array:
 	return _get_cached("food_in_view", "food", func():
 		return _food_in_view().to_array()
@@ -336,12 +338,13 @@ func food_in_view_count() -> int:
 		return food_in_view().size()
 	)
 
+## Get food within reach as an Array
 func food_in_reach() -> Array:
 	return _get_cached("food_in_reach", "food", func():
 		return _food_in_reach().to_array()
 	)
 
-## Get food in reach count
+## Get food within reach count
 func food_in_reach_count() -> int:
 	return _get_cached("food_in_reach_count", "food", func():
 		return food_in_reach().size()
@@ -364,24 +367,24 @@ func _get_cached(key: String, category: String, computer: Callable) -> Variant:
 		for dep_key in CACHE_DEPENDENCIES[key]:
 			if not _is_cache_valid(dep_key, current_time):
 				# If any dependency is invalid, we need to recompute
-				if OS.is_debug_build():
-					print("Cache miss for %s (dependency %s invalid)" % [key, dep_key])
+				#if OS.is_debug_build():
+					#print("Cache miss for %s (dependency %s invalid)" % [key, dep_key])
 				break
 			# If all dependencies are valid, we can use cached value if it exists
 			if _is_cache_valid(key, current_time):
-				if OS.is_debug_build():
-					print("Cache hit for %s (using dependencies)" % key)
+				#if OS.is_debug_build():
+					#print("Cache hit for %s (using dependencies)" % key)
 				return _cache[key]
 	
 	# If we have a valid cached value, use it
 	if _is_cache_valid(key, current_time):
-		if OS.is_debug_build():
-			print("Cache hit for %s" % key)
+		#if OS.is_debug_build():
+			#print("Cache hit for %s" % key)
 		return _cache[key]
 	
 	# Compute new value
-	if OS.is_debug_build():
-		print("Cache miss for %s (computing new value)" % key)
+	#if OS.is_debug_build():
+		#print("Cache miss for %s (computing new value)" % key)
 	var value = computer.call()
 	_cache[key] = value
 	_cache_timestamps[key] = current_time

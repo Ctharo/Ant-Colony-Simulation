@@ -15,7 +15,7 @@ var config: Dictionary = {}
 ## @param cache Dictionary to cache results
 ## @param context Dictionary containing context parameters
 ## @return Whether the condition is met
-func is_met(_ant: Ant, _cache: Dictionary, context: Dictionary) -> bool:
+func is_met(_cache: Dictionary, context: Dictionary) -> bool:
 	var result := ConditionEvaluator.evaluate(config, context)
 	
 	if result != _previous_result:
