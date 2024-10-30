@@ -99,6 +99,8 @@ const CACHE_DURATIONS = {
 	"stats": 0.0        # Stats are always recalculated
 }
 
+var _exposed_methods = {}
+
 ## TODO: Meant to be used as a way to access children for later when
 ## we have a UI and will allow a user to design conditions based on their data
 var exposed_attributes = {
@@ -121,6 +123,8 @@ func _init():
 	health = Health.new()
 	speed = Speed.new()
 	
+	_init_exposed_methods()
+	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
 	if task_tree and task_tree.get_active_task():
@@ -137,7 +141,69 @@ func _process(delta: float) -> void:
 	if task_update_timer >= 1.0:
 		task_tree.update(delta)
 		task_update_timer = 0.0
-		
+
+#region Exposed Method methods
+## Initialize method maps
+func _init_exposed_methods() -> void:
+	# Sensory methods
+	_exposed_methods["sensing"] = {
+		"ants_in_view": func(): return ants_in_view(),
+		"ants_in_view_count": func(): return ants_in_view_count(),
+		"food_pheromones_sensed": func(): return food_pheromones_sensed(),
+		"food_pheromones_sensed_count": func(): return food_pheromones_sensed_count(),
+		"is_food_pheromones_sensed": func(): return is_food_pheromones_sensed(),
+		"home_pheromones_sensed": func(): return home_pheromones_sensed(),
+		"home_pheromones_sensed_count": func(): return home_pheromones_sensed_count(),
+		"is_home_pheromones_sensed": func(): return is_home_pheromones_sensed()
+	}
+	
+	# Food-related methods
+	_exposed_methods["food"] = {
+		"food_in_view": func(): return food_in_view(),
+		"food_in_view_count": func(): return food_in_view_count(),
+		"food_in_reach": func(): return food_in_reach(),
+		"food_in_reach_count": func(): return food_in_reach_count(),
+		"carried_food_mass": func(): return carried_food_mass(),
+		"is_carrying_food": func(): return is_carrying_food(),
+		"available_carry_mass": func(): return available_carry_mass()
+	}
+	
+	# Colony-related methods
+	_exposed_methods["colony"] = {
+		"distance_to_colony": func(): return distance_to_colony(),
+		"colony_radius": func(): return colony_radius()
+	}
+	
+## Get all methods in a category
+func get_methods(category: String) -> Dictionary:
+	return _exposed_methods.get(category, {})
+
+## Get a specific method result
+func get_method_result(method_name: String, category: String = "") -> Variant:
+	if category.is_empty():
+		# Search all categories for the method
+		for cat in _exposed_methods:
+			if method_name in _exposed_methods[cat]:
+				return _exposed_methods[cat][method_name].call()
+		return null
+	
+	# Use specific category if provided
+	var category_methods = get_methods(category)
+	if method_name in category_methods:
+		return category_methods[method_name].call()
+	return null
+
+## Get all method results
+func get_all_method_results() -> Dictionary:
+	var results = {}
+	for category in _exposed_methods:
+		results[category] = {}
+		for method_name in _exposed_methods[category]:
+			results[category][method_name] = _exposed_methods[category][method_name].call()
+	return results
+	
+#endregion
+
 #region Attribute helpers
 # Get all exposed properties from an attribute
 func get_attribute_properties(attribute_name: String) -> Dictionary:
