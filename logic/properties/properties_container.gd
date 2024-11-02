@@ -32,8 +32,7 @@ var _properties: Dictionary = {}
 var _owner: Node  # Reference to owning object
 var _use_caching: bool = true
 
-func _init(owner: Node, use_caching: bool = true) -> void:
-	_owner = owner
+func _init(use_caching: bool = true) -> void:
 	_use_caching = use_caching
 
 #region Property Management

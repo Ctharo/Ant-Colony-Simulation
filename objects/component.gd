@@ -19,6 +19,7 @@ enum PropertyType {
 	UNKNOWN
 }
 
+
 ## Expose a property with type information
 func expose_property(
 		name: String, 
