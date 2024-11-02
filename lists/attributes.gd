@@ -1,4 +1,4 @@
-class_name Components
+class_name Attributes
 extends Iterator
 ## Container class for all exposed properties and attributes of object
 
@@ -7,7 +7,7 @@ var _exposed_methods: Dictionary = {}
 var _exposed_attributes: Dictionary = {}
 
 
-func _init(initial_components: Array[Component] = []):
+func _init(initial_attributes: Array[Component] = []):
 	super._init()
 
 
