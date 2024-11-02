@@ -65,9 +65,9 @@ var _cache: Dictionary = {}
 ## Track when cache entries were last updated (in seconds)
 var _cache_timestamps: Dictionary = {}
 
-var _attributes: Attributes
+var _attributes: Components
 
-var attributes: Attributes :
+var attributes: Components :
 	set(value):
 		_attributes = value
 	get:
@@ -122,8 +122,7 @@ func _init():
 	health = Health.new()
 	speed = Speed.new()
 	
-	var c: Array[Component] = [reach, vision, sense, energy, strength, health, speed]
-	attributes = Attributes.new(c)
+	attributes = Components.new()
 	
 	_init_exposed_methods()
 	_init_exposed_attributes()
@@ -180,13 +179,13 @@ func _init_exposed_methods() -> void:
 func _init_exposed_attributes() -> void:
 	
 	# Attributes
-	attributes._exposed_attributes["reach"] = reach
-	attributes._exposed_attributes["vision"] = vision
-	attributes._exposed_attributes["sense"] = sense
-	attributes._exposed_attributes["energy"] = energy
-	attributes._exposed_attributes["strength"] = strength
-	attributes._exposed_attributes["health"] = health
-	attributes._exposed_attributes["speed"] = speed
+	attributes.add_component("reach", reach)
+	attributes.add_component("vision", vision)
+	attributes.add_component("sense", sense)
+	attributes.add_component("energy", energy)
+	attributes.add_component("strength", strength)
+	attributes.add_component("health", health)
+	attributes.add_component("speed", speed)
 
 	
 ## Get all methods in a category

@@ -111,8 +111,8 @@ func _refresh_categories() -> void:
 		for category in current_ant._exposed_methods:
 			category_list.add_item(category)
 	else:
-		# Show attributes
-		for attr_name in current_ant._exposed_attributes:
+		# Show attributes 
+		for attr_name in current_ant._exposed_attributes: # TODO: Use access via ant.attributes
 			if current_ant._exposed_attributes[attr_name]:
 				category_list.add_item(attr_name)
 

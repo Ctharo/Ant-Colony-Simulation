@@ -1,4 +1,4 @@
-class_name Attributes
+class_name Components
 extends Iterator
 ## Container class for all exposed properties and attributes of object
 
@@ -10,6 +10,9 @@ var _exposed_attributes: Dictionary = {}
 func _init(initial_attributes: Array[Component] = []):
 	super._init()
 
+func add_component(component_name: String, component):
+	_exposed_attributes[component_name] = component
+	
 
 #region Attributes
 func get_attribute_properties(attribute_name: String) -> Dictionary:
