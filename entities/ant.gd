@@ -65,6 +65,14 @@ var _cache: Dictionary = {}
 ## Track when cache entries were last updated (in seconds)
 var _cache_timestamps: Dictionary = {}
 
+var _components: Components
+
+var components: Components :
+	set(value):
+		_components = value
+	get:
+		return _components
+
 ## Dependencies between cached values - base methods provide for derived methods
 const CACHE_DEPENDENCIES = {
 	# Food sensing dependencies
@@ -113,6 +121,9 @@ func _init():
 	strength = Strength.new()
 	health = Health.new()
 	speed = Speed.new()
+	
+	var c: Array[Component] = [reach, vision, sense, energy, strength, health, speed]
+	components = Components.new(c)
 	
 	_init_exposed_methods()
 	_init_exposed_attributes()
@@ -169,13 +180,13 @@ func _init_exposed_methods() -> void:
 func _init_exposed_attributes() -> void:
 	
 	# Attributes
-	_exposed_attributes["reach"] = reach
-	_exposed_attributes["vision"] = vision
-	_exposed_attributes["sense"] = sense
-	_exposed_attributes["energy"] = energy
-	_exposed_attributes["strength"] = strength
-	_exposed_attributes["health"] = health
-	_exposed_attributes["speed"] = speed
+	components._exposed_attributes["reach"] = reach
+	components._exposed_attributes["vision"] = vision
+	components._exposed_attributes["sense"] = sense
+	components._exposed_attributes["energy"] = energy
+	components._exposed_attributes["strength"] = strength
+	components._exposed_attributes["health"] = health
+	components._exposed_attributes["speed"] = speed
 
 	
 ## Get all methods in a category
@@ -211,29 +222,21 @@ func get_all_method_results() -> Dictionary:
 #region Attribute helpers
 # Get all exposed properties from an attribute
 func get_attribute_properties(attribute_name: String) -> Dictionary:
-	if attribute_name in _exposed_attributes:
-		var attribute: Attribute = _exposed_attributes[attribute_name]
-		return attribute.get_exposed_properties()
-	return {}
+	return components.get_attribute_properties(attribute_name)
 
 # Get a specific property from an attribute
 func get_attribute_property(attribute_name: String, property_name: String):
-	if attribute_name in _exposed_attributes:
-		return _exposed_attributes[attribute_name].get_property(property_name)
-	return null
+	return components.get_property(property_name)
+
 
 # Set a specific property on an attribute
 func set_attribute_property(attribute_name: String, property_name: String, value) -> bool:
-	if attribute_name in _exposed_attributes:
-		return _exposed_attributes[attribute_name].set_property(property_name, value)
-	return false
+	return components.set_property(property_name, value)
 
 # Get all exposed properties from all attributes
 func get_all_attribute_properties() -> Dictionary:
-	var properties = {}
-	for attr_name in _exposed_attributes:
-		properties[attr_name] = get_attribute_properties(attr_name)
-	return properties
+	return components.get_all_attribute_properties()
+	
 #endregion
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:

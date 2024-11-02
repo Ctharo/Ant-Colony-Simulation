@@ -81,9 +81,9 @@ static func get_object_info(object: Variant, name: String = "") -> ObjectInfo:
 				var attr_info = get_object_info(attr, attr_name)
 				if attr_info:
 					info.add_child(attr_info)
-	
-	# Handle Attribute objects
-	elif object is Attribute:
+		
+	# Handle Attribute and Colony objects
+	elif object is Attribute or object is Colony:
 		for prop_name in object._exposed_properties:
 			var prop_data = object._exposed_properties[prop_name]
 			var value = prop_data["getter"].call() if prop_data["getter"].is_valid() else null
