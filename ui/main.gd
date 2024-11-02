@@ -100,7 +100,7 @@ func animate_ui_elements():
 		i += 1
 
 func _on_start_simulation_button_pressed():
-	print("Start Simulation pressed")
+	DebugLogger.info(DebugLogger.Category.PROGRAM, "Start Simulation pressed")
 	transition_to_scene("sandbox")
 
 func _on_colony_editor_button_pressed():
@@ -110,7 +110,7 @@ func _on_ant_editor_button_pressed():
 	transition_to_scene("ant_editor")
 
 func _on_settings_button_pressed():
-	print("Settings pressed")
+	DebugLogger.info(DebugLogger.Category.PROGRAM, "Settings pressed")
 	# Add your logic here
 
 func _on_quit_button_pressed():
@@ -124,4 +124,4 @@ func transition_to_scene(scene_name: String):
 func _change_scene(scene_name: String):
 	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
-		push_error("Failed to load scene: " + scene_name)
+		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)

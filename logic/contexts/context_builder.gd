@@ -24,25 +24,27 @@ func register_required_properties(condition: Dictionary) -> void:
 
 func get_context_value(property_name: String) -> Variant:
 	if property_name in _context_cache:
-		if OS.is_debug_build():
-			print("    Using cached value for %s" % property_name)
+		DebugLogger.trace(DebugLogger.Category.CONTEXT, 
+			"Using cached value for '%s': %s" % [property_name, _context_cache[property_name]]
+		)
 		return _context_cache[property_name]
 	
 	if property_name in _required_properties:
-		# Use new ant.get_method_result() for safe access
 		var value = ant.get_method_result(property_name)
 		_context_cache[property_name] = value
-		if OS.is_debug_build():
-			print("    Evaluating and caching %s = %s" % [property_name, value])
+		DebugLogger.trace(DebugLogger.Category.CONTEXT,
+			"Evaluating property '%s' = %s" % [property_name, value]
+		)
 		return value
 	
-	if OS.is_debug_build():
-		print("    Warning: Accessing unrequired property %s" % property_name)
+	DebugLogger.warn(DebugLogger.Category.CONTEXT,
+		"Accessing unrequired property '%s'" % property_name
+	)
 	return null
 
 func build() -> Dictionary:
 	if not is_instance_valid(ant):
-		push_error("ContextBuilder: Invalid ant reference")
+		DebugLogger.error(DebugLogger.Category.CONTEXT, "ContextBuilder: Invalid ant reference")
 		return {}
 	
 	var context = {}
@@ -54,8 +56,15 @@ func build() -> Dictionary:
 		if "evaluation" in config:
 			register_required_properties(config.evaluation)
 	
-	if OS.is_debug_build():
-		print("\nRequired properties for this update: ", _required_properties.keys())
+	# Log required properties in a more organized way
+	var properties_list: Array = _required_properties.keys()
+	if not properties_list.is_empty():
+		var formatted_list = ""
+		for prop in properties_list:
+			formatted_list += "\n  - " + str(prop)
+		DebugLogger.debug(DebugLogger.Category.CONTEXT,
+			"Required properties for update:%s" % formatted_list
+		)
 	
 	for property_name in _required_properties:
 		context[property_name] = get_context_value(property_name)
@@ -64,12 +73,9 @@ func build() -> Dictionary:
 
 func clear_cache() -> void:
 	_context_cache.clear()
+	DebugLogger.debug(DebugLogger.Category.CONTEXT, "Context cache cleared")
 
 func print_context_analysis() -> void:
-	print("\nContext Analysis:")
-	print("  Registered properties:", _required_properties.keys())
-	print("  Cached values:", _context_cache.keys())
-	
 	var hits = 0
 	var misses = 0
 	for prop in _required_properties:
@@ -78,7 +84,19 @@ func print_context_analysis() -> void:
 		else:
 			misses += 1
 	
-	print("  Cache statistics:")
-	print("    Hits: ", hits)
-	print("    Misses: ", misses)
-	print("    Hit ratio: %.1f%%" % (100.0 * hits / (hits + misses) if (hits + misses) > 0 else 0))
+	var analysis = "\nContext Analysis:"
+	analysis += "\n  Registered properties (%d):" % _required_properties.size()
+	for prop in _required_properties.keys():
+		analysis += "\n    - %s" % prop
+	
+	analysis += "\n  Cached values (%d):" % _context_cache.size()
+	for key in _context_cache.keys():
+		analysis += "\n    - %s = %s" % [key, _context_cache[key]]
+	
+	analysis += "\n  Cache statistics:"
+	analysis += "\n    Hits: %d" % hits
+	analysis += "\n    Misses: %d" % misses
+	var hit_ratio = 100.0 * hits / (hits + misses) if (hits + misses) > 0 else 0
+	analysis += "\n    Hit ratio: %.1f%%" % hit_ratio
+	
+	DebugLogger.info(DebugLogger.Category.CONTEXT, analysis)

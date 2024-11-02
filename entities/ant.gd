@@ -128,7 +128,6 @@ func _init():
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
 	if task_tree and task_tree.get_active_task():
-		print("Successfully loaded task %s to ant %d" % [task_tree.get_active_task().name, id])
 		task_tree.print_task_hierarchy()
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
@@ -270,7 +269,7 @@ func move(direction: Vector2, delta: float) -> void:
 
 func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
-	print("Ant would be moving now to location %s" % location)
+	DebugLogger.info(DebugLogger.Category.ACTION, "Ant would be moving now to location %s" % location)
 
 ## Harvest food from a source over a given time period
 func harvest_food(food_source: Food, time: float) -> float:
@@ -289,12 +288,12 @@ func harvest_food(food_source: Food, time: float) -> float:
 func store_food(_colony: Colony, _time: float) -> float:
 	var storing_amount: float = carried_food.mass()
 	var total_stored = _colony.foods.add_food(storing_amount)
-	print("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
+	DebugLogger.info(DebugLogger.Category.ACTION,"Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
 	carried_food.clear()
 	return storing_amount
 
 func attack(current_target_entity: Ant, _delta: float) -> void:
-	print("Attack action called against %s" % current_target_entity.name)
+	DebugLogger.info(DebugLogger.Category.ACTION,"Attack action called against %s" % current_target_entity.name)
 
 #endregion
 

@@ -71,10 +71,10 @@ func load_configs(tasks_path: String, behaviors_path: String, conditions_path: S
 
 ## Create a complete task instance with its behaviors
 func create_task(task_type: String, priority: int, ant: Ant = null) -> Task:
-	print("Creating task: ", task_type)
+	DebugLogger.info(DebugLogger.Category.TASK, "Creating task: %s" % task_type)
 	
 	if not task_type in task_configs:
-		push_error("No configuration found for task type: %s" % task_type)
+		DebugLogger.error(DebugLogger.Category.TASK, "No configuration found for task type: %s" % task_type)
 		return null
 	
 	var config = task_configs[task_type]
@@ -97,7 +97,7 @@ func create_task(task_type: String, priority: int, ant: Ant = null) -> Task:
 ## Add conditions to a target (Task or Behavior) from configuration
 func _add_conditions_from_config(target: RefCounted, conditions_config: Array) -> void:
 	if not (target is Task or target is Behavior):
-		push_error("Target must be either Task or Behavior")
+		DebugLogger.error(DebugLogger.Category.TASK, "Target must be either Task or Behavior")
 		return
 		
 	for condition_data in conditions_config:
@@ -118,7 +118,7 @@ func _resolve_condition_config(condition_data: Variant) -> Dictionary:
 	# Handle string condition names (reference to predefined conditions)
 	if condition_data is String:
 		if not condition_data in condition_configs:
-			push_error("Unknown condition: %s" % condition_data)
+			DebugLogger.error(DebugLogger.Category.TASK, "Unknown condition: %s" % condition_data)
 			return {}
 		return condition_configs[condition_data]
 	
@@ -141,7 +141,7 @@ func _resolve_condition_config(condition_data: Variant) -> Dictionary:
 					return Operator.not_condition(subcond)
 		return condition_data
 	
-	push_error("Invalid condition data: %s" % condition_data)
+	DebugLogger.error(DebugLogger.Category.TASK, "Invalid condition data: %s" % condition_data)
 	return {}
 
 ## Add behaviors to the task from configuration
@@ -155,7 +155,7 @@ func _add_behaviors_from_config(task: Task, behaviors_config: Array, ant: Ant) -
 func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 	var behavior_type = behavior_data.type
 	if not behavior_type in behavior_configs:
-		push_error("Unknown behavior type: %s" % behavior_type)
+		DebugLogger.error(DebugLogger.Category.BEHAVIOR, "Unknown behavior type: %s" % behavior_type)
 		return null
 	
 	var config = behavior_configs[behavior_type]
@@ -189,7 +189,7 @@ func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 func create_action(action_data: Dictionary, ant: Ant) -> Action:
 	var action_type = action_data.type
 	if not action_type in ACTION_TYPES:
-		push_error("Unknown action type: %s" % action_type)
+		DebugLogger.error(DebugLogger.Category.ACTION, "Unknown action type: %s" % action_type)
 		return null
 	
 	var action_class: GDScript = ACTION_TYPES[action_type]
