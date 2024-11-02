@@ -65,13 +65,19 @@ var _cache: Dictionary = {}
 ## Track when cache entries were last updated (in seconds)
 var _cache_timestamps: Dictionary = {}
 
-var _attributes: Components
 
-var attributes: Components :
+
+var attributes_container: AttributesContainer :
 	set(value):
-		_attributes = value
+		attributes_container = value
 	get:
-		return _attributes
+		return attributes_container
+		
+var properties_container: PropertiesContainer :
+	set(value):
+		properties_container = value
+	get:
+		return properties_container
 
 ## Dependencies between cached values - base methods provide for derived methods
 const CACHE_DEPENDENCIES = {
@@ -121,9 +127,7 @@ func _init():
 	strength = Strength.new()
 	health = Health.new()
 	speed = Speed.new()
-	
-	attributes = Components.new()
-	
+		
 	_init_exposed_methods()
 	_init_exposed_attributes()
 	
@@ -179,13 +183,13 @@ func _init_exposed_methods() -> void:
 func _init_exposed_attributes() -> void:
 	
 	# Attributes
-	attributes.add_component("reach", reach)
-	attributes.add_component("vision", vision)
-	attributes.add_component("sense", sense)
-	attributes.add_component("energy", energy)
-	attributes.add_component("strength", strength)
-	attributes.add_component("health", health)
-	attributes.add_component("speed", speed)
+	attributes_container.add_component("reach", reach)
+	attributes_container.add_component("vision", vision)
+	attributes_container.add_component("sense", sense)
+	attributes_container.add_component("energy", energy)
+	attributes_container.add_component("strength", strength)
+	attributes_container.add_component("health", health)
+	attributes_container.add_component("speed", speed)
 
 	
 ## Get all methods in a category
@@ -221,20 +225,20 @@ func get_all_method_results() -> Dictionary:
 #region Attribute helpers
 # Get all exposed properties from an attribute
 func get_attribute_properties(attribute_name: String) -> Dictionary:
-	return attributes.get_properties(attribute_name)
+	return attributes_container.get_properties(attribute_name)
 
 # Get a specific property from an attribute
 func get_attribute_property(attribute_name: String, property_name: String):
-	return attributes.get_property(property_name)
+	return attributes_container.get_property(property_name)
 
 
 # Set a specific property on an attribute
 func set_attribute_property(attribute_name: String, property_name: String, value) -> bool:
-	return attributes.set_property(property_name, value)
+	return attributes_container.set_property(property_name, value)
 
 # Get all exposed properties from all attributes
 func get_all_attribute_properties() -> Dictionary:
-	return attributes.get_all_properties()
+	return attributes_container.get_all_properties()
 	
 #endregion
 

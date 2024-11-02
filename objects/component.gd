@@ -3,6 +3,7 @@ extends RefCounted
 
 # Stores property metadata and access methods
 var _exposed_properties = {}
+var properties: PropertiesContainer
 
 # Type enum for easier reference
 enum PropertyType {
@@ -18,14 +19,16 @@ enum PropertyType {
 	UNKNOWN
 }
 
-# Expose property with type information
-func expose_property(name: String, getter: Callable, type: PropertyType, setter: Callable = Callable()) -> void:
-	_exposed_properties[name] = {
-		"getter": getter,
-		"setter": setter if setter.is_valid() else Callable(),
-		"type": type
-	}
-
+## Expose a property with type information
+func expose_property(
+		name: String, 
+		getter: Callable, 
+		type: PropertyType, 
+		setter: Callable = Callable(),
+		description: String = ""
+	) -> void:
+		properties.expose_property(name, getter, type, setter, description)
+	
 func get_property(name: String):
 	if not _exposed_properties.has(name):
 		return null
