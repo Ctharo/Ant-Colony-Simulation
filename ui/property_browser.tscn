@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://j2e1qvtdom2c"]
+
+[ext_resource type="Script" path="res://ui/property_browser.gd" id="1_p7blo"]
+
+[node name="PropertyBrowser" type="Popup"]
+visible = true
+script = ExtResource("1_p7blo")

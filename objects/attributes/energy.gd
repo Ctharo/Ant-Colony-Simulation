@@ -11,19 +11,21 @@ var current_level: float = max_level :
 		if is_zero_approx(current_level):
 			depleted.emit()
 
-func _ready():
+func _init():
 	expose_property("max_level", 
 		func(): return max_level,
+		PropertyType.FLOAT,
 		func(v): max_level = v
 	)
 	expose_property("current_level", 
 		func(): return current_level,
+		PropertyType.FLOAT,
 		func(v): current_level = v
 	)
-	expose_property("percentage", func(): return percentage())
-	expose_property("is_critically_low", func(): return is_critically_low())
-	expose_property("is_full", func(): return is_full())
-	expose_property("replenishable_amount", func(): return replenishable_amount())
+	expose_property("percentage", func(): return percentage(), PropertyType.FLOAT)
+	expose_property("is_critically_low", func(): return is_critically_low(), PropertyType.BOOL)
+	expose_property("is_full", func(): return is_full(), PropertyType.BOOL)
+	expose_property("replenishable_amount", func(): return replenishable_amount(), PropertyType.FLOAT)
 
 func percentage() -> float:
 	return (current_level / max_level) * 100.0

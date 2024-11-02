@@ -101,17 +101,8 @@ const CACHE_DURATIONS = {
 
 var _exposed_methods = {}
 
-## TODO: Meant to be used as a way to access children for later when
-## we have a UI and will allow a user to design conditions based on their data
-var exposed_attributes = {
-	"reach": reach,
-	"vision": vision,
-	"sense": sense,
-	"energy": energy,
-	"strength": strength,
-	"health": health,
-	"speed": speed
-}
+
+var _exposed_attributes = {}
 
 func _init():
 	
@@ -124,6 +115,7 @@ func _init():
 	speed = Speed.new()
 	
 	_init_exposed_methods()
+	_init_exposed_attributes()
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
@@ -173,6 +165,19 @@ func _init_exposed_methods() -> void:
 		"colony_radius": func(): return colony_radius()
 	}
 	
+## Initialize attribute maps
+func _init_exposed_attributes() -> void:
+	
+	# Attributes
+	_exposed_attributes["reach"] = reach
+	_exposed_attributes["vision"] = vision
+	_exposed_attributes["sense"] = sense
+	_exposed_attributes["energy"] = energy
+	_exposed_attributes["strength"] = strength
+	_exposed_attributes["health"] = health
+	_exposed_attributes["speed"] = speed
+
+	
 ## Get all methods in a category
 func get_methods(category: String) -> Dictionary:
 	return _exposed_methods.get(category, {})
@@ -206,26 +211,27 @@ func get_all_method_results() -> Dictionary:
 #region Attribute helpers
 # Get all exposed properties from an attribute
 func get_attribute_properties(attribute_name: String) -> Dictionary:
-	if attribute_name in exposed_attributes:
-		return exposed_attributes[attribute_name].get_exposed_properties()
+	if attribute_name in _exposed_attributes:
+		var attribute: Attribute = _exposed_attributes[attribute_name]
+		return attribute.get_exposed_properties()
 	return {}
 
 # Get a specific property from an attribute
 func get_attribute_property(attribute_name: String, property_name: String):
-	if attribute_name in exposed_attributes:
-		return exposed_attributes[attribute_name].get_property(property_name)
+	if attribute_name in _exposed_attributes:
+		return _exposed_attributes[attribute_name].get_property(property_name)
 	return null
 
 # Set a specific property on an attribute
 func set_attribute_property(attribute_name: String, property_name: String, value) -> bool:
-	if attribute_name in exposed_attributes:
-		return exposed_attributes[attribute_name].set_property(property_name, value)
+	if attribute_name in _exposed_attributes:
+		return _exposed_attributes[attribute_name].set_property(property_name, value)
 	return false
 
 # Get all exposed properties from all attributes
 func get_all_attribute_properties() -> Dictionary:
 	var properties = {}
-	for attr_name in exposed_attributes:
+	for attr_name in _exposed_attributes:
 		properties[attr_name] = get_attribute_properties(attr_name)
 	return properties
 #endregion
@@ -367,7 +373,7 @@ func carry_capacity() -> float:
 ## Get array of ants in view
 func ants_in_view() -> Array:
 	return _get_cached("ants_in_view", "ants", func():
-		return _ants_in_view().as_array()
+		return _ants_in_view().to_array()
 	)
 ## Returns count of ants in view
 func ants_in_view_count() -> int:

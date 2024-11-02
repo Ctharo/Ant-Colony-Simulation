@@ -10,24 +10,28 @@ func _init(movement_rate: float = 1.0, harvesting_rate: float = 0.5, storing_rat
 	self.harvesting_rate = harvesting_rate
 	self.storing_rate = storing_rate
 
-func _ready():
 	expose_property("movement_rate", 
 		func(): return movement_rate,
+		PropertyType.FLOAT,
 		func(v): set_movement_rate(v)
 	)
 	expose_property("harvesting_rate", 
 		func(): return harvesting_rate,
+		PropertyType.FLOAT,
 		func(v): set_harvesting_rate(v)
 	)
 	expose_property("storing_rate", 
 		func(): return storing_rate,
+		PropertyType.FLOAT,
 		func(v): storing_rate = v
 	)
 	expose_property("time_to_move", 
-		func(distance: float): return time_to_move(distance)
+		func(distance: float): return time_to_move(distance),
+		PropertyType.FLOAT
 	)
 	expose_property("harvest_amount", 
-		func(time: float): return harvest_amount(time)
+		func(time: float): return harvest_amount(time),
+		PropertyType.FLOAT
 	)
 
 func set_movement_rate(rate: float) -> void:

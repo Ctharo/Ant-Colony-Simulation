@@ -48,6 +48,7 @@ func build() -> Dictionary:
 		return {}
 	
 	var context = {}
+	context["ant"] = ant  # Add ant reference to context
 	context["condition_configs"] = condition_configs
 	
 	_required_properties.clear()

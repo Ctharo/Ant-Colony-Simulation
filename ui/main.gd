@@ -45,6 +45,7 @@ func create_ui():
 	create_button("Start Simulation", button_container)
 	create_button("Colony Editor", button_container)
 	create_button("Ant Editor", button_container)
+	create_button("Property Browser", button_container)
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
 
@@ -107,7 +108,10 @@ func _on_colony_editor_button_pressed():
 	transition_to_scene("colony_editor")
 
 func _on_ant_editor_button_pressed():
-	transition_to_scene("ant_editor")
+	transition_to_scene("ant_behavior_editor")
+	
+func _on_property_browser_button_pressed():
+	transition_to_scene("property_browser")
 
 func _on_settings_button_pressed():
 	DebugLogger.info(DebugLogger.Category.PROGRAM, "Settings pressed")

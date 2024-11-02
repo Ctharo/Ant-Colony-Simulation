@@ -36,7 +36,7 @@ static func evaluate(condition: Dictionary, context: Dictionary, show_detailed_d
 	
 	DebugLogger.error(DebugLogger.Category.CONDITION, "Invalid condition format: %s" % condition)
 	return false
-
+	
 ## Evaluate a compound operator condition (AND, OR, NOT)
 static func _evaluate_operator_condition(condition: Dictionary, context: Dictionary, show_detailed_debug: bool) -> bool:
 	var operator_type = condition.operator_type.to_lower()
@@ -89,50 +89,55 @@ static func _evaluate_property_check(evaluation: Dictionary, context: Dictionary
 			"Property check missing 'property' field: %s" % evaluation
 		)
 		return false
-		
+	
 	var property_name = evaluation.property
-	var property_value = context.get(property_name)
 	var operator = evaluation.get("operator", "EQUALS")
 	
-	if show_detailed_debug:
-		var debug_info = "  ├─ Checking property '%s'\n" % property_name
-		debug_info += "  │  ├─ Current value: %s" % _format_value(property_value)
-		DebugLogger.trace(DebugLogger.Category.CONDITION, debug_info)
+	# Get the property value using PropertyEvaluator
+	var property_result = PropertyEvaluator.get_property_value(property_name, context)
+	if property_result.is_error():
+		DebugLogger.error(DebugLogger.Category.CONDITION, property_result.error_message)
+		return false
+	
+	var property_value = property_result.value
+	
+	var debug_info = "  ├─ Checking property '%s'\n" % property_name
+	debug_info += "  │  ├─ Current value: %s" % PropertyEvaluator.format_value(property_value)
+	DebugLogger.trace(DebugLogger.Category.CONDITION, debug_info)
 	
 	# Handle different value sources
 	if "value" in evaluation:
 		var compare_value = evaluation.value
-		if show_detailed_debug:
-			DebugLogger.trace(DebugLogger.Category.CONDITION,
-				"  │  ├─ Comparing with fixed value: %s" % _format_value(compare_value)
-			)
-		var result = _compare_values(property_value, compare_value, operator)
-		if show_detailed_debug:
-			DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
+		DebugLogger.trace(DebugLogger.Category.CONDITION,
+			"  │  ├─ Comparing with fixed value: %s" % PropertyEvaluator.format_value(compare_value)
+		)
+		var result = PropertyEvaluator.compare_values(property_value, compare_value, operator)
+		DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
 		return result
 		
 	elif "value_from" in evaluation:
-		var compare_prop = evaluation.value_from
-		var compare_value = context.get(compare_prop)
-		if show_detailed_debug:
-			DebugLogger.trace(DebugLogger.Category.CONDITION,
-				"  │  ├─ Comparing with '%s' value: %s" % [
-					compare_prop, _format_value(compare_value)
-				]
-			)
-		var result = _compare_values(property_value, compare_value, operator)
-		if show_detailed_debug:
-			DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
+		var compare_prop_result = PropertyEvaluator.get_property_value(evaluation.value_from, context)
+		if compare_prop_result.is_error():
+			DebugLogger.error(DebugLogger.Category.CONDITION, compare_prop_result.error_message)
+			return false
+			
+		var compare_value = compare_prop_result.value
+		DebugLogger.trace(DebugLogger.Category.CONDITION,
+			"  │  ├─ Comparing with '%s' value: %s" % [
+				evaluation.value_from, 
+				PropertyEvaluator.format_value(compare_value)
+			]
+		)
+		var result = PropertyEvaluator.compare_values(property_value, compare_value, operator)
+		DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
 		return result
 		
 	elif operator in ["NOT_EMPTY", "IS_EMPTY"]:
-		if show_detailed_debug:
-			DebugLogger.trace(DebugLogger.Category.CONDITION,
-				"  │  ├─ Checking if %s" % ("not empty" if operator == "NOT_EMPTY" else "empty")
-			)
-		var result = _compare_values(property_value, null, operator)
-		if show_detailed_debug:
-			DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
+		DebugLogger.trace(DebugLogger.Category.CONDITION,
+			"  │  ├─ Checking if %s" % ("not empty" if operator == "NOT_EMPTY" else "empty")
+		)
+		var result = PropertyEvaluator.compare_values(property_value, null, operator)
+		DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
 		return result
 	
 	DebugLogger.error(DebugLogger.Category.CONDITION, 
