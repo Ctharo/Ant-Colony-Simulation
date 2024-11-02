@@ -3,7 +3,7 @@ extends RefCounted
 
 # Stores property metadata and access methods
 var _exposed_properties = {}
-var properties: PropertiesContainer
+var properties: PropertiesContainer = PropertiesContainer.new()
 
 # Type enum for easier reference
 enum PropertyType {

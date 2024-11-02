@@ -71,12 +71,16 @@ var attributes_container: AttributesContainer :
 	set(value):
 		attributes_container = value
 	get:
+		if not attributes_container:
+			attributes_container = AttributesContainer.new(self)
 		return attributes_container
 		
 var properties_container: PropertiesContainer :
 	set(value):
 		properties_container = value
 	get:
+		if not properties_container:
+			properties_container = PropertiesContainer.new()
 		return properties_container
 
 ## Dependencies between cached values - base methods provide for derived methods
@@ -183,13 +187,13 @@ func _init_exposed_methods() -> void:
 func _init_exposed_attributes() -> void:
 	
 	# Attributes
-	attributes_container.add_component("reach", reach)
-	attributes_container.add_component("vision", vision)
-	attributes_container.add_component("sense", sense)
-	attributes_container.add_component("energy", energy)
-	attributes_container.add_component("strength", strength)
-	attributes_container.add_component("health", health)
-	attributes_container.add_component("speed", speed)
+	attributes_container.add_attribute("reach", reach)
+	attributes_container.add_attribute("vision", vision)
+	attributes_container.add_attribute("sense", sense)
+	attributes_container.add_attribute("energy", energy)
+	attributes_container.add_attribute("strength", strength)
+	attributes_container.add_attribute("health", health)
+	attributes_container.add_attribute("speed", speed)
 
 	
 ## Get all methods in a category
