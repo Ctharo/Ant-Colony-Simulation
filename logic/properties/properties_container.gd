@@ -1,12 +1,51 @@
 class_name PropertiesContainer
 extends RefCounted
 
-## Container for managing exposed properties with type safety and validation
-
+# Add to existing signals
+signal category_added(category: String)
+signal category_removed(category: String)
 signal property_added(name: String, type: int)
 signal property_removed(name: String)
 signal property_changed(name: String, old_value: Variant, new_value: Variant)
 
+# Add category management
+var _categories: Dictionary = {}  # category_name -> Array[String] (property names)
+
+## Add a new category
+func add_category(category: String) -> void:
+	if not _categories.has(category):
+		_categories[category] = []
+		category_added.emit(category)
+
+## Remove a category and its property assignments (does not remove properties)
+func remove_category(category: String) -> void:
+	if _categories.has(category):
+		_categories.erase(category)
+		category_removed.emit(category)
+
+## Assign property to category
+func assign_to_category(property_name: String, category: String) -> void:
+	if not has_property(property_name):
+		push_warning("Property '%s' doesn't exist" % property_name)
+		return
+		
+	if not _categories.has(category):
+		add_category(category)
+	
+	# Remove from any existing category
+	for cat in _categories.keys():
+		_categories[cat].erase(property_name)
+	
+	_categories[category].append(property_name)
+
+## Get all categories
+func get_categories() -> Array:
+	return _categories.keys()
+
+## Get properties in category
+func get_properties_in_category(category: String) -> Array:
+	return _categories.get(category, [])
+		
 ## Structure to store property metadata and access methods
 class PropertyData:
 	var getter: Callable
@@ -29,10 +68,11 @@ class PropertyData:
 		cache_valid = false
 
 var _properties: Dictionary = {}
-var _owner: Node  # Reference to owning object
+var _owner: Object  # Reference to owning object
 var _use_caching: bool = true
 
-func _init(use_caching: bool = true) -> void:
+func _init(owner: Object, use_caching: bool = true) -> void:
+	_owner = owner
 	_use_caching = use_caching
 
 #region Property Management
@@ -42,19 +82,89 @@ func expose_property(
 	getter: Callable, 
 	type: Component.PropertyType, 
 	setter: Callable = Callable(),
-	description: String = ""
+	description: String = "",
+	category: String = ""  # Add optional category parameter
 ) -> void:
 	if _properties.has(name):
 		push_warning("Property '%s' already exists" % name)
 		return
+	
+	# Validate the getter before adding
+	if not _is_valid_getter(getter):
+		push_warning("Invalid getter for property '%s'" % name)
+		return
 		
-	_validate_getter(getter)
-	if setter.is_valid():
-		_validate_setter(setter)
+	# Only validate setter if one is provided
+	if setter.is_valid() and not _is_valid_setter(setter):
+		push_warning("Invalid setter for property '%s'" % name)
+		return
 		
 	_properties[name] = PropertyData.new(getter, type, setter, description)
+	
+	# Assign to category if specified
+	if not category.is_empty():
+		assign_to_category(name, category)
+		
 	property_added.emit(name, type)
 
+#region Validation
+## Check if a getter callable is valid and properly configured
+func _is_valid_getter(getter: Callable) -> bool:
+	# Check if the callable has a valid object and method
+	if not getter.is_valid() or not getter.get_object() or getter.get_method().is_empty():
+		return false
+	
+	## Check argument count
+	#if getter.get_argument_count() != 0:
+		#push_warning("Getter must take no arguments")
+		#return false
+	
+	# Try to get the method info
+	var object = getter.get_object()
+	var method = getter.get_method()
+	
+	# Check if the method exists on the object
+	if not object.has_method(method):
+		push_warning("Method '%s' not found on object" % method)
+		return false
+	
+	return true
+
+## Check if a setter callable is valid and properly configured
+func _is_valid_setter(setter: Callable) -> bool:
+	# Check if the callable has a valid object and method
+	if not setter.is_valid() or not setter.get_object() or setter.get_method().is_empty():
+		return false
+	
+	# Check argument count
+	if setter.get_argument_count() != 1:
+		push_warning("Setter must take exactly one argument")
+		return false
+	
+	# Try to get the method info
+	var object = setter.get_object()
+	var method = setter.get_method()
+	
+	# Check if the method exists on the object
+	if not object.has_method(method):
+		push_warning("Method '%s' not found on object" % method)
+		return false
+	
+	return true
+
+## Debug helper to print callable information
+func _debug_callable(callable: Callable) -> void:
+	print("Callable Debug Info:")
+	print("- Is valid: ", callable.is_valid())
+	print("- Object: ", callable.get_object())
+	print("- Method: ", callable.get_method())
+	print("- Argument count: ", callable.get_argument_count())
+	if callable.get_object():
+		print("- Object class: ", callable.get_object().get_class())
+		print("- Has method: ", callable.get_object().has_method(callable.get_method()))
+#endregion
+
+#region Property Management
 ## Remove an exposed property
 func remove_property(name: String) -> void:
 	if not _properties.has(name):
@@ -69,8 +179,8 @@ func has_property(name: String) -> bool:
 	return _properties.has(name)
 
 ## Get list of all exposed property names
-func get_property_names() -> Array[String]:
-	return _properties.keys()
+func get_property_names() -> Array:
+	return _properties.keys() as Array
 #endregion
 
 #region Property Access
@@ -85,9 +195,11 @@ func get_property(name: String) -> Variant:
 	# Check cache if enabled
 	if _use_caching and prop_data.cache_valid:
 		return prop_data.cached_value
-		
+	
+	var value = "N/A"
 	# Get fresh value
-	var value = prop_data.getter.call()
+	if prop_data.getter.get_argument_count() == 0:
+		value = prop_data.getter.call()
 	
 	# Update cache
 	if _use_caching:

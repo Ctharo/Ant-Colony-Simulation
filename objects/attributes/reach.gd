@@ -1,25 +1,23 @@
 class_name Reach
 extends Attribute
 
-var distance: float:
-	set(value):
-		if distance != value:
-			distance = value
+var _distance: float
 
-func _init():
-	# Expose distance with getter/setter
-	expose_property("distance", 
-		func(): return distance,
+func _init() -> void:
+	expose_property(
+		"distance",
+		Callable(self, "distance"),
 		PropertyType.FLOAT,
-		func(v): distance = v
+		Callable(self, "set_distance"),
+		"Maximum distance the ant can reach from its current position"
 	)
 	
-	# Expose is_within_range as read-only method
-	expose_property("is_within_range",
-		func(point: Vector2, from_position: Vector2) -> bool:
-			return point.distance_to(from_position) <= distance,
-		PropertyType.BOOL
-	)
+func distance() -> float:
+	return _distance
+
+func set_distance(value: float) -> void:
+	if _distance != value:
+		_distance = value
 
 func is_within_range(point: Vector2, from_position: Vector2) -> bool:
-	return point.distance_to(from_position) <= distance
+	return point.distance_to(from_position) <= _distance

@@ -71,16 +71,12 @@ var attributes_container: AttributesContainer :
 	set(value):
 		attributes_container = value
 	get:
-		if not attributes_container:
-			attributes_container = AttributesContainer.new(self)
 		return attributes_container
 		
 var properties_container: PropertiesContainer :
 	set(value):
 		properties_container = value
 	get:
-		if not properties_container:
-			properties_container = PropertiesContainer.new()
 		return properties_container
 
 ## Dependencies between cached values - base methods provide for derived methods
@@ -132,7 +128,7 @@ func _init():
 	health = Health.new()
 	speed = Speed.new()
 		
-	_init_exposed_methods()
+	_init_properties()
 	_init_exposed_attributes()
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
@@ -153,39 +149,203 @@ func _process(delta: float) -> void:
 
 #region Exposed Method methods
 ## Initialize method maps
-func _init_exposed_methods() -> void:
-	# Sensory methods
-	_exposed_methods["sensing"] = {
-		"ants_in_view": func(): return ants_in_view(),
-		"ants_in_view_count": func(): return ants_in_view_count(),
-		"food_pheromones_sensed": func(): return food_pheromones_sensed(),
-		"food_pheromones_sensed_count": func(): return food_pheromones_sensed_count(),
-		"is_food_pheromones_sensed": func(): return is_food_pheromones_sensed(),
-		"home_pheromones_sensed": func(): return home_pheromones_sensed(),
-		"home_pheromones_sensed_count": func(): return home_pheromones_sensed_count(),
-		"is_home_pheromones_sensed": func(): return is_home_pheromones_sensed()
-	}
+func _init_properties() -> void:
+	properties_container = PropertiesContainer.new(self)
 	
-	# Food-related methods
-	_exposed_methods["food"] = {
-		"food_in_view": func(): return food_in_view(),
-		"food_in_view_count": func(): return food_in_view_count(),
-		"food_in_reach": func(): return food_in_reach(),
-		"food_in_reach_count": func(): return food_in_reach_count(),
-		"carried_food_mass": func(): return carried_food_mass(),
-		"is_carrying_food": func(): return is_carrying_food(),
-		"available_carry_mass": func(): return available_carry_mass()
-	}
+	# Sensing category
+	_init_sensing_properties()
+	_init_food_properties()
+	_init_colony_properties()
+
+func _init_sensing_properties() -> void:
+	var getter: Callable
 	
-	# Colony-related methods
-	_exposed_methods["colony"] = {
-		"distance_to_colony": func(): return distance_to_colony(),
-		"colony_radius": func(): return colony_radius()
-	}
+	# Ants sensing
+	getter = Callable(self, "ants_in_view")
+	properties_container.expose_property(
+		"ants_in_view",
+		getter,
+		Component.PropertyType.ARRAY,
+		Callable(),
+		"Array of ants currently in view",
+		"Sensing"
+	)
+	
+	getter = Callable(self, "ants_in_view_count")
+	properties_container.expose_property(
+		"ants_in_view_count",
+		getter,
+		Component.PropertyType.INT,
+		Callable(),
+		"Number of ants currently in view",
+		"Sensing"
+	)
+	
+	# Food pheromone sensing
+	getter = Callable(self, "food_pheromones_sensed")
+	properties_container.expose_property(
+		"food_pheromones_sensed",
+		getter,
+		Component.PropertyType.ARRAY,
+		Callable(),
+		"Array of food pheromones currently sensed",
+		"Sensing"
+	)
+	
+	getter = Callable(self, "food_pheromones_sensed_count")
+	properties_container.expose_property(
+		"food_pheromones_sensed_count",
+		getter,
+		Component.PropertyType.INT,
+		Callable(),
+		"Number of food pheromones currently sensed",
+		"Sensing"
+	)
+	
+	getter = Callable(self, "is_food_pheromones_sensed")
+	properties_container.expose_property(
+		"is_food_pheromones_sensed",
+		getter,
+		Component.PropertyType.BOOL,
+		Callable(),
+		"Whether any food pheromones are currently sensed",
+		"Sensing"
+	)
+	
+	# Home pheromone sensing
+	getter = Callable(self, "home_pheromones_sensed")
+	properties_container.expose_property(
+		"home_pheromones_sensed",
+		getter,
+		Component.PropertyType.ARRAY,
+		Callable(),
+		"Array of home pheromones currently sensed",
+		"Sensing"
+	)
+	
+	getter = Callable(self, "home_pheromones_sensed_count")
+	properties_container.expose_property(
+		"home_pheromones_sensed_count",
+		getter,
+		Component.PropertyType.INT,
+		Callable(),
+		"Number of home pheromones currently sensed",
+		"Sensing"
+	)
+	
+	getter = Callable(self, "is_home_pheromones_sensed")
+	properties_container.expose_property(
+		"is_home_pheromones_sensed",
+		getter,
+		Component.PropertyType.BOOL,
+		Callable(),
+		"Whether any home pheromones are currently sensed",
+		"Sensing"
+	)
+
+func _init_food_properties() -> void:
+	var getter: Callable
+	
+	# Food visibility
+	getter = Callable(self, "food_in_view")
+	properties_container.expose_property(
+		"food_in_view",
+		getter,
+		Component.PropertyType.ARRAY,
+		Callable(),
+		"Array of food items currently in view",
+		"Food"
+	)
+	
+	getter = Callable(self, "food_in_view_count")
+	properties_container.expose_property(
+		"food_in_view_count",
+		getter,
+		Component.PropertyType.INT,
+		Callable(),
+		"Number of food items currently in view",
+		"Food"
+	)
+	
+	# Food reachability
+	getter = Callable(self, "food_in_reach")
+	properties_container.expose_property(
+		"food_in_reach",
+		getter,
+		Component.PropertyType.ARRAY,
+		Callable(),
+		"Array of food items currently in reach",
+		"Food"
+	)
+	
+	getter = Callable(self, "food_in_reach_count")
+	properties_container.expose_property(
+		"food_in_reach_count",
+		getter,
+		Component.PropertyType.INT,
+		Callable(),
+		"Number of food items currently in reach",
+		"Food"
+	)
+	
+	# Food carrying
+	getter = Callable(self, "carried_food_mass")
+	properties_container.expose_property(
+		"carried_food_mass",
+		getter,
+		Component.PropertyType.FLOAT,
+		Callable(),
+		"Mass of food currently being carried",
+		"Food"
+	)
+	
+	getter = Callable(self, "is_carrying_food")
+	properties_container.expose_property(
+		"is_carrying_food",
+		getter,
+		Component.PropertyType.BOOL,
+		Callable(),
+		"Whether the ant is currently carrying food",
+		"Food"
+	)
+	
+	getter = Callable(self, "available_carry_mass")
+	properties_container.expose_property(
+		"available_carry_mass",
+		getter,
+		Component.PropertyType.FLOAT,
+		Callable(),
+		"Remaining carrying capacity available",
+		"Food"
+	)
+
+func _init_colony_properties() -> void:
+	var getter: Callable
+	
+	getter = Callable(self, "distance_to_colony")
+	properties_container.expose_property(
+		"distance_to_colony",
+		getter,
+		Component.PropertyType.FLOAT,
+		Callable(),
+		"Current distance to the colony",
+		"Colony"
+	)
+	
+	getter = Callable(self, "colony_radius")
+	properties_container.expose_property(
+		"colony_radius",
+		getter,
+		Component.PropertyType.FLOAT,
+		Callable(),
+		"Radius of the colony",
+		"Colony"
+	)
 	
 ## Initialize attribute maps
 func _init_exposed_attributes() -> void:
-	
+	if not attributes_container:
+		attributes_container = AttributesContainer.new(self)
 	# Attributes
 	attributes_container.add_attribute("reach", reach)
 	attributes_container.add_attribute("vision", vision)
@@ -254,9 +414,9 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:
-	health.current_level -= amount
+	health.set_current_level(health.current_level() - amount)
 	damaged.emit()
-	if health.current_level <= 0:
+	if health.current_level() <= 0:
 		died.emit()
 	
 ## Emit a pheromone at the current position
@@ -275,11 +435,11 @@ func perform_action(_action: Action) -> void:
 ## Handle the ant consuming food for energy
 func consume_food(amount: float) -> void:
 	var consumed = carried_food.consume(amount)
-	energy.current_level += consumed
+	energy._current_level += consumed
 
 ## Move the ant to a new position
 func move(direction: Vector2, delta: float) -> void:
-	var vector = direction * speed.movement_rate * delta 
+	var vector = direction * speed.movement_rate() * delta 
 	_move_to(global_position + vector)
 
 
@@ -289,7 +449,7 @@ func _move_to(location: Vector2) -> void:
 
 ## Harvest food from a source over a given time period
 func harvest_food(food_source: Food, time: float) -> float:
-	var potential_harvest = speed.harvesting_rate * time
+	var potential_harvest = speed.harvesting_rate() * time
 	var harvested_amount = min(food_source.amount, potential_harvest)
 	harvested_amount = min(harvested_amount, available_carry_mass())
 	
@@ -328,23 +488,23 @@ func _pheromones_sensed(type: String = "") -> Pheromones:
 	var cache_key = "pheromones_sensed_%s" % type
 	return _get_cached(cache_key, "pheromones", func():
 		var all_pheromones = Pheromones.all() 
-		var sensed = all_pheromones.sensed(global_position, sense.distance)
+		var sensed = all_pheromones.sensed(global_position, sense.distance())
 		return sensed if type.is_empty() else sensed.of_type(type)
 	)
 
 func _food_in_reach() -> Foods:
 	return _get_cached("food_in_reach", "food", func():
-		return Foods.in_reach(global_position, reach.distance)
+		return Foods.in_reach(global_position, reach.distance())
 	)
 
 func _food_in_view() -> Foods:
 	return _get_cached("food_in_view", "food", func():
-		return Foods.in_view(global_position, vision.distance)
+		return Foods.in_view(global_position, vision.distance())
 	)
 
 func _ants_in_view() -> Ants:
 	return _get_cached("ants_in_view", "ants", func():
-		return Ants.in_view(global_position, vision.distance)
+		return Ants.in_view(global_position, vision.distance())
 	)
 
 #endregion
@@ -359,19 +519,19 @@ func distance_to_colony() -> float:
 ## Get colony radius
 func colony_radius() -> float:
 	return _get_cached("colony_radius", "colony", func():
-		return colony.radius
+		return colony.radius()
 	)
 
 ## Get current energy level
 func energy_level() -> float:
 	return _get_cached("energy_level", "stats", func():
-		return energy.current_level
+		return energy.current_level()
 	)
 
 ## Get low energy threshold
 func low_energy_threshold() -> float:
 	return _get_cached("low_energy_threshold", "stats", func():
-		return energy.low_energy_threshold
+		return energy.low_energy_threshold()
 	)
 
 ## Get carry capacity

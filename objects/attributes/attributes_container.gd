@@ -59,13 +59,31 @@ func get_attributes() -> Dictionary:
 func get_attribute_properties(attribute_name: String) -> Dictionary:
 	if not has_attribute(attribute_name):
 		return {}
-		
-	# Check cache first
-	if attribute_name in _property_cache:
-		return _property_cache[attribute_name]
-		
-	# Get properties and cache them
-	var properties = _attributes[attribute_name].get_exposed_properties()
+	
+	# Get the attribute
+	var attribute = get_attribute(attribute_name)
+	if not attribute:
+		return {}
+	
+	# Get properties container
+	var properties_container = attribute.properties_container
+	if not properties_container:
+		return {}
+	
+	# Get all property names
+	var property_names = properties_container.get_property_names()
+	var properties = {}
+	
+	# Build property info dictionary
+	for property_name in property_names:
+		properties[property_name] = {
+			"type": properties_container.get_property_type(property_name),
+			"description": properties_container.get_property_description(property_name),
+			"writable": properties_container.is_property_writable(property_name),
+			"value": get_attribute_property(attribute_name, property_name)
+		}
+	
+	# Cache the results
 	_property_cache[attribute_name] = properties
 	return properties
 
@@ -74,18 +92,23 @@ func get_attribute_properties(attribute_name: String) -> Dictionary:
 func get_attribute_property(attribute_name: String, property_name: String) -> Variant:
 	if not has_attribute(attribute_name):
 		return null
-		
-	return _attributes[attribute_name].get_property(property_name)
+	
+	var attribute = _attributes[attribute_name]
+	return attribute.get_property(property_name)
 
 ## Set a specific property on an attribute
 ## Returns true if successful
 func set_attribute_property(attribute_name: String, property_name: String, value: Variant) -> bool:
 	if not has_attribute(attribute_name):
 		return false
-		
-	var success = _attributes[attribute_name].set_property(property_name, value)
+	
+	var attribute = _attributes[attribute_name]
+	var success = attribute.set_property(property_name, value)
+	
 	if success:
 		_property_cache.erase(attribute_name)  # Invalidate cache for this attribute
+		attribute_changed.emit(attribute_name, attribute)
+	
 	return success
 
 ## Get all properties from all attributes
@@ -94,6 +117,39 @@ func get_all_properties() -> Dictionary:
 	for attr_name in _attributes:
 		all_properties[attr_name] = get_attribute_properties(attr_name)
 	return all_properties
+
+## Get the property type for a specific property
+func get_property_type(attribute_name: String, property_name: String) -> Component.PropertyType:
+	if not has_attribute(attribute_name):
+		return Component.PropertyType.UNKNOWN
+		
+	var properties = get_attribute_properties(attribute_name)
+	if property_name in properties and "type" in properties[property_name]:
+		return properties[property_name]["type"]
+		
+	return Component.PropertyType.UNKNOWN
+
+## Get the property description for a specific property
+func get_property_description(attribute_name: String, property_name: String) -> String:
+	if not has_attribute(attribute_name):
+		return ""
+		
+	var properties = get_attribute_properties(attribute_name)
+	if property_name in properties and "description" in properties[property_name]:
+		return properties[property_name]["description"]
+		
+	return ""
+
+## Check if a property is writable
+func is_property_writable(attribute_name: String, property_name: String) -> bool:
+	if not has_attribute(attribute_name):
+		return false
+		
+	var properties = get_attribute_properties(attribute_name)
+	if property_name in properties and "writable" in properties[property_name]:
+		return properties[property_name]["writable"]
+		
+	return false
 #endregion
 
 #region Serialization
@@ -115,18 +171,6 @@ func from_dict(data: Dictionary) -> void:
 				attribute.from_dict(data[attr_name])
 #endregion
 
-#region Property Types
-## Get the type information for a specific property
-func get_property_type(attribute_name: String, property_name: String) -> Component.PropertyType:
-	if not has_attribute(attribute_name):
-		return Component.PropertyType.UNKNOWN
-		
-	var properties = get_attribute_properties(attribute_name)
-	if property_name in properties:
-		return properties[property_name]["type"]
-	return Component.PropertyType.UNKNOWN
-
 ## Convert property type to string representation
 static func type_to_string(type: Component.PropertyType) -> String:
 	return Component.type_to_string(type)
-#endregion

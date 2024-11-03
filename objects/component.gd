@@ -2,8 +2,7 @@ class_name Component
 extends RefCounted
 
 # Stores property metadata and access methods
-var _exposed_properties = {}
-var properties: PropertiesContainer = PropertiesContainer.new()
+var properties_container: PropertiesContainer = PropertiesContainer.new(self)
 
 # Type enum for easier reference
 enum PropertyType {
@@ -28,34 +27,18 @@ func expose_property(
 		setter: Callable = Callable(),
 		description: String = ""
 	) -> void:
-		properties.expose_property(name, getter, type, setter, description)
+		properties_container.expose_property(name, getter, type, setter, description)
 	
 func get_property(name: String):
-	if not _exposed_properties.has(name):
-		return null
-	
-	var getter = _exposed_properties[name]["getter"]
-	# Try to call the getter, return null if it fails (might need arguments)
-	if getter.is_valid():
-		if getter.get_object() and getter.get_method() and getter.get_argument_count() == 0:
-			return getter.call()
-	return null
+	return properties_container.get_property(name)
 
 func set_property(name: String, value) -> bool:
-	if not _exposed_properties.has(name) or _exposed_properties[name]["setter"].is_null():
-		return false
-	_exposed_properties[name]["setter"].call(value)
-	return true
+	if properties_container.set_property(name, value):
+		return true
+	return false
 	
 func get_exposed_properties() -> Dictionary:
-	var result = {}
-	for prop_name in _exposed_properties:
-		var prop_info = {
-			"value": get_property(prop_name),
-			"type": _exposed_properties[prop_name]["type"]
-		}
-		result[prop_name] = prop_info
-	return result
+	return properties_container.get_properties_info()
 
 # Helper function to check if a getter requires arguments
 func _getter_requires_args(getter: Callable) -> bool:

@@ -1,18 +1,22 @@
 class_name Sense
 extends Attribute
 
-var distance: float
+var _distance: float
 
-func _init():
-	expose_property("distance", 
-		func(): return distance,
+func _init() -> void:
+	expose_property(
+		"distance",
+		Callable(self, "distance"),
 		PropertyType.FLOAT,
-		func(v): distance = v
+		Callable(self, "set_distance"),
+		"Maximum distance at which the ant can sense things"
 	)
-	expose_property("is_within_range", 
-		func(point: Vector2, from_position: Vector2): return is_within_range(point, from_position),
-		PropertyType.BOOL
-	)
+
+func distance() -> float:
+	return _distance
+
+func set_distance(value: float) -> void:
+	_distance = value
 
 func is_within_range(point: Vector2, from_position: Vector2) -> bool:
-	return point.distance_to(from_position) <= distance
+	return point.distance_to(from_position) <= _distance
