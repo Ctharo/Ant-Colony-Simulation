@@ -113,11 +113,6 @@ const CACHE_DURATIONS = {
 	"stats": 0.0        # Stats are always recalculated
 }
 
-var _exposed_methods = {}
-
-
-var _exposed_attributes = {}
-
 func _init():
 	
 	reach = Reach.new()
@@ -354,35 +349,6 @@ func _init_exposed_attributes() -> void:
 	attributes_container.add_attribute("strength", strength)
 	attributes_container.add_attribute("health", health)
 	attributes_container.add_attribute("speed", speed)
-
-	
-## Get all methods in a category
-func get_methods(category: String) -> Dictionary:
-	return _exposed_methods.get(category, {})
-
-## Get a specific method result
-func get_method_result(method_name: String, category: String = "") -> Variant:
-	if category.is_empty():
-		# Search all categories for the method
-		for cat in _exposed_methods:
-			if method_name in _exposed_methods[cat]:
-				return _exposed_methods[cat][method_name].call()
-		return null
-	
-	# Use specific category if provided
-	var category_methods = get_methods(category)
-	if method_name in category_methods:
-		return category_methods[method_name].call()
-	return null
-
-## Get all method results
-func get_all_method_results() -> Dictionary:
-	var results = {}
-	for category in _exposed_methods:
-		results[category] = {}
-		for method_name in _exposed_methods[category]:
-			results[category][method_name] = _exposed_methods[category][method_name].call()
-	return results
 	
 #endregion
 

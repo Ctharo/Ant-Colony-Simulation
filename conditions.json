@@ -48,10 +48,10 @@
 		"IsHomePheromoneSensed": {
 			"description": "Check if home pheromones are detected",
 			"evaluation": {
-				"operator": "EQUALS",
-				"property": "is_home_pheromones_sensed",
+				"operator": "GREATER_THAN",
+				"property": "home_pheromones_sensed_count",
 				"type": "PropertyCheck",
-				"value": true
+				"value": 0
 			}
 		},
 		"LowEnergy": {
@@ -60,7 +60,7 @@
 				"operator": "LESS_THAN",
 				"property": "energy.current_level",
 				"type": "PropertyCheck",
-				"value_from": "low_energy_threshold"
+				"value_from": "energy.low_energy_threshold"
 			}
 		},
 		"OverloadedWithFood": {
@@ -69,7 +69,7 @@
 				"operator": "GREATER_THAN_EQUAL",
 				"property": "carried_food_mass",
 				"type": "PropertyCheck",
-				"value_from": "carry_capacity"
+				"value_from": "strength.carry_max"
 			}
 		}
 	}

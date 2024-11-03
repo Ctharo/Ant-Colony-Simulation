@@ -3,17 +3,21 @@ extends Window
 
 signal property_selected(property_path: String)
 
+#region UI Elements
 var mode_switch: OptionButton
 var category_list: ItemList
 var properties_tree: Tree
 var path_label: Label
 var category_label: Label
 var description_label: Label
+#endregion
 
+#region Member Variables
 var current_ant: Ant
 var current_mode: String = "Direct"
 var current_category: String
-var current_info: PropertyInspector.ObjectInfo
+var _property_access: PropertyAccess
+#endregion
 
 # Column indices
 const COL_NAME = 0
@@ -28,14 +32,15 @@ func _ready() -> void:
 	unresizable = false
 	# Create the UI
 	create_ui()
-	show_ant(Ant.new())
 
 func show_ant(ant: Ant) -> void:
 	if not ant:
 		return
 	current_ant = ant
+	_property_access = PropertyAccess.new({"ant": ant})
 	_refresh_view()
 
+## Creates all UI elements
 func create_ui() -> void:
 	var main_container = VBoxContainer.new()
 	main_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
@@ -159,30 +164,39 @@ func _refresh_view() -> void:
 	if not current_ant:
 		return
 	
-	# Get fresh object info using containers
-	current_info = PropertyInspector.get_object_info(current_ant)
-	
-	# Update UI
-	_populate_categories()
+	_refresh_categories()
 	path_label.text = ""
 
-func _populate_properties(category: PropertyInspector.CategoryInfo) -> void:
+func _populate_properties(category: String) -> void:
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 	
-	for prop in category.properties:
+	var properties: Array[String]
+	if current_mode == "Direct":
+		properties = current_ant.properties_container.get_properties_in_category(category)
+	else:
+		var attr_properties = current_ant.attributes_container.get_attribute_properties(category)
+		properties = attr_properties.keys()
+	
+	for prop_name in properties:
 		var item = properties_tree.create_item(root)
-		item.set_text(COL_NAME, PropertyBrowser.snake_to_readable(prop.name))
-		item.set_text(COL_TYPE, prop.type)
+		item.set_text(COL_NAME, snake_to_readable(prop_name))
 		
-		# Format value based on type
-		var value_text = _format_value(prop.value)
-		item.set_text(COL_VALUE, value_text)
+		var prop_info: PropertyResult.PropertyInfo
+		if current_mode == "Direct":
+			prop_info = current_ant.properties_container.get_property_info(prop_name)
+		else:
+			prop_info = current_ant.attributes_container.get_property_info(category, prop_name)
 		
-		# Store property info in metadata for later use
-		item.set_metadata(0, prop)
-		
+		if prop_info:
+			item.set_text(COL_TYPE, Component.type_to_string(prop_info.type))
+			item.set_text(COL_VALUE, _format_value(prop_info.value))
+			item.set_metadata(0, prop_info)
+		else:
+			item.set_text(COL_TYPE, "Unknown")
+			item.set_text(COL_VALUE, "<error>")
+
 ## Helper function to convert snake_case to Title Case
 static func snake_to_readable(text: String) -> String:
 	# Replace underscores with spaces and capitalize each word
@@ -190,31 +204,24 @@ static func snake_to_readable(text: String) -> String:
 	for i in range(words.size()):
 		words[i] = words[i].capitalize() if i == 0 else words[i]
 	return " ".join(words)
-	
-func _populate_categories() -> void:
+
+func _refresh_categories() -> void:
 	category_list.clear()
 	properties_tree.clear()
-
-	if not current_info:
-		print("No current info while populating categories")  # Debug
-		return
 	
-	# Show appropriate categories based on mode
-	var categories = current_info.direct_categories if current_mode == "Direct" else current_info.attributes
-	print("Populating ", categories.size(), " categories for mode: ", current_mode)  # Debug
-		
-	for category in categories:
-		print("Adding category: ", category.name, " with ", category.properties.size(), " properties")  # Debug
-		category_list.add_item(category.name.capitalize())
+	if current_mode == "Direct":
+		# Show categories from PropertiesContainer
+		for category in current_ant.properties_container.get_categories():
+			category_list.add_item(category.capitalize())
+	else:
+		# Show attributes from AttributesContainer
+		for attr_name in current_ant.attributes_container.get_attributes():
+			category_list.add_item(attr_name.capitalize())
 
 func _on_category_selected(index: int) -> void:
-	var categories = current_info.direct_categories if current_mode == "Direct" else current_info.attributes
-	if index < 0 or index >= categories.size():
-		return
-	
-	var category = categories[index]
-	current_category = category.name
-	_populate_properties(category)
+	var category_name = category_list.get_item_text(index).to_lower()
+	current_category = category_name
+	_populate_properties(category_name)
 	description_label.text = ""  # Clear description when category changes
 
 func _on_property_selected() -> void:
@@ -222,66 +229,22 @@ func _on_property_selected() -> void:
 	if not selected:
 		return
 		
-	var prop = selected.get_metadata(0) as PropertyInspector.PropertyInfo
-	if not prop:
+	var prop_info = selected.get_metadata(0) as PropertyResult.PropertyInfo
+	if not prop_info:
 		return
 	
 	# Update description
-	description_label.text = prop.description if not prop.description.is_empty() else "No description available."
+	description_label.text = prop_info.description if not prop_info.description.is_empty() else "No description available."
 	
 	# Update property path
 	var path: String
 	if current_mode == "Direct":
-		path = prop.name
+		path = prop_info.name
 	else:
-		path = "%s.%s" % [current_category, prop.name]
+		path = "%s.%s" % [current_category, prop_info.name]
 		
 	path_label.text = path
 	property_selected.emit(path)
 
-
-
-func _refresh_categories() -> void:
-	category_list.clear()
-	path_label.text = ""
-	
-	if current_mode == "Direct":
-		# Show categories from PropertiesContainer
-		for category in current_ant.properties_container.get_categories():
-			category_list.add_item(category)
-	else:
-		# Show attributes from AttributesContainer
-		for attr_name in current_ant.attributes_container.get_attributes():
-			category_list.add_item(attr_name)
-
-# Helper functions
-func _update_metadata(item_list: ItemList, index: int, data: Variant) -> void:
-	item_list.set_item_metadata(index, data)
-
-func _get_metadata(item_list: ItemList, index: int) -> Variant:
-	return item_list.get_item_metadata(index)
-
 func _format_value(value: Variant) -> String:
-	match typeof(value):
-		TYPE_NIL:
-			return "<null>"
-		TYPE_BOOL:
-			return str(value).to_lower()
-		TYPE_INT, TYPE_FLOAT:
-			return str(value)
-		TYPE_STRING:
-			return '"%s"' % value if not value.is_empty() else '""'
-		TYPE_VECTOR2:
-			var v = value as Vector2
-			return "(%.1f, %.1f)" % [v.x, v.y]
-		TYPE_VECTOR3:
-			var v = value as Vector3
-			return "(%.1f, %.1f, %.1f)" % [v.x, v.y, v.z]
-		TYPE_ARRAY:
-			return "[...]" if not value.is_empty() else "[]"
-		TYPE_DICTIONARY:
-			return "{...}" if not value.is_empty() else "{}"
-		TYPE_OBJECT:
-			return value.get_class() if value else "<null>"
-		_:
-			return str(value)
+	return PropertyResult.format_value(value)

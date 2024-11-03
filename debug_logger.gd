@@ -18,6 +18,7 @@ enum Category {
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages
 	CONTEXT,        ## Context building messages
+	PROPERTY,       ## Property-related messsages
 	TRANSITION,     ## State transition messages
 	HIERARCHY,      ## Tree hierarchy messages
 	PROGRAM         ## Program-related messages

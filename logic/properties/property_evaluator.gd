@@ -1,137 +1,216 @@
 class_name PropertyEvaluator
 extends RefCounted
+## Evaluates property expressions and handles value comparisons
+##
+## Focuses on property expression evaluation, value comparison,
+## and type conversion without handling higher-level condition logic.
 
-## Error codes for property access
-enum ErrorCode {
-	SUCCESS,
-	INVALID_PATH,
-	INVALID_ATTRIBUTE,
-	INVALID_PROPERTY,
-	INVALID_METHOD,
-	ACCESS_ERROR
+#region Constants
+var COMPARISON_OPERATORS = {
+	"==": func(a, b): return a == b,
+	"!=": func(a, b): return a != b,
+	">": func(a, b): return a > b if _are_comparable(a, b) else false,
+	"<": func(a, b): return a < b if _are_comparable(a, b) else false,
+	">=": func(a, b): return a >= b if _are_comparable(a, b) else false,
+	"<=": func(a, b): return a <= b if _are_comparable(a, b) else false,
+	"contains": func(a, b): return _contains_value(a, b),
+	"starts_with": func(a, b): return str(a).begins_with(str(b)) if a != null and b != null else false,
+	"ends_with": func(a, b): return str(a).ends_with(str(b)) if a != null and b != null else false
 }
 
-## Result structure for property access
-class PropertyResult:
-	var value: Variant
-	var error: ErrorCode
-	var error_message: String
-	
-	func _init(p_value: Variant = null, p_error: ErrorCode = ErrorCode.SUCCESS, p_message: String = ""):
-		value = p_value
-		error = p_error
-		error_message = p_message
-	
-	func is_error() -> bool:
-		return error != ErrorCode.SUCCESS
+const TYPE_CONVERSIONS = {
+	TYPE_STRING: "_to_string",
+	TYPE_INT: "_to_int",
+	TYPE_FLOAT: "_to_float",
+	TYPE_BOOL: "_to_bool",
+	TYPE_VECTOR2: "_to_vector2",
+	TYPE_VECTOR3: "_to_vector3",
+	TYPE_ARRAY: "_to_array",
+	TYPE_DICTIONARY: "_to_dictionary"
+}
+#endregion
 
-## Format a value for consistent string representation
-static func format_value(value: Variant) -> String:
-	match typeof(value):
-		TYPE_NIL:
-			return "<null>"
-		TYPE_ARRAY:
-			if (value as Array).is_empty():
-				return "[]"
-			return str(value)
-		TYPE_DICTIONARY:
-			if (value as Dictionary).is_empty():
-				return "{}"
-			return str(value)
-		TYPE_STRING:
-			if (value as String).is_empty():
-				return '""'
-			return '"%s"' % value
-		TYPE_FLOAT:
-			return "%.2f" % value
-		TYPE_VECTOR2:
-			var v = value as Vector2
-			return "(%.1f, %.1f)" % [v.x, v.y]
-		TYPE_BOOL:
-			return "true" if value else "false"
-		_:
-			return str(value)
+#region Member Variables
+var _property_access: PropertyAccess
+var _cache: PropertyCache
+#endregion
 
-## Get a property value either from context or through ant attributes
-static func get_property_value(property_path: String, context: Dictionary) -> PropertyResult:
-	# First try getting from context (existing behavior)
-	if property_path in context:
-		return PropertyResult.new(context[property_path])
-		
-	# If not in context, check if we can access through ant attributes
-	var ant = context.get("ant")
-	if not ant:
-		return PropertyResult.new(null, ErrorCode.ACCESS_ERROR, "No ant reference in context")
-		
-	# Check if it's a direct method call
-	var method_result = ant.get_method_result(property_path)
-	if method_result != null:
-		return PropertyResult.new(method_result)
+func _init(context: Dictionary = {}) -> void:
+	_property_access = PropertyAccess.new(context)
+	_cache = PropertyCache.new()
+
+#region Expression Evaluation
+## Evaluates a property expression
+## Expression format: "property_name operator value" or "property_name"
+## Returns: PropertyResult with evaluation result
+func evaluate_expression(expression: String, context: Dictionary = {}) -> PropertyResult:
+	# Check cache
+	var cache_key = _get_cache_key(expression, context)
+	if _cache.has_valid_cache(cache_key):
+		return PropertyResult.new(_cache.get_cached(cache_key))
 	
-	# Try attribute property access
-	var segments = property_path.split(".")
-	if segments.size() != 2:
-		return PropertyResult.new(
-			null, 
-			ErrorCode.INVALID_PATH,
-			"Invalid property path format. Expected 'attribute.property'"
-		)
+	# Parse expression
+	var parsed = _parse_expression(expression)
+	if not parsed.success():
+		return parsed
 	
-	var attribute_name = segments[0]
-	var property_name = segments[1]
+	# Evaluate parsed expression
+	var result = _evaluate_parsed_expression(parsed.value, context)
 	
-	if not attribute_name in ant.exposed_attributes:
+	# Cache successful results
+	if result.success():
+		_cache.cache_value(cache_key, result.value)
+	
+	return result
+
+## Evaluates a direct comparison between two values
+## Returns: PropertyResult with boolean result
+func evaluate_comparison(
+	value1: Variant,
+	operator: String,
+	value2: Variant
+) -> PropertyResult:
+	if not COMPARISON_OPERATORS.has(operator):
 		return PropertyResult.new(
 			null,
-			ErrorCode.INVALID_ATTRIBUTE,
-			"Invalid attribute: %s" % attribute_name
+			PropertyResult.ErrorType.INVALID_PATH,
+			"Unknown operator: %s" % operator
 		)
 	
-	var attribute = ant.exposed_attributes[attribute_name]
-	var value = attribute.get_property(property_name)
-	if value == null:
+	var compare_func = COMPARISON_OPERATORS[operator]
+	return PropertyResult.new(compare_func.call(value1, value2))
+#endregion
+
+#region Type Conversion
+## Converts a value to the specified Component.PropertyType
+## Returns: PropertyResult with converted value
+func convert_value(value: Variant, target_type: Component.PropertyType) -> PropertyResult:
+	if _is_type_match(value, target_type):
+		return PropertyResult.new(value)
+	
+	var method = TYPE_CONVERSIONS.get(target_type)
+	if not method or not has_method(method):
 		return PropertyResult.new(
 			null,
-			ErrorCode.INVALID_PROPERTY,
-			"Invalid property '%s' for attribute '%s'" % [property_name, attribute_name]
+			PropertyResult.ErrorType.TYPE_MISMATCH,
+			"Cannot convert to type: %s" % Component.type_to_string(target_type)
 		)
 	
-	return PropertyResult.new(value)
+	return call(method, value)
+#endregion
 
-## Compare two values using the specified operator
-static func compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
-	match operator:
-		"EQUALS":
-			return value_a == value_b
-		"NOT_EQUALS":
-			return value_a != value_b
-		"GREATER_THAN":
-			return value_a > value_b if value_a != null and value_b != null else false
-		"LESS_THAN":
-			return value_a < value_b if value_a != null and value_b != null else false
-		"GREATER_THAN_EQUAL":
-			return value_a >= value_b if value_a != null and value_b != null else false
-		"LESS_THAN_EQUAL":
-			return value_a <= value_b if value_a != null and value_b != null else false
-		"NOT_EMPTY":
-			return not _is_empty(value_a)
-		"IS_EMPTY":
-			return _is_empty(value_a)
+#region Expression Parsing
+## Parses an expression into components
+func _parse_expression(expression: String) -> PropertyResult:
+	var parts = expression.strip_edges().split(" ", false)
+	
+	match parts.size():
+		# Simple property reference
+		1:
+			return PropertyResult.new({
+				"type": "property",
+				"path": parts[0]
+			})
+		
+		# Property comparison
+		3:
+			return PropertyResult.new({
+				"type": "comparison",
+				"left": parts[0],
+				"operator": parts[1],
+				"right": parts[2]
+			})
+		
 		_:
-			DebugLogger.error(DebugLogger.Category.CONDITION, "Unknown operator: %s" % operator)
-			return false
+			return PropertyResult.new(
+				null,
+				PropertyResult.ErrorType.INVALID_PATH,
+				"Invalid expression format: %s" % expression
+			)
 
-## Helper function to check if a value is empty
-static func _is_empty(value: Variant) -> bool:
-	if value == null:
+## Evaluates a parsed expression
+func _evaluate_parsed_expression(parsed: Dictionary, context: Dictionary) -> PropertyResult:
+	match parsed.type:
+		"property":
+			return _property_access.get_property(parsed.path)
+		
+		"comparison":
+			var left = _property_access.get_property(parsed.left)
+			if not left.success():
+				return left
+			
+			# Handle direct value comparison
+			if parsed.right.begins_with('"') and parsed.right.ends_with('"'):
+				var right_value = parsed.right.substr(1, parsed.right.length() - 2)
+				return evaluate_comparison(left.value, parsed.operator, right_value)
+			
+			# Handle property comparison
+			var right = _property_access.get_property(parsed.right)
+			if not right.success():
+				return right
+			
+			return evaluate_comparison(left.value, parsed.operator, right.value)
+	
+	return PropertyResult.new(
+		null,
+		PropertyResult.ErrorType.INVALID_PATH,
+		"Unknown expression type: %s" % parsed.type
+	)
+#endregion
+
+#region Helper Methods
+## Gets cache key for an expression
+func _get_cache_key(expression: String, context: Dictionary) -> String:
+	return "%s|%s" % [expression, str(context)]
+
+## Checks if values are comparable
+static func _are_comparable(a: Variant, b: Variant) -> bool:
+	var type_a = typeof(a)
+	var type_b = typeof(b)
+	
+	if type_a == type_b:
 		return true
 	
-	match typeof(value):
-		TYPE_ARRAY:
-			return (value as Array).is_empty()
-		TYPE_DICTIONARY:
-			return (value as Dictionary).is_empty()
+	if type_a in [TYPE_INT, TYPE_FLOAT] and type_b in [TYPE_INT, TYPE_FLOAT]:
+		return true
+	
+	return false
+
+## Checks if a value contains another value
+static func _contains_value(container: Variant, value: Variant) -> bool:
+	match typeof(container):
 		TYPE_STRING:
-			return (value as String).is_empty()
-		_:
-			return false
+			return (container as String).contains(str(value))
+		TYPE_ARRAY:
+			return (container as Array).has(value)
+		TYPE_DICTIONARY:
+			return (container as Dictionary).has(value)
+	return false
+
+## Checks if value matches expected type
+func _is_type_match(value: Variant, expected_type: Component.PropertyType) -> bool:
+	match expected_type:
+		Component.PropertyType.BOOL:
+			return typeof(value) == TYPE_BOOL
+		Component.PropertyType.INT:
+			return typeof(value) == TYPE_INT
+		Component.PropertyType.FLOAT:
+			return typeof(value) == TYPE_FLOAT
+		Component.PropertyType.STRING:
+			return typeof(value) == TYPE_STRING
+		Component.PropertyType.VECTOR2:
+			return value is Vector2
+		Component.PropertyType.VECTOR3:
+			return value is Vector3
+		Component.PropertyType.ARRAY:
+			return value is Array
+		Component.PropertyType.DICTIONARY:
+			return value is Dictionary
+		Component.PropertyType.OBJECT:
+			return value is Object
+	return false
+
+## Formats a value for display
+static func format_value(value: Variant) -> String:
+	return PropertyResult.format_value(value)
+#endregion

@@ -1,11 +1,38 @@
 class_name ConditionEvaluator
 extends RefCounted
+## Evaluates complex conditions using structured configurations
+##
+## Handles high-level condition logic (AND, OR, NOT) and structured condition
+## configurations while delegating property comparisons to PropertyEvaluator.
 
+#region Member Variables
+var _property_access: PropertyAccess
+var _property_evaluator: PropertyEvaluator
+
+# Map condition operators to PropertyEvaluator operators
+const OPERATOR_MAP = {
+	"EQUALS": "==",
+	"NOT_EQUALS": "!=",
+	"GREATER_THAN": ">",
+	"LESS_THAN": "<",
+	"GREATER_THAN_EQUAL": ">=",
+	"LESS_THAN_EQUAL": "<=",
+	"CONTAINS": "contains",
+	"STARTS_WITH": "starts_with",
+	"ENDS_WITH": "ends_with"
+}
+#endregion
+
+func _init(context: Dictionary = {}) -> void:
+	_property_access = PropertyAccess.new(context)
+	_property_evaluator = PropertyEvaluator.new(context)
+
+#region Public Interface
 ## Evaluate a condition based on configuration and context
-static func evaluate(condition: Dictionary, context: Dictionary, show_detailed_debug: bool = false) -> bool:
+func evaluate(condition: Dictionary, context: Dictionary) -> bool:
 	# Handle operator type conditions (AND, OR, NOT)
 	if condition.get("type") == "Operator":
-		return _evaluate_operator_condition(condition, context, show_detailed_debug)
+		return _evaluate_operator_condition(condition, context)
 	
 	# Handle named conditions that reference condition configs
 	var condition_type = condition.get("type")
@@ -15,189 +42,136 @@ static func evaluate(condition: Dictionary, context: Dictionary, show_detailed_d
 			var full_condition = condition_configs[condition_type]
 			# Check for raw evaluation object
 			if full_condition.has("evaluation"):
-				return _evaluate_property_check(full_condition.evaluation, context, show_detailed_debug)
+				return _evaluate_property_check(full_condition.evaluation, context)
 			# If it's a direct dictionary of evaluation parameters
 			elif full_condition.has("property"):
-				return _evaluate_property_check(full_condition, context, show_detailed_debug)
+				return _evaluate_property_check(full_condition, context)
 		else:
-			DebugLogger.error(DebugLogger.Category.CONDITION, 
-				"Unknown condition type: %s (Available types: %s)" % [
-					condition_type, 
-					condition_configs.keys()
-				]
-			)
+			_log_error("Unknown condition type: %s (Available types: %s)" % [
+				condition_type, 
+				condition_configs.keys()
+			])
 		return false
 	
 	# Handle direct property check evaluation
 	if condition.has("evaluation"):
-		return _evaluate_property_check(condition.evaluation, context, show_detailed_debug)
+		return _evaluate_property_check(condition.evaluation, context)
 	elif condition.has("property"):
-		return _evaluate_property_check(condition, context, show_detailed_debug)
+		return _evaluate_property_check(condition, context)
 	
-	DebugLogger.error(DebugLogger.Category.CONDITION, "Invalid condition format: %s" % condition)
+	_log_error("Invalid condition format: %s" % condition)
 	return false
-	
+#endregion
+
+#region Condition Evaluation
 ## Evaluate a compound operator condition (AND, OR, NOT)
-static func _evaluate_operator_condition(condition: Dictionary, context: Dictionary, show_detailed_debug: bool) -> bool:
+func _evaluate_operator_condition(condition: Dictionary, context: Dictionary) -> bool:
 	var operator_type = condition.operator_type.to_lower()
 	var operands = condition.get("operands", [])
 	
-	if show_detailed_debug:
-		DebugLogger.debug(DebugLogger.Category.CONDITION, "\nEvaluating %s operator" % operator_type.to_upper())
+	_log_debug("\nEvaluating %s operator" % operator_type.to_upper())
 	
 	match operator_type:
 		"and":
 			for operand in operands:
-				var result = evaluate(operand, context, show_detailed_debug)
-				if show_detailed_debug:
-					DebugLogger.trace(DebugLogger.Category.CONDITION, "  AND operand result: %s" % result)
+				var result = evaluate(operand, context)
+				_log_trace("  AND operand result: %s" % result)
 				if not result:
 					return false
 			return true
 			
 		"or":
 			for operand in operands:
-				var result = evaluate(operand, context, show_detailed_debug)
-				if show_detailed_debug:
-					DebugLogger.trace(DebugLogger.Category.CONDITION, "  OR operand result: %s" % result)
+				var result = evaluate(operand, context)
+				_log_trace("  OR operand result: %s" % result)
 				if result:
 					return true
 			return false
 			
 		"not":
 			if operands.size() != 1:
-				DebugLogger.error(DebugLogger.Category.CONDITION, "NOT operator requires exactly one operand")
+				_log_error("NOT operator requires exactly one operand")
 				return false
-			if show_detailed_debug:
-				DebugLogger.debug(DebugLogger.Category.CONDITION, "├─ Evaluating NOT operand:")
-			var operand_result = evaluate(operands[0], context, show_detailed_debug)
-			var result = not operand_result
-			if show_detailed_debug:
-				DebugLogger.trace(DebugLogger.Category.CONDITION, 
-					"└─ Final NOT result: %s (inverted from %s)" % [result, operand_result]
-				)
+			var result = not evaluate(operands[0], context)
+			_log_trace("  NOT result: %s" % result)
 			return result
 			
 		_:
-			DebugLogger.error(DebugLogger.Category.CONDITION, "Unknown operator type: %s" % operator_type)
+			_log_error("Unknown operator type: %s" % operator_type)
 			return false
 
 ## Evaluate a property check condition
-static func _evaluate_property_check(evaluation: Dictionary, context: Dictionary, show_detailed_debug: bool) -> bool:
+func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
 	if not evaluation.has("property"):
-		DebugLogger.error(DebugLogger.Category.CONDITION, 
-			"Property check missing 'property' field: %s" % evaluation
-		)
+		_log_error("Property check missing 'property' field: %s" % evaluation)
 		return false
 	
 	var property_name = evaluation.property
 	var operator = evaluation.get("operator", "EQUALS")
 	
-	# Get the property value using PropertyEvaluator
-	var property_result = PropertyEvaluator.get_property_value(property_name, context)
+	# Get the property value using PropertyAccess
+	var property_result = _property_access.get_property(property_name)
 	if property_result.is_error():
-		DebugLogger.error(DebugLogger.Category.CONDITION, property_result.error_message)
+		_log_error(property_result.error_message)
 		return false
 	
 	var property_value = property_result.value
 	
 	var debug_info = "  ├─ Checking property '%s'\n" % property_name
 	debug_info += "  │  ├─ Current value: %s" % PropertyEvaluator.format_value(property_value)
-	DebugLogger.trace(DebugLogger.Category.CONDITION, debug_info)
+	_log_trace(debug_info)
 	
-	# Handle different value sources
+	# Special handling for empty checks
+	if operator in ["NOT_EMPTY", "IS_EMPTY"]:
+		var is_empty = _is_empty(property_value)
+		_log_trace("  │  ├─ Checking if %s (result: %s)" % [
+			"not empty" if operator == "NOT_EMPTY" else "empty",
+			not is_empty if operator == "NOT_EMPTY" else is_empty
+		])
+		return not is_empty if operator == "NOT_EMPTY" else is_empty
+	
+	# Handle different value sources using PropertyEvaluator for comparison
 	if "value" in evaluation:
 		var compare_value = evaluation.value
-		DebugLogger.trace(DebugLogger.Category.CONDITION,
-			"  │  ├─ Comparing with fixed value: %s" % PropertyEvaluator.format_value(compare_value)
-		)
-		var result = PropertyEvaluator.compare_values(property_value, compare_value, operator)
-		DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
-		return result
+		_log_trace("  │  ├─ Comparing with fixed value: %s" % \
+			PropertyEvaluator.format_value(compare_value))
+		return _compare_values(property_value, compare_value, operator)
 		
 	elif "value_from" in evaluation:
-		var compare_prop_result = PropertyEvaluator.get_property_value(evaluation.value_from, context)
+		var compare_prop_result = _property_access.get_property(evaluation.value_from)
 		if compare_prop_result.is_error():
-			DebugLogger.error(DebugLogger.Category.CONDITION, compare_prop_result.error_message)
+			_log_error(compare_prop_result.error_message)
 			return false
 			
 		var compare_value = compare_prop_result.value
-		DebugLogger.trace(DebugLogger.Category.CONDITION,
-			"  │  ├─ Comparing with '%s' value: %s" % [
-				evaluation.value_from, 
-				PropertyEvaluator.format_value(compare_value)
-			]
-		)
-		var result = PropertyEvaluator.compare_values(property_value, compare_value, operator)
-		DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
-		return result
-		
-	elif operator in ["NOT_EMPTY", "IS_EMPTY"]:
-		DebugLogger.trace(DebugLogger.Category.CONDITION,
-			"  │  ├─ Checking if %s" % ("not empty" if operator == "NOT_EMPTY" else "empty")
-		)
-		var result = PropertyEvaluator.compare_values(property_value, null, operator)
-		DebugLogger.trace(DebugLogger.Category.CONDITION, "  │  └─ Result: %s" % result)
-		return result
+		_log_trace("  │  ├─ Comparing with '%s' value: %s" % [
+			evaluation.value_from, 
+			PropertyEvaluator.format_value(compare_value)
+		])
+		return _compare_values(property_value, compare_value, operator)
 	
-	DebugLogger.error(DebugLogger.Category.CONDITION, 
-		"Invalid property check configuration: %s" % evaluation
-	)
+	_log_error("Invalid property check configuration: %s" % evaluation)
 	return false
 
-## Print debug information about condition evaluation
-static func debug_print_condition(condition: Dictionary, context: Dictionary) -> void:
-	var debug_info = "\nCondition Evaluation Debug:"
-	debug_info += "\nCondition: %s" % JSON.stringify(condition, "\t")
-	debug_info += "\nContext keys available: %s" % context.keys()
+## Compare values using PropertyEvaluator
+func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
+	# Map condition operator to PropertyEvaluator operator
+	var eval_operator = OPERATOR_MAP.get(operator)
+	if not eval_operator:
+		push_warning("Unknown operator: %s" % operator)
+		return false
 	
-	if "condition_configs" in context:
-		debug_info += "\nAvailable condition types: %s" % context.condition_configs.keys()
+	var result = _property_evaluator.evaluate_comparison(
+		value_a,
+		eval_operator,
+		value_b
+	)
 	
-	DebugLogger.debug(DebugLogger.Category.CONDITION, debug_info)
+	return result.value if result.success() else false
+#endregion
 
-## Helper methods remain unchanged as they don't produce output
-static func _format_value(value: Variant) -> String:
-	match typeof(value):
-		TYPE_NIL:
-			return "<null>"
-		TYPE_ARRAY:
-			if (value as Array).is_empty():
-				return "[]"
-			return str(value)
-		TYPE_DICTIONARY:
-			if (value as Dictionary).is_empty():
-				return "{}"
-			return str(value)
-		TYPE_STRING:
-			if (value as String).is_empty():
-				return '""'
-			return str(value)
-		_:
-			return str(value)
-
-static func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
-	match operator:
-		"EQUALS":
-			return value_a == value_b
-		"NOT_EQUALS":
-			return value_a != value_b
-		"GREATER_THAN":
-			return value_a > value_b if value_a != null and value_b != null else false
-		"LESS_THAN":
-			return value_a < value_b if value_a != null and value_b != null else false
-		"GREATER_THAN_EQUAL":
-			return value_a >= value_b if value_a != null and value_b != null else false
-		"LESS_THAN_EQUAL":
-			return value_a <= value_b if value_a != null and value_b != null else false
-		"NOT_EMPTY":
-			return not _is_empty(value_a)
-		"IS_EMPTY":
-			return _is_empty(value_a)
-		_:
-			DebugLogger.error(DebugLogger.Category.CONDITION, "Unknown operator: %s" % operator)
-			return false
-
+#region Helper Methods
+## Check if a value is empty
 static func _is_empty(value: Variant) -> bool:
 	if value == null:
 		return true
@@ -211,3 +185,14 @@ static func _is_empty(value: Variant) -> bool:
 			return (value as String).is_empty()
 		_:
 			return false
+
+## Logging helpers
+func _log_error(message: String) -> void:
+	DebugLogger.error(DebugLogger.Category.CONDITION, message)
+
+func _log_debug(message: String) -> void:
+	DebugLogger.debug(DebugLogger.Category.CONDITION, message)
+
+func _log_trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.CONDITION, message)
+#endregion

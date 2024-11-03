@@ -1,10 +1,17 @@
 class_name Component
 extends RefCounted
+## Base component class with property management functionality
+##
+## Provides a standardized way to expose and access properties with type safety,
+## error handling, and property metadata.
 
-# Stores property metadata and access methods
+#region Member Variables
+## Container for managing component properties
 var properties_container: PropertiesContainer = PropertiesContainer.new(self)
+#endregion
 
-# Type enum for easier reference
+#region Property Types
+## Supported property types
 enum PropertyType {
 	BOOL,
 	INT,
@@ -17,34 +24,93 @@ enum PropertyType {
 	OBJECT,
 	UNKNOWN
 }
+#endregion
 
-
-## Expose a property with type information
+#region Property Management
+## Expose a property with type information and optional setter
+## Returns: PropertyResult indicating success or any errors
 func expose_property(
-		name: String, 
-		getter: Callable, 
-		type: PropertyType, 
-		setter: Callable = Callable(),
-		description: String = ""
-	) -> void:
-		properties_container.expose_property(name, getter, type, setter, description)
+	name: String, 
+	getter: Callable, 
+	type: PropertyType, 
+	setter: Callable = Callable(),
+	description: String = ""
+) -> PropertyResult:
+	# Validate getter
+	if _getter_requires_args(getter):
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.INVALID_GETTER,
+			"Getter for property '%s' requires arguments" % name
+		)
 	
-func get_property(name: String):
-	return properties_container.get_property(name)
+	return properties_container.expose_property(
+		name,
+		getter,
+		type,
+		setter,
+		description
+	)
 
-func set_property(name: String, value) -> bool:
-	if properties_container.set_property(name, value):
-		return true
-	return false
+## Get property metadata
+## Returns: PropertyResult.PropertyInfo or null if not found
+func get_property(name: String) -> PropertyResult.PropertyInfo:
+	return properties_container.get_property_info(name)
+
+## Get a property's value
+## Returns: PropertyResult with value or error information
+func get_property_value(name: String) -> PropertyResult:
+	var property = get_property(name)
+	if not property:
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
+			"Property '%s' not found" % name
+		)
 	
+	if not property.getter.is_valid():
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.INVALID_GETTER,
+			"Invalid getter for property '%s'" % name
+		)
+	
+	# Get the value
+	var value = property.getter.call()
+	
+	# Validate result
+	if value == null:
+		DebugLogger.warn(
+			DebugLogger.Category.PROPERTY,
+			"Getter for property '%s' returned null" % name
+		)
+	
+	return PropertyResult.new(value)
+
+## Set a property's value
+## Returns: PropertyResult indicating success or error
+func set_property(name: String, value: Variant) -> PropertyResult:
+	return properties_container.set_property_value(name, value)
+
+## Get information about all exposed properties
+## Returns: Dictionary mapping property names to their information
 func get_exposed_properties() -> Dictionary:
-	return properties_container.get_properties_info()
+	var result = {}
+	for name in properties_container.get_properties():
+		var info = properties_container.get_property_info(name)
+		if info:
+			result[name] = info.to_dict()
+	return result
+#endregion
 
-# Helper function to check if a getter requires arguments
-func _getter_requires_args(getter: Callable) -> bool:
+#region Helper Methods
+## Check if a getter requires arguments
+## Returns: bool indicating if the getter needs arguments
+static func _getter_requires_args(getter: Callable) -> bool:
 	return getter.get_argument_count() > 0
 
-# Helper function to convert PropertyType to string
+## Convert PropertyType to human-readable string
+## Returns: String representation of the property type
 static func type_to_string(type: PropertyType) -> String:
 	match type:
 		PropertyType.BOOL: return "Boolean"
@@ -57,3 +123,4 @@ static func type_to_string(type: PropertyType) -> String:
 		PropertyType.DICTIONARY: return "Dictionary"
 		PropertyType.OBJECT: return "Object"
 		_: return "Unknown"
+#endregion

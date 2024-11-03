@@ -15,7 +15,7 @@ func add_food(mass_to_add: float) -> float:
 func mass() -> float:
 	var _mass: float = 0.0
 	for food in self:
-		_mass += food.mass()
+		_mass += food.mass
 	return _mass
 	
 func locations() -> Array[Vector2]:
