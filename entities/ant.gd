@@ -342,13 +342,13 @@ func _init_exposed_attributes() -> void:
 	if not attributes_container:
 		attributes_container = AttributesContainer.new(self)
 	# Attributes
-	attributes_container.add_attribute("reach", reach)
-	attributes_container.add_attribute("vision", vision)
-	attributes_container.add_attribute("sense", sense)
-	attributes_container.add_attribute("energy", energy)
-	attributes_container.add_attribute("strength", strength)
-	attributes_container.add_attribute("health", health)
-	attributes_container.add_attribute("speed", speed)
+	attributes_container.register_attribute("reach", reach.get_exposed_properties())
+	attributes_container.register_attribute("vision", vision.get_exposed_properties())
+	attributes_container.register_attribute("sense", sense.get_exposed_properties())
+	attributes_container.register_attribute("energy", energy.get_exposed_properties())
+	attributes_container.register_attribute("strength", strength.get_exposed_properties())
+	attributes_container.register_attribute("health", health.get_exposed_properties())
+	attributes_container.register_attribute("speed", speed.get_exposed_properties())
 	
 #endregion
 

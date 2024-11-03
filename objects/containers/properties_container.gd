@@ -170,7 +170,7 @@ func get_property_info(name: String) -> PropertyResult.PropertyInfo:
 	return _properties.get(name)
 
 ## Gets all property names
-func get_properties() -> Array[String]:
+func get_properties() -> Array:
 	return _properties.keys()
 
 ## Checks if a property exists

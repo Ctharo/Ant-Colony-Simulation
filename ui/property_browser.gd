@@ -32,6 +32,7 @@ func _ready() -> void:
 	unresizable = false
 	# Create the UI
 	create_ui()
+	show_ant(Ant.new())
 
 func show_ant(ant: Ant) -> void:
 	if not ant:
