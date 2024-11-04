@@ -4,6 +4,9 @@ extends Attribute
 var _level: int = 10
 
 func _init() -> void:
+	super._init("Strength")
+
+func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("level")
 			.of_type(PropertyType.INT)

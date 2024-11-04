@@ -1,19 +1,14 @@
 class_name Speed
 extends Attribute
 
-var _movement_rate: float
-var _harvesting_rate: float
-var _storing_rate: float
+var _movement_rate: float = 1.0
+var _harvesting_rate: float = 1.0
+var _storing_rate: float = 1.0
 
-func _init(
-	movement_rate: float = 1.0,
-	harvesting_rate: float = 0.5,
-	storing_rate: float = 10.0
-) -> void:
-	_movement_rate = movement_rate
-	_harvesting_rate = harvesting_rate
-	_storing_rate = storing_rate
-	
+func _init() -> void:
+	super._init("Speed")
+
+func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("movement_rate")
 			.of_type(PropertyType.FLOAT)

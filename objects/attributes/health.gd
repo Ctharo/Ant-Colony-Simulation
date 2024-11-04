@@ -11,6 +11,9 @@ var _current_level: float = _max_level :
 			depleted.emit()
 
 func _init() -> void:
+	super._init("Health")
+
+func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("max_level")
 			.of_type(PropertyType.FLOAT)

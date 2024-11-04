@@ -131,9 +131,11 @@ func clear_cache() -> void:
 ## Initializes property containers from context
 func _initialize_containers(context: Dictionary) -> void:
 	var ant = context.get("ant")
-	if ant:
-		_properties_container = ant.properties_container
-		_attributes_container = ant.attributes_container
+	if not ant:
+		return
+	_properties_container = ant.properties_container
+	_attributes_container = ant.attributes_container
+	
 
 ## Gets a property value based on parsed path
 func _get_property_value(path: PropertyResult.PropertyPath) -> PropertyResult:

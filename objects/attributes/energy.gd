@@ -43,8 +43,6 @@ func _init_properties() -> void:
 			.build()
 	])
 
-
-
 ## Calculate energy level as a percentage of maximum
 func percentage() -> float:
 	return (_current_level / _max_level) * 100.0

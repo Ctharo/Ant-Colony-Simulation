@@ -198,7 +198,7 @@ func get_category_info(name: String) -> PropertyResult.CategoryInfo:
 	return _categories.get(name)
 
 ## Gets all category names
-func get_categories() -> Array[String]:
+func get_categories() -> Array:
 	return _categories.keys()
 
 ## Gets properties in a specific category

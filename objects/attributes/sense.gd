@@ -4,6 +4,9 @@ extends Attribute
 var _distance: float
 
 func _init() -> void:
+	super._init("Sense")
+
+func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("distance")
 			.of_type(PropertyType.FLOAT)
