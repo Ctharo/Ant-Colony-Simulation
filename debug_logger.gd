@@ -34,6 +34,7 @@ static var enabled_categories := {
 	Category.ACTION: true,
 	Category.BEHAVIOR: true,
 	Category.CONDITION: true,
+	Category.PROPERTY: true,
 	Category.CONTEXT: true,
 	Category.TRANSITION: true,
 	Category.HIERARCHY: true,
@@ -55,6 +56,7 @@ const CATEGORY_NAMES := {
 	Category.ACTION: "ACTION",
 	Category.BEHAVIOR: "BEHAVIOR",
 	Category.CONDITION: "CONDITION",
+	Category.PROPERTY: "PROPERTY",
 	Category.CONTEXT: "CONTEXT",
 	Category.TRANSITION: "TRANSITION",
 	Category.HIERARCHY: "HIERARCHY",
@@ -68,6 +70,8 @@ static func set_category_enabled(category: Category, enabled: bool) -> void:
 ## Set the global log level
 static func set_log_level(level: LogLevel) -> void:
 	log_level = level
+	info(DebugLogger.Category.PROGRAM, "Set log level to %s" % level)
+
 
 ## Log a message with specified level and category
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:

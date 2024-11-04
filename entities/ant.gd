@@ -130,7 +130,6 @@ func _init():
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
 	if task_tree and task_tree.get_active_task():
-		task_tree.print_task_hierarchy()
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
 
@@ -144,16 +143,24 @@ func _process(delta: float) -> void:
 		task_update_timer = 0.0
 
 #region Exposed Method methods
+
 ## Initialize method maps
 func _init_properties() -> void:
 	properties_container = PropertiesContainer.new(self)
 	
-	# Sensing category
-	_init_sensing_properties()
-	_init_food_properties()
-	_init_colony_properties()
-
-func _init_sensing_properties() -> void:
+	var results: Array[PropertyResult]
+	results.append_array(_init_sensing_properties())
+	results.append_array(_init_food_properties())
+	results.append_array(_init_colony_properties())
+	
+	for result: PropertyResult in results:
+		if result.is_error():
+			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)
+		else:
+			var n = result.value.name
+			DebugLogger.debug(DebugLogger.Category.PROPERTY, "Successfully initialized property %s" % result.value.name)
+	
+func _init_sensing_properties() -> Array[PropertyResult]:
 	var sensing_properties = [
 		PropertyResult.PropertyInfo.create("ants_in_view")
 			.of_type(Component.PropertyType.ARRAY)
@@ -198,12 +205,10 @@ func _init_sensing_properties() -> void:
 			.build()
 	] as Array[PropertyResult.PropertyInfo]
 	
-	var results: Array[PropertyResult] = properties_container.expose_properties(sensing_properties)
-	for result: PropertyResult in results:
-		if result.error != PropertyResult.ErrorType.NONE:
-			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)
+	return properties_container.expose_properties(sensing_properties)
 
-func _init_food_properties() -> void:
+
+func _init_food_properties() -> Array[PropertyResult]:
 	var food_properties = [
 		PropertyResult.PropertyInfo.create("food_in_view")
 			.of_type(Component.PropertyType.ARRAY)
@@ -248,12 +253,10 @@ func _init_food_properties() -> void:
 			.build()
 	] as Array[PropertyResult.PropertyInfo]
 	
-	var results: Array[PropertyResult] = properties_container.expose_properties(food_properties)
-	for result: PropertyResult in results:
-		if result.error != PropertyResult.ErrorType.NONE:
-			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)
+	return properties_container.expose_properties(food_properties)
+
 			
-func _init_colony_properties() -> void:
+func _init_colony_properties() -> Array[PropertyResult]:
 	var colony_properties = [
 		PropertyResult.PropertyInfo.create("distance_to_colony")
 			.of_type(Component.PropertyType.FLOAT)
@@ -270,11 +273,8 @@ func _init_colony_properties() -> void:
 			.build()
 	] as Array[PropertyResult.PropertyInfo]
 	
-	var results: Array[PropertyResult] = properties_container.expose_properties(colony_properties)
-	for result: PropertyResult in results:
-		if result.error != PropertyResult.ErrorType.NONE:
-			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)	
-	
+	return properties_container.expose_properties(colony_properties)
+
 	
 ## Initialize attribute maps
 func _init_attributes() -> void:
@@ -395,75 +395,84 @@ func _ants_in_view() -> Ants:
 #endregion
 
 #region Contextual Information
+
+## Private methods that do the actual computation
+func _compute_distance_to_colony() -> float:
+	return global_position.distance_to(colony.global_position)
+
+func _compute_colony_radius() -> float:
+	return colony.radius()
+
+func _compute_carried_food_mass() -> float:
+	return carried_food.mass()
+
+func _compute_available_carry_mass() -> float:
+	return strength.carry_max() - carried_food_mass()
+
+func _compute_food_pheromones() -> Array:
+	return _pheromones_sensed("food").to_array()
+
+func _compute_home_pheromones() -> Array:
+	return _pheromones_sensed("home").to_array()
+
 ## Get distance to colony
 func distance_to_colony() -> float:
-	return _get_property_cached("colony.distance", func():
-		return global_position.distance_to(colony.global_position)
-	)
+	# The getter should just do direct computation
+	return _compute_distance_to_colony()
 
 ## Get colony radius
 func colony_radius() -> float:
-	return _get_property_cached("colony.radius", func():
-		return colony.radius()
-	)
-
-## Get current energy level
-func energy_level() -> float:
-	var result = _property_access.get_property("energy.current_level")
-	return result.value if result.success() else 0.0
-
-## Get low energy threshold
-func low_energy_threshold() -> float:
-	var result = _property_access.get_property("energy.low_energy_threshold")
-	return result.value if result.success() else 0.0
-
-## Get carry capacity
-func carry_capacity() -> float:
-	var result = _property_access.get_property("strength.carry_max")
-	return result.value if result.success() else 0.0
+	return _compute_colony_radius()
 
 ## Get array of ants in view
 func ants_in_view() -> Array:
-	return _get_property_cached("vision.ants_in_view", func():
-		return _ants_in_view().to_array()
-	)
+	return _ants_in_view().to_array()
 
 ## Returns count of ants in view
 func ants_in_view_count() -> int:
-	var ants = ants_in_view()
-	return ants.size() if ants else 0
+	return ants_in_view().size()
 
-#region Sensory Methods
-## Get sensed pheromones of a specific type
-func pheromones_sensed(type: String = "") -> Array:
-	return _get_property_cached("sense.pheromones_%s" % type, func():
-		var result = Pheromones.all().sensed(global_position, sense.distance())
-		return (result if type.is_empty() else result.of_type(type)).to_array()
-	)
+## Get food pheromones sensed
+func food_pheromones_sensed() -> Array:
+	return _compute_food_pheromones()
 
-## Get food within reach
-func food_in_reach() -> Array:
-	return _get_property_cached("reach.food", func():
-		return Foods.in_reach(global_position, reach.distance()).to_array()
-	)
+## Get food pheromones count
+func food_pheromones_sensed_count() -> int:
+	return food_pheromones_sensed().size()
+
+## Get home pheromones sensed
+func home_pheromones_sensed() -> Array:
+	return _compute_home_pheromones()
+
+## Get home pheromones count
+func home_pheromones_sensed_count() -> int:
+	return home_pheromones_sensed().size()
+
+## Get carried food mass
+func carried_food_mass() -> float:
+	return _compute_carried_food_mass()
+
+## Get available carry mass
+func available_carry_mass() -> float:
+	return _compute_available_carry_mass()
 
 ## Get food in view
 func food_in_view() -> Array:
-	return _get_property_cached("vision.food", func():
-		return Foods.in_view(global_position, vision.distance()).to_array()
-	)
+	return _food_in_view().to_array()
+
+## Get food in view count
+func food_in_view_count() -> int:
+	return food_in_view().size()
+
+## Get food in reach
+func food_in_reach() -> Array:
+	return _food_in_reach().to_array()
+
+## Get food in reach count
+func food_in_reach_count() -> int:
+	return food_in_reach().size()
 
 #region Property Access Helper Methods
-## Cached property access with computation
-func _get_property_cached(property_path: String, computer: Callable) -> Variant:
-	var result = _property_access.get_property(property_path)
-	if result.success():
-		return result.value
-		
-	# If property doesn't exist or failed, compute and cache it
-	var value = computer.call()
-	_property_access.set_property(property_path, value)
-	return value
 
 ## Initialize property access
 func _init_property_access() -> void:
@@ -473,19 +482,20 @@ func _init_property_access() -> void:
 		"attributes_container": attributes_container
 	})
 	
-	# Set up caching
+	# Set up property access caching
 	_property_access.set_cache_ttl(0.5) # Half second cache
+
+## Clear property cache
+func clear_property_cache() -> void:
+	if _property_access:
+		_property_access.clear_cache()
+	if properties_container:
+		properties_container.invalidate_all_caches()
 
 #region Attribute Property Access
 ## Get all properties from an attribute
 func get_attribute_properties(attribute_name: String) -> Dictionary:
-	var result = {}
-	var properties = attributes_container.get_attribute_properties(attribute_name)
-	for prop_name in properties:
-		var value = _property_access.get_property("%s.%s" % [attribute_name, prop_name])
-		if value.success():
-			result[prop_name] = value.value
-	return result
+	return attributes_container.get_attribute_properties(attribute_name)
 
 ## Get specific attribute property
 func get_attribute_property(attribute_name: String, property_name: String) -> PropertyResult:

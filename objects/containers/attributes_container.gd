@@ -204,7 +204,7 @@ func get_attribute_metadata(attribute: String) -> Dictionary:
 	return _attributes[attribute].metadata
 
 ## Gets all attribute names
-func get_attributes() -> Array[String]:
+func get_attributes() -> Array:
 	return _attributes.keys()
 
 ## Checks if an attribute exists

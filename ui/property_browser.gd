@@ -32,11 +32,10 @@ func _ready() -> void:
 	unresizable = false
 	# Create the UI
 	create_ui()
+	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
 	show_ant(Ant.new())
 
 func show_ant(ant: Ant) -> void:
-	if not ant:
-		return
 	current_ant = ant
 	_property_access = PropertyAccess.new({"ant": ant})
 	_refresh_view()
@@ -163,6 +162,7 @@ func _on_mode_changed(index: int) -> void:
 
 func _refresh_view() -> void:
 	if not current_ant:
+		DebugLogger.warn(DebugLogger.Category.CONTEXT, "No ant set for Property Browser scene")
 		return
 	
 	_refresh_categories()
@@ -173,7 +173,7 @@ func _populate_properties(category: String) -> void:
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 	
-	var properties: Array[String]
+	var properties: Array
 	if current_mode == "Direct":
 		properties = current_ant.properties_container.get_properties_in_category(category)
 	else:

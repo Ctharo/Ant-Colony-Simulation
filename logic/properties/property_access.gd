@@ -132,6 +132,7 @@ func clear_cache() -> void:
 func _initialize_containers(context: Dictionary) -> void:
 	var ant = context.get("ant")
 	if not ant:
+		DebugLogger.warn(DebugLogger.Category.CONTEXT, "Tried to initialize containers without Ant")
 		return
 	_properties_container = ant.properties_container
 	_attributes_container = ant.attributes_container
