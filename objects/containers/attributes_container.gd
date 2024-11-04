@@ -22,9 +22,8 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 	_cache = PropertyCache.new() if use_caching else null
 
 #region Attribute Management
-## Registers a new attribute with properties using PropertyInfo builders
-## Returns: PropertyResult with the created attribute info
 ## Registers a new attribute by automatically collecting its exposed properties
+## Returns: PropertyResult with the created attribute info
 func register_attribute(attribute: Attribute) -> PropertyResult:
 	var name = attribute.attribute_name
 	
@@ -44,6 +43,8 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	
 	# Add all properties to the category
 	for prop_info in properties:
+		var value = prop_info.getter.call() if prop_info.getter.is_valid() else null
+		prop_info.value = value  # Set initial value
 		category_info.add_property(prop_info)
 	
 	_attributes[name] = category_info
@@ -100,18 +101,31 @@ func get_property_value(attribute: String, property: String) -> PropertyResult:
 			"Property '%s' not found in attribute '%s'" % [property, attribute]
 		)
 	
+	# Validate getter exists and is valid
+	if not prop_info.getter.is_valid():
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.INVALID_GETTER,
+			"Invalid getter for property '%s' in attribute '%s'" % [property, attribute]
+		)
+	
 	var cache_key = _get_cache_key(attribute, property)
 	
 	# Check cache if enabled
 	if _cache and _cache.has_valid_cache(cache_key):
 		return PropertyResult.new(_cache.get_cached(cache_key))
 	
-	# Update cache
-	if _cache:
-		_cache.cache_value(cache_key, prop_info.value)
+	# Get fresh value using getter
+	var value = prop_info.getter.call()
 	
-	return PropertyResult.new(prop_info.value)
+	# Update cache and stored value
+	if _cache:
+		_cache.cache_value(cache_key, value)
+	prop_info.value = value  # Keep stored value in sync
+	
+	return PropertyResult.new(value)
 
+## Sets a property value in an attribute
 ## Sets a property value in an attribute
 func set_property_value(attribute: String, property: String, value: Variant) -> PropertyResult:
 	# Get property info first
@@ -123,12 +137,12 @@ func set_property_value(attribute: String, property: String, value: Variant) -> 
 			"Property '%s' not found in attribute '%s'" % [property, attribute]
 		)
 	
-	# Validate property is writable
-	if not prop_info.writable:
+	# Validate property is writable and setter is valid
+	if not prop_info.writable or not prop_info.setter.is_valid():
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.INVALID_SETTER,
-			"Property '%s' in attribute '%s' is read-only" % [property, attribute]
+			"Property '%s' in attribute '%s' is read-only or has invalid setter" % [property, attribute]
 		)
 	
 	# Validate value type
@@ -139,8 +153,12 @@ func set_property_value(attribute: String, property: String, value: Variant) -> 
 			"Invalid type for property '%s' in attribute '%s'" % [property, attribute]
 		)
 	
+	# Get old value before setting new one
 	var old_value = prop_info.value
-	prop_info.value = value
+	
+	# Set new value using setter
+	prop_info.setter.call(value)
+	prop_info.value = value  # Update stored value
 	
 	# Invalidate cache
 	_invalidate_property_cache(attribute, property)

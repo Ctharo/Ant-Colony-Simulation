@@ -16,7 +16,7 @@ var config: Dictionary = {}
 ## @param context Dictionary containing context parameters
 ## @return Whether the condition is met
 func is_met(_cache: Dictionary, context: Dictionary) -> bool:
-	var result := ConditionEvaluator.new().evaluate(config, context)
+	var result := ConditionEvaluator.new(context).evaluate(config, context)
 	
 	if result != _previous_result:
 		_previous_result = result

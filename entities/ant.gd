@@ -65,7 +65,7 @@ var _cache: Dictionary = {}
 ## Track when cache entries were last updated (in seconds)
 var _cache_timestamps: Dictionary = {}
 
-
+var _property_access: PropertyAccess
 
 var attributes_container: AttributesContainer :
 	set(value):
@@ -122,8 +122,10 @@ func _init():
 	health = Health.new()
 	speed = Speed.new()
 
-	_init_exposed_attributes()
+	_init_property_access()
+	_init_attributes()
 	_init_properties()
+	
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
@@ -196,7 +198,10 @@ func _init_sensing_properties() -> void:
 			.build()
 	] as Array[PropertyResult.PropertyInfo]
 	
-	properties_container.expose_properties(sensing_properties)
+	var results: Array[PropertyResult] = properties_container.expose_properties(sensing_properties)
+	for result: PropertyResult in results:
+		if result.error != PropertyResult.ErrorType.NONE:
+			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)
 
 func _init_food_properties() -> void:
 	var food_properties = [
@@ -243,8 +248,11 @@ func _init_food_properties() -> void:
 			.build()
 	] as Array[PropertyResult.PropertyInfo]
 	
-	properties_container.expose_properties(food_properties)
-
+	var results: Array[PropertyResult] = properties_container.expose_properties(food_properties)
+	for result: PropertyResult in results:
+		if result.error != PropertyResult.ErrorType.NONE:
+			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)
+			
 func _init_colony_properties() -> void:
 	var colony_properties = [
 		PropertyResult.PropertyInfo.create("distance_to_colony")
@@ -262,10 +270,14 @@ func _init_colony_properties() -> void:
 			.build()
 	] as Array[PropertyResult.PropertyInfo]
 	
-	properties_container.expose_properties(colony_properties)
+	var results: Array[PropertyResult] = properties_container.expose_properties(colony_properties)
+	for result: PropertyResult in results:
+		if result.error != PropertyResult.ErrorType.NONE:
+			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)	
+	
 	
 ## Initialize attribute maps
-func _init_exposed_attributes() -> void:
+func _init_attributes() -> void:
 	if not attributes_container:
 		attributes_container = AttributesContainer.new(self)
 	# Attributes
@@ -276,26 +288,6 @@ func _init_exposed_attributes() -> void:
 	attributes_container.register_attribute(strength)
 	attributes_container.register_attribute(health)
 	attributes_container.register_attribute(speed)
-	
-#endregion
-
-#region Attribute helpers
-# Get all exposed properties from an attribute
-func get_attribute_properties(attribute_name: String) -> Dictionary:
-	return attributes_container.get_properties(attribute_name)
-
-# Get a specific property from an attribute
-func get_attribute_property(attribute_name: String, property_name: String):
-	return attributes_container.get_property(property_name)
-
-
-# Set a specific property on an attribute
-func set_attribute_property(attribute_name: String, property_name: String, value) -> bool:
-	return attributes_container.set_property(property_name, value)
-
-# Get all exposed properties from all attributes
-func get_all_attribute_properties() -> Dictionary:
-	return attributes_container.get_all_properties()
 	
 #endregion
 
@@ -340,16 +332,16 @@ func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
 	DebugLogger.info(DebugLogger.Category.ACTION, "Ant would be moving now to location %s" % location)
 
-## Harvest food from a source over a given time period
-func harvest_food(food_source: Food, time: float) -> float:
-	var potential_harvest = speed.harvesting_rate() * time
-	var harvested_amount = min(food_source.amount, potential_harvest)
-	harvested_amount = min(harvested_amount, available_carry_mass())
-	
-	food_source.amount -= harvested_amount
-	carried_food.add(Food.new(harvested_amount))
-		
-	return harvested_amount
+### Harvest food from a source over a given time period
+#func harvest_food(food_source: Food, time: float) -> float:
+	#var potential_harvest = speed.harvesting_rate() * time
+	#var harvested_amount = min(food_source.amount, potential_harvest)
+	#harvested_amount = min(harvested_amount, available_carry_mass())
+	#
+	#food_source.amount -= harvested_amount
+	#carried_food.add(Food.new(harvested_amount))
+		#
+	#return harvested_amount
 
 ## Store food into colony over a given time period[br]
 ##Returns amount stored[br]
@@ -405,113 +397,113 @@ func _ants_in_view() -> Ants:
 #region Contextual Information
 ## Get distance to colony
 func distance_to_colony() -> float:
-	return _get_cached("colony_distance", "colony", func():
+	return _get_property_cached("colony.distance", func():
 		return global_position.distance_to(colony.global_position)
 	)
 
 ## Get colony radius
 func colony_radius() -> float:
-	return _get_cached("colony_radius", "colony", func():
+	return _get_property_cached("colony.radius", func():
 		return colony.radius()
 	)
 
 ## Get current energy level
 func energy_level() -> float:
-	return _get_cached("energy_level", "stats", func():
-		return energy.current_level()
-	)
+	var result = _property_access.get_property("energy.current_level")
+	return result.value if result.success() else 0.0
 
 ## Get low energy threshold
 func low_energy_threshold() -> float:
-	return _get_cached("low_energy_threshold", "stats", func():
-		return energy.low_energy_threshold()
-	)
+	var result = _property_access.get_property("energy.low_energy_threshold")
+	return result.value if result.success() else 0.0
 
 ## Get carry capacity
 func carry_capacity() -> float:
-	return _get_cached("carry_capacity", "stats", func():
-		return strength.carry_max()
-	)
+	var result = _property_access.get_property("strength.carry_max")
+	return result.value if result.success() else 0.0
 
 ## Get array of ants in view
 func ants_in_view() -> Array:
-	return _get_cached("ants_in_view", "ants", func():
+	return _get_property_cached("vision.ants_in_view", func():
 		return _ants_in_view().to_array()
 	)
+
 ## Returns count of ants in view
 func ants_in_view_count() -> int:
-	return _get_cached("ants_in_view_count", "ants", func():
-		return ants_in_view().size()
+	var ants = ants_in_view()
+	return ants.size() if ants else 0
+
+#region Sensory Methods
+## Get sensed pheromones of a specific type
+func pheromones_sensed(type: String = "") -> Array:
+	return _get_property_cached("sense.pheromones_%s" % type, func():
+		var result = Pheromones.all().sensed(global_position, sense.distance())
+		return (result if type.is_empty() else result.of_type(type)).to_array()
 	)
 
-## Get food pheromones sensed
-func food_pheromones_sensed() -> Array:
-	return _get_cached("food_pheromones_sensed", "pheromones", func():
-		return _pheromones_sensed("food").to_array()
-	)
-
-## Get food pheromones count
-func food_pheromones_sensed_count() -> int:
-	return _get_cached("food_pheromones_sensed_count", "pheromones", func():
-		return food_pheromones_sensed().size()
-	)
-
-## Get home pheromones sensed
-func home_pheromones_sensed() -> Array:
-	return _get_cached("home_pheromones_sensed", "pheromones", func():
-		return _pheromones_sensed("home").to_array()
-	)
-
-## Get home pheromones count
-func home_pheromones_sensed_count() -> int:
-	return _get_cached("home_pheromones_sensed_count", "pheromones", func():
-		return home_pheromones_sensed().size()
-	)
-
-## Get carried food mass
-func carried_food_mass() -> float:
-	return _get_cached("carried_food_mass", "stats", func():
-		return carried_food.mass()
-	)
-
-## Get available carry mass
-func available_carry_mass() -> float:
-	return _get_cached("available_carry_mass", "stats", func():
-		return strength.carry_max() - carried_food_mass()
-	)
-
-## Get food in view as an Array
-func food_in_view() -> Array:
-	return _get_cached("food_in_view", "food", func():
-		return _food_in_view().to_array()
-	)
-
-## Get food in view count
-func food_in_view_count() -> int:
-	return _get_cached("food_in_view_count", "food", func():
-		return food_in_view().size()
-	)
-
-## Get food within reach as an Array
+## Get food within reach
 func food_in_reach() -> Array:
-	return _get_cached("food_in_reach", "food", func():
-		return _food_in_reach().to_array()
+	return _get_property_cached("reach.food", func():
+		return Foods.in_reach(global_position, reach.distance()).to_array()
 	)
 
-## Get food within reach count
-func food_in_reach_count() -> int:
-	return _get_cached("food_in_reach_count", "food", func():
-		return food_in_reach().size()
+## Get food in view
+func food_in_view() -> Array:
+	return _get_property_cached("vision.food", func():
+		return Foods.in_view(global_position, vision.distance()).to_array()
 	)
+
+#region Property Access Helper Methods
+## Cached property access with computation
+func _get_property_cached(property_path: String, computer: Callable) -> Variant:
+	var result = _property_access.get_property(property_path)
+	if result.success():
+		return result.value
+		
+	# If property doesn't exist or failed, compute and cache it
+	var value = computer.call()
+	_property_access.set_property(property_path, value)
+	return value
+
+## Initialize property access
+func _init_property_access() -> void:
+	_property_access = PropertyAccess.new({
+		"ant": self,
+		"properties_container": properties_container,
+		"attributes_container": attributes_container
+	})
 	
+	# Set up caching
+	_property_access.set_cache_ttl(0.5) # Half second cache
+
+#region Attribute Property Access
+## Get all properties from an attribute
+func get_attribute_properties(attribute_name: String) -> Dictionary:
+	var result = {}
+	var properties = attributes_container.get_attribute_properties(attribute_name)
+	for prop_name in properties:
+		var value = _property_access.get_property("%s.%s" % [attribute_name, prop_name])
+		if value.success():
+			result[prop_name] = value.value
+	return result
+
+## Get specific attribute property
+func get_attribute_property(attribute_name: String, property_name: String) -> PropertyResult:
+	return _property_access.get_property("%s.%s" % [attribute_name, property_name])
+
+## Set attribute property
+func set_attribute_property(attribute_name: String, property_name: String, value: Variant) -> PropertyResult:
+	return _property_access.set_property("%s.%s" % [attribute_name, property_name], value)
+
+## Get all attribute properties
+func get_all_attribute_properties() -> Dictionary:
+	var result = {}
+	for attr in attributes_container.get_attributes():
+		result[attr] = get_attribute_properties(attr)
+	return result
 #endregion
 
 #region Caching methods
-## Clear all cached data
-func clear_cache() -> void:
-	_cache.clear()
-	_cache_timestamps.clear()
-
 ## Get cached value or compute if expired
 func _get_cached(key: String, category: String, computer: Callable) -> Variant:
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -565,4 +557,5 @@ func _get_category_for_key(key: String) -> String:
 		if key.begins_with(category):
 			return category
 	return "stats"  # Default category
+	
 #endregion
