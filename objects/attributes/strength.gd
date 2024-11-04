@@ -4,21 +4,20 @@ extends Attribute
 var _level: int = 10
 
 func _init() -> void:
-	expose_property(
-		"level",
-		Callable(self, "level"),
-		PropertyType.INT,
-		Callable(self, "set_level"),
-		"Base strength level of the ant"
-	)
-	
-	expose_property(
-		"carry_max",
-		Callable(self, "carry_max"),
-		PropertyType.FLOAT,
-		Callable(),
-		"Maximum weight the ant can carry based on strength level"
-	)
+	properties_container.expose_properties([
+		PropertyResult.PropertyInfo.create("level")
+			.of_type(PropertyType.INT)
+			.with_getter(Callable(self, "level"))
+			.with_setter(Callable(self, "set_level"))
+			.described_as("Base strength level of the ant")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("carry_max")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "carry_max"))
+			.described_as("Maximum weight the ant can carry based on strength level")
+			.build()
+	])
 
 func level() -> int:
 	return _level

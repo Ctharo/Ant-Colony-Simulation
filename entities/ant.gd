@@ -153,202 +153,131 @@ func _init_properties() -> void:
 	_init_colony_properties()
 
 func _init_sensing_properties() -> void:
-	var getter: Callable
+	var sensing_properties = [
+		PropertyResult.PropertyInfo.create("ants_in_view")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "ants_in_view"))
+			.in_category("Sensing")
+			.described_as("Array of ants currently in view")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("ants_in_view_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "ants_in_view_count"))
+			.in_category("Sensing")
+			.described_as("Number of ants currently in view")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_pheromones_sensed")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "food_pheromones_sensed"))
+			.in_category("Sensing")
+			.described_as("Array of food pheromones currently sensed")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_pheromones_sensed_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "food_pheromones_sensed_count"))
+			.in_category("Sensing")
+			.described_as("Number of food pheromones currently sensed")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("home_pheromones_sensed")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "home_pheromones_sensed"))
+			.in_category("Sensing")
+			.described_as("Array of home pheromones currently sensed")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("home_pheromones_sensed_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "home_pheromones_sensed_count"))
+			.in_category("Sensing")
+			.described_as("Number of home pheromones currently sensed")
+			.build()
+	] as Array[PropertyResult.PropertyInfo]
 	
-	# Ants sensing
-	getter = Callable(self, "ants_in_view")
-	properties_container.expose_property(
-		"ants_in_view",
-		getter,
-		Component.PropertyType.ARRAY,
-		Callable(),
-		"Array of ants currently in view",
-		"Sensing"
-	)
-	
-	getter = Callable(self, "ants_in_view_count")
-	properties_container.expose_property(
-		"ants_in_view_count",
-		getter,
-		Component.PropertyType.INT,
-		Callable(),
-		"Number of ants currently in view",
-		"Sensing"
-	)
-	
-	# Food pheromone sensing
-	getter = Callable(self, "food_pheromones_sensed")
-	properties_container.expose_property(
-		"food_pheromones_sensed",
-		getter,
-		Component.PropertyType.ARRAY,
-		Callable(),
-		"Array of food pheromones currently sensed",
-		"Sensing"
-	)
-	
-	getter = Callable(self, "food_pheromones_sensed_count")
-	properties_container.expose_property(
-		"food_pheromones_sensed_count",
-		getter,
-		Component.PropertyType.INT,
-		Callable(),
-		"Number of food pheromones currently sensed",
-		"Sensing"
-	)
-	
-	getter = Callable(self, "is_food_pheromones_sensed")
-	properties_container.expose_property(
-		"is_food_pheromones_sensed",
-		getter,
-		Component.PropertyType.BOOL,
-		Callable(),
-		"Whether any food pheromones are currently sensed",
-		"Sensing"
-	)
-	
-	# Home pheromone sensing
-	getter = Callable(self, "home_pheromones_sensed")
-	properties_container.expose_property(
-		"home_pheromones_sensed",
-		getter,
-		Component.PropertyType.ARRAY,
-		Callable(),
-		"Array of home pheromones currently sensed",
-		"Sensing"
-	)
-	
-	getter = Callable(self, "home_pheromones_sensed_count")
-	properties_container.expose_property(
-		"home_pheromones_sensed_count",
-		getter,
-		Component.PropertyType.INT,
-		Callable(),
-		"Number of home pheromones currently sensed",
-		"Sensing"
-	)
-	
-	getter = Callable(self, "is_home_pheromones_sensed")
-	properties_container.expose_property(
-		"is_home_pheromones_sensed",
-		getter,
-		Component.PropertyType.BOOL,
-		Callable(),
-		"Whether any home pheromones are currently sensed",
-		"Sensing"
-	)
+	properties_container.expose_properties(sensing_properties)
 
 func _init_food_properties() -> void:
-	var getter: Callable
+	var food_properties = [
+		PropertyResult.PropertyInfo.create("food_in_view")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "food_in_view"))
+			.in_category("Food")
+			.described_as("Array of food items currently in view")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_in_view_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "food_in_view_count"))
+			.in_category("Food")
+			.described_as("Number of food items currently in view")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_in_reach")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "food_in_reach"))
+			.in_category("Food")
+			.described_as("Array of food items currently in reach")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_in_reach_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "food_in_reach_count"))
+			.in_category("Food")
+			.described_as("Number of food items currently in reach")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("carried_food_mass")
+			.of_type(Component.PropertyType.FLOAT)
+			.with_getter(Callable(self, "carried_food_mass"))
+			.in_category("Food")
+			.described_as("Mass of food currently being carried")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("available_carry_mass")
+			.of_type(Component.PropertyType.FLOAT)
+			.with_getter(Callable(self, "available_carry_mass"))
+			.in_category("Food")
+			.described_as("Remaining carrying capacity available")
+			.build()
+	] as Array[PropertyResult.PropertyInfo]
 	
-	# Food visibility
-	getter = Callable(self, "food_in_view")
-	properties_container.expose_property(
-		"food_in_view",
-		getter,
-		Component.PropertyType.ARRAY,
-		Callable(),
-		"Array of food items currently in view",
-		"Food"
-	)
-	
-	getter = Callable(self, "food_in_view_count")
-	properties_container.expose_property(
-		"food_in_view_count",
-		getter,
-		Component.PropertyType.INT,
-		Callable(),
-		"Number of food items currently in view",
-		"Food"
-	)
-	
-	# Food reachability
-	getter = Callable(self, "food_in_reach")
-	properties_container.expose_property(
-		"food_in_reach",
-		getter,
-		Component.PropertyType.ARRAY,
-		Callable(),
-		"Array of food items currently in reach",
-		"Food"
-	)
-	
-	getter = Callable(self, "food_in_reach_count")
-	properties_container.expose_property(
-		"food_in_reach_count",
-		getter,
-		Component.PropertyType.INT,
-		Callable(),
-		"Number of food items currently in reach",
-		"Food"
-	)
-	
-	# Food carrying
-	getter = Callable(self, "carried_food_mass")
-	properties_container.expose_property(
-		"carried_food_mass",
-		getter,
-		Component.PropertyType.FLOAT,
-		Callable(),
-		"Mass of food currently being carried",
-		"Food"
-	)
-	
-	getter = Callable(self, "is_carrying_food")
-	properties_container.expose_property(
-		"is_carrying_food",
-		getter,
-		Component.PropertyType.BOOL,
-		Callable(),
-		"Whether the ant is currently carrying food",
-		"Food"
-	)
-	
-	getter = Callable(self, "available_carry_mass")
-	properties_container.expose_property(
-		"available_carry_mass",
-		getter,
-		Component.PropertyType.FLOAT,
-		Callable(),
-		"Remaining carrying capacity available",
-		"Food"
-	)
+	properties_container.expose_properties(food_properties)
 
 func _init_colony_properties() -> void:
-	var getter: Callable
+	var colony_properties = [
+		PropertyResult.PropertyInfo.create("distance_to_colony")
+			.of_type(Component.PropertyType.FLOAT)
+			.with_getter(Callable(self, "distance_to_colony"))
+			.in_category("Colony")
+			.described_as("Current distance to the colony")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("colony_radius")
+			.of_type(Component.PropertyType.FLOAT)
+			.with_getter(Callable(self, "colony_radius"))
+			.in_category("Colony")
+			.described_as("Radius of the colony")
+			.build()
+	] as Array[PropertyResult.PropertyInfo]
 	
-	getter = Callable(self, "distance_to_colony")
-	properties_container.expose_property(
-		"distance_to_colony",
-		getter,
-		Component.PropertyType.FLOAT,
-		Callable(),
-		"Current distance to the colony",
-		"Colony"
-	)
+	properties_container.expose_properties(colony_properties)
 	
-	getter = Callable(self, "colony_radius")
-	properties_container.expose_property(
-		"colony_radius",
-		getter,
-		Component.PropertyType.FLOAT,
-		Callable(),
-		"Radius of the colony",
-		"Colony"
-	)
-	
+# TODO: Might need to change how this is done
 ## Initialize attribute maps
 func _init_exposed_attributes() -> void:
 	if not attributes_container:
 		attributes_container = AttributesContainer.new(self)
 	# Attributes
-	attributes_container.register_attribute("reach", reach.get_exposed_properties())
-	attributes_container.register_attribute("vision", vision.get_exposed_properties())
-	attributes_container.register_attribute("sense", sense.get_exposed_properties())
-	attributes_container.register_attribute("energy", energy.get_exposed_properties())
-	attributes_container.register_attribute("strength", strength.get_exposed_properties())
-	attributes_container.register_attribute("health", health.get_exposed_properties())
-	attributes_container.register_attribute("speed", speed.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("reach", reach.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("vision", vision.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("sense", sense.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("energy", energy.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("strength", strength.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("health", health.get_exposed_properties())
+	attributes_container.register_attribute_from_dict("speed", speed.get_exposed_properties())
 	
 #endregion
 
@@ -529,12 +458,6 @@ func food_pheromones_sensed_count() -> int:
 		return food_pheromones_sensed().size()
 	)
 
-## Check if food pheromones are sensed
-func is_food_pheromones_sensed() -> bool:
-	return _get_cached("is_food_pheromones_sensed", "pheromones", func():
-		return not food_pheromones_sensed().is_empty()
-	)
-
 ## Get home pheromones sensed
 func home_pheromones_sensed() -> Array:
 	return _get_cached("home_pheromones_sensed", "pheromones", func():
@@ -547,22 +470,10 @@ func home_pheromones_sensed_count() -> int:
 		return home_pheromones_sensed().size()
 	)
 
-## Check if home pheromones are sensed
-func is_home_pheromones_sensed() -> bool:
-	return _get_cached("is_home_pheromones_sensed", "pheromones", func():
-		return not home_pheromones_sensed().is_empty()
-	)
-
 ## Get carried food mass
 func carried_food_mass() -> float:
 	return _get_cached("carried_food_mass", "stats", func():
 		return carried_food.mass()
-	)
-
-## Check if carrying food
-func is_carrying_food() -> bool:
-	return _get_cached("is_carrying_food", "stats", func():
-		return carried_food_mass() > 0
 	)
 
 ## Get available carry mass

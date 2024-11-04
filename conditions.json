@@ -71,6 +71,33 @@
 				"type": "PropertyCheck",
 				"value_from": "strength.carry_max"
 			}
-		}
+		},
+		"IsCarryingFood": {
+			 "description": "Whether the ant is currently carrying food",
+			 "evaluation": {
+				"operator": "GREATER_THAN",
+				"property": "carried_food_mass",
+				"type": "PropertyCheck",
+				"value": 0
+			}
+		},
+		"IsHomePheromoneSensed": {
+			  "description": "Whether any home pheromones are currently sensed",
+			  "evaluation": {
+				"operator": "GREATER_THAN",
+				"property": "home_pheromones_sensed_count",
+				"type": "PropertyCheck",
+				"value": 0
+		  }
+		},
+		"IsFoodPheromoneSensed": {
+			  "description": "Whether any food pheromones are currently sensed", 
+			  "evaluation": {
+				"operator": "GREATER_THAN",
+				"property": "food_pheromones_sensed_count",
+				"type": "PropertyCheck",
+				"value": 0
+		  }
+		},
 	}
 }

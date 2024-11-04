@@ -14,29 +14,28 @@ func _init(
 	_harvesting_rate = harvesting_rate
 	_storing_rate = storing_rate
 	
-	expose_property(
-		"movement_rate",
-		Callable(self, "movement_rate"),
-		PropertyType.FLOAT,
-		Callable(self, "set_movement_rate"),
-		"Rate at which the ant can move (units/second)"
-	)
-	
-	expose_property(
-		"harvesting_rate",
-		Callable(self, "harvesting_rate"),
-		PropertyType.FLOAT,
-		Callable(self, "set_harvesting_rate"),
-		"Rate at which the ant can harvest resources (units/second)"
-	)
-	
-	expose_property(
-		"storing_rate",
-		Callable(self, "storing_rate"),
-		PropertyType.FLOAT,
-		Callable(self, "set_storing_rate"),
-		"Rate at which the ant can store resources (units/second)"
-	)
+	properties_container.expose_properties([
+		PropertyResult.PropertyInfo.create("movement_rate")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "movement_rate"))
+			.with_setter(Callable(self, "set_movement_rate"))
+			.described_as("Rate at which the ant can move (units/second)")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("harvesting_rate")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "harvesting_rate"))
+			.with_setter(Callable(self, "set_harvesting_rate"))
+			.described_as("Rate at which the ant can harvest resources (units/second)")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("storing_rate")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "storing_rate"))
+			.with_setter(Callable(self, "set_storing_rate"))
+			.described_as("Rate at which the ant can store resources (units/second)")
+			.build()
+	])
 
 func movement_rate() -> float:
 	return _movement_rate

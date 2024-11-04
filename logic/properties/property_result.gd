@@ -70,7 +70,59 @@ class PropertyInfo:
 			"description": description,
 			"metadata": metadata
 		}
+		
+	# Static factory method for creating properties
+	static func create(name: String) -> PropertyInfoBuilder:
+		return PropertyInfoBuilder.new(name)
 
+## New builder class that works with existing PropertyInfo
+class PropertyInfoBuilder:
+	var _name: String
+	var _type: Component.PropertyType
+	var _getter: Callable
+	var _setter: Callable = Callable()
+	var _category: String = ""
+	var _description: String = ""
+	var _metadata: Dictionary = {}
+	
+	func _init(p_name: String) -> void:
+		_name = p_name
+	
+	func of_type(p_type: Component.PropertyType) -> PropertyInfoBuilder:
+		_type = p_type
+		return self
+	
+	func with_getter(p_getter: Callable) -> PropertyInfoBuilder:
+		_getter = p_getter
+		return self
+	
+	func with_setter(p_setter: Callable) -> PropertyInfoBuilder:
+		_setter = p_setter
+		return self
+	
+	func in_category(p_category: String) -> PropertyInfoBuilder:
+		_category = p_category
+		return self
+	
+	func described_as(p_description: String) -> PropertyInfoBuilder:
+		_description = p_description
+		return self
+	
+	func with_metadata(p_metadata: Dictionary) -> PropertyInfoBuilder:
+		_metadata = p_metadata
+		return self
+	
+	func build(initial_value: Variant = null) -> PropertyInfo:
+		return PropertyInfo.new(
+			_name,
+			_type,
+			initial_value,
+			_getter,
+			_setter,
+			_category,
+			_description,
+			_metadata
+		)
 
 ## Standardized category information structure
 class CategoryInfo:

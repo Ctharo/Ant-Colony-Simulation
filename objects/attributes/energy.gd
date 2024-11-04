@@ -12,53 +12,45 @@ var _current_level: float = _max_level :
 			depleted.emit()
 
 func _init() -> void:
-	expose_property(
-		"max_level",
-		Callable(self, "max_level"),
-		PropertyType.FLOAT,
-		func(v): _max_level = v,
-		"Maximum energy level the ant can have"
-	)
-	
-	expose_property(
-		"current_level",
-		Callable(self, "current_level"),
-		PropertyType.FLOAT,
-		func(v): _current_level = v,
-		"Current energy level of the ant"
-	)
-	
-	expose_property(
-		"percentage",
-		Callable(self, "percentage"),
-		PropertyType.FLOAT,
-		Callable(),
-		"Current energy level as a percentage of max energy"
-	)
-	
-	expose_property(
-		"is_critically_low",
-		Callable(self, "is_critically_low"),
-		PropertyType.BOOL,
-		Callable(),
-		"Whether energy is below critical threshold"
-	)
-	
-	expose_property(
-		"is_full",
-		Callable(self, "is_full"),
-		PropertyType.BOOL,
-		Callable(),
-		"Whether energy is at maximum level"
-	)
-	
-	expose_property(
-		"replenishable_amount",
-		Callable(self, "replenishable_amount"),
-		PropertyType.FLOAT,
-		Callable(),
-		"Amount of energy that can be replenished before reaching max"
-	)
+	properties_container.expose_properties([
+		PropertyResult.PropertyInfo.create("max_level")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "max_level"))
+			.with_setter(func(v): _max_level = v)
+			.described_as("Maximum energy level the ant can have")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("current_level")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "current_level"))
+			.with_setter(func(v): _current_level = v)
+			.described_as("Current energy level of the ant")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("percentage")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "percentage"))
+			.described_as("Current energy level as a percentage of max energy")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("is_critically_low")
+			.of_type(PropertyType.BOOL)
+			.with_getter(Callable(self, "is_critically_low"))
+			.described_as("Whether energy is below critical threshold")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("is_full")
+			.of_type(PropertyType.BOOL)
+			.with_getter(Callable(self, "is_full"))
+			.described_as("Whether energy is at maximum level")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("replenishable_amount")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "replenishable_amount"))
+			.described_as("Amount of energy that can be replenished before reaching max")
+			.build()
+	])
 
 ## Calculate energy level as a percentage of maximum
 func percentage() -> float:

@@ -21,6 +21,20 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 	_cache = PropertyCache.new() if use_caching else null
 
 #region Property Management
+
+func expose_properties(properties: Array[PropertyResult.PropertyInfo]) -> Array[PropertyResult]:
+	var results: Array[PropertyResult] = []
+	for prop in properties:
+		results.append(expose_property(
+			prop.name,
+			prop.getter,
+			prop.type,
+			prop.setter,
+			prop.description,
+			prop.category
+		))
+	return results
+	
 ## Exposes a new property with the given configuration
 func expose_property(
 	name: String, 

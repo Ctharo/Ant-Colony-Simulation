@@ -11,53 +11,45 @@ var _current_level: float = _max_level :
 			depleted.emit()
 
 func _init() -> void:
-	expose_property(
-		"max_level",
-		Callable(self, "max_level"),
-		PropertyType.FLOAT,
-		Callable(self, "set_max_level"),
-		"Maximum health level the ant can have"
-	)
-	
-	expose_property(
-		"current_level",
-		Callable(self, "current_level"),
-		PropertyType.FLOAT,
-		Callable(self, "set_current_level"),
-		"Current health level of the ant"
-	)
-	
-	expose_property(
-		"percentage",
-		Callable(self, "health_percentage"),
-		PropertyType.FLOAT,
-		Callable(),
-		"Current health level as a percentage of max health"
-	)
-	
-	expose_property(
-		"is_critically_low",
-		Callable(self, "is_critically_low"),
-		PropertyType.BOOL,
-		Callable(),
-		"Whether health is below critical threshold (20%)"
-	)
-	
-	expose_property(
-		"is_full",
-		Callable(self, "is_full"),
-		PropertyType.BOOL,
-		Callable(),
-		"Whether health is at maximum level"
-	)
-	
-	expose_property(
-		"restorable_amount",
-		Callable(self, "restorable_amount"),
-		PropertyType.FLOAT,
-		Callable(),
-		"Amount of health that can be restored before reaching max"
-	)
+	properties_container.expose_properties([
+		PropertyResult.PropertyInfo.create("max_level")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "max_level"))
+			.with_setter(Callable(self, "set_max_level"))
+			.described_as("Maximum health level the ant can have")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("current_level")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "current_level"))
+			.with_setter(Callable(self, "set_current_level"))
+			.described_as("Current health level of the ant")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("percentage")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "health_percentage"))
+			.described_as("Current health level as a percentage of max health")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("is_critically_low")
+			.of_type(PropertyType.BOOL)
+			.with_getter(Callable(self, "is_critically_low"))
+			.described_as("Whether health is below critical threshold (20%)")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("is_full")
+			.of_type(PropertyType.BOOL)
+			.with_getter(Callable(self, "is_full"))
+			.described_as("Whether health is at maximum level")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("restorable_amount")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "restorable_amount"))
+			.described_as("Amount of health that can be restored before reaching max")
+			.build()
+	])
 
 func max_level() -> float:
 	return _max_level

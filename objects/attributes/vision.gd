@@ -4,14 +4,14 @@ extends Attribute
 var _distance: float
 
 func _init() -> void:
-	expose_property(
-		"distance",
-		Callable(self, "distance"),
-		PropertyType.FLOAT,
-		Callable(self, "set_distance"),
-		"Maximum distance at which the ant can see"
-	)
-
+	properties_container.expose_properties([
+		PropertyResult.PropertyInfo.create("distance")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "distance"))
+			.with_setter(Callable(self, "set_distance"))
+			.described_as("Maximum distance at which the ant can see")
+			.build()
+	])
 func distance() -> float:
 	return _distance
 

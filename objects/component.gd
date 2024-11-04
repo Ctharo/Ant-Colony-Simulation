@@ -27,30 +27,6 @@ enum PropertyType {
 #endregion
 
 #region Property Management
-## Expose a property with type information and optional setter
-## Returns: PropertyResult indicating success or any errors
-func expose_property(
-	name: String, 
-	getter: Callable, 
-	type: PropertyType, 
-	setter: Callable = Callable(),
-	description: String = ""
-) -> PropertyResult:
-	# Validate getter
-	if _getter_requires_args(getter):
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_GETTER,
-			"Getter for property '%s' requires arguments" % name
-		)
-	
-	return properties_container.expose_property(
-		name,
-		getter,
-		type,
-		setter,
-		description
-	)
 
 ## Get property metadata
 ## Returns: PropertyResult.PropertyInfo or null if not found
