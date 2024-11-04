@@ -12,6 +12,9 @@ var _current_level: float = _max_level :
 			depleted.emit()
 
 func _init() -> void:
+	super._init("Energy")
+	
+func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("max_level")
 			.of_type(PropertyType.FLOAT)
@@ -32,25 +35,15 @@ func _init() -> void:
 			.with_getter(Callable(self, "percentage"))
 			.described_as("Current energy level as a percentage of max energy")
 			.build(),
-			
-		PropertyResult.PropertyInfo.create("is_critically_low")
-			.of_type(PropertyType.BOOL)
-			.with_getter(Callable(self, "is_critically_low"))
-			.described_as("Whether energy is below critical threshold")
-			.build(),
-			
-		PropertyResult.PropertyInfo.create("is_full")
-			.of_type(PropertyType.BOOL)
-			.with_getter(Callable(self, "is_full"))
-			.described_as("Whether energy is at maximum level")
-			.build(),
-			
+		
 		PropertyResult.PropertyInfo.create("replenishable_amount")
 			.of_type(PropertyType.FLOAT)
 			.with_getter(Callable(self, "replenishable_amount"))
 			.described_as("Amount of energy that can be replenished before reaching max")
 			.build()
 	])
+
+
 
 ## Calculate energy level as a percentage of maximum
 func percentage() -> float:

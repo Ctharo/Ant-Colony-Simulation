@@ -69,14 +69,14 @@ func set_property(name: String, value: Variant) -> PropertyResult:
 	return properties_container.set_property_value(name, value)
 
 ## Get information about all exposed properties
-## Returns: Dictionary mapping property names to their information
-func get_exposed_properties() -> Dictionary:
-	var result = {}
+## Returns: PropertyResult
+func get_exposed_properties() -> Array[PropertyResult.PropertyInfo]:
+	var properties: Array[PropertyResult.PropertyInfo] = []
 	for name in properties_container.get_properties():
 		var info = properties_container.get_property_info(name)
 		if info:
-			result[name] = info.to_dict()
-	return result
+			properties.append(info)
+	return properties
 #endregion
 
 #region Helper Methods

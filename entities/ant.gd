@@ -114,17 +114,17 @@ const CACHE_DURATIONS = {
 }
 
 func _init():
-	
-	reach = Reach.new()
-	vision = Vision.new()
-	sense = Sense.new()
 	energy = Energy.new()
-	strength = Strength.new()
-	health = Health.new()
-	speed = Speed.new()
-		
-	_init_properties()
+#
+	#reach = Reach.new()
+	#vision = Vision.new()
+	#sense = Sense.new()
+	#strength = Strength.new()
+	#health = Health.new()
+	#speed = Speed.new()
+		#
 	_init_exposed_attributes()
+	#_init_properties()
 	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
@@ -271,13 +271,13 @@ func _init_exposed_attributes() -> void:
 	if not attributes_container:
 		attributes_container = AttributesContainer.new(self)
 	# Attributes
-	attributes_container.register_attribute_from_dict("reach", reach.get_exposed_properties())
-	attributes_container.register_attribute_from_dict("vision", vision.get_exposed_properties())
-	attributes_container.register_attribute_from_dict("sense", sense.get_exposed_properties())
-	attributes_container.register_attribute_from_dict("energy", energy.get_exposed_properties())
-	attributes_container.register_attribute_from_dict("strength", strength.get_exposed_properties())
-	attributes_container.register_attribute_from_dict("health", health.get_exposed_properties())
-	attributes_container.register_attribute_from_dict("speed", speed.get_exposed_properties())
+	attributes_container.register_attribute(energy)
+	#attributes_container.register_attribute(reach)
+	#attributes_container.register_attribute_from_dict("vision", vision.get_exposed_properties())
+	#attributes_container.register_attribute_from_dict("sense", sense.get_exposed_properties())
+	#attributes_container.register_attribute_from_dict("strength", strength.get_exposed_properties())
+	#attributes_container.register_attribute_from_dict("health", health.get_exposed_properties())
+	#attributes_container.register_attribute_from_dict("speed", speed.get_exposed_properties())
 	
 #endregion
 

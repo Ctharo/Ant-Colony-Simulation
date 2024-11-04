@@ -99,5 +99,23 @@
 				"value": 0
 		  }
 		},
+		"IsEnergyCriticallyLow": {
+		  "description": "Whether energy is below critical threshold",
+		  "evaluation": {
+			"operator": "LESS_THAN",
+			"property": "percentage",
+			"type": "PropertyCheck",
+			"value": 20.0
+		  }
+		},
+		"IsEnergyFull": {
+		  "description": "Whether energy is at maximum level",
+		  "evaluation": {
+			"operator": "EQUALS",
+			"property": "current_level",
+			"type": "PropertyCheck",
+			"value_from": "max_level"
+		  }
+		},
 	}
 }

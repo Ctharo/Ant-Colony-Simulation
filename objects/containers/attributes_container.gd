@@ -24,11 +24,10 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 #region Attribute Management
 ## Registers a new attribute with properties using PropertyInfo builders
 ## Returns: PropertyResult with the created attribute info
-func register_attribute(
-	name: String,
-	properties: Array[PropertyResult.PropertyInfo],
-	metadata: Dictionary = {}
-) -> PropertyResult:
+## Registers a new attribute by automatically collecting its exposed properties
+func register_attribute(attribute: Attribute) -> PropertyResult:
+	var name = attribute.attribute_name
+	
 	# Validate attribute doesn't exist
 	if _attributes.has(name):
 		return PropertyResult.new(
@@ -38,48 +37,41 @@ func register_attribute(
 		)
 	
 	# Create category info for the attribute
-	var category_info = PropertyResult.CategoryInfo.new(name, metadata)
+	var category_info = PropertyResult.CategoryInfo.new(name)
 	
-	# Process properties
+	# Get properties exposed by the attribute
+	var properties = attribute.get_exposed_properties()
+	
+	# Add all properties to the category
 	for prop_info in properties:
-		# Update the category to match the attribute
-		var updated_prop = PropertyResult.PropertyInfo.create(prop_info.name)\
-			.of_type(prop_info.type)\
-			.with_getter(prop_info.getter)\
-			.with_setter(prop_info.setter)\
-			.in_category(name)\
-			.described_as(prop_info.description)\
-			.with_metadata(prop_info.metadata)\
-			.build(prop_info.value)
-			
-		category_info.add_property(updated_prop)
+		category_info.add_property(prop_info)
 	
 	_attributes[name] = category_info
 	attribute_added.emit(category_info)
 	return PropertyResult.new(category_info)
 
-## Alternative registration method using dictionary format for backward compatibility
-func register_attribute_from_dict(
-	name: String,
-	properties: Dictionary,
-	metadata: Dictionary = {}
-) -> PropertyResult:
-	var prop_infos: Array[PropertyResult.PropertyInfo] = []
-	
-	for prop_name in properties:
-		var prop_data = properties[prop_name]
-		
-		var builder = PropertyResult.PropertyInfo.create(prop_name)\
-			.of_type(prop_data.get("type", Component.PropertyType.UNKNOWN))\
-			.in_category(name)\
-			.described_as(prop_data.get("description", ""))
-			
-		if prop_data.get("writable", true):
-			builder.with_setter(Callable())
-			
-		prop_infos.append(builder.build(prop_data.get("value")))
-	
-	return register_attribute(name, prop_infos, metadata)	
+### Alternative registration method using dictionary format for backward compatibility
+#func register_attribute_from_dict(
+	#name: String,
+	#properties: Dictionary,
+	#metadata: Dictionary = {}
+#) -> PropertyResult:
+	#var prop_infos: Array[PropertyResult.PropertyInfo] = []
+	#
+	#for prop_name in properties:
+		#var prop_data = properties[prop_name]
+		#
+		#var builder = PropertyResult.PropertyInfo.create(prop_name)\
+			#.of_type(prop_data.get("type", Component.PropertyType.UNKNOWN))\
+			#.in_category(name)\
+			#.described_as(prop_data.get("description", ""))
+			#
+		#if prop_data.get("writable", true):
+			#builder.with_setter(Callable())
+			#
+		#prop_infos.append(builder.build(prop_data.get("value")))
+	#
+	#return register_attribute(name, prop_infos, metadata)	
 	
 ## Removes an attribute and all its properties
 func remove_attribute(name: String) -> PropertyResult:

@@ -18,3 +18,9 @@ func cache_value(path: String, value: Variant, ttl: float = -1.0) -> void:
 func clear() -> void:
 	values.clear()
 	valid_until.clear()
+
+# TODO: Not checking?
+func has_valid_cache(path: String) -> bool:
+	if not values.has(path) or Time.get_ticks_msec() > valid_until[path]:
+		return false
+	return true

@@ -28,6 +28,9 @@ func _init(p_value: Variant = null, p_error: ErrorType = ErrorType.NONE, p_messa
 func success() -> bool:
 	return error == ErrorType.NONE
 
+func is_error() -> bool:
+	return !success()
+	
 ## Property information structure
 class PropertyInfo:
 	var name: String
