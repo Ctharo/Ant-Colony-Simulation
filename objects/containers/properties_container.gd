@@ -21,51 +21,51 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 	_cache = PropertyCache.new() if use_caching else null
 
 #region Property Management
-
+## Accepts an Array of type [class PropertyResult.PropertyInfo] and calls [member expose_property] for each
+## Returns: Array of type [class PropertyResult]
 func expose_properties(properties: Array[PropertyResult.PropertyInfo]) -> Array[PropertyResult]:
 	var results: Array[PropertyResult] = []
 	for prop in properties:
-		results.append(expose_property(
-			prop.name,
-			prop.getter,
-			prop.type,
-			prop.setter,
-			prop.description,
-			prop.category
-		))
+		results.append(expose_property(prop))
 	return results
 	
 ## Exposes a new property with the given configuration
-func expose_property(
-	name: String, 
-	getter: Callable, 
-	type: Component.PropertyType, 
-	setter: Callable = Callable(),
-	description: String = "",	
-	category: String = ""
-) -> PropertyResult:
+func expose_property(property: PropertyResult.PropertyInfo) -> PropertyResult:
 	# Validate property doesn't exist
+	var name = property.name
+	var type = property.type
+	var getter = property.getter
+	var setter = property.setter
+	var category = property.category
+	var description = property.description
+	
 	if _properties.has(name):
+		var error_msg: String = "Property '%s' already exists" % property.name
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to expose property %s -> %s" % [name, error_msg])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.DUPLICATE_PROPERTY,
-			"Property '%s' already exists" % name
+			error_msg
 		)
 	
 	# Validate getter
 	if not _is_valid_getter(getter):
+		var error_msg: String = "Invalid getter for property '%s'" % name
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to expose property %s -> %s" % [name, error_msg])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.INVALID_GETTER,
-			"Invalid getter for property '%s'" % name
+			error_msg
 		)
 	
 	# Validate setter if provided
 	if setter.is_valid() and not _is_valid_setter(setter):
+		var error_msg: String = "Invalid setter for property '%s'" % name
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to expose property %s -> %s" % [name, error_msg])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.INVALID_SETTER,
-			"Invalid setter for property '%s'" % name
+			error_msg
 		)
 	
 	# Get initial value
@@ -90,11 +90,13 @@ func expose_property(
 		_ensure_category(category).add_property(prop_info)
 	
 	property_added.emit(prop_info)
+	_trace("Property %s successfully added and exposed in property container" % name)
 	return PropertyResult.new(prop_info)
 
 ## Removes a property from the container
 func remove_property(name: String) -> PropertyResult:
 	if not _properties.has(name):
+		_trace("Property %s to remove not found in property container" % name)
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
@@ -110,6 +112,7 @@ func remove_property(name: String) -> PropertyResult:
 	_properties.erase(name)
 	_invalidate_cache(name)
 	property_removed.emit(name)
+	_trace("Property %s removed from property container" % name)
 	return PropertyResult.new(null)
 
 ## Gets the value of a property
@@ -203,7 +206,12 @@ func get_categories() -> Array:
 
 ## Gets properties in a specific category
 func get_properties_in_category(category: String) -> Array[String]:
+	if category.is_empty():
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "category argument is not valid for retrieving properties in properties container" % category)
+		return []
 	if not _categories.has(category):
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Category '%s' not found in categories list in properties container" % category)
+		_trace("Categories in property container: %s" % _categories)
 		return []
 	return _categories[category].properties.map(func(p): return p.name)
 
@@ -303,3 +311,9 @@ func _is_valid_type(value: Variant, expected_type: Component.PropertyType) -> bo
 			return value is Object
 	return false
 #endregion
+
+func _trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY,
+		message,
+		{"From": "properties_container"}
+	)

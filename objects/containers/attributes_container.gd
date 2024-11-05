@@ -29,6 +29,7 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	
 	# Validate attribute doesn't exist
 	if _attributes.has(name):
+		DebugLogger.trace(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, "Attribute '%s' already exists" % attribute.attribute_name])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.DUPLICATE_PROPERTY,
@@ -50,29 +51,6 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	_attributes[name] = category_info
 	attribute_added.emit(category_info)
 	return PropertyResult.new(category_info)
-
-### Alternative registration method using dictionary format for backward compatibility
-#func register_attribute_from_dict(
-	#name: String,
-	#properties: Dictionary,
-	#metadata: Dictionary = {}
-#) -> PropertyResult:
-	#var prop_infos: Array[PropertyResult.PropertyInfo] = []
-	#
-	#for prop_name in properties:
-		#var prop_data = properties[prop_name]
-		#
-		#var builder = PropertyResult.PropertyInfo.create(prop_name)\
-			#.of_type(prop_data.get("type", Component.PropertyType.UNKNOWN))\
-			#.in_category(name)\
-			#.described_as(prop_data.get("description", ""))
-			#
-		#if prop_data.get("writable", true):
-			#builder.with_setter(Callable())
-			#
-		#prop_infos.append(builder.build(prop_data.get("value")))
-	#
-	#return register_attribute(name, prop_infos, metadata)	
 	
 ## Removes an attribute and all its properties
 func remove_attribute(name: String) -> PropertyResult:

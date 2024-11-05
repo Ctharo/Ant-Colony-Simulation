@@ -148,68 +148,7 @@ func _process(delta: float) -> void:
 func _init_properties() -> void:
 	properties_container = PropertiesContainer.new(self)
 	
-	var results: Array[PropertyResult]
-	results.append_array(_init_sensing_properties())
-	results.append_array(_init_food_properties())
-	results.append_array(_init_colony_properties())
-	
-	for result: PropertyResult in results:
-		if result.is_error():
-			DebugLogger.error(DebugLogger.Category.PROPERTY, result.error_message)
-		else:
-			var n = result.value.name
-			DebugLogger.debug(DebugLogger.Category.PROPERTY, "Successfully initialized property %s" % result.value.name)
-	
-func _init_sensing_properties() -> Array[PropertyResult]:
-	var sensing_properties = [
-		PropertyResult.PropertyInfo.create("ants_in_view")
-			.of_type(Component.PropertyType.ARRAY)
-			.with_getter(Callable(self, "ants_in_view"))
-			.in_category("Sensing")
-			.described_as("Array of ants currently in view")
-			.build(),
-			
-		PropertyResult.PropertyInfo.create("ants_in_view_count")
-			.of_type(Component.PropertyType.INT)
-			.with_getter(Callable(self, "ants_in_view_count"))
-			.in_category("Sensing")
-			.described_as("Number of ants currently in view")
-			.build(),
-			
-		PropertyResult.PropertyInfo.create("food_pheromones_sensed")
-			.of_type(Component.PropertyType.ARRAY)
-			.with_getter(Callable(self, "food_pheromones_sensed"))
-			.in_category("Sensing")
-			.described_as("Array of food pheromones currently sensed")
-			.build(),
-			
-		PropertyResult.PropertyInfo.create("food_pheromones_sensed_count")
-			.of_type(Component.PropertyType.INT)
-			.with_getter(Callable(self, "food_pheromones_sensed_count"))
-			.in_category("Sensing")
-			.described_as("Number of food pheromones currently sensed")
-			.build(),
-			
-		PropertyResult.PropertyInfo.create("home_pheromones_sensed")
-			.of_type(Component.PropertyType.ARRAY)
-			.with_getter(Callable(self, "home_pheromones_sensed"))
-			.in_category("Sensing")
-			.described_as("Array of home pheromones currently sensed")
-			.build(),
-			
-		PropertyResult.PropertyInfo.create("home_pheromones_sensed_count")
-			.of_type(Component.PropertyType.INT)
-			.with_getter(Callable(self, "home_pheromones_sensed_count"))
-			.in_category("Sensing")
-			.described_as("Number of home pheromones currently sensed")
-			.build()
-	] as Array[PropertyResult.PropertyInfo]
-	
-	return properties_container.expose_properties(sensing_properties)
-
-
-func _init_food_properties() -> Array[PropertyResult]:
-	var food_properties = [
+	var properties: Array[PropertyResult.PropertyInfo] = [
 		PropertyResult.PropertyInfo.create("food_in_view")
 			.of_type(Component.PropertyType.ARRAY)
 			.with_getter(Callable(self, "food_in_view"))
@@ -250,14 +189,8 @@ func _init_food_properties() -> Array[PropertyResult]:
 			.with_getter(Callable(self, "available_carry_mass"))
 			.in_category("Food")
 			.described_as("Remaining carrying capacity available")
-			.build()
-	] as Array[PropertyResult.PropertyInfo]
-	
-	return properties_container.expose_properties(food_properties)
-
+			.build(),
 			
-func _init_colony_properties() -> Array[PropertyResult]:
-	var colony_properties = [
 		PropertyResult.PropertyInfo.create("distance_to_colony")
 			.of_type(Component.PropertyType.FLOAT)
 			.with_getter(Callable(self, "distance_to_colony"))
@@ -270,26 +203,74 @@ func _init_colony_properties() -> Array[PropertyResult]:
 			.with_getter(Callable(self, "colony_radius"))
 			.in_category("Colony")
 			.described_as("Radius of the colony")
-			.build()
-	] as Array[PropertyResult.PropertyInfo]
-	
-	return properties_container.expose_properties(colony_properties)
-
-	
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("ants_in_view")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "ants_in_view"))
+			.in_category("Sensing")
+			.described_as("Array of ants currently in view")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("ants_in_view_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "ants_in_view_count"))
+			.in_category("Sensing")
+			.described_as("Number of ants currently in view")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_pheromones_sensed")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "food_pheromones_sensed"))
+			.in_category("Sensing")
+			.described_as("Array of food pheromones currently sensed")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("food_pheromones_sensed_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "food_pheromones_sensed_count"))
+			.in_category("Sensing")
+			.described_as("Number of food pheromones currently sensed")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("home_pheromones_sensed")
+			.of_type(Component.PropertyType.ARRAY)
+			.with_getter(Callable(self, "home_pheromones_sensed"))
+			.in_category("Sensing")
+			.described_as("Array of home pheromones currently sensed")
+			.build(),
+			
+		PropertyResult.PropertyInfo.create("home_pheromones_sensed_count")
+			.of_type(Component.PropertyType.INT)
+			.with_getter(Callable(self, "home_pheromones_sensed_count"))
+			.in_category("Sensing")
+			.described_as("Number of home pheromones currently sensed")
+			.build(),
+		]
+		
+	var results: Array[PropertyResult] = properties_container.expose_properties(properties)
+	for property in properties:
+		var result = properties_container.expose_property(property)
+		if result.is_error():
+			DebugLogger.error(DebugLogger.Category.PROPERTY,"Failed to register property %s -> %s" % [property.name, result.error_message])
+		else:
+			DebugLogger.trace(DebugLogger.Category.PROPERTY, "Successfully registered property %s" % result.value.name)
+		
 ## Initialize attribute maps
 func _init_attributes() -> void:
 	if not attributes_container:
 		attributes_container = AttributesContainer.new(self)
-	# Attributes
-	attributes_container.register_attribute(energy)
-	attributes_container.register_attribute(reach)
-	attributes_container.register_attribute(vision)
-	attributes_container.register_attribute(sense)
-	attributes_container.register_attribute(strength)
-	attributes_container.register_attribute(health)
-	attributes_container.register_attribute(speed)
-	
+	var attributes: Array = [energy, reach, vision, sense, strength, health, speed]
+	for attribute: Attribute in attributes:
+		var result = attributes_container.register_attribute(attribute)
+		if result.is_error():
+			DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, result.error_message])
+		else:
+			DebugLogger.trace(DebugLogger.Category.PROPERTY, "Successfully registered attribute %s" % attribute.attribute_name)
+
 #endregion
+
+
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass

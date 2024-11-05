@@ -26,8 +26,12 @@ enum PropertyType {
 }
 #endregion
 
-#region Property Management
+func _init() -> void:
+	properties_container.property_added.connect(
+		func(property): _trace("Property %s added to properties container" % property)
+	)
 
+#region Property Management
 ## Get property metadata
 ## Returns: PropertyResult.PropertyInfo or null if not found
 func get_property(name: String) -> PropertyResult.PropertyInfo:
@@ -38,17 +42,21 @@ func get_property(name: String) -> PropertyResult.PropertyInfo:
 func get_property_value(name: String) -> PropertyResult:
 	var property = get_property(name)
 	if not property:
+		var error_msg: String = "Property '%s' not found" % name
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
-			"Property '%s' not found" % name
+			error_msg
 		)
 	
 	if not property.getter.is_valid():
+		var error_msg: String = "Invalid getter for property '%s'" % name
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.INVALID_GETTER,
-			"Invalid getter for property '%s'" % name
+			error_msg
 		)
 	
 	# Get the value
@@ -56,9 +64,11 @@ func get_property_value(name: String) -> PropertyResult:
 	
 	# Validate result
 	if value == null:
+		var warn_msg: String = "Getter for property '%s' returned null" % name
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, warn_msg])
 		DebugLogger.warn(
 			DebugLogger.Category.PROPERTY,
-			"Getter for property '%s' returned null" % name
+			warn_msg
 		)
 	
 	return PropertyResult.new(value)
@@ -71,11 +81,13 @@ func set_property(name: String, value: Variant) -> PropertyResult:
 ## Get information about all exposed properties
 ## Returns: PropertyResult
 func get_exposed_properties() -> Array[PropertyResult.PropertyInfo]:
+	_trace("Attempting to retrieve %s exposed properties" % properties_container.get_properties().size())
 	var properties: Array[PropertyResult.PropertyInfo] = []
 	for name in properties_container.get_properties():
 		var info = properties_container.get_property_info(name)
 		if info:
 			properties.append(info)
+	_trace("Retrieved %s exposed properties" % properties.size())
 	return properties
 #endregion
 
@@ -100,3 +112,9 @@ static func type_to_string(type: PropertyType) -> String:
 		PropertyType.OBJECT: return "Object"
 		_: return "Unknown"
 #endregion
+
+func _trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY,
+		message,
+		{"From": "component"}
+	)

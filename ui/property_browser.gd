@@ -157,8 +157,11 @@ func create_ui() -> void:
 
 func _on_mode_changed(index: int) -> void:
 	current_mode = "Direct" if index == 0 else "Attributes"
+	var other_mode = "Attributes" if index == 0 else "Direct"
 	category_label.text = "Categories" if current_mode == "Direct" else "Attributes"
 	_refresh_view()
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Changed browser mode from %s to %s" % [other_mode, current_mode])
+
 
 func _refresh_view() -> void:
 	if not current_ant:
@@ -169,6 +172,7 @@ func _refresh_view() -> void:
 	path_label.text = ""
 
 func _populate_properties(category: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Attempting to populate properties list in browser")
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
@@ -180,9 +184,12 @@ func _populate_properties(category: String) -> void:
 		var attr_properties = current_ant.attributes_container.get_attribute_properties(category)
 		properties = attr_properties.keys()
 	
+	if properties.is_empty():
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Properties list is empty, cannot populate property list in browser")
+	
 	for prop_name in properties:
 		var item = properties_tree.create_item(root)
-		item.set_text(COL_NAME, snake_to_readable(prop_name))
+		item.set_text(COL_NAME, Helper.snake_to_readable(prop_name))
 		
 		var prop_info: PropertyResult.PropertyInfo
 		if current_mode == "Direct":
@@ -198,15 +205,10 @@ func _populate_properties(category: String) -> void:
 			item.set_text(COL_TYPE, "Unknown")
 			item.set_text(COL_VALUE, "<error>")
 
-## Helper function to convert snake_case to Title Case
-static func snake_to_readable(text: String) -> String:
-	# Replace underscores with spaces and capitalize each word
-	var words = text.split("_")
-	for i in range(words.size()):
-		words[i] = words[i].capitalize() if i == 0 else words[i]
-	return " ".join(words)
 
 func _refresh_categories() -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Refreshing primary list in browser")
+
 	category_list.clear()
 	properties_tree.clear()
 	
@@ -221,6 +223,7 @@ func _refresh_categories() -> void:
 
 func _on_category_selected(index: int) -> void:
 	var category_name = category_list.get_item_text(index).to_lower()
+	_trace("Category selected: %s" % category_name)
 	current_category = category_name
 	_populate_properties(category_name)
 	description_label.text = ""  # Clear description when category changes
@@ -228,10 +231,12 @@ func _on_category_selected(index: int) -> void:
 func _on_property_selected() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property selected")
 		return
 		
 	var prop_info = selected.get_metadata(0) as PropertyResult.PropertyInfo
 	if not prop_info:
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property info found (%s) for property %s" % [prop_info, selected])
 		return
 	
 	# Update description
@@ -249,3 +254,9 @@ func _on_property_selected() -> void:
 
 func _format_value(value: Variant) -> String:
 	return PropertyResult.format_value(value)
+
+func _trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY,
+		message,
+		{"From": "property_browser"}
+	)

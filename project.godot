@@ -25,3 +25,7 @@ PheromoneManager="*res://managers/pheromone_manager.gd"
 AntManager="*res://managers/ant_manager.gd"
 FoodManager="*res://managers/food_manager.gd"
 ColonyManager="*res://managers/colony_manager.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/Todo_Manager/plugin.cfg")
