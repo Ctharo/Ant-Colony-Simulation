@@ -29,26 +29,36 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	
 	# Validate attribute doesn't exist
 	if _attributes.has(name):
-		DebugLogger.trace(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, "Attribute '%s' already exists" % attribute.attribute_name])
+		var msg: String = "Attribute '%s' already exists" % attribute.attribute_name
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, msg])
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.DUPLICATE_PROPERTY,
-			"Attribute '%s' already exists" % name
+			msg
 		)
 	
 	# Create category info for the attribute
 	var category_info = PropertyResult.CategoryInfo.new(name)
+	var before_count = _attributes.size()
 	
 	# Get properties exposed by the attribute
 	var properties = attribute.get_exposed_properties()
 	
+	var msg: String = "Adding %s properties to attribute %s" % [properties.size(), name]
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
 	# Add all properties to the category
 	for prop_info in properties:
-		var value = prop_info.getter.call() if prop_info.getter.is_valid() else null
+		msg = "Calling getter for property %s of attribute %s" % [prop_info.name, name]
+		DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
+		var value = get_property_value(name, prop_info.name) if prop_info.getter.is_valid() else null
 		prop_info.value = value  # Set initial value
 		category_info.add_property(prop_info)
+		msg = "Added property %s to attribute %s" % [prop_info.name, name]
+		DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
 	
 	_attributes[name] = category_info
+	msg  = "Added attribute %s to attributes container" % name
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
 	attribute_added.emit(category_info)
 	return PropertyResult.new(category_info)
 	
