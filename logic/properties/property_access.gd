@@ -134,6 +134,7 @@ func _get_related_paths(path: String) -> Array[String]:
 			related.append(available_path)
 	
 	return related
+	
 #endregion
 ## Gets all available property paths
 ## Returns: Array of valid property paths
@@ -153,9 +154,9 @@ func get_available_paths() -> Array[String]:
 	
 	return paths
 
-## Gets all properties for a category
+## Gets all properties for an attribute
 ## Returns: Array[PropertyResult]
-func get_category_properties(category: String) -> Array[PropertyResult]:
+func get_attribute_properties(category: String) -> Array[PropertyResult]:
 	if not _attributes_container:
 		return []
 		

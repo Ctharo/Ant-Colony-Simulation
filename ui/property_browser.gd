@@ -5,17 +5,17 @@ signal property_selected(property_path: String)
 
 #region UI Elements
 var mode_switch: OptionButton
-var category_list: ItemList
+var attribute_list: ItemList  
 var properties_tree: Tree
 var path_label: Label
-var category_label: Label
+var attribute_label: Label    
 var description_label: Label
 #endregion
 
 #region Member Variables
 var current_ant: Ant
 var current_mode: String = "Direct"
-var current_category: String
+var current_attribute: String
 var _property_access: PropertyAccess
 #endregion
 
@@ -58,27 +58,27 @@ func create_ui() -> void:
 	mode_switch.connect("item_selected", Callable(self, "_on_mode_changed"))
 	mode_container.add_child(mode_switch)
 	
-	# Main content split with adjusted proportions
+	# Main content split
 	var content_split = HSplitContainer.new()
 	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_split.split_offset = 150
 	main_container.add_child(content_split)
 	
-	# Left side - Categories (now narrower)
-	var category_container = VBoxContainer.new()
-	category_container.custom_minimum_size.x = 150
-	category_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	content_split.add_child(category_container)
+	# Left side - Attributes
+	var attribute_container = VBoxContainer.new()
+	attribute_container.custom_minimum_size.x = 150
+	attribute_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	content_split.add_child(attribute_container)
 	
-	category_label = Label.new()
-	category_label.text = "Categories"
-	category_container.add_child(category_label)
+	attribute_label = Label.new()
+	attribute_label.text = "Attributes"
+	attribute_container.add_child(attribute_label)
 	
-	category_list = ItemList.new()
-	category_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	category_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	category_list.connect("item_selected", Callable(self, "_on_category_selected"))
-	category_container.add_child(category_list)
+	attribute_list = ItemList.new()
+	attribute_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	attribute_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	attribute_list.connect("item_selected", Callable(self, "_on_attribute_selected"))
+	attribute_container.add_child(attribute_list)
 	
 	# Right side - Properties and Description (wider)
 	var right_container = VBoxContainer.new()
@@ -154,7 +154,7 @@ func create_ui() -> void:
 	main_container.add_child(close_button)
 
 func _on_mode_changed(index: int) -> void:
-	category_label.text = "Attributes"
+	attribute_label.text = "Attributes"
 	_refresh_view()
 
 func _refresh_view() -> void:
@@ -162,27 +162,26 @@ func _refresh_view() -> void:
 		DebugLogger.warn(DebugLogger.Category.CONTEXT, "No ant set for Property Browser scene")
 		return
 	
-	_refresh_categories()
+	_refresh_attributes()
 	path_label.text = ""
 
-func _populate_properties(category: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Populating properties for category: %s" % category)
+func _populate_properties(attribute: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Populating properties for attribute: %s" % attribute)
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 	
-	# Get properties directly from ant
-	var property_results = current_ant.get_category_properties(category)
+	var property_results = current_ant.get_attribute_properties(attribute)
 	if property_results.is_empty():
 		DebugLogger.warn(DebugLogger.Category.PROPERTY, 
-			"No properties found for category: %s" % category)
+			"No properties found for attribute: %s" % attribute)
 		return
 	
 	for property_result in property_results:
 		if not property_result.success():
 			DebugLogger.warn(DebugLogger.Category.PROPERTY,
-				"Failed to get property in category %s: %s" % [
-					category, property_result.error_message
+				"Failed to get property in attribute %s: %s" % [
+					attribute, property_result.error_message
 				])
 			continue
 			
@@ -202,23 +201,22 @@ func _populate_tree_item(item: TreeItem, property_result: PropertyResult) -> voi
 	item.set_text(COL_VALUE, PropertyResult.format_value(property_result.value))
 	item.set_metadata(0, property_info)
 
-func _refresh_categories() -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Refreshing categories")
+func _refresh_attributes() -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Refreshing attributes list")
 	
-	category_list.clear()
+	attribute_list.clear()
 	properties_tree.clear()
 	
-	# Get categories directly from ant
-	var categories = current_ant.get_categories()
-	for category_name in categories:
-		category_list.add_item(category_name.capitalize())
+	var attributes = current_ant.get_attribute_names()
+	for attribute_name in attributes:
+		attribute_list.add_item(attribute_name.capitalize())
 
-func _on_category_selected(index: int) -> void:
-	var category_name = category_list.get_item_text(index).to_lower()
-	_trace("Category selected: %s" % category_name)
-	current_category = category_name
-	_populate_properties(category_name)
-	description_label.text = ""  # Clear description when category changes
+func _on_attribute_selected(index: int) -> void:
+	var attribute_name = attribute_list.get_item_text(index).to_lower()
+	_trace("Attribute selected: %s" % attribute_name)
+	current_attribute = attribute_name
+	_populate_properties(attribute_name)
+	description_label.text = ""
 
 func _on_property_selected() -> void:
 	var selected = properties_tree.get_selected()
@@ -231,15 +229,13 @@ func _on_property_selected() -> void:
 		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property info found for selection")
 		return
 	
-	# Update description
 	description_label.text = property_info.description if not property_info.description.is_empty() else "No description available."
 	
-	# Update property path
 	var path: String
 	if current_mode == "Direct":
 		path = property_info.name
 	else:
-		path = "%s.%s" % [current_category, property_info.name]
+		path = "%s.%s" % [current_attribute, property_info.name]
 		
 	path_label.text = path
 	property_selected.emit(path)

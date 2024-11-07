@@ -1,57 +1,82 @@
 class_name Speed
 extends Attribute
 
-var _movement_rate: float = 1.0
-var _harvesting_rate: float = 1.0
-var _storing_rate: float = 1.0
+#region Properties
+## Rate at which the ant can move (units/second)
+var movement_rate: float = 1.0 : get = _get_movement_rate, set = _set_movement_rate
 
-func _init() -> void:
-	super._init("Speed")
+## Rate at which the ant can harvest resources (units/second)
+var harvesting_rate: float = 1.0 : get = _get_harvesting_rate, set = _set_harvesting_rate
+
+## Rate at which the ant can store resources (units/second)
+var storing_rate: float = 1.0 : get = _get_storing_rate, set = _set_storing_rate
+#endregion
+
+#region Lifecycle Methods
+func _init(_ant: Ant) -> void:
+	super._init(_ant, "Speed")
 
 func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("movement_rate")
 			.of_type(PropertyType.FLOAT)
-			.with_getter(Callable(self, "movement_rate"))
-			.with_setter(Callable(self, "set_movement_rate"))
+			.with_getter(Callable(self, "_get_movement_rate"))
+			.with_setter(Callable(self, "_set_movement_rate"))
 			.described_as("Rate at which the ant can move (units/second)")
 			.build(),
 			
 		PropertyResult.PropertyInfo.create("harvesting_rate")
 			.of_type(PropertyType.FLOAT)
-			.with_getter(Callable(self, "harvesting_rate"))
-			.with_setter(Callable(self, "set_harvesting_rate"))
+			.with_getter(Callable(self, "_get_harvesting_rate"))
+			.with_setter(Callable(self, "_set_harvesting_rate"))
 			.described_as("Rate at which the ant can harvest resources (units/second)")
 			.build(),
 			
 		PropertyResult.PropertyInfo.create("storing_rate")
 			.of_type(PropertyType.FLOAT)
-			.with_getter(Callable(self, "storing_rate"))
-			.with_setter(Callable(self, "set_storing_rate"))
+			.with_getter(Callable(self, "_get_storing_rate"))
+			.with_setter(Callable(self, "_set_storing_rate"))
 			.described_as("Rate at which the ant can store resources (units/second)")
 			.build()
 	])
+#endregion
 
-func movement_rate() -> float:
-	return _movement_rate
-
-func harvesting_rate() -> float:
-	return _harvesting_rate
-
-func storing_rate() -> float:
-	return _storing_rate
-
-func set_movement_rate(rate: float) -> void:
-	_movement_rate = max(rate, 0.0)
-
-func set_harvesting_rate(rate: float) -> void:
-	_harvesting_rate = max(rate, 0.0)
-
-func set_storing_rate(rate: float) -> void:
-	_storing_rate = max(rate, 0.0)
-
+#region Public Methods
 func time_to_move(distance: float) -> float:
-	return distance / _movement_rate if _movement_rate > 0 else INF
+	return distance / movement_rate if movement_rate > 0 else INF
 
 func harvest_amount(time: float) -> float:
-	return _harvesting_rate * time
+	return harvesting_rate * time
+#endregion
+
+#region Private Methods
+func _get_movement_rate() -> float:
+	return movement_rate
+
+func _get_harvesting_rate() -> float:
+	return harvesting_rate
+
+func _get_storing_rate() -> float:
+	return storing_rate
+
+func _set_movement_rate(rate: float) -> void:
+	if is_zero_approx(rate):
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Attempted to set speed.movement_rate to zero -> Action not allowed")
+		return
+	if movement_rate != rate:
+		movement_rate = max(rate, 0.0)
+
+func _set_harvesting_rate(rate: float) -> void:
+	if is_zero_approx(rate):
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Attempted to set speed.harvesting_rate to zero -> Action not allowed")
+		return
+	if harvesting_rate != rate:
+		harvesting_rate = max(rate, 0.0)
+
+func _set_storing_rate(rate: float) -> void:
+	if is_zero_approx(rate):
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Attempted to set speed.storing_rate to zero -> Action not allowed")
+		return
+	if storing_rate != rate:
+		storing_rate = max(rate, 0.0)
+#endregion

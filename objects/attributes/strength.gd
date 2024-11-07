@@ -1,35 +1,50 @@
 class_name Strength 
 extends Attribute
 
-var _level: int = 10
+#region Properties
+## Base strength level of the ant
+var level: int = 10 : get = _get_level, set = _set_level
 
-func _init() -> void:
-	super._init("Strength")
+## Maximum number of units the ant can carry at a time
+var carry_max: float : get = _get_carry_max
+
+## Mass carryable ([member carry_max]) is equal to [member level] * [member strength_factor]
+const STRENGTH_FACTOR: float = 20.0
+#endregion
+
+#region Lifecycle Methods
+func _init(_ant: Ant) -> void:
+	super._init(_ant, "Strength")
 
 func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("level")
 			.of_type(PropertyType.INT)
-			.with_getter(Callable(self, "level"))
-			.with_setter(Callable(self, "set_level"))
+			.with_getter(Callable(self, "_get_level"))
+			.with_setter(Callable(self, "_set_level"))
 			.described_as("Base strength level of the ant")
 			.build(),
 			
 		PropertyResult.PropertyInfo.create("carry_max")
 			.of_type(PropertyType.FLOAT)
-			.with_getter(Callable(self, "carry_max"))
+			.with_getter(Callable(self, "_get_carry_max"))
 			.described_as("Maximum weight the ant can carry based on strength level")
 			.build()
 	])
+#endregion
 
-func level() -> int:
-	return _level
-
-func set_level(value: int) -> void:
-	_level = value
-
-func carry_max() -> float:
-	return 20.0 * _level
-
+#region Public Methods
 func can_carry(weight: float) -> bool:
-	return weight <= carry_max()
+	return weight <= carry_max
+#endregion
+
+#region Private Methods
+func _get_level() -> int:
+	return level
+
+func _set_level(value: int) -> void:
+	level = value
+
+func _get_carry_max() -> float:
+	return STRENGTH_FACTOR * level
+#endregion

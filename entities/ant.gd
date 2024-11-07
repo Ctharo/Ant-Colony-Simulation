@@ -79,13 +79,14 @@ const CACHE_DURATIONS = {
 }
 
 func _init():
-	energy = Energy.new()
-	reach = Reach.new()
-	vision = Vision.new()
-	olfaction = Olfaction.new()
-	strength = Strength.new()
-	health = Health.new()
-	speed = Speed.new()
+	energy = Energy.new(self)
+	reach = Reach.new(self)
+	vision = Vision.new(self)
+	olfaction = Olfaction.new(self)
+	strength = Strength.new(self)
+	health = Health.new(self)
+	health.depleted.connect(died.emit)
+	speed = Speed.new(self)
 
 	_init_property_access()
 	_init_attributes()
@@ -133,10 +134,8 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:
-	health.set_current_level(health.current_level() - amount)
+	health.current_level -= amount
 	damaged.emit()
-	if health.current_level() <= 0:
-		died.emit()
 	
 ## Emit a pheromone at the current position
 func emit_pheromone(type: String, concentration: float) -> void:
@@ -158,7 +157,7 @@ func consume_food(amount: float) -> void:
 
 ## Move the ant to a new position
 func move(direction: Vector2, delta: float) -> void:
-	var vector = direction * speed.movement_rate() * delta 
+	var vector = direction * speed.movement_rate * delta 
 	_move_to(global_position + vector)
 
 
@@ -210,14 +209,13 @@ func get_property_info(path: String) -> PropertyResult.PropertyInfo:
 	return _property_access.get_property_info(path)
 
 # Category-specific methods
-func get_category_properties(category: String) -> Array[PropertyResult]:
-	return _property_access.get_category_properties(category)
+func get_attribute_properties(category: String) -> Array[PropertyResult]:
+	return _property_access.get_attribute_properties(category)
 
-func get_categories() -> Array:
-	var categories = []
-	categories.append_array(attributes_container.get_attribute_names())
-	# Add any other category sources here
-	return categories
+func get_attribute_names() -> Array:
+	var attribute_names = []
+	attribute_names.append_array(attributes_container.get_attribute_names())
+	return attribute_names
 
 ## Convenience method for browser
 func get_categorized_properties() -> PropertyResult:
