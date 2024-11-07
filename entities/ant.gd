@@ -110,8 +110,6 @@ func _process(delta: float) -> void:
 
 ## Initialize attribute maps
 func _init_attributes() -> void:
-	if not attributes_container:
-		attributes_container = AttributesContainer.new(self)
 	var attributes: Array = [energy, reach, vision, olfaction, strength, health, speed]
 	for attribute: Attribute in attributes:
 		var result = attributes_container.register_attribute(attribute)

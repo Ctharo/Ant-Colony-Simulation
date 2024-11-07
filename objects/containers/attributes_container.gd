@@ -135,7 +135,7 @@ func get_attribute_property_infos(attribute: String) -> Array[PropertyResult.Pro
 	var category_info = _attributes[attribute]
 	return category_info.properties
 
-func get_property_wrapped(attribute: String, property: String) -> PropertyResult:
+func get_property(attribute: String, property: String) -> PropertyResult:
 	# Get property info first
 	var prop_info = get_property_info(attribute, property)
 	if not prop_info:

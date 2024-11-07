@@ -87,6 +87,7 @@ class PropertyInfoBuilder:
 	var _type: Component.PropertyType
 	var _getter: Callable
 	var _setter: Callable = Callable()
+	var _dependencies: Array[String]
 	var _category: String = ""
 	var _description: String = ""
 	var _metadata: Dictionary = {}
@@ -105,7 +106,11 @@ class PropertyInfoBuilder:
 	func with_setter(p_setter: Callable) -> PropertyInfoBuilder:
 		_setter = p_setter
 		return self
-	
+		
+	func with_dependencies(deps: Array[String]) -> PropertyInfoBuilder:
+		_dependencies = deps
+		return self
+		
 	func in_category(p_category: String) -> PropertyInfoBuilder:
 		_category = p_category
 		return self

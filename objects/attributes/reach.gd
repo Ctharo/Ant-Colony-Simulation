@@ -19,6 +19,13 @@ func _init_properties() -> void:
 			.described_as("Maximum range the ant can reach from its current position")
 			.build()
 	])
+	properties_container.expose_properties([
+		PropertyResult.PropertyInfo.create("food_in_range")
+			.of_type(PropertyType.FLOAT)
+			.with_getter(Callable(self, "_get_food_in_range"))
+			.described_as("Food within reach range")
+			.build()
+	])
 #endregion
 
 #region Public Methods
@@ -29,6 +36,12 @@ func is_within_range(point: Vector2) -> bool:
 #region Private Methods
 func _get_range() -> float:
 	return range
+	
+func _get_food_in_range() -> Foods:
+	return Foods.in_reach(ant.global_position, range)
+	
+func _get_food_in_range_count() -> int:
+	return _get_food_in_range().size()
 
 func _set_range(value: float) -> void:
 	if range != value:
