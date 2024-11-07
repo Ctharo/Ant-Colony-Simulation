@@ -88,11 +88,9 @@ func _init():
 	health.depleted.connect(died.emit)
 	speed = Speed.new(self)
 
-	_init_property_access()
 	_init_attributes()
+	_init_property_access()
 
-	
-	
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
 	if task_tree and task_tree.get_active_task():
