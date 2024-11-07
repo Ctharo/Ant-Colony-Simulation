@@ -1,10 +1,11 @@
 class_name Attribute
 extends Component
 
-var attribute_name: String
+var name: String
 
-func _init(name: String) -> void:
-	attribute_name = name
+func _init(_name: String) -> void:
+	name = _name.to_snake_case()
+	DebugLogger.trace(DebugLogger.Category.PROGRAM, "Name for attribute set as %s" % name)
 	properties_container = PropertiesContainer.new(self)
 	_init_properties()
 

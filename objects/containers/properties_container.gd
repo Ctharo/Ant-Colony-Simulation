@@ -93,8 +93,8 @@ func expose_property(property: PropertyResult.PropertyInfo) -> PropertyResult:
 func _init(owner: Object, _unused_caching: bool = false) -> void:
 	_owner = owner
 
-func get_property_value(name: String) -> PropertyResult:
-	# Validate property exists
+func get_property(name: String) -> PropertyResult:
+	# Current get_property_value implementation but renamed
 	if not _properties.has(name):
 		return PropertyResult.new(
 			null,
@@ -103,12 +103,14 @@ func get_property_value(name: String) -> PropertyResult:
 		)
 	
 	var prop_info = _properties[name]
-	
-	# Get fresh value
 	var value = prop_info.getter.call()
 	prop_info.value = value  # Update stored value
 	
 	return PropertyResult.new(value)
+
+func get_property_value(name: String) -> Variant:
+	var result = get_property(name)
+	return result.value if result.success() else null
 
 func set_property_value(name: String, value: Variant) -> PropertyResult:
 	# Validate property exists

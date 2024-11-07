@@ -59,18 +59,14 @@ var nav_agent: NavigationAgent2D
 ## Task update timer
 var task_update_timer: float = 0.0
 
-## Cache storage for various sensory and contextual data
-var _cache: Dictionary = {}
-
-## Track when cache entries were last updated (in seconds)
-var _cache_timestamps: Dictionary = {}
-
 var _property_access: PropertyAccess
 
 var attributes_container: AttributesContainer :
 	set(value):
 		attributes_container = value
 	get:
+		if not attributes_container:
+			attributes_container = AttributesContainer.new(self)
 		return attributes_container
 
 ## How long cached values remain valid (in seconds)
@@ -121,9 +117,9 @@ func _init_attributes() -> void:
 	for attribute: Attribute in attributes:
 		var result = attributes_container.register_attribute(attribute)
 		if result.is_error():
-			DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, result.error_message])
+			DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.name, result.error_message])
 		else:
-			DebugLogger.trace(DebugLogger.Category.PROPERTY, "Successfully registered attribute %s" % attribute.attribute_name)
+			DebugLogger.trace(DebugLogger.Category.PROPERTY, "Successfully registered attribute %s" % attribute.name)
 
 #endregion
 
@@ -203,21 +199,27 @@ func _init_property_access() -> void:
 
 #region Attribute Property Access
 ## Get all properties from an attribute
-func get_attribute_properties(attribute_name: String) -> Dictionary:
-	return attributes_container.get_attribute_properties(attribute_name)
+# Public property interface methods
+func get_property_value(path: String) -> Variant:
+	return _property_access.get_property_value(path)
+	
+func get_property(path: String) -> PropertyResult:
+	return _property_access.get_property(path)
+	
+func get_property_info(path: String) -> PropertyResult.PropertyInfo:
+	return _property_access.get_property_info(path)
 
-## Get specific attribute property
-func get_attribute_property(attribute_name: String, property_name: String) -> PropertyResult:
-	return _property_access.get_property("%s.%s" % [attribute_name, property_name])
+# Category-specific methods
+func get_category_properties(category: String) -> Array[PropertyResult]:
+	return _property_access.get_category_properties(category)
 
-## Set attribute property
-func set_attribute_property(attribute_name: String, property_name: String, value: Variant) -> PropertyResult:
-	return _property_access.set_property("%s.%s" % [attribute_name, property_name], value)
+func get_categories() -> Array:
+	var categories = []
+	categories.append_array(attributes_container.get_attribute_names())
+	# Add any other category sources here
+	return categories
 
-## Get all attribute properties
-func get_all_attribute_properties() -> Dictionary:
-	var result = {}
-	for attr in attributes_container.get_attributes():
-		result[attr] = get_attribute_properties(attr)
-	return result
+## Convenience method for browser
+func get_categorized_properties() -> PropertyResult:
+	return _property_access.get_categorized_properties()
 #endregion

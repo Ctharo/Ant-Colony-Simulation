@@ -19,17 +19,20 @@ enum ErrorType {
 var value: Variant
 var error: ErrorType
 var error_message: String
+var property_info: PropertyInfo  # Add PropertyInfo storage
 
-func _init(p_value: Variant = null, p_error: ErrorType = ErrorType.NONE, p_message: String = "") -> void:
+
+func _init(p_value: Variant = null, p_error: ErrorType = ErrorType.NONE, p_message: String = "", p_property_info: PropertyInfo = null) -> void:
 	value = p_value
 	error = p_error
 	error_message = p_message
+	property_info = p_property_info
 
 func success() -> bool:
 	return error == ErrorType.NONE
 
 func is_error() -> bool:
-	return !success()
+	return not success()
 	
 ## Property information structure
 class PropertyInfo:

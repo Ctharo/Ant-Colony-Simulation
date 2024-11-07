@@ -25,11 +25,11 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 ## Registers a new attribute by automatically collecting its exposed properties
 ## Returns: PropertyResult with the created attribute info
 func register_attribute(attribute: Attribute) -> PropertyResult:
-	var name = attribute.attribute_name
+	var name = attribute.name
 	
 	# Validate attribute doesn't exist
 	if _attributes.has(name):
-		var msg: String = "Attribute '%s' already exists" % attribute.attribute_name
+		var msg: String = "Attribute '%s' already exists" % attribute.name
 		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, msg])
 		return PropertyResult.new(
 			null,
@@ -50,7 +50,7 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	for prop_info in properties:
 		msg = "Calling getter for property %s of attribute %s" % [prop_info.name, name]
 		DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
-		var value = get_property_value(name, prop_info.name) if prop_info.getter.is_valid() else null
+		var value = get_attribute_property_value(name, prop_info.name) if prop_info.getter.is_valid() else null
 		prop_info.value = value  # Set initial value
 		category_info.add_property(prop_info)
 		msg = "Added property %s to attribute %s" % [prop_info.name, name]
@@ -78,8 +78,64 @@ func remove_attribute(name: String) -> PropertyResult:
 #endregion
 
 #region Property Access
-## Gets a property value from an attribute
-func get_property_value(attribute: String, property: String) -> PropertyResult:
+func get_attribute_property_value(attribute: String, property: String) -> Variant:
+	var result = get_attribute_property(attribute, property)
+	return result.value if result.success() else null
+
+func get_attribute_property(attribute: String, property: String) -> PropertyResult:
+	var prop_info = get_property_info(attribute, property)
+	if not prop_info:
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
+			"Property '%s' not found in attribute '%s'" % [property, attribute]
+		)
+	
+	# Validate getter exists and is valid
+	if not prop_info.getter.is_valid():
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.INVALID_GETTER,
+			"Invalid getter for property '%s' in attribute '%s'" % [property, attribute]
+		)
+	
+	var cache_key = _get_cache_key(attribute, property)
+	
+	# Check cache if enabled
+	if _cache and _cache.has_valid_cache(cache_key):
+		return PropertyResult.new(_cache.get_cached(cache_key))
+	
+	# Get fresh value using getter
+	var value = prop_info.getter.call()
+	
+	# Update cache and stored value
+	if _cache:
+		_cache.cache_value(cache_key, value)
+	prop_info.value = value  # Keep stored value in sync
+	
+	return PropertyResult.new(value)
+
+func get_attribute_properties(attribute: String) -> Array[PropertyResult]:
+	if not _attributes.has(attribute):
+		return []
+	
+	var results: Array[PropertyResult] = []
+	var category_info = _attributes[attribute]
+	
+	for prop_info in category_info.properties:
+		var value_result = get_attribute_property(attribute, prop_info.name)
+		results.append(value_result)
+	
+	return results
+
+func get_attribute_property_infos(attribute: String) -> Array[PropertyResult.PropertyInfo]:
+	if not _attributes.has(attribute):
+		return []
+	
+	var category_info = _attributes[attribute]
+	return category_info.properties
+
+func get_property_wrapped(attribute: String, property: String) -> PropertyResult:
 	# Get property info first
 	var prop_info = get_property_info(attribute, property)
 	if not prop_info:
@@ -113,62 +169,6 @@ func get_property_value(attribute: String, property: String) -> PropertyResult:
 	
 	return PropertyResult.new(value)
 
-## Sets a property value in an attribute
-## Sets a property value in an attribute
-func set_property_value(attribute: String, property: String, value: Variant) -> PropertyResult:
-	# Get property info first
-	var prop_info = get_property_info(attribute, property)
-	if not prop_info:
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
-			"Property '%s' not found in attribute '%s'" % [property, attribute]
-		)
-	
-	# Validate property is writable and setter is valid
-	if not prop_info.writable or not prop_info.setter.is_valid():
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_SETTER,
-			"Property '%s' in attribute '%s' is read-only or has invalid setter" % [property, attribute]
-		)
-	
-	# Validate value type
-	if not _is_valid_type(value, prop_info.type):
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.TYPE_MISMATCH,
-			"Invalid type for property '%s' in attribute '%s'" % [property, attribute]
-		)
-	
-	# Get old value before setting new one
-	var old_value = prop_info.value
-	
-	# Set new value using setter
-	prop_info.setter.call(value)
-	prop_info.value = value  # Update stored value
-	
-	# Invalidate cache
-	_invalidate_property_cache(attribute, property)
-	
-	property_changed.emit(attribute, property, old_value, value)
-	return PropertyResult.new(value)
-#endregion
-
-#region Property Information
-## Gets information about all properties in an attribute
-func get_attribute_properties(attribute: String) -> Dictionary:
-	if not _attributes.has(attribute):
-		return {}
-	
-	var result = {}
-	var category_info = _attributes[attribute]
-	
-	for prop_info in category_info.properties:
-		result[prop_info.name] = prop_info.to_dict()
-	
-	return result
-
 ## Gets information about a specific property in an attribute
 func get_property_info(attribute: String, property: String) -> PropertyResult.PropertyInfo:
 	if not _attributes.has(attribute):
@@ -192,7 +192,7 @@ func get_attribute_metadata(attribute: String) -> Dictionary:
 	return _attributes[attribute].metadata
 
 ## Gets all attribute names
-func get_attributes() -> Array:
+func get_attribute_names() -> Array:
 	return _attributes.keys()
 
 ## Checks if an attribute exists

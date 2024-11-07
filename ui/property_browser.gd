@@ -37,9 +37,8 @@ func _ready() -> void:
 
 func show_ant(ant: Ant) -> void:
 	current_ant = ant
-	_property_access = PropertyAccess.new({"ant": ant})
 	_refresh_view()
-
+	
 ## Creates all UI elements
 func create_ui() -> void:
 	var main_container = VBoxContainer.new()
@@ -55,8 +54,7 @@ func create_ui() -> void:
 	mode_container.add_child(mode_label)
 	
 	mode_switch = OptionButton.new()
-	mode_switch.add_item("Direct Properties", 0)
-	mode_switch.add_item("Attribute Properties", 1)
+	mode_switch.add_item("Attribute Properties", 0)
 	mode_switch.connect("item_selected", Callable(self, "_on_mode_changed"))
 	mode_container.add_child(mode_switch)
 	
@@ -156,12 +154,8 @@ func create_ui() -> void:
 	main_container.add_child(close_button)
 
 func _on_mode_changed(index: int) -> void:
-	current_mode = "Direct" if index == 0 else "Attributes"
-	var other_mode = "Attributes" if index == 0 else "Direct"
-	category_label.text = "Categories" if current_mode == "Direct" else "Attributes"
+	category_label.text = "Attributes"
 	_refresh_view()
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Changed browser mode from %s to %s" % [other_mode, current_mode])
-
 
 func _refresh_view() -> void:
 	if not current_ant:
@@ -172,54 +166,52 @@ func _refresh_view() -> void:
 	path_label.text = ""
 
 func _populate_properties(category: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Attempting to populate properties list in browser")
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Populating properties for category: %s" % category)
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 	
-	var properties: Array
-	if current_mode == "Direct":
-		properties = current_ant.properties_container.get_properties_in_category(category)
-	else:
-		var attr_properties = current_ant.attributes_container.get_attribute_properties(category)
-		properties = attr_properties.keys()
+	# Get properties directly from ant
+	var property_results = current_ant.get_category_properties(category)
+	if property_results.is_empty():
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, 
+			"No properties found for category: %s" % category)
+		return
 	
-	if properties.is_empty():
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Properties list is empty, cannot populate property list in browser")
-	
-	for prop_name in properties:
+	for property_result in property_results:
+		if not property_result.success():
+			DebugLogger.warn(DebugLogger.Category.PROPERTY,
+				"Failed to get property in category %s: %s" % [
+					category, property_result.error_message
+				])
+			continue
+			
 		var item = properties_tree.create_item(root)
-		item.set_text(COL_NAME, Helper.snake_to_readable(prop_name))
-		
-		var prop_info: PropertyResult.PropertyInfo
-		if current_mode == "Direct":
-			prop_info = current_ant.properties_container.get_property_info(prop_name)
-		else:
-			prop_info = current_ant.attributes_container.get_property_info(category, prop_name)
-		
-		if prop_info:
-			item.set_text(COL_TYPE, Component.type_to_string(prop_info.type))
-			item.set_text(COL_VALUE, _format_value(prop_info.value))
-			item.set_metadata(0, prop_info)
-		else:
-			item.set_text(COL_TYPE, "Unknown")
-			item.set_text(COL_VALUE, "<error>")
+		_populate_tree_item(item, property_result)
 
+func _populate_tree_item(item: TreeItem, property_result: PropertyResult) -> void:
+	# Get property info from the metadata
+	var property_info = property_result.property_info as PropertyResult.PropertyInfo
+	if not property_info:
+		DebugLogger.error(DebugLogger.Category.PROPERTY,
+			"Property result missing metadata: %s" % property_result.error_message)
+		return
+		
+	item.set_text(COL_NAME, Helper.snake_to_readable(property_info.name))
+	item.set_text(COL_TYPE, Component.type_to_string(property_info.type))
+	item.set_text(COL_VALUE, PropertyResult.format_value(property_result.value))
+	item.set_metadata(0, property_info)
 
 func _refresh_categories() -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Refreshing primary list in browser")
-
+	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Refreshing categories")
+	
 	category_list.clear()
 	properties_tree.clear()
 	
-	if current_mode == "Direct":
-		# Show categories from PropertiesContainer
-		for category in current_ant.properties_container.get_categories():
-			category_list.add_item(category.capitalize())
-	else:
-		# Show attributes from AttributesContainer
-		for attr_name in current_ant.attributes_container.get_attributes():
-			category_list.add_item(attr_name.capitalize())
+	# Get categories directly from ant
+	var categories = current_ant.get_categories()
+	for category_name in categories:
+		category_list.add_item(category_name.capitalize())
 
 func _on_category_selected(index: int) -> void:
 	var category_name = category_list.get_item_text(index).to_lower()
@@ -234,24 +226,24 @@ func _on_property_selected() -> void:
 		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property selected")
 		return
 		
-	var prop_info = selected.get_metadata(0) as PropertyResult.PropertyInfo
-	if not prop_info:
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property info found (%s) for property %s" % [prop_info, selected])
+	var property_info = selected.get_metadata(0) as PropertyResult.PropertyInfo
+	if not property_info:
+		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property info found for selection")
 		return
 	
 	# Update description
-	description_label.text = prop_info.description if not prop_info.description.is_empty() else "No description available."
+	description_label.text = property_info.description if not property_info.description.is_empty() else "No description available."
 	
 	# Update property path
 	var path: String
 	if current_mode == "Direct":
-		path = prop_info.name
+		path = property_info.name
 	else:
-		path = "%s.%s" % [current_category, prop_info.name]
+		path = "%s.%s" % [current_category, property_info.name]
 		
 	path_label.text = path
 	property_selected.emit(path)
-
+	
 func _format_value(value: Variant) -> String:
 	return PropertyResult.format_value(value)
 

@@ -1,4 +1,3 @@
-
 class_name PropertyAccess
 extends RefCounted
 ## Centralized class for handling property access across different containers
@@ -19,8 +18,15 @@ func _init(context: Dictionary, use_caching: bool = true) -> void:
 	_initialize_containers(context)
 
 #region Public Interface
+## Gets the actual value of a property
+## Returns: Variant - The direct value of the property
+func get_property_value(path: String) -> Variant:
+	var result = get_property(path)
+	return result.value if result.success() else null
+
+## Gets property with full result information
+## Returns: PropertyResult containing value and error information
 func get_property(path: String) -> PropertyResult:
-	# Parse and validate path
 	var parsed_path = PropertyResult.PropertyPath.parse(path)
 	if not parsed_path:
 		return PropertyResult.new(
@@ -29,18 +35,35 @@ func get_property(path: String) -> PropertyResult:
 			"Invalid property path format: %s" % path
 		)
 	
-	# Check cache first
-	if _use_caching and _cache.has_valid_cache(path):
-		return PropertyResult.new(_cache.get_cached(path))
+	if parsed_path.container == "properties":
+		if not _properties_container:
+			return _error_no_container("Properties")
+		return _properties_container.get_property(parsed_path.property)
+	else:
+		if not _attributes_container:
+			return _error_no_container("Attributes")
+		return _attributes_container.get_attribute_property(
+			parsed_path.category,
+			parsed_path.property
+		)
+## Gets property metadata and definition
+## Returns: PropertyResult.PropertyInfo or null if not found
+func get_property_info(path: String) -> PropertyResult.PropertyInfo:
+	var parsed_path = PropertyResult.PropertyPath.parse(path)
+	if not parsed_path:
+		return null
 	
-	# Get property value based on path type
-	var result = _get_property_value(parsed_path)
-	
-	# Cache successful results
-	if _use_caching and result.success():
-		_cache.cache_value(path, result.value)
-	
-	return result
+	if parsed_path.container == "properties":
+		if not _properties_container:
+			return null
+		return _properties_container.get_property_info(parsed_path.property)
+	else:
+		if not _attributes_container:
+			return null
+		return _attributes_container.get_property_info(
+			parsed_path.category,
+			parsed_path.property
+		)
 
 func set_property(path: String, value: Variant) -> PropertyResult:
 	# Parse and validate path
@@ -86,30 +109,6 @@ func _initialize_containers(context: Dictionary) -> void:
 	_properties_container = PropertiesContainer.new(ant, false)  
 	_attributes_container = ant.attributes_container
 
-func _get_property_value(path: PropertyResult.PropertyPath) -> PropertyResult:
-	# Handle direct properties
-	if path.container == "properties":
-		if not _properties_container:
-			return PropertyResult.new(
-				null,
-				PropertyResult.ErrorType.NO_CONTAINER,
-				"Properties container not available"
-			)
-		return _properties_container.get_property_value(path.property)
-	
-	# Handle attribute properties
-	if not _attributes_container:
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.NO_CONTAINER,
-			"Attributes container not available"
-		)
-	
-	return _attributes_container.get_property_value(
-		path.category,
-		path.property
-	)
-
 func _invalidate_cache_for_path(path: String) -> void:
 	if not _cache:
 		return
@@ -136,23 +135,6 @@ func _get_related_paths(path: String) -> Array[String]:
 	
 	return related
 #endregion
-#region Public Interface
-
-## Gets property information using a property path
-## Returns: PropertyInfo or null if not found
-func get_property_info(path: String) -> PropertyResult.PropertyInfo:
-	var parsed_path = PropertyResult.PropertyPath.parse(path)
-	if not parsed_path:
-		return null
-	
-	if parsed_path.container == "properties":
-		return _properties_container.get_property_info(parsed_path.property)
-	else:
-		return _attributes_container.get_property_info(
-			parsed_path.category,
-			parsed_path.property
-		)
-
 ## Gets all available property paths
 ## Returns: Array of valid property paths
 func get_available_paths() -> Array[String]:
@@ -171,28 +153,32 @@ func get_available_paths() -> Array[String]:
 	
 	return paths
 
-## Gets categorized property information
-## Returns: Dictionary mapping categories to property information
-func get_categorized_properties() -> Dictionary:
-	var result = {}
+## Gets all properties for a category
+## Returns: Array[PropertyResult]
+func get_category_properties(category: String) -> Array[PropertyResult]:
+	if not _attributes_container:
+		return []
+		
+	var results: Array[PropertyResult] = []
 	
-	# Add direct properties by category
-	if _properties_container:
-		for category in _properties_container.get_categories():
-			result[category] = {
-				"type": "properties",
-				"properties": _properties_container.get_properties_in_category(category)
-			}
+	# Get property infos from container
+	var property_infos = _attributes_container.get_attribute_property_infos(category)
 	
-	# Add attribute properties
-	if _attributes_container:
-		for attr in _attributes_container.get_attributes():
-			result[attr] = {
-				"type": "attributes",
-				"properties": _attributes_container.get_attribute_properties(attr).keys()
-			}
+	# For each property info, get a PropertyResult containing its current value and info
+	for property_info in property_infos:
+		var path = "%s.%s" % [category, property_info.name]
+		var result = get_property(path)  # Use existing get_property to handle caching etc
+		if result.success():
+			results.append(PropertyResult.new(
+				result.value,
+				PropertyResult.ErrorType.NONE,
+				"",
+				property_info
+			))
+		else:
+			results.append(result)  # Keep error information if get_property failed
 	
-	return result
+	return results
 #endregion
 
 #region Private Methods
