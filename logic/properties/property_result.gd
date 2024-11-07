@@ -45,6 +45,7 @@ class PropertyInfo:
 	var description: String
 	var metadata: Dictionary
 	var writable: bool
+	var dependencies: Array[String] = []  # Array of property paths this property depends on
 	
 	func _init(
 		p_name: String,
@@ -54,7 +55,8 @@ class PropertyInfo:
 		p_setter: Callable = Callable(),
 		p_category: String = "",
 		p_description: String = "",
-		p_metadata: Dictionary = {}
+		p_metadata: Dictionary = {},
+		p_dependencies: Array[String] = []
 	) -> void:
 		name = p_name
 		type = p_type
@@ -65,6 +67,7 @@ class PropertyInfo:
 		description = p_description
 		metadata = p_metadata
 		writable = setter.is_valid()
+		dependencies = p_dependencies
 	
 	func to_dict() -> Dictionary:
 		return {

@@ -5,6 +5,9 @@ extends RefCounted
 ## Provides a unified interface for accessing properties from both PropertiesContainer
 ## and AttributesContainer with consistent error handling and path resolution.
 
+## Stores which properties depend on each property
+var _dependency_map: Dictionary = {}  # property_path -> Array[dependent_paths]
+
 #region Member Variables
 var _cache: PropertyCache
 var _properties_container: PropertiesContainer
@@ -16,6 +19,34 @@ func _init(context: Dictionary, use_caching: bool = true) -> void:
 	_use_caching = use_caching
 	_cache = PropertyCache.new() if use_caching else null
 	_initialize_containers(context)
+	_build_dependency_map()
+	
+# Builds reverse lookup of property dependencies
+func _build_dependency_map() -> void:
+	_dependency_map.clear()
+	
+	# Get all properties
+	var all_paths = get_available_paths()
+	
+	# For each property, check its dependencies and build reverse lookup
+	for path in all_paths:
+		var info = get_property_info(path)
+		if info and not info.dependencies.is_empty():
+			# For each dependency, add this property as dependent
+			for dependency in info.dependencies:
+				if not _dependency_map.has(dependency):
+					_dependency_map[dependency] = []
+				_dependency_map[dependency].append(path)
+
+## Get all properties that depend on a given property
+func _get_dependent_properties(path: String) -> Array[String]:
+	var dependents: Array[String] = []
+	if _dependency_map.has(path):
+		dependents.append_array(_dependency_map[path])
+		# Recursively get properties that depend on the dependents
+		for dependent in _dependency_map[path]:
+			dependents.append_array(_get_dependent_properties(dependent))
+	return dependents
 
 #region Public Interface
 ## Gets the actual value of a property
@@ -109,6 +140,7 @@ func _initialize_containers(context: Dictionary) -> void:
 	_properties_container = PropertiesContainer.new(ant, false)  
 	_attributes_container = ant.attributes_container
 
+## Override cache invalidation to handle dependencies
 func _invalidate_cache_for_path(path: String) -> void:
 	if not _cache:
 		return
@@ -116,10 +148,11 @@ func _invalidate_cache_for_path(path: String) -> void:
 	# Invalidate the specific path
 	_cache.invalidate(path)
 	
-	# Also invalidate any related paths (if using wildcards or patterns)
-	var related_paths = _get_related_paths(path)
-	for related_path in related_paths:
-		_cache.invalidate(related_path)
+	# Invalidate all dependent properties
+	var dependents = _get_dependent_properties(path)
+	for dependent in dependents:
+		_cache.invalidate(dependent)
+		DebugLogger.info(DebugLogger.Category.CONTEXT, "Invalidated dependent property cache: %s (depends on %s)" % [dependent, path])
 
 func _get_related_paths(path: String) -> Array[String]:
 	# Implementation depends on your path structure
