@@ -16,10 +16,6 @@ var _owner: Object
 var _cache: PropertyCache
 #endregion
 
-func _init(owner: Object, use_caching: bool = true) -> void:
-	_owner = owner
-	_cache = PropertyCache.new() if use_caching else null
-
 #region Property Management
 ## Accepts an Array of type [class PropertyResult.PropertyInfo] and calls [member expose_property] for each
 ## Returns: Array of type [class PropertyResult]
@@ -93,29 +89,10 @@ func expose_property(property: PropertyResult.PropertyInfo) -> PropertyResult:
 	_trace("Property %s successfully added and exposed in property container" % name)
 	return PropertyResult.new(prop_info)
 
-## Removes a property from the container
-func remove_property(name: String) -> PropertyResult:
-	if not _properties.has(name):
-		_trace("Property %s to remove not found in property container" % name)
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
-			"Property '%s' doesn't exist" % name
-		)
-	
-	# Remove from categories
-	for category in _categories.values():
-		category.properties = category.properties.filter(
-			func(p): return p.name != name
-		)
-	
-	_properties.erase(name)
-	_invalidate_cache(name)
-	property_removed.emit(name)
-	_trace("Property %s removed from property container" % name)
-	return PropertyResult.new(null)
 
-## Gets the value of a property
+func _init(owner: Object, _unused_caching: bool = false) -> void:
+	_owner = owner
+
 func get_property_value(name: String) -> PropertyResult:
 	# Validate property exists
 	if not _properties.has(name):
@@ -127,21 +104,12 @@ func get_property_value(name: String) -> PropertyResult:
 	
 	var prop_info = _properties[name]
 	
-	# Check cache if enabled
-	if _cache and _cache.has_valid_cache(name):
-		return PropertyResult.new(_cache.get_cached(name))
-	
 	# Get fresh value
 	var value = prop_info.getter.call()
-	
-	# Update cache
-	if _cache:
-		_cache.cache_value(name, value)
-		prop_info.value = value  # Update stored value
+	prop_info.value = value  # Update stored value
 	
 	return PropertyResult.new(value)
 
-## Sets the value of a property
 func set_property_value(name: String, value: Variant) -> PropertyResult:
 	# Validate property exists
 	if not _properties.has(name):
@@ -173,9 +141,6 @@ func set_property_value(name: String, value: Variant) -> PropertyResult:
 	var old_value = get_property_value(name).value
 	prop_info.setter.call(value)
 	prop_info.value = value  # Update stored value
-	
-	# Invalidate cache
-	_invalidate_cache(name)
 	
 	property_changed.emit(name, old_value, value)
 	return PropertyResult.new(value)
@@ -238,21 +203,6 @@ func assign_to_category(property_name: String, category: String) -> PropertyResu
 	return PropertyResult.new(null)
 #endregion
 
-#region Cache Management
-## Sets the cache time-to-live in seconds
-func set_cache_ttl(ttl: float) -> void:
-	if _cache:
-		_cache.default_ttl = ttl
-
-## Invalidates the cache for a specific property
-func invalidate_cache(name: String) -> void:
-	_invalidate_cache(name)
-
-## Invalidates all property caches
-func invalidate_all_caches() -> void:
-	if _cache:
-		_cache.clear()
-#endregion
 
 #region Helper Functions
 ## Gets the category a property belongs to
