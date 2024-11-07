@@ -1,3 +1,4 @@
+
 class_name PropertyAccess
 extends RefCounted
 ## Centralized class for handling property access across different containers
@@ -9,15 +10,15 @@ extends RefCounted
 var _cache: PropertyCache
 var _properties_container: PropertiesContainer
 var _attributes_container: AttributesContainer
+var _use_caching: bool
 #endregion
 
-func _init(context: Dictionary) -> void:
-	_cache = PropertyCache.new()
+func _init(context: Dictionary, use_caching: bool = true) -> void:
+	_use_caching = use_caching
+	_cache = PropertyCache.new() if use_caching else null
 	_initialize_containers(context)
 
 #region Public Interface
-## Gets a property value using a property path
-## Returns: PropertyResult with value or error information
 func get_property(path: String) -> PropertyResult:
 	# Parse and validate path
 	var parsed_path = PropertyResult.PropertyPath.parse(path)
@@ -29,20 +30,18 @@ func get_property(path: String) -> PropertyResult:
 		)
 	
 	# Check cache first
-	if _cache.has_valid_cache(path):
+	if _use_caching and _cache.has_valid_cache(path):
 		return PropertyResult.new(_cache.get_cached(path))
 	
 	# Get property value based on path type
 	var result = _get_property_value(parsed_path)
 	
 	# Cache successful results
-	if result.success():
+	if _use_caching and result.success():
 		_cache.cache_value(path, result.value)
 	
 	return result
 
-## Sets a property value using a property path
-## Returns: PropertyResult indicating success or error
 func set_property(path: String, value: Variant) -> PropertyResult:
 	# Parse and validate path
 	var parsed_path = PropertyResult.PropertyPath.parse(path)
@@ -57,10 +56,87 @@ func set_property(path: String, value: Variant) -> PropertyResult:
 	var result = _set_property_value(parsed_path, value)
 	
 	# Invalidate cache on successful set
-	if result.success():
-		_cache.invalidate(path)
+	if _use_caching and result.success():
+		_invalidate_cache_for_path(path)
 	
 	return result
+
+## Sets cache time-to-live in seconds
+func set_cache_ttl(ttl: float) -> void:
+	if _cache:
+		_cache.default_ttl = ttl
+
+## Clears all cached values
+func clear_cache() -> void:
+	if _cache:
+		_cache.clear()
+
+## Invalidates cache for a specific path
+func invalidate_cache(path: String) -> void:
+	if _cache:
+		_invalidate_cache_for_path(path)
+
+#region Private Methods
+func _initialize_containers(context: Dictionary) -> void:
+	var ant = context.get("ant")
+	if not ant:
+		DebugLogger.warn(DebugLogger.Category.CONTEXT, "Tried to initialize containers without Ant")
+		return
+	# Initialize containers without caching since PropertyAccess handles it
+	_properties_container = PropertiesContainer.new(ant, false)  
+	_attributes_container = ant.attributes_container
+
+func _get_property_value(path: PropertyResult.PropertyPath) -> PropertyResult:
+	# Handle direct properties
+	if path.container == "properties":
+		if not _properties_container:
+			return PropertyResult.new(
+				null,
+				PropertyResult.ErrorType.NO_CONTAINER,
+				"Properties container not available"
+			)
+		return _properties_container.get_property_value(path.property)
+	
+	# Handle attribute properties
+	if not _attributes_container:
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.NO_CONTAINER,
+			"Attributes container not available"
+		)
+	
+	return _attributes_container.get_property_value(
+		path.category,
+		path.property
+	)
+
+func _invalidate_cache_for_path(path: String) -> void:
+	if not _cache:
+		return
+		
+	# Invalidate the specific path
+	_cache.invalidate(path)
+	
+	# Also invalidate any related paths (if using wildcards or patterns)
+	var related_paths = _get_related_paths(path)
+	for related_path in related_paths:
+		_cache.invalidate(related_path)
+
+func _get_related_paths(path: String) -> Array[String]:
+	# Implementation depends on your path structure
+	# Example: if you have wildcard paths or pattern matching
+	var related: Array[String] = []
+	var all_paths = get_available_paths()
+	
+	# Add logic to find related paths that should be invalidated
+	# This is just an example - implement based on your needs
+	for available_path in all_paths:
+		if available_path.begins_with(path.split(".")[0]):
+			related.append(available_path)
+	
+	return related
+#endregion
+#region Public Interface
 
 ## Gets property information using a property path
 ## Returns: PropertyInfo or null if not found
@@ -117,52 +193,9 @@ func get_categorized_properties() -> Dictionary:
 			}
 	
 	return result
-
-## Sets cache time-to-live in seconds
-func set_cache_ttl(ttl: float) -> void:
-	_cache.default_ttl = ttl
-
-## Clears all cached values
-func clear_cache() -> void:
-	_cache.clear()
 #endregion
 
 #region Private Methods
-## Initializes property containers from context
-func _initialize_containers(context: Dictionary) -> void:
-	var ant = context.get("ant")
-	if not ant:
-		DebugLogger.warn(DebugLogger.Category.CONTEXT, "Tried to initialize containers without Ant")
-		return
-	_properties_container = ant.properties_container
-	_attributes_container = ant.attributes_container
-	
-
-## Gets a property value based on parsed path
-func _get_property_value(path: PropertyResult.PropertyPath) -> PropertyResult:
-	# Handle direct properties
-	if path.container == "properties":
-		if not _properties_container:
-			return PropertyResult.new(
-				null,
-				PropertyResult.ErrorType.NO_CONTAINER,
-				"Properties container not available"
-			)
-		return _properties_container.get_property_value(path.property)
-	
-	# Handle attribute properties
-	if not _attributes_container:
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.NO_CONTAINER,
-			"Attributes container not available"
-		)
-	
-	return _attributes_container.get_property_value(
-		path.category,
-		path.property
-	)
-
 ## Sets a property value based on parsed path
 func _set_property_value(path: PropertyResult.PropertyPath, value: Variant) -> PropertyResult:
 	# Handle direct properties
