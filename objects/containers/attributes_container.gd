@@ -59,7 +59,8 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	)
 	
 	# Add properties to category
-	for prop_info in properties:
+	for property in properties:
+		var prop_info = property.property_info
 		var value = null
 		if prop_info.getter.is_valid():
 			value = get_attribute_property_value(name, prop_info.name)
