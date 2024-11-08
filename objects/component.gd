@@ -51,17 +51,17 @@ func _init_properties() -> void:
 ## Get property metadata
 ## Returns: PropertyResult
 func get_property(prop_name: String) -> PropertyResult:
-	return ant.get_property("%s.%s" % [name, prop_name])
+	return properties_container.get_property("%s" % prop_name)
 
 ## Get a property's value
 ## Returns: PropertyResult with value or error information
 func get_property_value(prop_name: String) -> Variant:
-	return ant.get_property_value("%s.%s" % [name, prop_name])
+	return properties_container.get_property_value("%s" % prop_name)
 
 ## Get an array of PropertyResults
 ## Returns: PropertyResult
 func get_properties() -> Array[PropertyResult]:
-	return ant.get_attribute_properties(name)
+	return properties_container.get_properties()
 #endregion
 
 #region Helper Methods
