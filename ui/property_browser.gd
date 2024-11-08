@@ -240,12 +240,12 @@ func _on_attribute_selected(index: int) -> void:
 func _on_property_selected() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property selected")
+		_warn("No valid property selected")
 		return
 		
 	var property_info = selected.get_metadata(0) as PropertyResult.PropertyInfo
 	if not property_info:
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "No valid property info found for selection")
+		_warn("No valid property info found for selection")
 		return
 	
 	_update_property_selection(property_info)
@@ -255,7 +255,7 @@ func _on_property_selected() -> void:
 ## Refreshes the entire view
 func _refresh_view() -> void:
 	if not current_ant:
-		DebugLogger.warn(DebugLogger.Category.CONTEXT, "No ant set for Property Browser scene")
+		_warn("No ant set for Property Browser scene")
 		return
 	
 	_refresh_attributes()
@@ -263,34 +263,30 @@ func _refresh_view() -> void:
 
 ## Refreshes the attributes list
 func _refresh_attributes() -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Refreshing attributes list")
+	_trace("Refreshing attributes list")
 	
 	attribute_list.clear()
 	properties_tree.clear()
 	
-	var attributes = current_ant.get_attribute_names()
+	var attributes = _get_attribute_names()
 	for attribute_name in attributes:
 		attribute_list.add_item(attribute_name.capitalize())
 
 ## Populates properties for a given attribute
 func _populate_properties(attribute: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, "Populating properties for attribute: %s" % attribute)
+	_trace("Populating properties for attribute: %s" % attribute)
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 	
-	var property_results = current_ant.get_attribute_properties(attribute)
+	var property_results = _get_attribute_properties(attribute)
 	if property_results.is_empty():
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, 
-			"No properties found for attribute: %s" % attribute)
+		_warn("No properties found for attribute: %s" % attribute)
 		return
 	
 	for property_result in property_results:
 		if not property_result.success():
-			DebugLogger.warn(DebugLogger.Category.PROPERTY,
-				"Failed to get property in attribute %s: %s" % [
-					attribute, property_result.error_message
-				])
+			_warn("Failed to get property in attribute %s: %s" % [attribute, property_result.error_message])
 			continue
 			
 		var item = properties_tree.create_item(root)
@@ -300,8 +296,7 @@ func _populate_properties(attribute: String) -> void:
 func _populate_tree_item(item: TreeItem, property_result: PropertyResult) -> void:
 	var property_info = property_result.property_info as PropertyResult.PropertyInfo
 	if not property_info:
-		DebugLogger.error(DebugLogger.Category.PROPERTY,
-			"Property result missing metadata: %s" % property_result.error_message)
+		_error("Property result missing metadata: %s" % property_result.error_message)
 		return
 	
 	item.set_text(COL_NAME, Helper.snake_to_readable(property_info.name))
@@ -333,6 +328,40 @@ func _update_property_selection(property_info: PropertyResult.PropertyInfo) -> v
 	property_selected.emit(path)
 #endregion
 
+#region Property Access Methods
+## Gets property value through ant's property access system
+func _get_property_value(path: String) -> Variant:
+	if not current_ant:
+		push_error("No ant set for property access")
+		return null
+		
+	return current_ant.get_property_value(path)
+
+## Gets property info through ant's property access system
+func _get_property_info(path: String) -> PropertyResult.PropertyInfo:
+	if not current_ant:
+		push_error("No ant set for property access")
+		return null
+		
+	return current_ant.get_property_info(path)
+
+## Gets attribute properties through ant's property access system
+func _get_attribute_properties(attribute: String) -> Array[PropertyResult]:
+	if not current_ant:
+		push_error("No ant set for property access")
+		return []
+		
+	return current_ant.get_attribute_properties(attribute)
+
+## Gets all attribute names through ant's property access system
+func _get_attribute_names() -> Array[String]:
+	if not current_ant:
+		push_error("No ant set for property access")
+		return []
+		
+	return current_ant.get_attribute_names()
+#endregion
+
 #region Helper Functions
 ## Formats a value for display
 func _format_value(value: Variant) -> String:
@@ -344,4 +373,15 @@ func _trace(message: String) -> void:
 		message,
 		{"From": "property_browser"}
 	)
+	
+func _error(message: String) -> void:
+	DebugLogger.error(DebugLogger.Category.PROPERTY,
+		message
+	)
+	
+func _warn(message: String) -> void:
+	DebugLogger.warn(DebugLogger.Category.PROPERTY,
+		message
+	)
+
 #endregion
