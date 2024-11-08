@@ -40,6 +40,9 @@ var strength: Strength
 ## The health status of the ant
 var health: Health
 
+## The sense of direction for the ant
+var proprioception: Proprioception
+
 ## The foods being carried by the ant
 var carried_food: Foods :
 	get:
@@ -87,6 +90,7 @@ func _init():
 	health = Health.new(self)
 	health.depleted.connect(died.emit)
 	speed = Speed.new(self)
+	proprioception = Proprioception.new(self)
 
 	_init_attributes()
 	_init_property_access()
@@ -110,7 +114,7 @@ func _process(delta: float) -> void:
 
 ## Initialize attribute maps
 func _init_attributes() -> void:
-	var attributes: Array = [energy, reach, vision, olfaction, strength, health, speed]
+	var attributes: Array = [energy, reach, vision, olfaction, strength, health, speed, proprioception]
 	for attribute: Attribute in attributes:
 		var result = attributes_container.register_attribute(attribute)
 		if result.is_error():

@@ -180,7 +180,7 @@ func get_available_paths() -> Array[String]:
 	
 	# Add attribute properties
 	if _attributes_container:
-		for attr in _attributes_container.get_attributes():
+		for attr in _attributes_container.get_attribute_names():
 			var properties = _attributes_container.get_attribute_properties(attr)
 			for prop in properties:
 				paths.append("%s.%s" % [attr, prop])
