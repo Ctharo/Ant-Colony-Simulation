@@ -133,7 +133,10 @@ func get_property_info(name: String) -> PropertyResult.PropertyInfo:
 
 ## Gets all property names
 func get_properties() -> Array:
-	return _properties.keys()
+	var a: Array[PropertyResult] = []
+	for key in _properties.keys():
+		a.append(key)
+	return a
 
 ## Checks if a property exists
 func has_property(name: String) -> bool:
