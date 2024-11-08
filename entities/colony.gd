@@ -83,8 +83,8 @@ func set_property(name: String, value: Variant) -> PropertyResult:
 func get_exposed_properties() -> Array[PropertyResult.PropertyInfo]:
 	_trace("Attempting to retrieve %s exposed properties" % properties_container.get_properties().size())
 	var properties: Array[PropertyResult.PropertyInfo] = []
-	for name in properties_container.get_properties():
-		var info = properties_container.get_property_info(name)
+	for property_result: PropertyResult in properties_container.get_properties():
+		var info = properties_container.get_property_info(property_result.name)
 		if info:
 			properties.append(info)
 	_trace("Retrieved %s exposed properties" % properties.size())
