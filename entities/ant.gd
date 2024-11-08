@@ -67,38 +67,6 @@ func _process(delta: float) -> void:
 		task_tree.update(delta)
 		task_update_timer = 0.0
 
-#region 
-
-## Initialize attribute maps
-func _init_attributes() -> void:
-	if not _property_access:
-		DebugLogger.error(
-			DebugLogger.Category.PROPERTY,
-			"Property access not configured for attribute initialization"
-		)
-		return
-	var attributes = [
-		Energy.new(self),
-		Reach.new(self),
-		Vision.new(self),
-		Olfaction.new(self),
-		Strength.new(self),
-		Health.new(self),
-		Speed.new(self),
-		Proprioception.new(self)
-	]
-	
-	for attribute in attributes:
-		var result = _property_access.register_attribute(attribute)
-		if not result.success():
-			DebugLogger.error(
-				DebugLogger.Category.PROPERTY,
-				"Failed to register attribute %s: %s" % [
-					attribute.name,
-					result.error_message
-				]
-			)
-#endregion
 
 func set_colony(_colony: Colony) -> void:
 	if colony != _colony:
@@ -169,31 +137,64 @@ func attack(current_target_entity: Ant, _delta: float) -> void:
 ## Initialize property access
 func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
-	# Set up property access caching
-	_property_access.set_cache_ttl(0.5) # Half second cache
 
-#region Attribute Property Access
-## Get all properties from an attribute
-# Public property interface methods
-func get_property_value(path: String) -> Variant:
-	return _property_access.get_property_value(path)
+func _init_attributes() -> void:
+	if not _property_access:
+		DebugLogger.error(
+			DebugLogger.Category.PROPERTY,
+			"Property access not configured for attribute initialization"
+		)
+		return
+		
+	var attributes = [
+		Energy.new(self),
+		Reach.new(self),
+		Vision.new(self),
+		Olfaction.new(self),
+		Strength.new(self),
+		Health.new(self),
+		Speed.new(self),
+		Proprioception.new(self)
+	]
 	
+	for attribute in attributes:
+		var result = _property_access.register_attribute(attribute)
+		if not result.success():
+			DebugLogger.error(
+				DebugLogger.Category.PROPERTY,
+				"Failed to register attribute %s: %s" % [
+					attribute.name,
+					result.error_message
+				]
+			)
+#endregion
+
+#region Property Access Interface
+## Core Property Access
 func get_property(path: String) -> PropertyResult:
 	return _property_access.get_property(path)
-	
+
 func set_property(path: String, value: Variant) -> PropertyResult:
 	return _property_access.set_property(path, value)
-	
-func get_property_info(path: String) -> PropertyResult.PropertyInfo:
-	return _property_access.get_property_info(path)
 
-# Category-specific methods
-func get_attribute_properties(category: String) -> Array[PropertyResult]:
-	if category.is_empty():
+## Convenience Methods
+func get_property_value(path: String) -> Variant:
+	var result = get_property(path)
+	return result.value if result.success() else null
+
+func get_property_info(path: String) -> PropertyResult.PropertyInfo:
+	var result = get_property(path)
+	return result.property_info if result.success() else null
+#endregion
+
+#region Attribute Access Interface
+## Get properties for a specific attribute
+func get_attribute_properties(attribute: String) -> Array[PropertyResult]:
+	if attribute.is_empty():
 		return [PropertyResult.new(
 			null,
-			PropertyResult.ErrorType.TYPE_MISMATCH,
-			"Category name cannot be empty"
+			PropertyResult.ErrorType.INVALID_PATH,
+			"Attribute name cannot be empty"
 		)]
 		
 	if not _property_access:
@@ -203,12 +204,21 @@ func get_attribute_properties(category: String) -> Array[PropertyResult]:
 			"Property access not configured"
 		)]
 		
-	return _property_access.get_attribute_properties(category)
+	return _property_access.get_attribute_properties(attribute)
 
-func get_attribute_names() -> Array:
+## Get all attribute names
+func get_attribute_names() -> Array[String]:
+	if not _property_access:
+		return []
 	return _property_access.get_attribute_names()
 
-## Convenience method for browser
+## Get properties organized by category for browser
 func get_categorized_properties() -> PropertyResult:
+	if not _property_access:
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.NO_CONTAINER,
+			"Property access not configured"
+		)
 	return _property_access.get_categorized_properties()
 #endregion
