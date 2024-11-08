@@ -23,7 +23,7 @@ func _init(_ant: Ant) -> void:
 func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("max_level")
-			.of_type(PropertyType.FLOAT)
+			.of_type(PropertyResult.PropertyType.FLOAT)
 			.with_getter(Callable(self, "_get_max_level"))
 			.with_setter(Callable(self, "_set_max_level"))
 			.described_as("Maximum energy level the ant can have")
@@ -43,7 +43,7 @@ func _init_properties() -> void:
 			.build(),
 		
 		PropertyResult.PropertyInfo.create("replenishable_amount")
-			.of_type(PropertyType.FLOAT)
+			.of_type(PropertyResult.PropertyType.FLOAT)
 			.with_getter(Callable(self, "_get_replenishable_amount"))
 			.described_as("Amount of energy that can be replenished before reaching max")
 			.build()

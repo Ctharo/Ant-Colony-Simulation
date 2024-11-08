@@ -205,25 +205,25 @@ func _is_valid_setter(setter: Callable) -> bool:
 		return false
 	return setter.get_argument_count() == 1 and setter.get_object().has_method(setter.get_method())
 
-func _is_valid_type(value: Variant, expected_type: Component.PropertyType) -> bool:
+func _is_valid_type(value: Variant, expected_type: PropertyResult.PropertyType) -> bool:
 	match expected_type:
-		Component.PropertyType.BOOL:
+		PropertyResult.PropertyType.BOOL:
 			return typeof(value) == TYPE_BOOL
-		Component.PropertyType.INT:
+		PropertyResult.PropertyType.INT:
 			return typeof(value) == TYPE_INT
-		Component.PropertyType.FLOAT:
+		PropertyResult.PropertyType.FLOAT:
 			return typeof(value) == TYPE_FLOAT
-		Component.PropertyType.STRING:
+		PropertyResult.PropertyType.STRING:
 			return typeof(value) == TYPE_STRING
-		Component.PropertyType.VECTOR2:
+		PropertyResult.PropertyType.VECTOR2:
 			return value is Vector2
-		Component.PropertyType.VECTOR3:
+		PropertyResult.PropertyType.VECTOR3:
 			return value is Vector3
-		Component.PropertyType.ARRAY:
+		PropertyResult.PropertyType.ARRAY:
 			return value is Array
-		Component.PropertyType.DICTIONARY:
+		PropertyResult.PropertyType.DICTIONARY:
 			return value is Dictionary
-		Component.PropertyType.OBJECT:
+		PropertyResult.PropertyType.OBJECT:
 			return value is Object
 	return false
 #endregion

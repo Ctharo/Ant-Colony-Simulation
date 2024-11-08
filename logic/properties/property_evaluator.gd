@@ -82,9 +82,9 @@ func evaluate_comparison(
 #endregion
 
 #region Type Conversion
-## Converts a value to the specified Component.PropertyType
+## Converts a value to the specified PropertyResult.PropertyType
 ## Returns: PropertyResult with converted value
-func convert_value(value: Variant, target_type: Component.PropertyType) -> PropertyResult:
+func convert_value(value: Variant, target_type: PropertyResult.PropertyType) -> PropertyResult:
 	if _is_type_match(value, target_type):
 		return PropertyResult.new(value)
 	
@@ -93,7 +93,7 @@ func convert_value(value: Variant, target_type: Component.PropertyType) -> Prope
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.TYPE_MISMATCH,
-			"Cannot convert to type: %s" % Component.type_to_string(target_type)
+			"Cannot convert to type: %s" % PropertyResult.type_to_string(target_type)
 		)
 	
 	return call(method, value)
@@ -188,25 +188,25 @@ static func _contains_value(container: Variant, value: Variant) -> bool:
 	return false
 
 ## Checks if value matches expected type
-func _is_type_match(value: Variant, expected_type: Component.PropertyType) -> bool:
+func _is_type_match(value: Variant, expected_type: PropertyResult.PropertyType) -> bool:
 	match expected_type:
-		Component.PropertyType.BOOL:
+		PropertyResult.PropertyType.BOOL:
 			return typeof(value) == TYPE_BOOL
-		Component.PropertyType.INT:
+		PropertyResult.PropertyType.INT:
 			return typeof(value) == TYPE_INT
-		Component.PropertyType.FLOAT:
+		PropertyResult.PropertyType.FLOAT:
 			return typeof(value) == TYPE_FLOAT
-		Component.PropertyType.STRING:
+		PropertyResult.PropertyType.STRING:
 			return typeof(value) == TYPE_STRING
-		Component.PropertyType.VECTOR2:
+		PropertyResult.PropertyType.VECTOR2:
 			return value is Vector2
-		Component.PropertyType.VECTOR3:
+		PropertyResult.PropertyType.VECTOR3:
 			return value is Vector3
-		Component.PropertyType.ARRAY:
+		PropertyResult.PropertyType.ARRAY:
 			return value is Array
-		Component.PropertyType.DICTIONARY:
+		PropertyResult.PropertyType.DICTIONARY:
 			return value is Dictionary
-		Component.PropertyType.OBJECT:
+		PropertyResult.PropertyType.OBJECT:
 			return value is Object
 	return false
 

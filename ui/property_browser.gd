@@ -305,7 +305,7 @@ func _populate_tree_item(item: TreeItem, property_result: PropertyResult) -> voi
 		return
 	
 	item.set_text(COL_NAME, Helper.snake_to_readable(property_info.name))
-	item.set_text(COL_TYPE, Component.type_to_string(property_info.type))
+	item.set_text(COL_TYPE, PropertyResult.type_to_string(property_info.type))
 	item.set_text(COL_VALUE, PropertyResult.format_value(property_result.value))
 	
 	# Add dependencies information

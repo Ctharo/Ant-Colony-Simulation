@@ -56,7 +56,7 @@ func _get_pheromones_in_range() -> Pheromones:
 func _get_food_pheromones_in_range() -> Pheromones:
 	# Get the cached pheromones directly from the property container
 	# to avoid recursive property access calls
-	var result: PropertyResult = properties_container.get_property("pheromones_in_range")
+	var result: PropertyResult = get_property("pheromones_in_range")
 	if not result.success():
 		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Problem getting property dependency")
 		return Pheromones.new([])

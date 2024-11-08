@@ -16,7 +16,7 @@ func _init() -> void:
 func _init_properties() -> void:
 	properties_container.expose_properties([
 		PropertyResult.PropertyInfo.create("position")
-			.of_type(Component.PropertyType.VECTOR2)
+			.of_type(PropertyResult.PropertyType.VECTOR2)
 			.with_getter(Callable(self, "_get_position"))
 			.described_as("Location of the colony in global coordinates")
 			.build()
@@ -96,24 +96,6 @@ func get_exposed_properties() -> Array[PropertyResult.PropertyInfo]:
 ## Returns: bool indicating if the getter needs arguments
 static func _getter_requires_args(getter: Callable) -> bool:
 	return getter.get_argument_count() > 0
-
-## Convert PropertyType to human-readable string
-## Returns: String representation of the property type
-static func type_to_string(type: Component.PropertyType) -> String:
-	match type:
-		Component.PropertyType.BOOL: return "Boolean"
-		Component.PropertyType.INT: return "Integer"
-		Component.PropertyType.FLOAT: return "Float"
-		Component.PropertyType.STRING: return "String"
-		Component.PropertyType.VECTOR2: return "Vector2"
-		Component.PropertyType.VECTOR3: return "Vector3"
-		Component.PropertyType.ARRAY: return "Array"
-		Component.PropertyType.DICTIONARY: return "Dictionary"
-		Component.PropertyType.FOODS: return "Foods"
-		Component.PropertyType.ANTS: return "Ants"
-		Component.PropertyType.PHEROMONES: return "Pheromones"
-		Component.PropertyType.OBJECT: return "Object"
-		_: return "Unknown"
 #endregion
 
 func _trace(message: String) -> void:

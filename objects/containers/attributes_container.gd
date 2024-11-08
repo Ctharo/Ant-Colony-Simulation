@@ -45,9 +45,11 @@ func register_attribute(attribute: Attribute) -> PropertyResult:
 	
 	for property in properties:
 		var prop_info = property.property_info
+		_trace("Adding property %s with property_info %s to attribute container" % [property, prop_info])
 		category_info.add_property(prop_info)
 	
 	_attributes[name] = category_info
+	_trace("Added %s to attribute container" % name)
 	attribute_added.emit(category_info)
 	return PropertyResult.new(category_info)
 
@@ -65,6 +67,13 @@ func remove_attribute(name: String) -> PropertyResult:
 #endregion
 
 #region Property Information
+
+func get_property(attribute: String, property: String) -> PropertyResult:
+	if not _attributes.has(attribute):
+		return null
+	var a: Attribute = _attributes[attribute]
+	return a._property_container.get_property(property)
+
 func get_property_info(attribute: String, property: String) -> PropertyResult.PropertyInfo:
 	if not _attributes.has(attribute):
 		return null
@@ -98,12 +107,30 @@ func get_attribute_properties(attribute: String) -> Array[PropertyResult]:
 	
 	var results: Array[PropertyResult] = []
 	var category_info = _attributes[attribute]
-	
 	for prop_info in category_info.properties:
-		results.append(_property_container.get_property(prop_info.name))
+		if not prop_info:
+			_error("Skipping null property info for %s while retrieving attribute properties in container" % attribute)
+			continue
+		results.append(get_property(attribute, prop_info.name))
 	
 	return results
 #endregion
 
 static func create_property(name: String) -> PropertyResult.PropertyInfoBuilder:
 	return PropertyResult.PropertyInfo.create(name)
+
+func _trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY,
+		message,
+		{"From": "component"}
+	)
+
+func _warn(message: String) -> void:
+	DebugLogger.warn(DebugLogger.Category.PROPERTY,
+		message
+	)
+
+func _error(message: String) -> void:
+	DebugLogger.error(DebugLogger.Category.PROPERTY,
+		message
+	)

@@ -16,6 +16,23 @@ enum ErrorType {
 	CACHE_ERROR        # Error with cache operations
 }
 
+## Supported property types
+enum PropertyType {
+	BOOL,
+	INT,
+	FLOAT,
+	STRING,
+	VECTOR2,
+	VECTOR3,
+	ARRAY,
+	DICTIONARY,
+	FOODS,
+	PHEROMONES,
+	ANTS,
+	OBJECT,
+	UNKNOWN
+}
+
 var value: Variant
 var error: ErrorType
 var error_message: String
@@ -37,7 +54,7 @@ func is_error() -> bool:
 ## Property information structure
 class PropertyInfo:
 	var name: String
-	var type: Component.PropertyType
+	var type: PropertyType
 	var value: Variant
 	var getter: Callable
 	var setter: Callable
@@ -49,7 +66,7 @@ class PropertyInfo:
 	
 	func _init(
 		p_name: String,
-		p_type: Component.PropertyType,
+		p_type: PropertyType,
 		p_value: Variant,
 		p_getter: Callable,
 		p_setter: Callable = Callable(),
@@ -72,7 +89,7 @@ class PropertyInfo:
 	func to_dict() -> Dictionary:
 		return {
 			"name": name,
-			"type": Component.type_to_string(type),
+			"type": PropertyResult.type_to_string(type),
 			"value": value,
 			"category": category,
 			"writable": writable,
@@ -87,7 +104,7 @@ class PropertyInfo:
 ## New builder class that works with existing PropertyInfo
 class PropertyInfoBuilder:
 	var _name: String
-	var _type: Component.PropertyType
+	var _type: PropertyType
 	var _getter: Callable
 	var _setter: Callable = Callable()
 	var _dependencies: Array[String]
@@ -98,7 +115,7 @@ class PropertyInfoBuilder:
 	func _init(p_name: String) -> void:
 		_name = p_name
 	
-	func of_type(p_type: Component.PropertyType) -> PropertyInfoBuilder:
+	func of_type(p_type: PropertyType) -> PropertyInfoBuilder:
 		_type = p_type
 		return self
 	
@@ -246,3 +263,19 @@ static func format_value(value: Variant) -> String:
 				return value.to_string()
 		_:
 			return str(value)
+
+static func type_to_string(type: PropertyType) -> String:
+	match type:
+		PropertyType.BOOL: return "Boolean"
+		PropertyType.INT: return "Integer"
+		PropertyType.FLOAT: return "Float"
+		PropertyType.STRING: return "String"
+		PropertyType.VECTOR2: return "Vector2"
+		PropertyType.VECTOR3: return "Vector3"
+		PropertyType.ARRAY: return "Array"
+		PropertyType.DICTIONARY: return "Dictionary"
+		PropertyType.FOODS: return "Foods"
+		PropertyType.ANTS: return "Ants"
+		PropertyType.PHEROMONES: return "Pheromones"
+		PropertyType.OBJECT: return "Object"
+		_: return "Unknown"
