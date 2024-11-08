@@ -112,3 +112,13 @@ func to_array() -> Array:
 	for element in elements:
 		a.append(element)
 	return a
+	
+## Join all elements into a string, separated by the given delimiter
+## Returns an empty string if the iterator is empty
+## Non-string elements will be converted using str()
+func array_to_string(delimiter: String = ", ") -> String:
+	if is_empty():
+		return ""
+	
+	var string_elements: Array = elements.map(func(element): return str(element))
+	return delimiter.join(string_elements)

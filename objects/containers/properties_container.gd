@@ -5,18 +5,28 @@ extends RefCounted
 signal property_added(info: PropertyResult.PropertyInfo)
 signal property_removed(name: String)
 signal property_changed(name: String, old_value: Variant, new_value: Variant)
-signal category_added(info: PropertyResult.CategoryInfo)
-signal category_removed(name: String)
 #endregion
 
 #region Member Variables
-var _properties: Dictionary = {}  # name -> PropertyInfo
-var _categories: Dictionary = {}  # name -> CategoryInfo
+## Dictionary mapping property names to their PropertyInfo
+var _properties: Dictionary = {}
+
+## Reference to the owner object
 var _owner: Object
-var _cache: PropertyCache
+
+## Dictionary mapping property names to their local dependent properties
+var _local_dependency_map: Dictionary = {}
+
+## Dictionary mapping full paths to their externally dependent properties
+var _external_dependency_map: Dictionary = {}
 #endregion
 
-#region Property Management
+#region Initialization
+func _init(owner: Object) -> void:
+	_owner = owner
+#endregion
+
+#region Property Management - Exposure
 ## Accepts an Array of type [class PropertyResult.PropertyInfo] and calls [member expose_property] for each
 ## Returns: Array of type [class PropertyResult]
 func expose_properties(properties: Array[PropertyResult.PropertyInfo]) -> Array[PropertyResult]:
@@ -32,7 +42,6 @@ func expose_property(property: PropertyResult.PropertyInfo) -> PropertyResult:
 	var type = property.type
 	var getter = property.getter
 	var setter = property.setter
-	var category = property.category
 	var description = property.description
 	
 	if _properties.has(name):
@@ -44,57 +53,28 @@ func expose_property(property: PropertyResult.PropertyInfo) -> PropertyResult:
 			error_msg
 		)
 	
-	# Validate getter
-	if not _is_valid_getter(getter):
-		var error_msg: String = "Invalid getter for property '%s'" % name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to expose property %s -> %s" % [name, error_msg])
+	# Validate getter and setter
+	if not _validate_property_accessors(name, getter, setter):
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.INVALID_GETTER,
-			error_msg
+			"Invalid getter or setter for property '%s'" % name
 		)
 	
-	# Validate setter if provided
-	if setter.is_valid() and not _is_valid_setter(setter):
-		var error_msg: String = "Invalid setter for property '%s'" % name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to expose property %s -> %s" % [name, error_msg])
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_SETTER,
-			error_msg
-		)
-	
-	# Get initial value
+	# Get initial value and handle dependencies
 	var initial_value = getter.call()
-	
-	# Create property info
-	var prop_info = PropertyResult.PropertyInfo.new(
-		name,
-		type,
-		initial_value,
-		getter,
-		setter,
-		category,
-		description
-	)
+	_setup_property_dependencies(property)
 	
 	# Store property
-	_properties[name] = prop_info
+	_properties[name] = property
 	
-	# Add to category if specified
-	if not category.is_empty():
-		_ensure_category(category).add_property(prop_info)
-	
-	property_added.emit(prop_info)
+	property_added.emit(property)
 	_trace("Property %s successfully added and exposed in property container" % name)
-	return PropertyResult.new(prop_info)
+	return PropertyResult.new(property)
+#endregion
 
-
-func _init(owner: Object, _unused_caching: bool = false) -> void:
-	_owner = owner
-
+#region Property Management - Access
 func get_property(name: String) -> PropertyResult:
-	# Current get_property_value implementation but renamed
 	if not _properties.has(name):
 		return PropertyResult.new(
 			null,
@@ -113,7 +93,7 @@ func get_property_value(name: String) -> Variant:
 	return result.value if result.success() else null
 
 func set_property_value(name: String, value: Variant) -> PropertyResult:
-	# Validate property exists
+	# Validate property exists and is writable
 	if not _properties.has(name):
 		return PropertyResult.new(
 			null,
@@ -122,8 +102,6 @@ func set_property_value(name: String, value: Variant) -> PropertyResult:
 		)
 	
 	var prop_info = _properties[name]
-	
-	# Validate property is writable
 	if not prop_info.writable:
 		return PropertyResult.new(
 			null,
@@ -139,10 +117,10 @@ func set_property_value(name: String, value: Variant) -> PropertyResult:
 			"Invalid type for property '%s'" % name
 		)
 	
-	# Get old value and set new value
-	var old_value = get_property_value(name).value
+	# Update value and emit change
+	var old_value = get_property_value(name)
 	prop_info.setter.call(value)
-	prop_info.value = value  # Update stored value
+	prop_info.value = value
 	
 	property_changed.emit(name, old_value, value)
 	return PropertyResult.new(value)
@@ -160,73 +138,55 @@ func get_properties() -> Array:
 ## Checks if a property exists
 func has_property(name: String) -> bool:
 	return _properties.has(name)
+
+## Gets all properties that depend on a given property
+func get_dependent_properties(name: String, full_path: String = "") -> Array[String]:
+	var dependents: Array[String] = []
+	
+	if _local_dependency_map.has(name):
+		dependents.append_array(_local_dependency_map[name])
+	
+	if not full_path.is_empty() and _external_dependency_map.has(full_path):
+		dependents.append_array(_external_dependency_map[full_path])
+		
+	return dependents
+
+## Gets all external dependencies of properties in this container
+func get_external_dependencies() -> Array[String]:
+	return _external_dependency_map.keys()
 #endregion
-
-#region Category Management
-## Gets information about a specific category
-func get_category_info(name: String) -> PropertyResult.CategoryInfo:
-	return _categories.get(name)
-
-## Gets all category names
-func get_categories() -> Array:
-	return _categories.keys()
-
-## Gets properties in a specific category
-func get_properties_in_category(category: String) -> Array[String]:
-	if category.is_empty():
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "category argument is not valid for retrieving properties in properties container" % category)
-		return []
-	if not _categories.has(category):
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Category '%s' not found in categories list in properties container" % category)
-		_trace("Categories in property container: %s" % _categories)
-		return []
-	return _categories[category].properties.map(func(p): return p.name)
-
-## Assigns a property to a category
-func assign_to_category(property_name: String, category: String) -> PropertyResult:
-	# Validate property exists
-	if not has_property(property_name):
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
-			"Property '%s' doesn't exist" % property_name
-		)
-	
-	# Remove from existing category
-	for cat in _categories.values():
-		cat.properties = cat.properties.filter(
-			func(p): return p.name != property_name
-		)
-	
-	# Add to new category
-	var prop_info = get_property_info(property_name)
-	_ensure_category(category).add_property(prop_info)
-	
-	return PropertyResult.new(null)
-#endregion
-
 
 #region Helper Functions
-## Gets the category a property belongs to
-func _get_property_category(property_name: String) -> String:
-	for category_name in _categories:
-		var category = _categories[category_name]
-		if category.properties.any(func(p): return p.name == property_name):
-			return category_name
-	return ""
+## Validates both getter and setter for a property
+func _validate_property_accessors(name: String, getter: Callable, setter: Callable) -> bool:
+	if not _is_valid_getter(getter):
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Invalid getter for property '%s'" % name)
+		return false
+	
+	if setter.is_valid() and not _is_valid_setter(setter):
+		DebugLogger.error(DebugLogger.Category.PROPERTY, "Invalid setter for property '%s'" % name)
+		return false
+		
+	return true
 
-## Ensures a category exists, creating it if necessary
-func _ensure_category(name: String) -> PropertyResult.CategoryInfo:
-	if not _categories.has(name):
-		var category = PropertyResult.CategoryInfo.new(name)
-		_categories[name] = category
-		category_added.emit(category)
-	return _categories[name]
-
-## Invalidates cache for a property
-func _invalidate_cache(name: String) -> void:
-	if _cache and _properties.has(name):
-		_cache.invalidate(name)
+## Sets up dependency mappings for a property
+func _setup_property_dependencies(property: PropertyResult.PropertyInfo) -> void:
+	if property.dependencies.is_empty():
+		return
+		
+	for dependency in property.dependencies:
+		var map = _external_dependency_map if "." in dependency else _local_dependency_map
+		var key = dependency
+		
+		if not map.has(key):
+			map[key] = []
+		map[key].append(property.name)
+		
+		_trace("Added %s dependency: %s depends on %s" % [
+			"external" if "." in dependency else "local",
+			property.name,
+			dependency
+		])
 
 ## Validates a getter callable
 func _is_valid_getter(getter: Callable) -> bool:
@@ -262,10 +222,11 @@ func _is_valid_type(value: Variant, expected_type: Component.PropertyType) -> bo
 		Component.PropertyType.OBJECT:
 			return value is Object
 	return false
-#endregion
 
+## Logs a trace message with property container context
 func _trace(message: String) -> void:
 	DebugLogger.trace(DebugLogger.Category.PROPERTY,
 		message,
 		{"From": "properties_container"}
 	)
+#endregion

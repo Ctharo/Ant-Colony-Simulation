@@ -16,32 +16,7 @@ var id: int
 var role: String
 
 ## The colony this ant belongs to
-var colony: Colony :
-	get:
-		if not colony:
-			colony = Colony.new()
-		return colony
-
-## The reach capabilities of the ant
-var reach: Reach
-
-## The vision capabilities of the ant
-var vision: Vision
-
-## The sense capabilities of the ant
-var olfaction: Olfaction
-
-## The energy levels of the ant
-var energy: Energy
-
-## The strength capabilities of the ant
-var strength: Strength
-
-## The health status of the ant
-var health: Health
-
-## The sense of direction for the ant
-var proprioception: Proprioception
+var colony: Colony : set = set_colony
 
 ## The foods being carried by the ant
 var carried_food: Foods :
@@ -49,9 +24,6 @@ var carried_food: Foods :
 		if not carried_food:
 			carried_food = Foods.new()
 		return carried_food
-
-## The speed capabilities of the ant
-var speed: Speed
 
 ## The task tree for this ant
 var task_tree: TaskTree
@@ -62,15 +34,11 @@ var nav_agent: NavigationAgent2D
 ## Task update timer
 var task_update_timer: float = 0.0
 
-var _property_access: PropertyAccess
-
-var attributes_container: AttributesContainer :
-	set(value):
-		attributes_container = value
+var _property_access: PropertyAccess :
 	get:
-		if not attributes_container:
-			attributes_container = AttributesContainer.new(self)
-		return attributes_container
+		if not _property_access:
+			_init_property_access()
+		return _property_access
 
 ## How long cached values remain valid (in seconds)
 const CACHE_DURATIONS = {
@@ -82,18 +50,7 @@ const CACHE_DURATIONS = {
 }
 
 func _init():
-	energy = Energy.new(self)
-	reach = Reach.new(self)
-	vision = Vision.new(self)
-	olfaction = Olfaction.new(self)
-	strength = Strength.new(self)
-	health = Health.new(self)
-	health.depleted.connect(died.emit)
-	speed = Speed.new(self)
-	proprioception = Proprioception.new(self)
-
 	_init_attributes()
-	_init_property_access()
 
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 	
@@ -114,17 +71,45 @@ func _process(delta: float) -> void:
 
 ## Initialize attribute maps
 func _init_attributes() -> void:
-	var attributes: Array = [energy, reach, vision, olfaction, strength, health, speed, proprioception]
-	for attribute: Attribute in attributes:
-		var result = attributes_container.register_attribute(attribute)
-		if result.is_error():
-			DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.name, result.error_message])
-		else:
-			DebugLogger.trace(DebugLogger.Category.PROPERTY, "Successfully registered attribute %s" % attribute.name)
-
+	if not _property_access:
+		DebugLogger.error(
+			DebugLogger.Category.PROPERTY,
+			"Property access not configured for attribute initialization"
+		)
+		return
+	var attributes = [
+		Energy.new(self),
+		Reach.new(self),
+		Vision.new(self),
+		Olfaction.new(self),
+		Strength.new(self),
+		Health.new(self),
+		Speed.new(self),
+		Proprioception.new(self)
+	]
+	
+	for attribute in attributes:
+		var result = _property_access.register_attribute(attribute)
+		if not result.success():
+			DebugLogger.error(
+				DebugLogger.Category.PROPERTY,
+				"Failed to register attribute %s: %s" % [
+					attribute.name,
+					result.error_message
+				]
+			)
 #endregion
 
+func set_colony(_colony: Colony) -> void:
+	if colony != _colony:
+		colony = _colony
+		var a: Attribute = create_attribute_from_node(colony, "Colony")
+		_property_access.register_attribute(a)
 
+func create_attribute_from_node(node: Node, _name: String) -> Attribute:
+	var a: Attribute = Attribute.new(self, _name)
+	a.properties_container = node.properties_container
+	return a
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
@@ -134,7 +119,8 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:
-	health.current_level -= amount
+	var current_health = get_property_value("health.current_value")
+	set_property("health.current_value", current_health - amount)
 	damaged.emit()
 	
 ## Emit a pheromone at the current position
@@ -153,11 +139,10 @@ func perform_action(_action: Action) -> void:
 ## Handle the ant consuming food for energy
 func consume_food(amount: float) -> void:
 	var consumed = carried_food.consume(amount)
-	energy._current_level += consumed
 
 ## Move the ant to a new position
 func move(direction: Vector2, delta: float) -> void:
-	var vector = direction * speed.movement_rate * delta 
+	var vector = direction * get_property_value("speed.movement_rate") * delta 
 	_move_to(global_position + vector)
 
 
@@ -180,19 +165,10 @@ func attack(current_target_entity: Ant, _delta: float) -> void:
 
 #endregion
 
-## Connect signals
-func _connect_signals() -> void:
-	health.depleted.connect(func(): died.emit())
-	energy.depleted.connect(func(): take_damage(1))  # Ant takes damage when out of energy
-
 #region Property Access Helper Methods
 ## Initialize property access
 func _init_property_access() -> void:
-	_property_access = PropertyAccess.new({
-		"ant": self,
-		"attributes_container": attributes_container
-	})
-	
+	_property_access = PropertyAccess.new(self)
 	# Set up property access caching
 	_property_access.set_cache_ttl(0.5) # Half second cache
 
@@ -205,17 +181,32 @@ func get_property_value(path: String) -> Variant:
 func get_property(path: String) -> PropertyResult:
 	return _property_access.get_property(path)
 	
+func set_property(path: String, value: Variant) -> PropertyResult:
+	return _property_access.set_property(path, value)
+	
 func get_property_info(path: String) -> PropertyResult.PropertyInfo:
 	return _property_access.get_property_info(path)
 
 # Category-specific methods
 func get_attribute_properties(category: String) -> Array[PropertyResult]:
+	if category.is_empty():
+		return [PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.TYPE_MISMATCH,
+			"Category name cannot be empty"
+		)]
+		
+	if not _property_access:
+		return [PropertyResult.new(
+			null, 
+			PropertyResult.ErrorType.NO_CONTAINER,
+			"Property access not configured"
+		)]
+		
 	return _property_access.get_attribute_properties(category)
 
 func get_attribute_names() -> Array:
-	var attribute_names = []
-	attribute_names.append_array(attributes_container.get_attribute_names())
-	return attribute_names
+	return _property_access.get_attribute_names()
 
 ## Convenience method for browser
 func get_categorized_properties() -> PropertyResult:

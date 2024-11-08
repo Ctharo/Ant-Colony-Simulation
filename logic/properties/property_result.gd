@@ -135,7 +135,8 @@ class PropertyInfoBuilder:
 			_setter,
 			_category,
 			_description,
-			_metadata
+			_metadata,
+			_dependencies
 		)
 
 ## Standardized category information structure
@@ -234,5 +235,14 @@ static func format_value(value: Variant) -> String:
 			return "(%.1f, %.1f, %.1f)" % [v.x, v.y, v.z]
 		TYPE_BOOL:
 			return "true" if value else "false"
+		TYPE_OBJECT:
+			if value is Pheromones:
+				return "Num: %s" % value.size()
+			elif value is Foods:
+				return "Num: %s" % value.size()
+			elif value is Ants:
+				return "Num: %s" % value.size()
+			else:
+				return value.to_string()
 		_:
 			return str(value)

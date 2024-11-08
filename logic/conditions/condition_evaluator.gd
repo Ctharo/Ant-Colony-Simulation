@@ -8,7 +8,6 @@ extends RefCounted
 #region Member Variables
 var _property_access: PropertyAccess
 var _property_evaluator: PropertyEvaluator
-
 # Map condition operators to PropertyEvaluator operators
 const OPERATOR_MAP = {
 	"EQUALS": "==",
@@ -24,8 +23,7 @@ const OPERATOR_MAP = {
 #endregion
 
 func _init(context: Dictionary = {}) -> void:
-	_property_access = PropertyAccess.new(context)
-	_property_evaluator = PropertyEvaluator.new(context)
+	_property_access = PropertyAccess.new(context.ant)
 
 #region Public Interface
 ## Evaluate a condition based on configuration and context

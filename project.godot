@@ -26,6 +26,11 @@ AntManager="*res://managers/ant_manager.gd"
 FoodManager="*res://managers/food_manager.gd"
 ColonyManager="*res://managers/colony_manager.gd"
 
+[display]
+
+window/size/viewport_width=1800
+window/size/viewport_height=900
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/Todo_Manager/plugin.cfg")

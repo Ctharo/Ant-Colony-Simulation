@@ -36,7 +36,7 @@ var _cache: PropertyCache
 #endregion
 
 func _init(context: Dictionary = {}) -> void:
-	_property_access = PropertyAccess.new(context)
+	_property_access = PropertyAccess.new(context.ant)
 	_cache = PropertyCache.new()
 
 #region Expression Evaluation

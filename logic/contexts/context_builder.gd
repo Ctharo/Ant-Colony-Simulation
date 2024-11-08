@@ -15,11 +15,7 @@ var _property_access: PropertyAccess
 func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
 	ant = p_ant
 	condition_configs = p_condition_configs
-	_property_access = PropertyAccess.new({
-		"ant": ant,
-		"properties_container": ant.properties_container,
-		"attributes_container": ant.attributes_container
-	})
+	_property_access = PropertyAccess.new(ant)
 	_property_access.set_cache_ttl(0.5)  # Half second cache duration
 
 #region Property Management

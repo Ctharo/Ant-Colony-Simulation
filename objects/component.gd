@@ -8,6 +8,8 @@ extends RefCounted
 #region Member Variables
 ## Container for managing component properties
 var properties_container: PropertiesContainer = PropertiesContainer.new(self)
+var name: String
+var ant: Ant
 #endregion
 
 #region Property Types
@@ -21,74 +23,45 @@ enum PropertyType {
 	VECTOR3,
 	ARRAY,
 	DICTIONARY,
+	FOODS,
+	PHEROMONES,
+	ANTS,
 	OBJECT,
 	UNKNOWN
 }
 #endregion
 
-func _init() -> void:
+func _init(_ant: Ant, _name: String) -> void:
+	ant = _ant
+	name = _name.to_snake_case() # Ensures lowercase for lookup
+	properties_container = PropertiesContainer.new(self)
 	properties_container.property_added.connect(
 		func(property): _trace("Property %s added to properties container" % property)
 	)
+	# Log name set so we know if it is a case mismatch causing a lookup error
+	DebugLogger.trace(DebugLogger.Category.PROGRAM, "Name for attribute set as %s" % name)
+	_init_properties()
+
+
+# Virtual method that derived classes will implement
+func _init_properties() -> void:
+	pass
 
 #region Property Management
 ## Get property metadata
-## Returns: PropertyResult.PropertyInfo or null if not found
-func get_property(name: String) -> PropertyResult.PropertyInfo:
-	return properties_container.get_property_info(name)
+## Returns: PropertyResult
+func get_property(prop_name: String) -> PropertyResult:
+	return ant.get_property("%s.%s" % [name, prop_name])
 
 ## Get a property's value
 ## Returns: PropertyResult with value or error information
-func get_property_value(name: String) -> PropertyResult:
-	var property = get_property(name)
-	if not property:
-		var error_msg: String = "Property '%s' not found" % name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
-			error_msg
-		)
-	
-	if not property.getter.is_valid():
-		var error_msg: String = "Invalid getter for property '%s'" % name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_GETTER,
-			error_msg
-		)
-	
-	# Get the value
-	var value = property.getter.call()
-	
-	# Validate result
-	if value == null:
-		var warn_msg: String = "Getter for property '%s' returned null" % name
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, warn_msg])
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
-			warn_msg
-		)
-	
-	return PropertyResult.new(value)
+func get_property_value(prop_name: String) -> Variant:
+	return ant.get_property_value("%s.%s" % [name, prop_name])
 
-## Set a property's value
-## Returns: PropertyResult indicating success or error
-func set_property(name: String, value: Variant) -> PropertyResult:
-	return properties_container.set_property_value(name, value)
-
-## Get information about all exposed properties
+## Get an array of PropertyResults
 ## Returns: PropertyResult
-func get_exposed_properties() -> Array[PropertyResult.PropertyInfo]:
-	_trace("Attempting to retrieve %s exposed properties" % properties_container.get_properties().size())
-	var properties: Array[PropertyResult.PropertyInfo] = []
-	for name in properties_container.get_properties():
-		var info = properties_container.get_property_info(name)
-		if info:
-			properties.append(info)
-	_trace("Retrieved %s exposed properties" % properties.size())
-	return properties
+func get_properties() -> Array[PropertyResult]:
+	return ant.get_attribute_properties(name)
 #endregion
 
 #region Helper Methods
@@ -109,6 +82,9 @@ static func type_to_string(type: PropertyType) -> String:
 		PropertyType.VECTOR3: return "Vector3"
 		PropertyType.ARRAY: return "Array"
 		PropertyType.DICTIONARY: return "Dictionary"
+		PropertyType.FOODS: return "Foods"
+		PropertyType.ANTS: return "Ants"
+		PropertyType.PHEROMONES: return "Pheromones"
 		PropertyType.OBJECT: return "Object"
 		_: return "Unknown"
 #endregion

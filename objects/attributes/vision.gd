@@ -17,7 +17,20 @@ func _init_properties() -> void:
 			.with_getter(Callable(self, "_get_range"))
 			.with_setter(Callable(self, "_set_range"))
 			.described_as("Maximum range at which the ant can see")
-			.build()
+			.build(),
+		PropertyResult.PropertyInfo.create("ants_in_range")
+			.of_type(PropertyType.ANTS)
+			.with_getter(Callable(self, "_get_ants_in_range"))
+			.with_dependencies(["vision.range"])  # Depends on range property
+			.described_as("Ants within vision range")
+			.build(),
+		PropertyResult.PropertyInfo.create("foods_in_range")
+			.of_type(PropertyType.ANTS)
+			.with_getter(Callable(self, "_get_foods_in_range"))
+			.with_dependencies(["vision.range"])  # Depends on range property
+			.described_as("Food items within vision range")
+			.build(),
+	
 	])
 #endregion
 
@@ -29,6 +42,14 @@ func is_within_range(point: Vector2) -> bool:
 #region Private Methods
 func _get_range() -> float:
 	return range
+
+#TODO Implement
+func _get_ants_in_range() -> Ants:
+	return Ants.new([])
+	
+#TODO Implement
+func _get_foods_in_range() -> Foods:
+	return Foods.new([])
 
 func _set_range(value: float) -> void:
 	if range != value:

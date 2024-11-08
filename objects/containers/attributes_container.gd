@@ -12,6 +12,7 @@ signal property_changed(attribute: String, property: String, old_value: Variant,
 #endregion
 
 #region Member Variables
+## Dictionary mapping attribute names to their category info
 var _attributes: Dictionary = {}  # name -> CategoryInfo
 var _cache: PropertyCache
 var _owner: Object
@@ -25,40 +26,59 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 ## Registers a new attribute by automatically collecting its exposed properties
 ## Returns: PropertyResult with the created attribute info
 func register_attribute(attribute: Attribute) -> PropertyResult:
+	# Validate input
+	if not attribute:
+		return PropertyResult.new(
+			null,
+			PropertyResult.ErrorType.TYPE_MISMATCH,
+			"Attribute cannot be null"
+		)
+		
 	var name = attribute.name
 	
-	# Validate attribute doesn't exist
+	# Check for duplicate attributes
 	if _attributes.has(name):
-		var msg: String = "Attribute '%s' already exists" % attribute.name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to register attribute %s -> %s" % [attribute.attribute_name, msg])
+		var msg = "Attribute '%s' already exists" % name
+		DebugLogger.error(
+			DebugLogger.Category.PROPERTY,
+			"Failed to register attribute %s: %s" % [name, msg]
+		)
 		return PropertyResult.new(
 			null,
 			PropertyResult.ErrorType.DUPLICATE_PROPERTY,
 			msg
 		)
 	
-	# Create category info for the attribute
+	# Create category info
 	var category_info = PropertyResult.CategoryInfo.new(name)
-	var before_count = _attributes.size()
+	var properties = attribute.get_properties()
 	
-	# Get properties exposed by the attribute
-	var properties = attribute.get_exposed_properties()
+	DebugLogger.trace(
+		DebugLogger.Category.PROPERTY,
+		"Adding %d properties to attribute %s" % [properties.size(), name]
+	)
 	
-	var msg: String = "Adding %s properties to attribute %s" % [properties.size(), name]
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
-	# Add all properties to the category
+	# Add properties to category
 	for prop_info in properties:
-		msg = "Calling getter for property %s of attribute %s" % [prop_info.name, name]
-		DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
-		var value = get_attribute_property_value(name, prop_info.name) if prop_info.getter.is_valid() else null
-		prop_info.value = value  # Set initial value
+		var value = null
+		if prop_info.getter.is_valid():
+			value = get_attribute_property_value(name, prop_info.name)
+		
+		prop_info.value = value
 		category_info.add_property(prop_info)
-		msg = "Added property %s to attribute %s" % [prop_info.name, name]
-		DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
+		
+		DebugLogger.trace(
+			DebugLogger.Category.PROPERTY,
+			"Added property %s to attribute %s" % [prop_info.name, name]
+		)
 	
 	_attributes[name] = category_info
-	msg  = "Added attribute %s to attributes container" % name
-	DebugLogger.trace(DebugLogger.Category.PROPERTY, msg)
+	
+	DebugLogger.trace(
+		DebugLogger.Category.PROPERTY,
+		"Successfully registered attribute %s" % name
+	)
+	
 	attribute_added.emit(category_info)
 	return PropertyResult.new(category_info)
 	
@@ -128,8 +148,22 @@ func get_attribute_properties(attribute: String) -> Array[PropertyResult]:
 	
 	return results
 
-func get_attribute_property_infos(attribute: String) -> Array[PropertyResult.PropertyInfo]:
+func get_attribute_property_infos(
+	attribute: String
+) -> Array[PropertyResult.PropertyInfo]:
+	# Validate input
+	if attribute.is_empty():
+		DebugLogger.error(
+			DebugLogger.Category.PROPERTY,
+			"Attribute name cannot be empty"
+		)
+		return []
+		
 	if not _attributes.has(attribute):
+		DebugLogger.error(
+			DebugLogger.Category.PROPERTY,
+			"Attribute '%s' not found" % attribute
+		)
 		return []
 	
 	var category_info = _attributes[attribute]
@@ -192,8 +226,11 @@ func get_attribute_metadata(attribute: String) -> Dictionary:
 	return _attributes[attribute].metadata
 
 ## Gets all attribute names
-func get_attribute_names() -> Array:
-	return _attributes.keys()
+func get_attribute_names() -> Array[String]:
+	var a: Array[String] = []
+	for key in _attributes.keys():
+		a.append(key)
+	return a
 
 ## Checks if an attribute exists
 func has_attribute(attribute: String) -> bool:
