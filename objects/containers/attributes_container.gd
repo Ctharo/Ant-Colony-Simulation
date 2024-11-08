@@ -242,25 +242,6 @@ func has_property(attribute: String, property: String) -> bool:
 	return info != null
 #endregion
 
-#region Cache Management
-## Sets the cache time-to-live in seconds
-func set_cache_ttl(ttl: float) -> void:
-	if _cache:
-		_cache.default_ttl = ttl
-
-## Invalidates cache for a specific property in an attribute
-func invalidate_property_cache(attribute: String, property: String) -> void:
-	_invalidate_property_cache(attribute, property)
-
-## Invalidates cache for all properties in an attribute
-func invalidate_attribute_cache(attribute: String) -> void:
-	_invalidate_attribute_cache(attribute)
-
-## Invalidates all caches
-func invalidate_all_caches() -> void:
-	if _cache:
-		_cache.clear()
-#endregion
 
 #region Helper Functions
 ## Generates a cache key for a property
