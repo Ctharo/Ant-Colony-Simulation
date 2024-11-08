@@ -131,13 +131,20 @@ func set_property_value(name: String, value: Variant) -> PropertyResult:
 func get_property_info(name: String) -> PropertyResult.PropertyInfo:
 	return _properties.get(name)
 
-## Gets all property names
-func get_properties() -> Array:
+## Gets all properties
+func get_properties() -> Array[PropertyResult]:
 	var a: Array[PropertyResult] = []
+	for key in _properties.keys():
+		a.append(get_property(key))
+	return a
+	
+## Gets all property names
+func get_property_names() -> Array[String]:
+	var a: Array[String] = []
 	for key in _properties.keys():
 		a.append(key)
 	return a
-
+	
 ## Checks if a property exists
 func has_property(name: String) -> bool:
 	return _properties.has(name)
