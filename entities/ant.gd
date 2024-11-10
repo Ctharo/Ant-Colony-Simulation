@@ -53,7 +53,7 @@ func _init():
 	_init_attributes()
 
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
-	
+
 	if task_tree and task_tree.get_active_task():
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
@@ -75,28 +75,27 @@ func set_colony(_colony: Colony) -> void:
 		_property_access.register_attribute(a)
 
 func create_attribute_from_node(node: Node, _name: String) -> Attribute:
-	var a: Attribute = Attribute.new(self, _name)
+	var a: Attribute = Attribute.new(_name)
 	a.properties_container = node.properties_container
 	return a
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
-	
+
 func _on_active_task_changed(_new_task: Task) -> void:
 	pass
 
 ## Handle the ant taking damage
 func take_damage(amount: float) -> void:
-	var current_health = get_property_value("health.current_value")
-	set_property("health.current_value", current_health - amount)
+	var current_health = get_property_value(Path.parse("health.current_value"))
 	damaged.emit()
-	
+
 ## Emit a pheromone at the current position
 func emit_pheromone(type: String, concentration: float) -> void:
 	print("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
 	#var new_pheromone = Pheromone.new(position, type, concentration, self)
 	# Add the pheromone to the world (implementation depends on your world management system)
-	
+
 #region Action methods
 ## Perform an action (placeholder for more complex behavior)
 ## Meant to serve as access for all actions prompted by the TaskManager
@@ -110,7 +109,7 @@ func consume_food(amount: float) -> void:
 
 ## Move the ant to a new position
 func move(direction: Vector2, delta: float) -> void:
-	var vector = direction * get_property_value("speed.movement_rate") * delta 
+	var vector = direction * get_property_value(Path.parse("speed.movement_rate")) * delta
 	_move_to(global_position + vector)
 
 
@@ -145,7 +144,7 @@ func _init_attributes() -> void:
 			"Property access not configured for attribute initialization"
 		)
 		return
-		
+
 	var attributes = [
 		Energy.new(self),
 		Reach.new(self),
@@ -156,7 +155,7 @@ func _init_attributes() -> void:
 		Speed.new(self),
 		Proprioception.new(self)
 	]
-	
+
 	for attribute in attributes:
 		var result = _property_access.register_attribute(attribute)
 		if not result.success():
@@ -171,39 +170,19 @@ func _init_attributes() -> void:
 
 #region Property Access Interface
 ## Core Property Access
-func get_property(path: String) -> PropertyResult:
+func get_property(path: Path) -> Property:
 	return _property_access.get_property(path)
 
-func set_property(path: String, value: Variant) -> PropertyResult:
-	return _property_access.set_property(path, value)
-
-## Convenience Methods
-func get_property_value(path: String) -> Variant:
-	var result = get_property(path)
-	return result.value if result.success() else null
-
-func get_property_info(path: String) -> PropertyResult.PropertyInfo:
-	var result = get_property(path)
-	return result.property_info if result.success() else null
+func get_property_value(path: Path) -> Variant:
+	return _property_access.get_property_value(path)
 #endregion
 
 #region Attribute Access Interface
 ## Get properties for a specific attribute
-func get_attribute_properties(attribute: String) -> Array[PropertyResult]:
-	if attribute.is_empty():
-		return [PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_PATH,
-			"Attribute name cannot be empty"
-		)]
-		
-	if not _property_access:
-		return [PropertyResult.new(
-			null, 
-			PropertyResult.ErrorType.NO_CONTAINER,
-			"Property access not configured"
-		)]
-		
+func get_attribute_properties(attribute: String) -> Array[Property]:
+	if attribute.is_empty() or not _property_access:
+		return []
+
 	return _property_access.get_attribute_properties(attribute)
 
 ## Get all attribute names
@@ -211,14 +190,4 @@ func get_attribute_names() -> Array[String]:
 	if not _property_access:
 		return []
 	return _property_access.get_attribute_names()
-
-## Get properties organized by category for browser
-func get_categorized_properties() -> PropertyResult:
-	if not _property_access:
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.NO_CONTAINER,
-			"Property access not configured"
-		)
-	return _property_access.get_categorized_properties()
 #endregion

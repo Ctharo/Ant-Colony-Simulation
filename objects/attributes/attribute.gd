@@ -7,52 +7,65 @@ extends RefCounted
 
 #region Member Variables
 ## Container for managing component properties
-var properties_container: PropertiesContainer = PropertiesContainer.new(self)
+var _properties_container: PropertiesContainer
 var name: String
-var ant: Ant
+var metadata: Dictionary = {}
 #endregion
 
-#region Property Types
-var PropertyType = PropertyResult.PropertyType
-#endregion
-
-func _init(_ant: Ant, _name: String) -> void:
-	ant = _ant
+func _init(_name: String) -> void:
 	name = _name.to_snake_case() # Ensures lowercase for lookup
-	properties_container = PropertiesContainer.new(self)
-	properties_container.property_added.connect(
-		func(property): _trace("Property %s added to properties container" % property)
-	)
+	_properties_container = PropertiesContainer.new(self)
 	# Log name set so we know if it is a case mismatch causing a lookup error
 	DebugLogger.trace(DebugLogger.Category.PROGRAM, "Name for attribute set as %s" % name)
 	_init_properties()
 
 # Virtual method that derived classes will implement
 func _init_properties() -> void:
-	pass
+	DebugLogger.warn(DebugLogger.Category.PROPERTY, "Attribute %s did not initialize properties" % [name])
 
 #region Property Management
+func register_property(property: Property) -> Result:
+	return _properties_container.expose_property(property)
+
 ## Get property metadata
 ## Returns: PropertyResult
-func get_property(prop_name: String) -> PropertyResult:
-	return properties_container.get_property("%s" % prop_name)
+func get_property(prop_name: String) -> Property:
+	return _properties_container.get_property(prop_name)
+
+func get_property_path(prop_name: String) -> Path:
+	if not has_property(prop_name):
+		return null
+	return _properties_container.get_property(prop_name).path
 
 ## Get a property's value
-## Returns: PropertyResult with value or error information
+## Returns: Variant
 func get_property_value(prop_name: String) -> Variant:
-	return properties_container.get_property_value("%s" % prop_name)
+	if not has_property(prop_name):
+		return null
+	return get_property(prop_name).get_property_value(prop_name)
+
+## Sets a property value and returns a PropertyResult
+func set_property_value(prop_name: String, value: Variant) -> Result:
+	if not has_property(prop_name):
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
+			"Property '%s' doesn't exist" % name
+		)
+	var property: Property = get_property(prop_name)
+	var result = property.set_value(value)
+	return result
 
 ## Get an array of PropertyResults
 ## Returns: PropertyResult
-func get_properties() -> Array[PropertyResult]:
-	return properties_container.get_properties()
+func get_properties() -> Array[Property]:
+	return _properties_container.get_properties()
+
+func has_property(property_name: String) -> bool:
+	return _properties_container.has_property(property_name)
 #endregion
 
 #region Helper Methods
-## Check if a getter requires arguments
-## Returns: bool indicating if the getter needs arguments
-static func _getter_requires_args(getter: Callable) -> bool:
-	return getter.get_argument_count() > 0
+
 #endregion
 
 func _trace(message: String) -> void:

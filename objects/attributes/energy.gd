@@ -19,31 +19,31 @@ var replenishable_amount: float : get = _get_replenishable_amount
 #region Lifecycle Methods
 func _init(_ant: Ant) -> void:
 	super._init(_ant, "Energy")
-	
+
 func _init_properties() -> void:
 	properties_container.expose_properties([
-		PropertyResult.PropertyInfo.create("max_level")
-			.of_type(PropertyResult.PropertyType.FLOAT)
+		Property.create("max_level")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_max_level"))
 			.with_setter(Callable(self, "_set_max_level"))
 			.described_as("Maximum energy level the ant can have")
 			.build(),
-			
-		PropertyResult.PropertyInfo.create("current_level")
-			.of_type(PropertyType.FLOAT)
+
+		Property.create("current_level")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_current_level"))
 			.with_setter(Callable(self, "_set_current_level"))
 			.described_as("Current energy level of the ant")
 			.build(),
-			
-		PropertyResult.PropertyInfo.create("percentage")
-			.of_type(PropertyType.FLOAT)
+
+		Property.create("percentage")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_percentage"))
 			.described_as("Current energy level as a percentage of max energy")
 			.build(),
-		
-		PropertyResult.PropertyInfo.create("replenishable_amount")
-			.of_type(PropertyResult.PropertyType.FLOAT)
+
+		Property.create("replenishable_amount")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_replenishable_amount"))
 			.described_as("Amount of energy that can be replenished before reaching max")
 			.build()
@@ -59,7 +59,7 @@ func is_full() -> bool:
 #region Private Methods
 func _get_current_level() ->float:
 	return current_level
-	
+
 func _set_current_level(value: float) -> void:
 	if current_level != value:
 		current_level = max(value, 0.0)

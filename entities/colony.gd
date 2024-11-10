@@ -15,8 +15,8 @@ func _init() -> void:
 # Virtual method that derived classes will implement
 func _init_properties() -> void:
 	properties_container.expose_properties([
-		PropertyResult.PropertyInfo.create("position")
-			.of_type(PropertyResult.PropertyType.VECTOR2)
+		Property.create("position")
+			.of_type(Property.Type.VECTOR2)
 			.with_getter(Callable(self, "_get_position"))
 			.described_as("Location of the colony in global coordinates")
 			.build()
@@ -33,35 +33,33 @@ func radius() -> float:
 
 #region Property Management
 ## Get property metadata
-## Returns: PropertyResult.PropertyInfo or null if not found
-func get_property(name: String) -> PropertyResult.PropertyInfo:
-	return properties_container.get_property_info(name)
+## Returns: Property or null if not found
+func get_property(name: String) -> Property:
+	return properties_container.get_property(name)
 
 ## Get a property's value
 ## Returns: PropertyResult with value or error information
-func get_property_value(name: String) -> PropertyResult:
+func get_property_value(name: String) -> Variant:
 	var property = get_property(name)
 	if not property:
 		var error_msg: String = "Property '%s' not found" % name
 		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
 			error_msg
 		)
-	
-	if not property.getter.is_valid():
+
+	if not property.has_valid_getter():
 		var error_msg: String = "Invalid getter for property '%s'" % name
 		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_GETTER,
+		return Result.new(
+			Result.ErrorType.INVALID_GETTER,
 			error_msg
 		)
-	
+
 	# Get the value
-	var value = property.getter.call()
-	
+	var value = property.value
+
 	# Validate result
 	if value == null:
 		var warn_msg: String = "Getter for property '%s' returned null" % name
@@ -70,25 +68,8 @@ func get_property_value(name: String) -> PropertyResult:
 			DebugLogger.Category.PROPERTY,
 			warn_msg
 		)
-	
-	return PropertyResult.new(value)
 
-## Set a property's value
-## Returns: PropertyResult indicating success or error
-func set_property(name: String, value: Variant) -> PropertyResult:
-	return properties_container.set_property_value(name, value)
-
-## Get information about all exposed properties
-## Returns: PropertyResult
-func get_exposed_properties() -> Array[PropertyResult.PropertyInfo]:
-	_trace("Attempting to retrieve %s exposed properties" % properties_container.get_properties().size())
-	var properties: Array[PropertyResult.PropertyInfo] = []
-	for property_result: PropertyResult in properties_container.get_properties():
-		var info = properties_container.get_property_info(property_result.name)
-		if info:
-			properties.append(info)
-	_trace("Retrieved %s exposed properties" % properties.size())
-	return properties
+	return value
 #endregion
 
 #region Helper Methods

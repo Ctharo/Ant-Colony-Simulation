@@ -19,10 +19,11 @@ enum Category {
 	CONDITION,      ## Condition evaluation messages
 	CONTEXT,        ## Context building messages
 	PROPERTY,       ## Property-related messsages
+	ATTRIBUTE,      ## Attribute-related messages
 	TRANSITION,     ## State transition messages
 	HIERARCHY,      ## Tree hierarchy messages
 	PROGRAM         ## Program-related messages
-	
+
 }
 
 ## Current log level
@@ -35,6 +36,7 @@ static var enabled_categories := {
 	Category.BEHAVIOR: true,
 	Category.CONDITION: true,
 	Category.PROPERTY: true,
+	Category.ATTRIBUTE: true,
 	Category.CONTEXT: true,
 	Category.TRANSITION: true,
 	Category.HIERARCHY: true,
@@ -57,6 +59,7 @@ const CATEGORY_NAMES := {
 	Category.BEHAVIOR: "BEHAVIOR",
 	Category.CONDITION: "CONDITION",
 	Category.PROPERTY: "PROPERTY",
+	Category.ATTRIBUTE: "ATTRIBUTE",
 	Category.CONTEXT: "CONTEXT",
 	Category.TRANSITION: "TRANSITION",
 	Category.HIERARCHY: "HIERARCHY",
@@ -77,12 +80,12 @@ static func set_log_level(level: LogLevel) -> void:
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:
 	if level > log_level or not enabled_categories.get(category, false):
 		return
-	
+
 	var timestamp = Time.get_datetime_string_from_system()
 	var level_name = LogLevel.keys()[level]
 	var category_name = CATEGORY_NAMES[category]
 	var color = COLORS.get(level, "ffffff")
-	
+
 	var formatted_message = "[color=#%s][%s][%s][%s] %s[/color]" % [
 		color,
 		timestamp,
@@ -90,11 +93,11 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 		category_name,
 		message
 	]
-	
+
 	# Add context information if provided
 	if not context.is_empty():
 		formatted_message += "\n  Context: " + str(context)
-	
+
 	print_rich(formatted_message)
 
 ## Convenience methods for different log levels

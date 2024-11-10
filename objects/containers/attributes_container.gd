@@ -2,92 +2,74 @@ class_name AttributesContainer
 extends RefCounted
 
 #region Signals
-signal attribute_added(info: PropertyResult.CategoryInfo)
+signal attribute_added(attribute_name: String)
 signal attribute_removed(name: String)
-signal property_changed(attribute: String, property: String, old_value: Variant, new_value: Variant)
+signal property_changed(attribute_name: String, property_name: String, old_value: Variant, new_value: Variant)
 #endregion
 
 #region Member Variables
-var _attributes: Dictionary = {}  # name -> CategoryInfo
+var _attributes: Dictionary = {}  # name -> Attribute
+var _dependency_map: Dictionary = {} # full path -> Array[Property]
 var _owner: Object
-var _property_container: PropertiesContainer
 #endregion
 
-func _init(owner: Object, property_container: PropertiesContainer) -> void:
+func _init(owner: Object) -> void:
 	_owner = owner
-	_property_container = property_container
+
 
 #region Attribute Management
-func register_attribute(attribute: Attribute) -> PropertyResult:
+func register_attribute(attribute: Attribute) -> Result:
 	if not attribute:
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.TYPE_MISMATCH,
-			"Attribute cannot be null"
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Cannot register null attribute"
 		)
-		
 	var name = attribute.name
-	
 	if _attributes.has(name):
 		var msg = "Attribute '%s' already exists" % name
 		DebugLogger.error(
-			DebugLogger.Category.PROPERTY,
+			DebugLogger.Category.ATTRIBUTE,
 			"Failed to register attribute %s: %s" % [name, msg]
 		)
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.DUPLICATE_PROPERTY,
-			msg
-		)
-	
-	var category_info = PropertyResult.CategoryInfo.new(name)
-	var properties = attribute.get_properties()
-	
-	for property in properties:
-		var prop_info = property.property_info
-		_trace("Adding property %s with property_info %s to attribute container" % [property, prop_info])
-		category_info.add_property(prop_info)
-	
-	_attributes[name] = category_info
-	_trace("Added %s to attribute container" % name)
-	attribute_added.emit(category_info)
-	return PropertyResult.new(category_info)
 
-func remove_attribute(name: String) -> PropertyResult:
-	if not _attributes.has(name):
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.PROPERTY_NOT_FOUND,
+	_setup_property_dependencies(attribute)
+
+	_attributes[name] = attribute
+	_trace("Added attribute %s to attribute container" % name)
+	attribute_added.emit(attribute)
+	return Result.new()
+
+func remove_attribute(name: String) -> Result:
+	if not has_attribute(name):
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
 			"Attribute '%s' doesn't exist" % name
 		)
-	
 	_attributes.erase(name)
 	attribute_removed.emit(name)
-	return PropertyResult.new(null)
+	return Result.new()
 #endregion
 
 #region Property Information
-
-func get_property(attribute: String, property: String) -> PropertyResult:
-	if not _attributes.has(attribute):
+func get_attribute(attribute_name: String) -> Attribute:
+	if not has_attribute(attribute_name):
 		return null
-	var a: Attribute = _attributes[attribute]
-	return a._property_container.get_property(property)
+	return _attributes[attribute_name]
 
-func get_property_info(attribute: String, property: String) -> PropertyResult.PropertyInfo:
-	if not _attributes.has(attribute):
+func get_property(attribute_name: String, property_name: String) -> Property:
+	if not has_property(attribute_name, property_name):
 		return null
-	
-	var category_info = _attributes[attribute]
-	for prop_info in category_info.properties:
-		if prop_info.name == property:
-			return prop_info
-	return null
+	return get_attribute(attribute_name).get_property(property_name)
 
-func get_attribute_metadata(attribute: String) -> Dictionary:
-	if not _attributes.has(attribute):
-		return {}
-	return _attributes[attribute].metadata
+func get_property_value(attribute_name: String, property_name: String) -> Variant:
+	if not has_property(attribute_name, property_name):
+		return null
+	return get_property(attribute_name, property_name).value
+
+func get_attribute_properties(attribute_name: String) -> Array[Property]:
+	if not has_attribute(attribute_name):
+		return []
+	return get_attribute(attribute_name).get_properties()
 
 func get_attribute_names() -> Array[String]:
 	var names: Array[String] = []
@@ -95,34 +77,49 @@ func get_attribute_names() -> Array[String]:
 		names.append(key)
 	return names
 
-func has_attribute(attribute: String) -> bool:
-	return _attributes.has(attribute)
+func has_attribute(attribute_name: String) -> bool:
+	return _attributes.has(attribute_name)
 
-func has_property(attribute: String, property: String) -> bool:
-	return get_property_info(attribute, property) != null
-
-func get_attribute_properties(attribute: String) -> Array[PropertyResult]:
-	if not _attributes.has(attribute):
-		return []
-	
-	var results: Array[PropertyResult] = []
-	var category_info = _attributes[attribute]
-	for prop_info in category_info.properties:
-		if not prop_info:
-			_error("Skipping null property info for %s while retrieving attribute properties in container" % attribute)
-			continue
-		results.append(get_property(attribute, prop_info.name))
-	
-	return results
+func has_property(attribute_name: String, property_name: String) -> bool:
+	if not has_attribute(attribute_name):
+		return false
+	if not get_attribute(attribute_name).has_property(property_name):
+		return false
+	return true
 #endregion
 
-static func create_property(name: String) -> PropertyResult.PropertyInfoBuilder:
-	return PropertyResult.PropertyInfo.create(name)
+#region Dependencies
+func _setup_property_dependencies(attribute: Attribute) -> void:
+	var map = _dependency_map
+	for property in attribute.get_properties():
+		var key: String = property.path.full
+		if not map.has(key):
+			map[key] = []
+		for dependency in property.dependencies:
+			var path: Path
+			if Helper.is_full_path(dependency):
+				path = Path.parse(dependency)
+			else:
+				# Assumes if not full path then local dependency (i.e., same attribute)
+				path = Path.new(attribute.name, dependency)
+			map[key].append(path.full)
 
+func _cleanup_property_dependencies(attribute: Attribute) -> void:
+	var map = _dependency_map
+	for property in attribute.get_properties():
+		var key: String = property.path.full
+		# Remove as a dependent
+		map.erase(key)
+		# Remove from other properties' dependencies
+		for deps in map.values():
+			deps.erase(key)
+#endregion
+
+#region Helpers
 func _trace(message: String) -> void:
 	DebugLogger.trace(DebugLogger.Category.PROPERTY,
 		message,
-		{"From": "component"}
+		{"From": "attributes_container"}
 	)
 
 func _warn(message: String) -> void:
@@ -134,3 +131,4 @@ func _error(message: String) -> void:
 	DebugLogger.error(DebugLogger.Category.PROPERTY,
 		message
 	)
+#endregion
