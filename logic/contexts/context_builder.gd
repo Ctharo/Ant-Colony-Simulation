@@ -38,17 +38,15 @@ func _register_property(property_path: String) -> void:
 		return
 
 	required_properties[property_path] = true
-	DebugLogger.trace(DebugLogger.Category.CONTEXT,
-		"Registered required property: %s" % property_path
-	)
+	_trace("Registered required property: %s" % property_path)
 
 #TODO we already have a caching system, cant we just use the PropertyAccess cache from Ant?
+# No, because we want conditions and expressions to be cached in this system
 ## Gets a context value, using cache if available
 func get_context_value(property_path: String) -> Variant:
 	# Check cache first
 	if property_path in context_cache:
-		DebugLogger.trace(DebugLogger.Category.CONTEXT,
-			"Using cached value for '%s': %s" % [
+		_trace("Using cached value for '%s': %s" % [
 				property_path,
 				Property.format_value(context_cache[property_path])
 			]
@@ -57,9 +55,7 @@ func get_context_value(property_path: String) -> Variant:
 
 	# Verify property is required
 	if not property_path in required_properties:
-		DebugLogger.warn(DebugLogger.Category.CONTEXT,
-			"Accessing unrequired property '%s'" % property_path
-		)
+		_warn("Accessing unrequired property '%s'" % property_path)
 		return null
 
 	# Try to get value through property system
@@ -67,12 +63,7 @@ func get_context_value(property_path: String) -> Variant:
 
 	# Cache and return the value
 	context_cache[property_path] = property.value
-	DebugLogger.trace(DebugLogger.Category.CONTEXT,
-		"Evaluated property '%s' = %s" % [
-			property_path,
-			Property.format_value(context_cache[property_path])
-		]
-	)
+	_trace("Evaluated property '%s' = %s" % [property_path, Property.format_value(context_cache[property_path])])
 	return context_cache[property_path]
 #endregion
 
@@ -81,9 +72,7 @@ func get_context_value(property_path: String) -> Variant:
 ## Returns: Dictionary with context information
 func build() -> Dictionary:
 	if not is_instance_valid(ant):
-		DebugLogger.error(DebugLogger.Category.CONTEXT,
-			"ContextBuilder: Invalid ant reference"
-		)
+		_error("ContextBuilder: Invalid ant reference")
 		return {}
 
 	var context = {
@@ -120,17 +109,13 @@ func _log_required_properties() -> void:
 	for prop in properties_list:
 		formatted_list += "\n  - " + str(prop)
 
-	DebugLogger.debug(DebugLogger.Category.CONTEXT,
-		"Required properties for update:%s" % formatted_list
-	)
+	_trace("Required properties for update:%s" % formatted_list)
 
 ## Clears the context cache
 func clear_cache() -> void:
 	context_cache.clear()
 	_property_access.clear_cache()
-	DebugLogger.debug(DebugLogger.Category.CONTEXT,
-		"Context cache cleared"
-	)
+	_trace("Context cache cleared")
 #endregion
 
 #region Debug
@@ -162,5 +147,33 @@ func print_context_analysis() -> void:
 	var hit_ratio = 100.0 * hits / (hits + misses) if (hits + misses) > 0 else 0
 	analysis += "\n    Hit ratio: %.1f%%" % hit_ratio
 
-	DebugLogger.info(DebugLogger.Category.CONTEXT, analysis)
+	_info(analysis)
+#endregion
+
+#region Logging Helpers
+func _trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.CONTEXT,
+		message,
+		{"From": "context_builder"}
+	)
+
+func _warn(message: String) -> void:
+	DebugLogger.warn(DebugLogger.Category.CONTEXT,
+		message
+	)
+
+func _debug(message: String) -> void:
+	DebugLogger.debug(DebugLogger.Category.CONTEXT,
+		message
+	)
+
+func _info(message: String) -> void:
+	DebugLogger.info(DebugLogger.Category.CONTEXT,
+		message
+	)
+
+func _error(message: String) -> void:
+	DebugLogger.error(DebugLogger.Category.CONTEXT,
+		message
+	)
 #endregion
