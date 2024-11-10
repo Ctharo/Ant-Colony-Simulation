@@ -32,22 +32,16 @@ const TYPE_CONVERSIONS = {
 
 #region Member Variables
 var _property_access: PropertyAccess
-var _cache: Cache
 #endregion
 
 func _init(context: Dictionary = {}) -> void:
 	_property_access = PropertyAccess.new(context.ant)
-	_cache = Cache.new()
 
 #region Expression Evaluation
 ## Evaluates a property expression
 ## Expression format: "property_name operator value" or "property_name"
 ## Returns: PropertyResult with evaluation result
 func evaluate_expression(expression: String, context: Dictionary = {}) -> Variant:
-	# Check cache
-	var cache_key = _get_cache_key(expression, context)
-	if _cache.has_valid_cache(cache_key):
-		return _cache.get_cached(cache_key)
 
 	# Parse expression
 	var parsed = _parse_expression(expression)
@@ -56,10 +50,6 @@ func evaluate_expression(expression: String, context: Dictionary = {}) -> Varian
 
 	# Evaluate parsed expression
 	var result = _evaluate_parsed_expression(parsed.value, context)
-
-	# Cache successful results
-	if result.success():
-		_cache.cache_value(cache_key, result.value)
 
 	return result
 

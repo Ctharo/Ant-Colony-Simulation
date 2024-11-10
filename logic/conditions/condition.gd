@@ -9,6 +9,18 @@ var _previous_result: bool = false
 
 ## Configuration for this condition
 var config: Dictionary = {}
+var _required_properties: Array[Path] = []
+
+func get_required_properties() -> Array[String]:
+	var props: Array[String] = []
+	for path in _required_properties:
+		props.append(path.full)
+	return props
+
+func _register_required_property(property_path: String) -> void:
+	var path := Path.parse(property_path)
+	if not _required_properties.has(path):
+		_required_properties.append(path)
 
 ## Evaluate if the condition is met
 ## @param ant The ant to evaluate for
@@ -17,11 +29,11 @@ var config: Dictionary = {}
 ## @return Whether the condition is met
 func is_met(_cache: Dictionary, context: Dictionary) -> bool:
 	var result := ConditionEvaluator.new(context).evaluate(config, context)
-	
+
 	if result != _previous_result:
 		_previous_result = result
 		evaluation_changed.emit(result)
-	
+
 	return result
 
 ## Create a condition from configuration

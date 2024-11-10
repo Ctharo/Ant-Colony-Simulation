@@ -50,34 +50,34 @@ func build() -> TaskTree:
 	# Create tree instance
 	var tree := TaskTree.new()
 	tree.ant = ant
-	
+
 	# Initialize task configuration
 	tree.task_config = TaskConfig.new()
 	var load_result = tree.task_config.load_configs(tasks_path, behaviors_path, conditions_path)
 	if load_result != OK:
-		DebugLogger.error(DebugLogger.Category.TASK, "Failed to load configs from: %s, %s, and/or %s" % 
+		DebugLogger.error(DebugLogger.Category.TASK, "Failed to load configs from: %s, %s, and/or %s" %
 				  [tasks_path, behaviors_path, conditions_path])
 		return tree
-	
+
 	# Validate configurations
 	if not _validate_configs(tree.task_config):
 		DebugLogger.error(DebugLogger.Category.TASK, "Configuration validation failed")
 		return tree
-	
+
 	# Create root task
 	var root = tree.task_config.create_task(root_task_type, root_priority, ant)
 	if not root:
 		DebugLogger.error(DebugLogger.Category.TASK, "Failed to create root task of type: %s" % root_task_type)
 		return tree
-	
+
 	root.name = root_task_type  # Ensure root is named
 	tree.root_task = root
-	
+
 	# Verify the created hierarchy
 	if not _verify_task_hierarchy(root):
 		DebugLogger.error(DebugLogger.Category.TASK, "Task hierarchy verification failed")
 		return tree
-	
+
 	DebugLogger.info(DebugLogger.Category.TASK, "Successfully built task tree")
 	return tree
 
@@ -87,13 +87,13 @@ func _validate_configs(config: TaskConfig) -> bool:
 	if not root_task_type in config.task_configs:
 		DebugLogger.error(DebugLogger.Category.TASK, "Root task type '%s' not found in configuration" % root_task_type)
 		return false
-	
+
 	# Check required tasks exist
 	for task_type in required_tasks:
 		if not task_type in config.task_configs:
 			DebugLogger.error(DebugLogger.Category.TASK, "Required task type '%s' not found in configuration" % task_type)
 			return false
-	
+
 	# Check that all behaviors referenced by tasks exist
 	for task_type in config.task_configs:
 		var task_config = config.task_configs[task_type]
@@ -101,36 +101,36 @@ func _validate_configs(config: TaskConfig) -> bool:
 			for behavior_data in task_config.behaviors:
 				var behavior_type = behavior_data.type
 				if not behavior_type in config.behavior_configs:
-					DebugLogger.error(DebugLogger.Category.TASK, "Task '%s' references undefined behavior: %s" % 
+					DebugLogger.error(DebugLogger.Category.TASK, "Task '%s' references undefined behavior: %s" %
 							 [task_type, behavior_type])
 					return false
-	
+
 	return true
 
 ## Verify the created task hierarchy
 func _verify_task_hierarchy(task: Task) -> bool:
 	if not task:
 		return false
-	
+
 	# Check that task has proper references
 	if not task.ant:
 		DebugLogger.error(DebugLogger.Category.TASK, "Task '%s' missing ant reference" % task.name)
 		return false
-	
+
 	# Verify behaviors
 	for behavior in task.behaviors:
 		if not behavior.ant:
-			DebugLogger.error(DebugLogger.Category.BEHAVIOR, "Behavior '%s' in task '%s' missing ant reference" % 
+			DebugLogger.error(DebugLogger.Category.BEHAVIOR, "Behavior '%s' in task '%s' missing ant reference" %
 					  [behavior.name, task.name])
 			return false
-		
+
 		# Verify behavior actions
 		for action in behavior.actions:
 			if not action.ant:
-				DebugLogger.error(DebugLogger.Category.ACTION, "Action in behavior '%s' of task '%s' missing ant reference" % 
+				DebugLogger.error(DebugLogger.Category.ACTION, "Action in behavior '%s' of task '%s' missing ant reference" %
 						  [behavior.name, task.name])
 				return false
-	
+
 	return true
 
 ## Get the list of all task types that will be loaded
@@ -139,13 +139,3 @@ func get_task_types() -> Array[String]:
 	types.append(root_task_type)
 	types.append_array(required_tasks)
 	return types
-
-### Print the configuration that will be used
-#func print_config() -> void:
-	#print("\nTask Tree Configuration:")
-	#print("  Root Task: %s (Priority: %d)" % [root_task_type, root_priority])
-	#print("  Required Tasks: %s" % required_tasks)
-	#print("  Config Paths:")
-	#print("    Tasks: %s" % tasks_path)
-	#print("    Behaviors: %s" % behaviors_path)
-	#print("    Conditions: %s" % conditions_path)

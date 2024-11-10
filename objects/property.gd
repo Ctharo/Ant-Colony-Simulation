@@ -163,11 +163,11 @@ static func format_value(value: Variant) -> String:
 			return "true" if value else "false"
 		TYPE_OBJECT:
 			if value is Pheromones:
-				return "Num: %s" % value.size()
+				return Property.format_value(value.to_array())
 			elif value is Foods:
-				return "Num: %s" % value.size()
+				return Property.format_value(value.to_array())
 			elif value is Ants:
-				return "Num: %s" % value.size()
+				return Property.format_value(value.to_array())
 			else:
 				return value.to_string()
 		_:
