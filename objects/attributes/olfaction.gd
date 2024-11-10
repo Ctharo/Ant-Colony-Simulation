@@ -25,7 +25,7 @@ func _init_properties() -> void:
 			.of_type(Property.Type.PHEROMONES)
 			.with_attribute(name)
 			.with_getter(Callable(self, "_get_pheromones_in_range"))
-			.with_dependencies(["olfaction.range"])  # Depends on range property
+			.with_dependencies(["range"])  # Depends on range property
 			.described_as("List of pheromones within olfactory range")
 			.build(),
 		Property.create("food_pheromones_in_range")
@@ -34,6 +34,13 @@ func _init_properties() -> void:
 			.with_getter(Callable(self, "_get_food_pheromones_in_range"))
 			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
 			.described_as("List of food pheromones within olfactory range")
+			.build(),
+		Property.create("home_pheromones_in_range")
+			.of_type(Property.Type.PHEROMONES)
+			.with_attribute(name)
+			.with_getter(Callable(self, "_get_home_pheromones_in_range"))
+			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
+			.described_as("List of home pheromones within olfactory range")
 			.build(),
 	])
 #endregion
@@ -64,6 +71,19 @@ func _get_food_pheromones_in_range() -> Pheromones:
 
 	for pheromone in pheromones:
 		if pheromone.type == "food":
+			p_in_range.append(pheromone as Pheromone)
+
+	return p_in_range
+
+func _get_home_pheromones_in_range() -> Pheromones:
+	# Get the cached pheromones directly from the property container
+	# to avoid recursive property access calls
+	var property: Property = get_property("pheromones_in_range")
+	var pheromones: Pheromones = property.value
+	var p_in_range: Pheromones = Pheromones.new([])
+
+	for pheromone in pheromones:
+		if pheromone.type == "home":
 			p_in_range.append(pheromone as Pheromone)
 
 	return p_in_range
