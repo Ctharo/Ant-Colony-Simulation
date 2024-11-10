@@ -62,7 +62,11 @@ class Builder:
 	func with_dependencies(p_dependencies: Array[String]) -> Builder:
 		for dependency in p_dependencies:
 			if not Helper.is_full_path(dependency):
-				assert(false)
+				# Fix if possible, abort otherwise
+				if attribute_name.is_empty():
+					DebugLogger.warn(DebugLogger.Category.PROPERTY, "Cannot set dependency %s for property %s as invalid path format" % [dependency, name])
+					return
+				dependency = attribute_name + "." + dependency
 			dependencies.append(dependency)
 		return self
 
