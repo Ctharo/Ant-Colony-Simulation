@@ -32,12 +32,12 @@ const TYPE_CONVERSIONS = {
 
 #region Member Variables
 var _property_access: PropertyAccess
-var _cache: PropertyCache
+var _cache: Cache
 #endregion
 
 func _init(context: Dictionary = {}) -> void:
 	_property_access = PropertyAccess.new(context.ant)
-	_cache = PropertyCache.new()
+	_cache = Cache.new()
 
 #region Expression Evaluation
 ## Evaluates a property expression
