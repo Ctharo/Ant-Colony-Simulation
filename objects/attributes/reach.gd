@@ -23,6 +23,7 @@ func _init_properties() -> void:
 		Property.create("food_in_range")
 			.of_type(Property.Type.FLOAT)
 			.with_attribute(name)
+			.with_dependencies(["range"])
 			.with_getter(Callable(self, "_get_food_in_range"))
 			.described_as("Food within reach range")
 			.build()
