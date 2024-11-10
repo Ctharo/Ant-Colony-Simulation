@@ -16,6 +16,13 @@ func cache_value(path: Path, value: Variant, ttl: float = -1.0) -> Result:
 	valid_until[path.full] = Time.get_ticks_msec() + (ttl if ttl > 0 else default_ttl) * 1000
 	return Result.new()
 
+func invalidate(path: Path) -> Result:
+	if values.has(path.full):
+		values.erase(path.full)
+	if valid_until.has(path.full):
+		valid_until.erase(path.full)
+	return Result.new()
+
 func clear() -> void:
 	values.clear()
 	valid_until.clear()

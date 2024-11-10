@@ -76,7 +76,7 @@ func set_colony(_colony: Colony) -> void:
 
 func create_attribute_from_node(node: Node, _name: String) -> Attribute:
 	var a: Attribute = Attribute.new(_name)
-	a.properties_container = node.properties_container
+	a._properties_container = node.properties_container
 	return a
 
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:

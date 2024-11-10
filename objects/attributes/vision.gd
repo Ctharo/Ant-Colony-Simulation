@@ -14,18 +14,21 @@ func _init_properties() -> void:
 	_properties_container.expose_properties([
 		Property.create("range")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_range"))
 			.with_setter(Callable(self, "_set_range"))
 			.described_as("Maximum range at which the ant can see")
 			.build(),
 		Property.create("ants_in_range")
 			.of_type(Property.Type.ANTS)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_ants_in_range"))
 			.with_dependencies(["vision.range"])  # Depends on range property
 			.described_as("Ants within vision range")
 			.build(),
 		Property.create("foods_in_range")
 			.of_type(Property.Type.ANTS)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_foods_in_range"))
 			.with_dependencies(["vision.range"])  # Depends on range property
 			.described_as("Food items within vision range")

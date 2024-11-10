@@ -16,18 +16,21 @@ func _init_properties() -> void:
 	_properties_container.expose_properties([
 		Property.create("range")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_range"))
 			.with_setter(Callable(self, "_set_range"))
 			.described_as("Maximum range at which the ant can smell things")
 			.build(),
 		Property.create("pheromones_in_range")
 			.of_type(Property.Type.PHEROMONES)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_pheromones_in_range"))
 			.with_dependencies(["olfaction.range"])  # Depends on range property
 			.described_as("List of pheromones within olfactory range")
 			.build(),
 		Property.create("food_pheromones_in_range")
 			.of_type(Property.Type.PHEROMONES)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_food_pheromones_in_range"))
 			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
 			.described_as("List of food pheromones within olfactory range")

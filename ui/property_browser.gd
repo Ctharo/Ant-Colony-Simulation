@@ -10,7 +10,7 @@ signal property_selected(property_path: String)
 const COL_NAME = 0
 const COL_TYPE = 1
 const COL_VALUE = 2
-const COL_DEPENDENCIES = 3  
+const COL_DEPENDENCIES = 3
 #endregion
 
 #region UI Elements
@@ -77,6 +77,8 @@ func create_ui() -> void:
 	_create_path_display(main_container)
 	_create_close_button(main_container)
 
+	_refresh_view()
+
 func create_components() -> void:
 	var a: Ant = Ant.new()
 	var c: Colony = Colony.new()
@@ -84,7 +86,7 @@ func create_components() -> void:
 
 	a.global_position = Vector2(randf_range(0, 1800), randf_range(0, 800))
 	c.global_position = Vector2(randf_range(0, 1800), randf_range(0, 800))
-	
+
 	show_ant(a)
 
 ## Creates the main container
@@ -98,11 +100,11 @@ func _create_main_container() -> VBoxContainer:
 func _create_mode_selector(parent: Control) -> void:
 	var mode_container = HBoxContainer.new()
 	parent.add_child(mode_container)
-	
+
 	var mode_label = Label.new()
 	mode_label.text = "Browse Mode:"
 	mode_container.add_child(mode_label)
-	
+
 	mode_switch = OptionButton.new()
 	mode_switch.add_item("Attribute Properties", 0)
 	mode_switch.connect("item_selected", Callable(self, "_on_mode_changed"))
@@ -114,7 +116,7 @@ func _create_content_split(parent: Control) -> void:
 	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_split.split_offset = 150
 	parent.add_child(content_split)
-	
+
 	_create_attribute_panel(content_split)
 	_create_properties_panel(content_split)
 
@@ -124,11 +126,11 @@ func _create_attribute_panel(parent: Control) -> void:
 	attribute_container.custom_minimum_size.x = 150
 	attribute_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	parent.add_child(attribute_container)
-	
+
 	attribute_label = Label.new()
 	attribute_label.text = "Attributes"
 	attribute_container.add_child(attribute_label)
-	
+
 	attribute_list = ItemList.new()
 	attribute_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	attribute_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -141,7 +143,7 @@ func _create_properties_panel(parent: Control) -> void:
 	right_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(right_container)
-	
+
 	_create_properties_tree(right_container)
 	_create_description_panel(right_container)
 
@@ -150,7 +152,7 @@ func _create_properties_tree(parent: Control) -> void:
 	var properties_label = Label.new()
 	properties_label.text = "Properties"
 	parent.add_child(properties_label)
-	
+
 	properties_tree = Tree.new()
 	properties_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	properties_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -166,20 +168,20 @@ func _configure_tree_columns() -> void:
 	properties_tree.set_column_title(COL_TYPE, "Type")
 	properties_tree.set_column_title(COL_VALUE, "Value")
 	properties_tree.set_column_title(COL_DEPENDENCIES, "Dependencies")
-	
+
 	for col in range(4):  # Updated range for 4 columns
 		properties_tree.set_column_title_alignment(col, HORIZONTAL_ALIGNMENT_LEFT)
-	
+
 	properties_tree.set_column_expand(COL_NAME, true)
 	properties_tree.set_column_expand(COL_TYPE, false)
 	properties_tree.set_column_expand(COL_VALUE, true)
 	properties_tree.set_column_expand(COL_DEPENDENCIES, true)
-	
+
 	properties_tree.set_column_custom_minimum_width(COL_NAME, 300)
 	properties_tree.set_column_custom_minimum_width(COL_TYPE, 150)
 	properties_tree.set_column_custom_minimum_width(COL_VALUE, 250)
 	properties_tree.set_column_custom_minimum_width(COL_DEPENDENCIES, 300)  # Width for dependencies
-	
+
 	properties_tree.column_titles_visible = true
 
 ## Creates the description panel
@@ -187,14 +189,14 @@ func _create_description_panel(parent: Control) -> void:
 	var description_panel = PanelContainer.new()
 	description_panel.custom_minimum_size.y = 100
 	parent.add_child(description_panel)
-	
+
 	var description_container = VBoxContainer.new()
 	description_panel.add_child(description_container)
-	
+
 	var description_title = Label.new()
 	description_title.text = "Description"
 	description_container.add_child(description_title)
-	
+
 	description_label = Label.new()
 	description_label.text = ""
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -205,11 +207,11 @@ func _create_description_panel(parent: Control) -> void:
 func _create_path_display(parent: Control) -> void:
 	var path_container = HBoxContainer.new()
 	parent.add_child(path_container)
-	
+
 	var path_title = Label.new()
 	path_title.text = "Selected Property Path:"
 	path_container.add_child(path_title)
-	
+
 	path_label = Label.new()
 	path_label.text = ""
 	path_container.add_child(path_label)
@@ -242,13 +244,16 @@ func _on_property_selected() -> void:
 	if not selected:
 		_warn("No valid property selected")
 		return
-		
-	var property_info = selected.get_metadata(0) as PropertyResult.PropertyInfo
-	if not property_info:
+
+	var property = selected.get_metadata(0) as Property
+	if not property:
 		_warn("No valid property info found for selection")
 		return
-	
-	_update_property_selection(property_info)
+
+	_update_property_selection(property)
+
+func _on_close_pressed():
+	transition_to_scene("main")
 #endregion
 
 #region Data Management
@@ -257,17 +262,17 @@ func _refresh_view() -> void:
 	if not current_ant:
 		_warn("No ant set for Property Browser scene")
 		return
-	
+
 	_refresh_attributes()
-	path_label.text = ""
+	path_label.text = "none"
 
 ## Refreshes the attributes list
 func _refresh_attributes() -> void:
 	_trace("Refreshing attributes list")
-	
+
 	attribute_list.clear()
 	properties_tree.clear()
-	
+
 	var attributes = _get_attribute_names()
 	for attribute_name in attributes:
 		attribute_list.add_item(attribute_name.capitalize())
@@ -276,54 +281,49 @@ func _refresh_attributes() -> void:
 func _populate_properties(attribute: String) -> void:
 	_trace("Populating properties for attribute: %s" % attribute)
 	properties_tree.clear()
+	path_label.text = "none"
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
-	
-	var property_results = _get_attribute_properties(attribute)
-	if property_results.is_empty():
+
+	var properties = _get_attribute_properties(attribute)
+	if properties.is_empty():
 		_warn("No properties found for attribute: %s" % attribute)
 		return
-	
-	for property_result in property_results:
-		if not property_result.success():
-			_warn("Failed to get property in attribute %s: %s" % [attribute, property_result.error_message])
-			continue
-			
+
+	for property in properties:
 		var item = properties_tree.create_item(root)
-		_populate_tree_item(item, property_result)
+		_populate_tree_item(item, property)
 
 ## Populates a tree item with property data
-func _populate_tree_item(item: TreeItem, property_result: PropertyResult) -> void:
-	var property_info = property_result.property_info as PropertyResult.PropertyInfo
-	if not property_info:
-		_error("Property result missing metadata: %s" % property_result.error_message)
+func _populate_tree_item(item: TreeItem, property: Property) -> void:
+	if not property:
 		return
-	
-	item.set_text(COL_NAME, Helper.snake_to_readable(property_info.name))
-	item.set_text(COL_TYPE, PropertyResult.type_to_string(property_info.type))
-	item.set_text(COL_VALUE, PropertyResult.format_value(property_result.value))
-	
+
+	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
+	item.set_text(COL_TYPE, Property.type_to_string(property.type))
+	item.set_text(COL_VALUE, Property.format_value(property.value))
+
 	# Add dependencies information
 	var dependencies_text = ""
-	if property_info.dependencies.is_empty():
+	if property.dependencies.is_empty():
 		dependencies_text = "None"
 	else:
 		# Format the dependencies list
-		dependencies_text = "\n".join(property_info.dependencies)
-	
+		dependencies_text = "\n".join(property.dependencies)
+
 	item.set_text(COL_DEPENDENCIES, dependencies_text)
-	
+
 	# Set tooltip for dependencies column if there are any
-	if not property_info.dependencies.is_empty():
+	if not property.dependencies.is_empty():
 		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
-	
-	item.set_metadata(0, property_info)
+
+	item.set_metadata(0, property)
 
 ## Updates UI after property selection
-func _update_property_selection(property_info: PropertyResult.PropertyInfo) -> void:
-	description_label.text = property_info.description if not property_info.description.is_empty() else "No description available."
-	
-	var path = "%s.%s" % [current_attribute, property_info.name]
+func _update_property_selection(property: Property) -> void:
+	description_label.text = property.description if not property.description.is_empty() else "No description available."
+
+	var path = property.path.full
 	path_label.text = path
 	property_selected.emit(path)
 #endregion
@@ -334,23 +334,15 @@ func _get_property_value(path: String) -> Variant:
 	if not current_ant:
 		push_error("No ant set for property access")
 		return null
-		
-	return current_ant.get_property_value(path)
 
-## Gets property info through ant's property access system
-func _get_property_info(path: String) -> PropertyResult.PropertyInfo:
-	if not current_ant:
-		push_error("No ant set for property access")
-		return null
-		
-	return current_ant.get_property_info(path)
+	return current_ant.get_property_value(Path.parse(path))
 
 ## Gets attribute properties through ant's property access system
-func _get_attribute_properties(attribute: String) -> Array[PropertyResult]:
+func _get_attribute_properties(attribute: String) -> Array[Property]:
 	if not current_ant:
 		push_error("No ant set for property access")
 		return []
-		
+
 	return current_ant.get_attribute_properties(attribute)
 
 ## Gets all attribute names through ant's property access system
@@ -358,14 +350,11 @@ func _get_attribute_names() -> Array[String]:
 	if not current_ant:
 		push_error("No ant set for property access")
 		return []
-		
+
 	return current_ant.get_attribute_names()
 #endregion
 
 #region Helper Functions
-## Formats a value for display
-func _format_value(value: Variant) -> String:
-	return PropertyResult.format_value(value)
 
 ## Logs a trace message
 func _trace(message: String) -> void:
@@ -373,15 +362,17 @@ func _trace(message: String) -> void:
 		message,
 		{"From": "property_browser"}
 	)
-	
+
 func _error(message: String) -> void:
 	DebugLogger.error(DebugLogger.Category.PROPERTY,
 		message
 	)
-	
+
 func _warn(message: String) -> void:
 	DebugLogger.warn(DebugLogger.Category.PROPERTY,
 		message
 	)
+
+
 
 #endregion

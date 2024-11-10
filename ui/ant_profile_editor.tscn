@@ -146,7 +146,7 @@ func _on_new_profile_pressed():
 	line_edit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dialog.add_child(line_edit)
 	add_child(dialog)
-	
+
 	dialog.connect(\"confirmed\", Callable(self, \"_on_new_profile_confirmed\").bind(line_edit))
 	dialog.popup_centered()
 
@@ -155,7 +155,7 @@ func _on_new_profile_confirmed(line_edit: LineEdit):
 	if profile_name.is_empty():
 		push_warning(\"Profile name cannot be empty\")
 		return
-	
+
 	if data_manager.ant_profile_exists(profile_name):
 		# Show overwrite warning
 		var overwrite_dialog = ConfirmationDialog.new()
@@ -172,7 +172,7 @@ func _on_overwrite_profile_confirmed(profile_name: String):
 func _create_new_ant_profile(profile_name: String):
 	var profile_id = data_manager.create_new_ant_profile(profile_name)
 	populate_profile_list()
-	
+
 	# Select the new profile in the list
 	for i in range(profile_list.get_item_count()):
 		if profile_list.get_item_text(i) == profile_name:
@@ -186,7 +186,7 @@ func _on_delete_pressed():
 		push_warning(\"No ant profile selected for deletion\")
 		return
 	var selected_profile_name = profile_list.get_item_text(selected_items[0])
-	
+
 	# Show a confirmation dialog before deleting
 	var confirm_dialog = ConfirmationDialog.new()
 	confirm_dialog.dialog_text = \"Are you sure you want to delete the ant profile '%s'? This action cannot be undone.\" % selected_profile_name
@@ -208,7 +208,7 @@ func _on_save_stats():
 		return
 	var selected_profile_name = profile_list.get_item_text(selected_items[0])
 	var selected_profile_id = profile_id_to_name[selected_profile_name]
-	
+
 	var updated_stats = {}
 	var stat_containers = stats_editor.get_node(\"VBoxContainer\").get_children()
 	for stat_container in stat_containers:
@@ -216,14 +216,14 @@ func _on_save_stats():
 			var stat_name = stat_container.get_child(0).text.to_lower()
 			var stat_value = stat_container.get_child(1).value
 			updated_stats[stat_name] = stat_value
-	
+
 	data_manager.update_ant_profile_stats(selected_profile_id, updated_stats)
 	stats_editor.hide()
 
 func _on_add_behavior_pressed():
 	var behavior_list = behavior_editor.get_node(\"VBoxContainer/ItemList\")
 	behavior_list.add_item(\"If [condition] then [action] (Priority: 1)\")
-	
+
 func format_behavior(behavior: Dictionary) -> String:
 	return rule_manager.format_rule(behavior)
 
@@ -238,12 +238,12 @@ func _on_save_behavior():
 		return
 	var selected_profile_name = profile_list.get_item_text(selected_items[0])
 	var selected_profile_id = profile_id_to_name[selected_profile_name]
-	
+
 	var updated_behavior = []
 	var behavior_list = behavior_editor.get_node(\"VBoxContainer/ItemList\")
 	for i in range(behavior_list.get_item_count()):
 		updated_behavior.append(rule_manager.parse_rule(behavior_list.get_item_text(i)))
-	
+
 	rule_manager.save_rules(selected_profile_id, updated_behavior, false)
 	behavior_editor.hide()
 

@@ -20,6 +20,7 @@ func _init_properties() -> void:
 	_properties_container.expose_properties([
 		Property.create("movement_rate")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_movement_rate"))
 			.with_setter(Callable(self, "_set_movement_rate"))
 			.described_as("Rate at which the ant can move (units/second)")
@@ -27,6 +28,7 @@ func _init_properties() -> void:
 
 		Property.create("harvesting_rate")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_harvesting_rate"))
 			.with_setter(Callable(self, "_set_harvesting_rate"))
 			.described_as("Rate at which the ant can harvest resources (units/second)")
@@ -34,6 +36,7 @@ func _init_properties() -> void:
 
 		Property.create("storing_rate")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_storing_rate"))
 			.with_setter(Callable(self, "_set_storing_rate"))
 			.described_as("Rate at which the ant can store resources (units/second)")

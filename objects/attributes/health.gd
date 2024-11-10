@@ -26,12 +26,14 @@ func _init_properties() -> void:
 	_properties_container.expose_properties([
 		Property.create("max_level")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_max_level"))
 			.described_as("Maximum health level the ant can have")
 			.build(),
 
 		Property.create("current_level")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_current_level"))
 			.with_setter(Callable(self, "_set_current_level"))
 			.described_as("Current health level of the ant")
@@ -39,12 +41,14 @@ func _init_properties() -> void:
 
 		Property.create("percentage")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_percentage"))
 			.described_as("Current health level as a percentage of max health")
 			.build(),
 
 		Property.create("replenishable_amount")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_replenishable_amount"))
 			.described_as("Amount of health that can be restored before reaching max")
 			.build()

@@ -1,7 +1,6 @@
 class_name Helper
 extends Node
 
-
 static func is_full_path(path: String) -> bool:
 	if path.split(".").size() == 1:
 		return false

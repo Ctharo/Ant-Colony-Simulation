@@ -18,11 +18,13 @@ func _init_properties() -> void:
 	_properties_container.expose_properties([
 		Property.create("position")
 			.of_type(Property.Type.VECTOR2)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_position"))
 			.described_as("The vector location of the ant")
 			.build(),
 		Property.create("direction_to_colony")
 			.of_type(Property.Type.VECTOR2)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_direction_to_colony"))
 			.with_dependencies(["proprioception.position", "colony.position"])
 			.described_as("The normalized vector pointing towards colony")

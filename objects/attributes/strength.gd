@@ -20,6 +20,7 @@ func _init_properties() -> void:
 	_properties_container.expose_properties([
 		Property.create("level")
 			.of_type(Property.Type.INT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_level"))
 			.with_setter(Callable(self, "_set_level"))
 			.described_as("Base strength level of the ant")
@@ -27,6 +28,7 @@ func _init_properties() -> void:
 
 		Property.create("carry_max")
 			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
 			.with_getter(Callable(self, "_get_carry_max"))
 			.described_as("Maximum weight the ant can carry based on strength level")
 			.build()

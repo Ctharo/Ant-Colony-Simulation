@@ -39,13 +39,13 @@ class Builder:
 	var description: String
 
 	func _init(p_name: String) -> void:
-		name = p_name
+		name = p_name.to_lower()
 
 	func with_attribute(p_name: String) -> Builder:
-		attribute_name = p_name
+		attribute_name = p_name.to_lower()
 		return self
 
-	func with_type(p_type: Type) -> Builder:
+	func of_type(p_type: Type) -> Builder:
 		type = p_type
 		return self
 
@@ -61,20 +61,22 @@ class Builder:
 
 	func with_dependencies(p_dependencies: Array[String]) -> Builder:
 		for dependency in p_dependencies:
-			#TODO add validation as should be format full_path (i.e. attribute_name.property_name)
+			if not Helper.is_full_path(dependency):
+				assert(false)
 			dependencies.append(dependency)
 		return self
 
-	func with_description(p_description: String) -> Builder:
+	func described_as(p_description: String) -> Builder:
 		description = p_description
 		return self
 
 	func build() -> Property:
-		return Property.new(name, type, getter, setter, dependencies, description)
+		return Property.new(name, type, attribute_name, getter, setter, dependencies, description)
 
-func _init(p_name: String, p_type: Type, p_getter: Callable, p_setter: Callable = Callable(), p_dependencies: Array[String] = [], p_description: String = "") -> void:
+func _init(p_name: String, p_type: Type, p_attribute_name: String, p_getter: Callable, p_setter: Callable = Callable(), p_dependencies: Array[String] = [], p_description: String = "") -> void:
 	name = p_name
 	type = p_type
+	attribute_name = p_attribute_name
 	getter = p_getter
 	setter = p_setter
 	dependencies = p_dependencies

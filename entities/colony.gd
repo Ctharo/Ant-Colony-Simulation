@@ -17,6 +17,7 @@ func _init_properties() -> void:
 	properties_container.expose_properties([
 		Property.create("position")
 			.of_type(Property.Type.VECTOR2)
+			.with_attribute("Colony")
 			.with_getter(Callable(self, "_get_position"))
 			.described_as("Location of the colony in global coordinates")
 			.build()

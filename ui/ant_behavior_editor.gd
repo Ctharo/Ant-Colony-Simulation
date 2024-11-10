@@ -50,34 +50,34 @@ class RuleRow:
 	func setup_condition_row(parent: Control):
 		var condition_container = HBoxContainer.new()
 		container.add_child(condition_container)
-		
+
 		var if_label = Label.new()
 		if_label.text = "If"
 		condition_container.add_child(if_label)
-		
+
 		condition_dropdown = OptionButton.new()
 		condition_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_update_condition_options(parent.conditions)
 		condition_container.add_child(condition_dropdown)
-	
+
 	func _update_condition_options(conditions: Dictionary) -> void:
 		condition_dropdown.clear()
 		for condition_name in conditions:
 			condition_dropdown.add_item(condition_name)
-	
+
 	func setup_action_row():
 		var action_container = HBoxContainer.new()
 		container.add_child(action_container)
-		
+
 		var then_label = Label.new()
 		then_label.text = "Then"
 		action_container.add_child(then_label)
-		
+
 		action_button = OptionButton.new()
 		for option in AntBehaviorEditor.action_options:
 			action_button.add_item(option)
 		action_container.add_child(action_button)
-	
+
 	func setup_remove_button(parent: Control):
 		var remove_button = Button.new()
 		remove_button.text = "Remove Rule"
@@ -87,7 +87,7 @@ class RuleRow:
 func _ready():
 	create_ui()
 	load_conditions()
-	
+
 	# Setup condition manager
 	condition_manager = ConditionManager.new()
 	condition_manager.visible = false
@@ -104,11 +104,11 @@ func create_ui():
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 24)
 	main_container.add_child(title)
-	
+
 	# Toolbar
 	var toolbar = HBoxContainer.new()
 	main_container.add_child(toolbar)
-	
+
 	condition_button = Button.new()
 	condition_button.text = "Manage Conditions"
 	condition_button.connect("pressed", Callable(self, "_on_manage_conditions_pressed"))
@@ -202,7 +202,7 @@ func get_rules() -> Array:
 		var rule_row = rule_node.get_meta("rule_row")
 		if not rule_row:
 			continue
-			
+
 		var condition_name = rule_row.condition_dropdown.get_item_text(
 			rule_row.condition_dropdown.selected
 		)
@@ -218,21 +218,21 @@ func set_rules(rules: Array):
 	# Clear existing rules
 	for child in rule_container.get_children():
 		child.queue_free()
-	
+
 	# Add loaded rules
 	for rule_data in rules:
 		var rule_row = RuleRow.new(self)
 		rule_container.add_child(rule_row.container)
-		
+
 		var condition = rule_data["condition"]
 		rule_row.property_field.text = condition["property"]
-		
+
 		_update_operators_for_property(condition["property"], rule_row.operator_button)
 		var op_idx = rule_row.operator_button.get_item_index(condition["operator"])
 		rule_row.operator_button.select(op_idx)
-		
+
 		rule_row.value_field.text = str(condition["value"])
-		
+
 		var action_idx = action_options.find(rule_data["action"])
 		rule_row.action_button.select(action_idx)
 
