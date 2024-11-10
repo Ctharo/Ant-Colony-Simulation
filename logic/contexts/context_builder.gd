@@ -16,7 +16,6 @@ func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
 	ant = p_ant
 	condition_configs = p_condition_configs
 	_property_access = PropertyAccess.new(ant)
-	_property_access.set_cache_ttl(0.5)  # Half second cache duration
 
 #region Property Management
 ## Registers properties required by a condition configuration
