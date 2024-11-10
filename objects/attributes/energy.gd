@@ -41,6 +41,7 @@ func _init_properties() -> void:
 		Property.create("percentage")
 			.of_type(Property.Type.FLOAT)
 			.with_attribute(name)
+			.with_dependencies(["current_level", "max_level"])
 			.with_getter(Callable(self, "_get_percentage"))
 			.described_as("Current energy level as a percentage of max energy")
 			.build(),
@@ -48,6 +49,7 @@ func _init_properties() -> void:
 		Property.create("replenishable_amount")
 			.of_type(Property.Type.FLOAT)
 			.with_attribute(name)
+			.with_dependencies(["current_level", "max_level"])
 			.with_getter(Callable(self, "_get_replenishable_amount"))
 			.described_as("Amount of energy that can be replenished before reaching max")
 			.build()

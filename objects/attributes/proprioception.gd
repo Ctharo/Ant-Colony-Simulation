@@ -8,6 +8,7 @@ extends Attribute
 #region Properties
 var position: Vector2 : get = _get_position
 var direction_to_colony: Vector2 : get = _get_direction_to_colony
+var distance_to_colony: float : get = _get_distance_to_colony
 #endregion
 
 #region Lifecycle Methods
@@ -28,6 +29,13 @@ func _init_properties() -> void:
 			.with_getter(Callable(self, "_get_direction_to_colony"))
 			.with_dependencies(["proprioception.position", "colony.position"])
 			.described_as("The normalized vector pointing towards colony")
+			.build(),
+		Property.create("distance_to_colony")
+			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
+			.with_getter(Callable(self, "_get_distance_to_colony"))
+			.with_dependencies(["proprioception.position", "colony.position"])
+			.described_as("The distance from ant to colony in units")
 			.build()
 	])
 #endregion
@@ -39,6 +47,10 @@ func _init_properties() -> void:
 #region Private Methods
 func _get_position() -> Vector2:
 	return ant.global_position
+
+func _get_distance_to_colony() -> float:
+	var colony_pos: Vector2 = ant.get_property_value(Path.parse("colony.position"))
+	return get_property("position").value.distance_to(colony_pos)
 
 func _get_direction_to_colony() -> Vector2:
 	if not ant._property_access:

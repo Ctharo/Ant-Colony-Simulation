@@ -1,7 +1,8 @@
 class_name Colony
 extends Node2D
 
-var _radius: float = 10.0
+var radius: float = 10.0 : get = _get_radius
+var area: float : get = _get_area
 var foods: Foods
 var properties_container: PropertiesContainer
 
@@ -20,17 +21,31 @@ func _init_properties() -> void:
 			.with_attribute("Colony")
 			.with_getter(Callable(self, "_get_position"))
 			.described_as("Location of the colony in global coordinates")
+			.build(),
+		Property.create("radius")
+			.of_type(Property.Type.FLOAT)
+			.with_attribute("Colony")
+			.with_getter(Callable(self, "_get_radius"))
+			.described_as("Size of the colony radius in units")
+			.build(),
+		Property.create("area")
+			.of_type(Property.Type.FLOAT)
+			.with_attribute("Colony")
+			.with_dependencies(["radius"])
+			.with_getter(Callable(self, "_get_area"))
+			.described_as("Size of the colony area in units squared")
 			.build()
 	])
 
 func _get_position() -> Vector2:
 	return global_position
 
-func area() -> float:
-	return PI * _radius * _radius
+func _get_radius() -> float:
+	return radius
 
-func radius() -> float:
-	return _radius
+func _get_area() -> float:
+	return PI * radius * radius
+
 
 #region Property Management
 ## Get property metadata

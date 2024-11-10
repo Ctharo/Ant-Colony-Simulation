@@ -12,34 +12,42 @@ func add_food(mass_to_add: float) -> float:
 	append(food)
 	return mass()
 
+func mark_as_carried() -> void:
+	for food in elements:
+		food.carried = true
+
 func mass() -> float:
 	var _mass: float = 0.0
 	for food in self:
 		_mass += food.mass
 	return _mass
-	
+
 func locations() -> Array[Vector2]:
 	return [] as Array[Vector2]
+
+func as_array() -> Array[Food]:
+	var f: Array[Food]
+	for food in elements:
+		f.append(food)
+	return f
 
 static func are_available() -> Foods:
 	var f: Foods = Foods.new()
 	for food: Food in all():
-		if food.is_available():
+		if food.is_available:
 			f.append(food)
 	return f
 
-static func in_reach(location: Vector2, reach_distance: float) -> Foods:
+static func in_range(location: Vector2, range: float, available_foods: bool = false) -> Foods:
 	var f: Foods = Foods.new()
-	for food: Food in all():
-		if food.get_position().distance_to(location) <= reach_distance:
-			f.append(food)
-	return f
-
-static func in_view(location: Vector2, view_distance: float) -> Foods:
-	var f: Foods = Foods.new()
-	for food: Food in all():
-		if food.get_position().distance_to(location) <= view_distance:
-			f.append(food)
+	for food: Food in Foods.all():
+		if food.get_position().distance_to(location) <= range:
+			if available_foods == food.is_available:
+				f.append(food)
+			elif not available_foods:
+				f.append(food)
+			else:
+				continue
 	return f
 
 static func all() -> Foods:

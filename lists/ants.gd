@@ -6,18 +6,19 @@ func _init(initial_ants: Array[Ant] = []):
 	for ant in initial_ants:
 		self.append(ant)
 
-static func in_view(location: Vector2, view_distance: float) -> Ants:
-	var a: Ants = Ants.new()
-	for ant: Ant in all():
-		if ant.get_position().distance_to(location) <= view_distance:
-			a.append(ant)
+func as_array() -> Array[Ant]:
+	var a: Array[Ant]
+	for ant in elements:
+		a.append(ant)
 	return a
-	
-static func in_reach(location: Vector2, reach_distance: float) -> Ants:
+
+## Pass ant so we can exclude the caller from the list of other ants
+static func in_range(_ant: Ant, range: float) -> Ants:
 	var a: Ants = Ants.new()
-	for ant: Ant in all():
-		if ant.get_position().distance_to(location) <= reach_distance:
-			a.append(ant)
+	for ant: Ant in Ants.all():
+		if ant.global_position.distance_to(_ant.global_position) <= range:
+			if ant != _ant: # Exclude the ant calling
+				a.append(ant)
 	return a
 
 static func all() -> Ants:

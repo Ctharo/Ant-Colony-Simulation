@@ -31,7 +31,7 @@ func emitted_by_colony(colony: Colony) -> Pheromones:
 # Sorting methods
 func sort_by_concentration(descending: bool = true) -> Pheromones:
 	var sorted = self.duplicate()
-	sorted.sort_custom(func(a, b): 
+	sorted.sort_custom(func(a, b):
 		return a.concentration > b.concentration if descending else a.concentration < b.concentration
 	)
 	return Pheromones.new(sorted)
@@ -80,5 +80,25 @@ func furthest(from_position: Vector2) -> Pheromone:
 		return p if p.position.distance_squared_to(from_position) > _furthest.position.distance_squared_to(from_position) else _furthest
 	)
 
-static func all() -> Pheromones:
-	return PheromoneManager.get_all()
+func as_array() -> Array[Pheromone]:
+	var p: Array[Pheromone]
+	for pheromone in elements:
+		p.append(pheromone)
+	return p
+
+static func all(type: String = "") -> Pheromones:
+	var p: Pheromones = Pheromones.new()
+	for pheromone in PheromoneManager.get_all():
+		if type.is_empty():
+			p.append(pheromone)
+		else:
+			if pheromone.type == type:
+				p.append(pheromone)
+	return p
+
+static func in_range(location: Vector2, range_distance: float, type: String = "") -> Pheromones:
+	var p: Pheromones = Pheromones.new()
+	for pheromone: Pheromone in Pheromones.all(type):
+		if pheromone.get_position().distance_to(location) <= range_distance:
+			p.append(pheromone)
+	return p

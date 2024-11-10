@@ -28,6 +28,13 @@ func _init_properties() -> void:
 			.with_dependencies(["range"])  # Depends on range property
 			.described_as("List of pheromones within olfactory range")
 			.build(),
+		Property.create("pheromones_in_range_count")
+			.of_type(Property.Type.INT)
+			.with_attribute(name)
+			.with_getter(Callable(self, "_get_pheromones_in_range_count"))
+			.with_dependencies(["pheromones_in_range"])  # Depends on range property
+			.described_as("Count of pheromones within olfactory range")
+			.build(),
 		Property.create("food_pheromones_in_range")
 			.of_type(Property.Type.PHEROMONES)
 			.with_attribute(name)
@@ -35,12 +42,26 @@ func _init_properties() -> void:
 			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
 			.described_as("List of food pheromones within olfactory range")
 			.build(),
+		Property.create("food_pheromones_in_range_count")
+			.of_type(Property.Type.INT)
+			.with_attribute(name)
+			.with_getter(Callable(self, "_get_food_pheromones_in_range_count"))
+			.with_dependencies(["olfaction.food_pheromones_in_range"])  # Use full path for cross-property dependencies
+			.described_as("Count of food pheromones within olfactory range")
+			.build(),
 		Property.create("home_pheromones_in_range")
 			.of_type(Property.Type.PHEROMONES)
 			.with_attribute(name)
 			.with_getter(Callable(self, "_get_home_pheromones_in_range"))
 			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
 			.described_as("List of home pheromones within olfactory range")
+			.build(),
+		Property.create("home_pheromones_in_range_count")
+			.of_type(Property.Type.INT)
+			.with_attribute(name)
+			.with_getter(Callable(self, "_get_home_pheromones_in_range_count"))
+			.with_dependencies(["olfaction.home_pheromones_in_range"])  # Use full path for cross-property dependencies
+			.described_as("Count of home pheromones within olfactory range")
 			.build(),
 	])
 #endregion
@@ -55,38 +76,22 @@ func _get_range() -> float:
 	return range
 
 func _get_pheromones_in_range() -> Pheromones:
-	var pheromones: Pheromones = Pheromones.all()
-	var p_in_range: Pheromones = Pheromones.new([])
-	for pheromone in pheromones:
-		if is_within_range(pheromone.global_position):
-			p_in_range.append(pheromone as Pheromone)
-	return p_in_range
+	return Pheromones.in_range(ant.global_position, range)
+
+func _get_pheromones_in_range_count() -> int:
+	return _get_pheromones_in_range().size()
 
 func _get_food_pheromones_in_range() -> Pheromones:
-	# Get the cached pheromones directly from the property container
-	# to avoid recursive property access calls
-	var property: Property = get_property("pheromones_in_range")
-	var pheromones: Pheromones = property.value
-	var p_in_range: Pheromones = Pheromones.new([])
+	return Pheromones.in_range(ant.global_position, range, "food")
 
-	for pheromone in pheromones:
-		if pheromone.type == "food":
-			p_in_range.append(pheromone as Pheromone)
-
-	return p_in_range
+func _get_food_pheromones_in_range_count() -> int:
+	return _get_food_pheromones_in_range().size()
 
 func _get_home_pheromones_in_range() -> Pheromones:
-	# Get the cached pheromones directly from the property container
-	# to avoid recursive property access calls
-	var property: Property = get_property("pheromones_in_range")
-	var pheromones: Pheromones = property.value
-	var p_in_range: Pheromones = Pheromones.new([])
+	return Pheromones.in_range(ant.global_position, range, "home")
 
-	for pheromone in pheromones:
-		if pheromone.type == "home":
-			p_in_range.append(pheromone as Pheromone)
-
-	return p_in_range
+func _get_home_pheromones_in_range_count() -> int:
+	return _get_home_pheromones_in_range().size()
 
 func _set_range(value: float) -> void:
 	if range != value:

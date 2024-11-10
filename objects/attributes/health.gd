@@ -42,6 +42,7 @@ func _init_properties() -> void:
 		Property.create("percentage")
 			.of_type(Property.Type.FLOAT)
 			.with_attribute(name)
+			.with_dependencies(["current_level", "max_level"])
 			.with_getter(Callable(self, "_get_percentage"))
 			.described_as("Current health level as a percentage of max health")
 			.build(),
@@ -49,6 +50,7 @@ func _init_properties() -> void:
 		Property.create("replenishable_amount")
 			.of_type(Property.Type.FLOAT)
 			.with_attribute(name)
+			.with_dependencies(["current_level", "max_level"])
 			.with_getter(Callable(self, "_get_replenishable_amount"))
 			.described_as("Amount of health that can be restored before reaching max")
 			.build()

@@ -13,6 +13,7 @@ func _init(p_position: Vector2, p_type: String, p_concentration: float, p_emitte
 	type = p_type
 	concentration = p_concentration
 	emitted_by = p_emitted_by
+	add_to_group("pheromone")
 
 func _ready():
 	spawned.emit()

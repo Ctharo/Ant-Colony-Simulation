@@ -33,6 +33,20 @@ func _init_properties() -> void:
 			.with_dependencies(["vision.range"])  # Depends on range property
 			.described_as("Food items within vision range")
 			.build(),
+		Property.create("foods_in_range_count")
+			.of_type(Property.Type.INT)
+			.with_attribute(name)
+			.with_dependencies(["foods_in_range"])
+			.with_getter(Callable(self, "_get_foods_in_range_count"))
+			.described_as("Food within vision range count")
+			.build(),
+		Property.create("ants_in_range_count")
+			.of_type(Property.Type.INT)
+			.with_attribute(name)
+			.with_dependencies(["ants_in_range"])
+			.with_getter(Callable(self, "_get_ants_in_range_count"))
+			.described_as("Ants within vision range count")
+			.build(),
 
 	])
 #endregion
@@ -46,13 +60,17 @@ func is_within_range(point: Vector2) -> bool:
 func _get_range() -> float:
 	return range
 
-#TODO Implement
 func _get_ants_in_range() -> Ants:
-	return Ants.new([])
+	return Ants.in_range(ant, range)
 
-#TODO Implement
+func _get_ants_in_range_count() -> int:
+	return _get_ants_in_range().size()
+
 func _get_foods_in_range() -> Foods:
-	return Foods.new([])
+	return Foods.in_range(ant.global_position, range, true)
+
+func _get_foods_in_range_count() -> int:
+	return _get_foods_in_range().size()
 
 func _set_range(value: float) -> void:
 	if range != value:

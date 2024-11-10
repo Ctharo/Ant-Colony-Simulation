@@ -24,6 +24,9 @@ var carried_food: Foods :
 		if not carried_food:
 			carried_food = Foods.new()
 		return carried_food
+	set(value):
+		carried_food = value
+		carried_food.mark_as_carried()
 
 ## The task tree for this ant
 var task_tree: TaskTree
@@ -57,6 +60,8 @@ func _init():
 	if task_tree and task_tree.get_active_task():
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
+
+	add_to_group("ant")
 
 func _ready() -> void:
 	spawned.emit()
