@@ -39,6 +39,7 @@ func get_property_from_str(path: String) -> Property:
 	var p: Path = Path.parse(path)
 	return _get_attribute_property(p)
 
+## Must use if wanting to have caching
 func get_property_value(path: Path) -> Variant:
 	# Check cache first if enabled
 	if _cache and _cache.has_valid_cache(path):

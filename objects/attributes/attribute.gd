@@ -8,12 +8,14 @@ extends RefCounted
 #region Member Variables
 ## Container for managing component properties
 var _properties_container: PropertiesContainer
+var ant: Ant
 var name: String
 var metadata: Dictionary = {}
 #endregion
 
-func _init(_name: String) -> void:
+func _init(_name: String, _ant: Ant = null) -> void:
 	name = _name.to_snake_case() # Ensures lowercase for lookup
+	ant = _ant
 	_properties_container = PropertiesContainer.new(self)
 	# Log name set so we know if it is a case mismatch causing a lookup error
 	DebugLogger.trace(DebugLogger.Category.PROGRAM, "Name for attribute set as %s" % name)

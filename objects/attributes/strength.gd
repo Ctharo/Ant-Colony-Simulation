@@ -1,4 +1,4 @@
-class_name Strength 
+class_name Strength
 extends Attribute
 
 #region Properties
@@ -14,19 +14,19 @@ const STRENGTH_FACTOR: float = 20.0
 
 #region Lifecycle Methods
 func _init(_ant: Ant) -> void:
-	super._init(_ant, "Strength")
+	super._init("Strength", _ant)
 
 func _init_properties() -> void:
-	properties_container.expose_properties([
-		PropertyResult.PropertyInfo.create("level")
-			.of_type(PropertyType.INT)
+	_properties_container.expose_properties([
+		Property.create("level")
+			.of_type(Property.Type.INT)
 			.with_getter(Callable(self, "_get_level"))
 			.with_setter(Callable(self, "_set_level"))
 			.described_as("Base strength level of the ant")
 			.build(),
-			
-		PropertyResult.PropertyInfo.create("carry_max")
-			.of_type(PropertyType.FLOAT)
+
+		Property.create("carry_max")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_carry_max"))
 			.described_as("Maximum weight the ant can carry based on strength level")
 			.build()

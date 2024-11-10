@@ -31,7 +31,7 @@ func evaluate(condition: Dictionary, context: Dictionary) -> bool:
 	# Handle operator type conditions (AND, OR, NOT)
 	if condition.get("type") == "Operator":
 		return _evaluate_operator_condition(condition, context)
-	
+
 	# Handle named conditions that reference condition configs
 	var condition_type = condition.get("type")
 	if condition_type:
@@ -46,17 +46,17 @@ func evaluate(condition: Dictionary, context: Dictionary) -> bool:
 				return _evaluate_property_check(full_condition, context)
 		else:
 			_log_error("Unknown condition type: %s (Available types: %s)" % [
-				condition_type, 
+				condition_type,
 				condition_configs.keys()
 			])
 		return false
-	
+
 	# Handle direct property check evaluation
 	if condition.has("evaluation"):
 		return _evaluate_property_check(condition.evaluation, context)
 	elif condition.has("property"):
 		return _evaluate_property_check(condition, context)
-	
+
 	_log_error("Invalid condition format: %s" % condition)
 	return false
 #endregion
@@ -66,9 +66,9 @@ func evaluate(condition: Dictionary, context: Dictionary) -> bool:
 func _evaluate_operator_condition(condition: Dictionary, context: Dictionary) -> bool:
 	var operator_type = condition.operator_type.to_lower()
 	var operands = condition.get("operands", [])
-	
+
 	_log_debug("\nEvaluating %s operator" % operator_type.to_upper())
-	
+
 	match operator_type:
 		"and":
 			for operand in operands:
@@ -77,7 +77,7 @@ func _evaluate_operator_condition(condition: Dictionary, context: Dictionary) ->
 				if not result:
 					return false
 			return true
-			
+
 		"or":
 			for operand in operands:
 				var result = evaluate(operand, context)
@@ -85,7 +85,7 @@ func _evaluate_operator_condition(condition: Dictionary, context: Dictionary) ->
 				if result:
 					return true
 			return false
-			
+
 		"not":
 			if operands.size() != 1:
 				_log_error("NOT operator requires exactly one operand")
@@ -93,7 +93,7 @@ func _evaluate_operator_condition(condition: Dictionary, context: Dictionary) ->
 			var result = not evaluate(operands[0], context)
 			_log_trace("  NOT result: %s" % result)
 			return result
-			
+
 		_:
 			_log_error("Unknown operator type: %s" % operator_type)
 			return false
@@ -103,22 +103,22 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 	if not evaluation.has("property"):
 		_log_error("Property check missing 'property' field: %s" % evaluation)
 		return false
-	
+
 	var property_name = evaluation.property
 	var operator = evaluation.get("operator", "EQUALS")
-	
+
 	# Get the property value using PropertyAccess
 	var property_result = _property_access.get_property(property_name)
 	if property_result.is_error():
 		_log_error(property_result.error_message)
 		return false
-	
+
 	var property_value = property_result.value
-	
+
 	var debug_info = "  ├─ Checking property '%s'\n" % property_name
-	debug_info += "  │  ├─ Current value: %s" % PropertyEvaluator.format_value(property_value)
+	debug_info += "  │  ├─ Current value: %s" % Property.format_value(property_value)
 	_log_trace(debug_info)
-	
+
 	# Special handling for empty checks
 	if operator in ["NOT_EMPTY", "IS_EMPTY"]:
 		var is_empty = _is_empty(property_value)
@@ -127,27 +127,27 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 			not is_empty if operator == "NOT_EMPTY" else is_empty
 		])
 		return not is_empty if operator == "NOT_EMPTY" else is_empty
-	
+
 	# Handle different value sources using PropertyEvaluator for comparison
 	if "value" in evaluation:
 		var compare_value = evaluation.value
 		_log_trace("  │  ├─ Comparing with fixed value: %s" % \
-			PropertyEvaluator.format_value(compare_value))
+			Property.format_value(compare_value))
 		return _compare_values(property_value, compare_value, operator)
-		
+
 	elif "value_from" in evaluation:
 		var compare_prop_result = _property_access.get_property(evaluation.value_from)
 		if compare_prop_result.is_error():
 			_log_error(compare_prop_result.error_message)
 			return false
-			
+
 		var compare_value = compare_prop_result.value
 		_log_trace("  │  ├─ Comparing with '%s' value: %s" % [
-			evaluation.value_from, 
-			PropertyEvaluator.format_value(compare_value)
+			evaluation.value_from,
+			Property.format_value(compare_value)
 		])
 		return _compare_values(property_value, compare_value, operator)
-	
+
 	_log_error("Invalid property check configuration: %s" % evaluation)
 	return false
 
@@ -158,13 +158,13 @@ func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bo
 	if not eval_operator:
 		push_warning("Unknown operator: %s" % operator)
 		return false
-	
+
 	var result = _property_evaluator.evaluate_comparison(
 		value_a,
 		eval_operator,
 		value_b
 	)
-	
+
 	return result.value if result.success() else false
 #endregion
 
@@ -173,7 +173,7 @@ func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bo
 static func _is_empty(value: Variant) -> bool:
 	if value == null:
 		return true
-	
+
 	match typeof(value):
 		TYPE_ARRAY:
 			return (value as Array).is_empty()

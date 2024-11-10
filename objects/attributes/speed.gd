@@ -14,26 +14,26 @@ var storing_rate: float = 1.0 : get = _get_storing_rate, set = _set_storing_rate
 
 #region Lifecycle Methods
 func _init(_ant: Ant) -> void:
-	super._init(_ant, "Speed")
+	super._init("Speed", _ant)
 
 func _init_properties() -> void:
-	properties_container.expose_properties([
-		PropertyResult.PropertyInfo.create("movement_rate")
-			.of_type(PropertyType.FLOAT)
+	_properties_container.expose_properties([
+		Property.create("movement_rate")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_movement_rate"))
 			.with_setter(Callable(self, "_set_movement_rate"))
 			.described_as("Rate at which the ant can move (units/second)")
 			.build(),
-			
-		PropertyResult.PropertyInfo.create("harvesting_rate")
-			.of_type(PropertyType.FLOAT)
+
+		Property.create("harvesting_rate")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_harvesting_rate"))
 			.with_setter(Callable(self, "_set_harvesting_rate"))
 			.described_as("Rate at which the ant can harvest resources (units/second)")
 			.build(),
-			
-		PropertyResult.PropertyInfo.create("storing_rate")
-			.of_type(PropertyType.FLOAT)
+
+		Property.create("storing_rate")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_storing_rate"))
 			.with_setter(Callable(self, "_set_storing_rate"))
 			.described_as("Rate at which the ant can store resources (units/second)")

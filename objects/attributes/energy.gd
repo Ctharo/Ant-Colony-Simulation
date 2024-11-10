@@ -18,10 +18,10 @@ var replenishable_amount: float : get = _get_replenishable_amount
 
 #region Lifecycle Methods
 func _init(_ant: Ant) -> void:
-	super._init(_ant, "Energy")
+	super._init("Energy", _ant)
 
 func _init_properties() -> void:
-	properties_container.expose_properties([
+	_properties_container.expose_properties([
 		Property.create("max_level")
 			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_max_level"))

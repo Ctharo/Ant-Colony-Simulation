@@ -3,25 +3,25 @@ extends Attribute
 
 #region Properties
 ## Maximum range the ant can reach
-var range: float = 15.0 : get = _get_range, set = _set_range 
+var range: float = 15.0 : get = _get_range, set = _set_range
 #endregion
 
 #region Lifecycle Methods
 func _init(_ant: Ant) -> void:
-	super._init(_ant, "Reach")
+	super._init("Reach", _ant)
 
 func _init_properties() -> void:
-	properties_container.expose_properties([
-		PropertyResult.PropertyInfo.create("range")
-			.of_type(PropertyType.FLOAT)
+	_properties_container.expose_properties([
+		Property.create("range")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_range"))
 			.with_setter(Callable(self, "_set_range"))
 			.described_as("Maximum range the ant can reach from its current position")
 			.build()
 	])
-	properties_container.expose_properties([
-		PropertyResult.PropertyInfo.create("food_in_range")
-			.of_type(PropertyType.FLOAT)
+	_properties_container.expose_properties([
+		Property.create("food_in_range")
+			.of_type(Property.Type.FLOAT)
 			.with_getter(Callable(self, "_get_food_in_range"))
 			.described_as("Food within reach range")
 			.build()
@@ -36,10 +36,10 @@ func is_within_range(point: Vector2) -> bool:
 #region Private Methods
 func _get_range() -> float:
 	return range
-	
+
 func _get_food_in_range() -> Foods:
 	return Foods.in_reach(ant.global_position, range)
-	
+
 func _get_food_in_range_count() -> int:
 	return _get_food_in_range().size()
 

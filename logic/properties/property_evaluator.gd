@@ -43,24 +43,24 @@ func _init(context: Dictionary = {}) -> void:
 ## Evaluates a property expression
 ## Expression format: "property_name operator value" or "property_name"
 ## Returns: PropertyResult with evaluation result
-func evaluate_expression(expression: String, context: Dictionary = {}) -> PropertyResult:
+func evaluate_expression(expression: String, context: Dictionary = {}) -> Variant:
 	# Check cache
 	var cache_key = _get_cache_key(expression, context)
 	if _cache.has_valid_cache(cache_key):
-		return PropertyResult.new(_cache.get_cached(cache_key))
-	
+		return _cache.get_cached(cache_key)
+
 	# Parse expression
 	var parsed = _parse_expression(expression)
 	if not parsed.success():
 		return parsed
-	
+
 	# Evaluate parsed expression
 	var result = _evaluate_parsed_expression(parsed.value, context)
-	
+
 	# Cache successful results
 	if result.success():
 		_cache.cache_value(cache_key, result.value)
-	
+
 	return result
 
 ## Evaluates a direct comparison between two values
@@ -69,93 +69,43 @@ func evaluate_comparison(
 	value1: Variant,
 	operator: String,
 	value2: Variant
-) -> PropertyResult:
+) -> Result:
 	if not COMPARISON_OPERATORS.has(operator):
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.INVALID_PATH,
+		return Result.new(
+			Result.ErrorType.INVALID_PATH,
 			"Unknown operator: %s" % operator
 		)
-	
+
 	var compare_func = COMPARISON_OPERATORS[operator]
-	return PropertyResult.new(compare_func.call(value1, value2))
+	return Result.new(compare_func.call(value1, value2))
 #endregion
 
 #region Type Conversion
 ## Converts a value to the specified PropertyResult.PropertyType
 ## Returns: PropertyResult with converted value
-func convert_value(value: Variant, target_type: PropertyResult.PropertyType) -> PropertyResult:
+func convert_value(value: Variant, target_type: Property.Type) -> Result:
 	if _is_type_match(value, target_type):
-		return PropertyResult.new(value)
-	
+		return Result.new(value)
+
 	var method = TYPE_CONVERSIONS.get(target_type)
 	if not method or not has_method(method):
-		return PropertyResult.new(
-			null,
-			PropertyResult.ErrorType.TYPE_MISMATCH,
-			"Cannot convert to type: %s" % PropertyResult.type_to_string(target_type)
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Cannot convert to type: %s" % Property.type_to_string(target_type)
 		)
-	
+
 	return call(method, value)
 #endregion
 
 #region Expression Parsing
-## Parses an expression into components
-func _parse_expression(expression: String) -> PropertyResult:
+## Parses an expression into components #TODO broken
+func _parse_expression(expression: String) -> String:
 	var parts = expression.strip_edges().split(" ", false)
-	
-	match parts.size():
-		# Simple property reference
-		1:
-			return PropertyResult.new({
-				"type": "property",
-				"path": parts[0]
-			})
-		
-		# Property comparison
-		3:
-			return PropertyResult.new({
-				"type": "comparison",
-				"left": parts[0],
-				"operator": parts[1],
-				"right": parts[2]
-			})
-		
-		_:
-			return PropertyResult.new(
-				null,
-				PropertyResult.ErrorType.INVALID_PATH,
-				"Invalid expression format: %s" % expression
-			)
+	return parts
 
-## Evaluates a parsed expression
-func _evaluate_parsed_expression(parsed: Dictionary, context: Dictionary) -> PropertyResult:
-	match parsed.type:
-		"property":
-			return _property_access.get_property(parsed.path)
-		
-		"comparison":
-			var left = _property_access.get_property(parsed.left)
-			if not left.success():
-				return left
-			
-			# Handle direct value comparison
-			if parsed.right.begins_with('"') and parsed.right.ends_with('"'):
-				var right_value = parsed.right.substr(1, parsed.right.length() - 2)
-				return evaluate_comparison(left.value, parsed.operator, right_value)
-			
-			# Handle property comparison
-			var right = _property_access.get_property(parsed.right)
-			if not right.success():
-				return right
-			
-			return evaluate_comparison(left.value, parsed.operator, right.value)
-	
-	return PropertyResult.new(
-		null,
-		PropertyResult.ErrorType.INVALID_PATH,
-		"Unknown expression type: %s" % parsed.type
-	)
+## Evaluates a parsed expression # TODO
+func _evaluate_parsed_expression(parsed: Dictionary, context: Dictionary) -> bool:
+	return false
 #endregion
 
 #region Helper Methods
@@ -167,13 +117,13 @@ func _get_cache_key(expression: String, context: Dictionary) -> String:
 static func _are_comparable(a: Variant, b: Variant) -> bool:
 	var type_a = typeof(a)
 	var type_b = typeof(b)
-	
+
 	if type_a == type_b:
 		return true
-	
+
 	if type_a in [TYPE_INT, TYPE_FLOAT] and type_b in [TYPE_INT, TYPE_FLOAT]:
 		return true
-	
+
 	return false
 
 ## Checks if a value contains another value
@@ -188,29 +138,25 @@ static func _contains_value(container: Variant, value: Variant) -> bool:
 	return false
 
 ## Checks if value matches expected type
-func _is_type_match(value: Variant, expected_type: PropertyResult.PropertyType) -> bool:
+func _is_type_match(value: Variant, expected_type: Property.Type) -> bool:
 	match expected_type:
-		PropertyResult.PropertyType.BOOL:
+		Property.Type.BOOL:
 			return typeof(value) == TYPE_BOOL
-		PropertyResult.PropertyType.INT:
+		Property.Type.INT:
 			return typeof(value) == TYPE_INT
-		PropertyResult.PropertyType.FLOAT:
+		Property.Type.FLOAT:
 			return typeof(value) == TYPE_FLOAT
-		PropertyResult.PropertyType.STRING:
+		Property.Type.STRING:
 			return typeof(value) == TYPE_STRING
-		PropertyResult.PropertyType.VECTOR2:
+		Property.Type.VECTOR2:
 			return value is Vector2
-		PropertyResult.PropertyType.VECTOR3:
+		Property.Type.VECTOR3:
 			return value is Vector3
-		PropertyResult.PropertyType.ARRAY:
+		Property.Type.ARRAY:
 			return value is Array
-		PropertyResult.PropertyType.DICTIONARY:
+		Property.Type.DICTIONARY:
 			return value is Dictionary
-		PropertyResult.PropertyType.OBJECT:
+		Property.Type.OBJECT:
 			return value is Object
 	return false
-
-## Formats a value for display
-static func format_value(value: Variant) -> String:
-	return PropertyResult.format_value(value)
 #endregion
