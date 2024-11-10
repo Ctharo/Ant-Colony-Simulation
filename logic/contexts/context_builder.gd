@@ -2,7 +2,7 @@
 ##
 ## The ContextBuilder class handles:
 ## - Property registration and tracking
-## - Value caching for efficient access
+## - Value caching for efficient access # TODO: Probably shouldn't have caching
 ## - Context building for condition evaluation
 ## - Property access management
 class_name ContextBuilder
@@ -16,7 +16,7 @@ var ant: Ant
 var condition_configs: Dictionary
 
 ## Cache of property values for quick lookup
-var _cache: Cache
+var _cache: Dictionary = {}
 
 ## Dictionary tracking which properties are required by conditions
 var required_properties: Dictionary = {}
@@ -32,7 +32,6 @@ var _property_access: PropertyAccess
 func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
 	ant = p_ant
 	condition_configs = p_condition_configs
-	_cache = Cache.new()
 	_property_access = ant._property_access
 #endregion
 
