@@ -7,11 +7,11 @@ signal property_changed(path: String, old_value: Variant, new_value: Variant)
 
 #region Member Variables
 var _attributes_container: AttributesContainer
-var _cache: PropertyCache
+var _cache: Cache
 #endregion
 
 func _init(owner: Object, use_caching: bool = true) -> void:
-	_cache = PropertyCache.new() if use_caching else null
+	_cache = Cache.new() if use_caching else null
 	_attributes_container = AttributesContainer.new(owner)
 
 #region Attribute Management
