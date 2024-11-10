@@ -373,6 +373,14 @@ func _warn(message: String) -> void:
 		message
 	)
 
+func transition_to_scene(scene_name: String):
+	var tween = create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(Callable(self, "_change_scene").bind(scene_name))
 
+func _change_scene(scene_name: String):
+	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
+	if error != OK:
+		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)
 
 #endregion
