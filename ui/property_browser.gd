@@ -79,21 +79,20 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Configure window properties
 func _configure_window() -> void:
 	title = "Ant Property Browser"
-	# Increased height significantly for better vertical space usage
-	size = Vector2(1800, 1000)  # Increased from 700 to 1000
-	exclusive = false
+	visibility_changed.connect(func(): visible = true) # Keep visible even when clicking elsewhere
+	exclusive = true
 	unresizable = false
-
 	# Set minimum size to prevent window from becoming too small
 	min_size = Vector2(800, 600)
 
 	# Center the window on screen
 	var screen_size = DisplayServer.screen_get_size()
+	size = screen_size
 	position = (screen_size - size) / 2
 
 ## Setup signal connections
 func _setup_signals() -> void:
-	properties_tree.cell_selected.connect(_on_item_selected)
+	properties_tree.item_mouse_selected.connect(_on_item_selected)
 	properties_tree.nothing_selected.connect(_on_tree_deselected)
 
 
@@ -161,7 +160,6 @@ func _on_content_created() -> void:
 	if _loading_label:
 		_loading_label.queue_free()
 		_loading_label = null
-		_refresh_view()
 
 ## Creates the main container
 func _create_main_container() -> VBoxContainer:
@@ -363,13 +361,8 @@ func _populate_tree_item(item: TreeItem, property: Property) -> void:
 
 	item.set_metadata(0, property)
 
-## Handle button clicks
-func _on_button_clicked(item: TreeItem, column: int, id: int, mouse_button_index: int) -> void:
-	if column == COL_VALUE and id == BTN_EXPAND:
-		_handle_value_cell_click(item)
-
 ## Handles tree item selection
-func _on_item_selected() -> void:
+func _on_item_selected(location, button) -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
 		return
@@ -384,9 +377,7 @@ func _on_item_selected() -> void:
 func _handle_value_cell_click(item: TreeItem) -> void:
 	if item == _expanded_item:
 		_collapse_expanded_cell()
-	else:
-		_collapse_expanded_cell()
-		_expand_cell(item)
+	_expand_cell(item)
 
 ## Expands a cell to show full content
 func _expand_cell(item: TreeItem) -> void:
@@ -396,10 +387,11 @@ func _expand_cell(item: TreeItem) -> void:
 
 ## Collapses currently expanded cell
 func _collapse_expanded_cell() -> void:
-	if _expanded_item:
+	if _expanded_item != null:
 		var full_text = _expanded_item.get_metadata(1)
 		_expanded_item.set_text(COL_VALUE, _get_condensed_text(full_text))
 		_expanded_item = null
+
 
 ## Handles tree deselection
 func _on_tree_deselected() -> void:

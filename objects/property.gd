@@ -168,7 +168,10 @@ static func format_value(value: Variant) -> String:
 					p.append("T: %s, [%.1f]" % [pheromone.type, pheromone.concentration])
 				return Property.format_value(p)
 			elif value is Foods:
-				return Property.format_value("%.2f units" % value.mass())
+				var f: Array[String]
+				for food in value:
+					f.append("Mass: %.1f" % [food.mass])
+				return Property.format_value(f)
 			elif value is Ants:
 				return Property.format_value(value.to_array())
 			else:
