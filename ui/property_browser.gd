@@ -3,6 +3,7 @@ extends Window
 
 #region Signals
 signal property_selected(property_path: String)
+signal content_created
 #endregion
 
 #region Constants
@@ -11,9 +12,29 @@ const COL_NAME = 0
 const COL_TYPE = 1
 const COL_VALUE = 2
 const COL_DEPENDENCIES = 3
+
+## Number of items to process per frame for staged creation
+const ITEMS_PER_FRAME = 50
 #endregion
 
-#region UI Elements
+#region Member Variables
+## Tree view value column width
+var _original_value_width: int = 250
+
+## Currently expanded tree item
+var _expanded_item: TreeItem
+
+## Reference to current Ant instance
+var current_ant: Ant
+
+## Current browsing mode (Direct/Attribute)
+var current_mode: String = "Direct"
+
+## Currently selected attribute
+var current_attribute: String
+#endregion
+
+#region UI Properties
 ## Mode selection dropdown
 var mode_switch: OptionButton
 
@@ -31,36 +52,50 @@ var attribute_label: Label
 
 ## Label showing property description
 var description_label: Label
+
+var _loading_label: Label
 #endregion
 
-#region Member Variables
-## Reference to current Ant instance
-var current_ant: Ant
-
-## Current browsing mode (Direct/Attribute)
-var current_mode: String = "Direct"
-
-## Currently selected attribute
-var current_attribute: String
-
-## Property access manager
-var _property_access: PropertyAccess
-#endregion
+var _processing_click: bool = false
+## Debug flag to track event flow
+var _event_source: String = ""
+## Add a button identifier constant
+const BTN_EXPAND = 0
 
 #region Initialization
 func _ready() -> void:
 	_configure_window()
 	create_ui()
 	create_components()
+	_setup_signals()
 	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
 
+## Handle input events
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):  # Escape key
+		_on_close_pressed()
+		get_viewport().set_input_as_handled()
 
 ## Configure window properties
 func _configure_window() -> void:
 	title = "Ant Property Browser"
-	size = Vector2(1800, 700)  # Increased width to accommodate new column
+	# Increased height significantly for better vertical space usage
+	size = Vector2(1800, 1000)  # Increased from 700 to 1000
 	exclusive = false
 	unresizable = false
+
+	# Set minimum size to prevent window from becoming too small
+	min_size = Vector2(800, 600)
+
+	# Center the window on screen
+	var screen_size = DisplayServer.screen_get_size()
+	position = (screen_size - size) / 2
+
+## Setup signal connections
+func _setup_signals() -> void:
+	properties_tree.cell_selected.connect(_on_item_selected)
+	properties_tree.nothing_selected.connect(_on_tree_deselected)
+
 
 ## Shows properties for a given Ant instance
 func show_ant(ant: Ant) -> void:
@@ -76,56 +111,72 @@ func create_ui() -> void:
 	_create_content_split(main_container)
 	_create_path_display(main_container)
 	_create_close_button(main_container)
-
 	_refresh_view()
 
+## Creates test components for demonstration
 func create_components() -> void:
+
+	_show_loading_indicator()
+
+
 	var a: Ant = Ant.new()
 	var c: Colony = Colony.new()
 	a.colony = c
 
 	a.global_position = _get_random_position()
 	c.global_position = _get_random_position()
-
 	a.carried_food.add_food(randf_range(0.0, 200.0))
 
 	add_child(a)
-
 	a.set_physics_process(false)
 	a.set_process(false)
 
-	# Add a bunch of food randomly
-	for i in range(randi_range(1000, 5000)):
-		var food: Food = Food.new(randf_range(0.0, 50.0))
-		food.global_position = _get_random_position()
-		add_child(food)
-
-	# Add a bunch of pheromones randomly
-	for i in range(randi_range(1000, 5000)):
-		var pheromone: Pheromone = Pheromone.new(
-				_get_random_position(),
-				["food", "home"].pick_random(),
-				randf_range(0.0, 100.0), a
-			)
-		add_child(pheromone)
-
-	# Add a bunch of other ants randomly
-	for i in range(randi_range(50, 100)):
-		var ant: Ant = Ant.new()
-		ant.global_position = _get_random_position()
-		add_child(ant)
-		ant.set_physics_process(false)
-		ant.set_process(false)
-
+	var to_create = {
+		"food": randi_range(1000, 5000),
+		"pheromones": randi_range(1000, 5000),
+		"ants": randi_range(50, 100)
+	}
+	_staged_creation(to_create, a)
 	show_ant(a)
 
-func _get_random_position() -> Vector2:
-	return Vector2(randf_range(0, 1800), randf_range(0, 800))
+func _show_loading_indicator() -> void:
+	_loading_label = Label.new()
+	_loading_label.text = "Creating content..."
+	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	# Style the label
+	_loading_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_loading_label.add_theme_font_size_override("font_size", 24)
+
+	# Position it in the center of the window
+	_loading_label.set_anchors_preset(Control.PRESET_CENTER)
+
+	add_child(_loading_label)
+
+	# Connect our content_created signal to hide the label
+	content_created.connect(_on_content_created)
+
+func _on_content_created() -> void:
+	if _loading_label:
+		_loading_label.queue_free()
+		_loading_label = null
+		_refresh_view()
 
 ## Creates the main container
 func _create_main_container() -> VBoxContainer:
 	var container = VBoxContainer.new()
-	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 20)
+
+	# Use full rect preset but maintain some padding
+	container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+
+	# Add custom minimum size to ensure adequate space
+	container.custom_minimum_size = Vector2(750, 500)
+
+	# Ensure container expands to fill available space
+	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
 	add_child(container)
 	return container
 
@@ -147,7 +198,13 @@ func _create_mode_selector(parent: Control) -> void:
 func _create_content_split(parent: Control) -> void:
 	var content_split = HSplitContainer.new()
 	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_split.split_offset = 150
+	content_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	# Set a larger minimum height to utilize vertical space
+	content_split.custom_minimum_size.y = 600
+
+	# Adjust split offset for better initial proportions
+	content_split.split_offset = -600
 	parent.add_child(content_split)
 
 	_create_attribute_panel(content_split)
@@ -156,17 +213,20 @@ func _create_content_split(parent: Control) -> void:
 ## Creates the attribute selection panel
 func _create_attribute_panel(parent: Control) -> void:
 	var attribute_container = VBoxContainer.new()
-	attribute_container.custom_minimum_size.x = 150
-	attribute_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	attribute_container.custom_minimum_size.x = 100
+	attribute_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	attribute_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(attribute_container)
 
 	attribute_label = Label.new()
 	attribute_label.text = "Attributes"
 	attribute_container.add_child(attribute_label)
 
+	# Configure attribute list to expand vertically
 	attribute_list = ItemList.new()
 	attribute_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	attribute_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	attribute_list.custom_minimum_size.y = 400  # Ensure minimum height
 	attribute_list.connect("item_selected", Callable(self, "_on_attribute_selected"))
 	attribute_container.add_child(attribute_list)
 
@@ -175,6 +235,9 @@ func _create_properties_panel(parent: Control) -> void:
 	var right_container = VBoxContainer.new()
 	right_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	# Add some spacing between elements
+	right_container.add_theme_constant_override("separation", 10)
 	parent.add_child(right_container)
 
 	_create_properties_tree(right_container)
@@ -182,48 +245,32 @@ func _create_properties_panel(parent: Control) -> void:
 
 ## Creates the properties tree view
 func _create_properties_tree(parent: Control) -> void:
+	var tree_container = VBoxContainer.new()
+	tree_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tree_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(tree_container)
+
 	var properties_label = Label.new()
 	properties_label.text = "Properties"
-	parent.add_child(properties_label)
+	tree_container.add_child(properties_label)
 
 	properties_tree = Tree.new()
 	properties_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	properties_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	properties_tree.custom_minimum_size.y = 400  # Ensure minimum height
 	_configure_tree_columns()
 	properties_tree.connect("item_selected", Callable(self, "_on_property_selected"))
-	parent.add_child(properties_tree)
-
-
-## Configures the tree view columns
-func _configure_tree_columns() -> void:
-	properties_tree.columns = 4  # Increased to 4 columns
-	properties_tree.set_column_title(COL_NAME, "Property")
-	properties_tree.set_column_title(COL_TYPE, "Type")
-	properties_tree.set_column_title(COL_VALUE, "Value")
-	properties_tree.set_column_title(COL_DEPENDENCIES, "Dependencies")
-
-	for col in range(4):  # Updated range for 4 columns
-		properties_tree.set_column_title_alignment(col, HORIZONTAL_ALIGNMENT_LEFT)
-
-	properties_tree.set_column_expand(COL_NAME, true)
-	properties_tree.set_column_expand(COL_TYPE, false)
-	properties_tree.set_column_expand(COL_VALUE, true)
-	properties_tree.set_column_expand(COL_DEPENDENCIES, true)
-
-	properties_tree.set_column_custom_minimum_width(COL_NAME, 300)
-	properties_tree.set_column_custom_minimum_width(COL_TYPE, 150)
-	properties_tree.set_column_custom_minimum_width(COL_VALUE, 250)
-	properties_tree.set_column_custom_minimum_width(COL_DEPENDENCIES, 300)  # Width for dependencies
-
-	properties_tree.column_titles_visible = true
+	tree_container.add_child(properties_tree)
 
 ## Creates the description panel
 func _create_description_panel(parent: Control) -> void:
 	var description_panel = PanelContainer.new()
-	description_panel.custom_minimum_size.y = 100
+	# Increased minimum height for better visibility of descriptions
+	description_panel.custom_minimum_size.y = 150  # Increased from 100
 	parent.add_child(description_panel)
 
 	var description_container = VBoxContainer.new()
+	description_container.add_theme_constant_override("separation", 5)
 	description_panel.add_child(description_container)
 
 	var description_title = Label.new()
@@ -234,11 +281,15 @@ func _create_description_panel(parent: Control) -> void:
 	description_label.text = ""
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	description_label.custom_minimum_size.y = 100  # Ensure minimum height for text
 	description_container.add_child(description_label)
+
 
 ## Creates the property path display
 func _create_path_display(parent: Control) -> void:
 	var path_container = HBoxContainer.new()
+	# Add some padding around the path display
+	path_container.add_theme_constant_override("separation", 10)
 	parent.add_child(path_container)
 
 	var path_title = Label.new()
@@ -247,17 +298,113 @@ func _create_path_display(parent: Control) -> void:
 
 	path_label = Label.new()
 	path_label.text = ""
+	path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	path_container.add_child(path_label)
 
 ## Creates the close button
 func _create_close_button(parent: Control) -> void:
+	var button_container = HBoxContainer.new()
+	button_container.add_theme_constant_override("separation", 10)
+	parent.add_child(button_container)
+
 	var close_button = Button.new()
 	close_button.text = "Close"
+	close_button.custom_minimum_size = Vector2(100, 30)  # Set fixed size for button
 	close_button.connect("pressed", Callable(self, "_on_close_pressed"))
-	parent.add_child(close_button)
+	button_container.add_child(close_button)
 #endregion
 
-#region Event Handlers
+#region Tree Management
+## Configures the tree view columns
+func _configure_tree_columns() -> void:
+	properties_tree.columns = 4
+	properties_tree.set_column_title(COL_NAME, "Property")
+	properties_tree.set_column_title(COL_TYPE, "Type")
+	properties_tree.set_column_title(COL_VALUE, "Value")
+	properties_tree.set_column_title(COL_DEPENDENCIES, "Dependencies")
+
+	for col in range(4):
+		properties_tree.set_column_title_alignment(col, HORIZONTAL_ALIGNMENT_LEFT)
+		properties_tree.set_column_clip_content(col, true)
+
+	properties_tree.set_column_expand(COL_NAME, true)
+	properties_tree.set_column_expand(COL_TYPE, false)
+	properties_tree.set_column_expand(COL_VALUE, true)
+	properties_tree.set_column_expand(COL_DEPENDENCIES, true)
+
+	properties_tree.set_column_custom_minimum_width(COL_NAME, 200)
+	properties_tree.set_column_custom_minimum_width(COL_TYPE, 150)
+	properties_tree.set_column_custom_minimum_width(COL_VALUE, _original_value_width)
+	properties_tree.set_column_custom_minimum_width(COL_DEPENDENCIES, 200)
+
+	properties_tree.column_titles_visible = true
+
+## Populates a tree item with property data
+func _populate_tree_item(item: TreeItem, property: Property) -> void:
+	if not property:
+		return
+
+	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
+	item.set_text(COL_TYPE, Property.type_to_string(property.type))
+
+	var value_text = Property.format_value(property.value)
+	var wrapped_text = _wrap_text(value_text)
+
+	item.set_text(COL_VALUE, _get_condensed_text(value_text))
+	item.set_tooltip_text(COL_VALUE, value_text)
+	item.set_metadata(1, wrapped_text)
+	item.set_selectable(COL_VALUE, true)
+
+	var dependencies_text = "None" if property.dependencies.is_empty() else "\n".join(property.dependencies)
+	item.set_text(COL_DEPENDENCIES, dependencies_text)
+
+	if not property.dependencies.is_empty():
+		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
+
+	item.set_metadata(0, property)
+
+## Handle button clicks
+func _on_button_clicked(item: TreeItem, column: int, id: int, mouse_button_index: int) -> void:
+	if column == COL_VALUE and id == BTN_EXPAND:
+		_handle_value_cell_click(item)
+
+## Handles tree item selection
+func _on_item_selected() -> void:
+	var selected = properties_tree.get_selected()
+	if not selected:
+		return
+
+	var column = properties_tree.get_selected_column()
+	if column == COL_VALUE:
+		_handle_value_cell_click(selected)
+	else:
+		_collapse_expanded_cell()
+
+### Handles value cell click events
+func _handle_value_cell_click(item: TreeItem) -> void:
+	if item == _expanded_item:
+		_collapse_expanded_cell()
+	else:
+		_collapse_expanded_cell()
+		_expand_cell(item)
+
+## Expands a cell to show full content
+func _expand_cell(item: TreeItem) -> void:
+	var full_text = item.get_metadata(1)
+	item.set_text(COL_VALUE, full_text)
+	_expanded_item = item
+
+## Collapses currently expanded cell
+func _collapse_expanded_cell() -> void:
+	if _expanded_item:
+		var full_text = _expanded_item.get_metadata(1)
+		_expanded_item.set_text(COL_VALUE, _get_condensed_text(full_text))
+		_expanded_item = null
+
+## Handles tree deselection
+func _on_tree_deselected() -> void:
+	_collapse_expanded_cell()
+
 ## Handles mode selection changes
 func _on_mode_changed(index: int) -> void:
 	attribute_label.text = "Attributes"
@@ -285,7 +432,8 @@ func _on_property_selected() -> void:
 
 	_update_property_selection(property)
 
-func _on_close_pressed():
+## Handles close button press
+func _on_close_pressed() -> void:
 	transition_to_scene("main")
 #endregion
 
@@ -296,13 +444,13 @@ func _refresh_view() -> void:
 		_warn("No ant set for Property Browser scene")
 		return
 
+	_expanded_item = null
 	_refresh_attributes()
 	path_label.text = "none"
 
 ## Refreshes the attributes list
 func _refresh_attributes() -> void:
 	_trace("Refreshing attributes list")
-
 	attribute_list.clear()
 	properties_tree.clear()
 
@@ -327,55 +475,20 @@ func _populate_properties(attribute: String) -> void:
 		var item = properties_tree.create_item(root)
 		_populate_tree_item(item, property)
 
-## Populates a tree item with property data
-func _populate_tree_item(item: TreeItem, property: Property) -> void:
-	if not property:
-		return
-
-	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
-	item.set_text(COL_TYPE, Property.type_to_string(property.type))
-	item.set_text(COL_VALUE, Property.format_value(property.value))
-
-	# Add dependencies information
-	var dependencies_text = ""
-	if property.dependencies.is_empty():
-		dependencies_text = "None"
-	else:
-		# Format the dependencies list
-		dependencies_text = "\n".join(property.dependencies)
-
-	item.set_text(COL_DEPENDENCIES, dependencies_text)
-
-	# Set tooltip for dependencies column if there are any
-	if not property.dependencies.is_empty():
-		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
-
-	item.set_metadata(0, property)
-
 ## Updates UI after property selection
 func _update_property_selection(property: Property) -> void:
 	description_label.text = property.description if not property.description.is_empty() else "No description available."
-
 	var path = property.path.full
 	path_label.text = path
 	property_selected.emit(path)
 #endregion
 
 #region Property Access Methods
-## Gets property value through ant's property access system
-func _get_property_value(path: String) -> Variant:
-	if not current_ant:
-		push_error("No ant set for property access")
-		return null
-
-	return current_ant.get_property_value(Path.parse(path))
-
 ## Gets attribute properties through ant's property access system
 func _get_attribute_properties(attribute: String) -> Array[Property]:
 	if not current_ant:
 		push_error("No ant set for property access")
 		return []
-
 	return current_ant.get_attribute_properties(attribute)
 
 ## Gets all attribute names through ant's property access system
@@ -383,11 +496,89 @@ func _get_attribute_names() -> Array[String]:
 	if not current_ant:
 		push_error("No ant set for property access")
 		return []
-
 	return current_ant.get_attribute_names()
 #endregion
 
+#region Component Creation
+## Handles staged creation of components
+func _staged_creation(params: Dictionary, main_ant: Ant) -> void:
+	var timer = Timer.new()
+	add_child(timer)
+	timer.wait_time = 0.016  # ~60fps
+	timer.connect("timeout", Callable(self, "_create_batch").bind(params, main_ant, timer))
+	timer.start()
+
+## Creates a batch of components per frame
+func _create_batch(params: Dictionary, main_ant: Ant, timer: Timer) -> void:
+	var items_created = 0
+
+	# Create food
+	while params.food > 0 and items_created < ITEMS_PER_FRAME:
+		var food = Food.new(randf_range(0.0, 50.0))
+		food.global_position = _get_random_position()
+		add_child(food)
+		params.food -= 1
+		items_created += 1
+
+	# Create pheromones if food is done
+	while params.food == 0 and params.pheromones > 0 and items_created < ITEMS_PER_FRAME:
+		var pheromone = Pheromone.new(
+			_get_random_position(),
+			["food", "home"].pick_random(),
+			randf_range(0.0, 100.0),
+			main_ant
+		)
+		add_child(pheromone)
+		params.pheromones -= 1
+		items_created += 1
+
+	# Create ants if pheromones are done
+	while params.food == 0 and params.pheromones == 0 and params.ants > 0 and items_created < ITEMS_PER_FRAME:
+		var ant = Ant.new()
+		ant.global_position = _get_random_position()
+		add_child(ant)
+		ant.set_physics_process(false)
+		ant.set_process(false)
+		params.ants -= 1
+		items_created += 1
+
+	# Stop if everything is created
+	if params.food == 0 and params.pheromones == 0 and params.ants == 0:
+		timer.queue_free()
+		content_created.emit()
+#endregion
+
 #region Helper Functions
+## Gets random position within window bounds
+func _get_random_position() -> Vector2:
+	return Vector2(randf_range(0, 1800), randf_range(0, 800))
+
+## Condenses text to specified length with ellipsis
+func _get_condensed_text(text: String, max_length: int = 50) -> String:
+	if text.length() <= max_length:
+		return text
+	return text.substr(0, max_length - 3) + "..."
+
+## Wraps text to specified width
+func _wrap_text(text: String, width: int = 50) -> String:
+	var lines = []
+	var current_line = ""
+	var words = text.split(" ")
+
+	for word in words:
+		if current_line.length() + word.length() + 1 <= width:
+			if current_line.length() > 0:
+				current_line += " "
+			current_line += word
+		else:
+			if current_line.length() > 0:
+				lines.append(current_line)
+			current_line = word
+
+	if current_line.length() > 0:
+		lines.append(current_line)
+
+	return "\n".join(lines)
 
 ## Logs a trace message
 func _trace(message: String) -> void:
@@ -396,24 +587,25 @@ func _trace(message: String) -> void:
 		{"From": "property_browser"}
 	)
 
+## Logs an error message
 func _error(message: String) -> void:
 	DebugLogger.error(DebugLogger.Category.PROPERTY,
 		message
 	)
 
+## Logs a warning message
 func _warn(message: String) -> void:
 	DebugLogger.warn(DebugLogger.Category.PROPERTY,
 		message
 	)
 
-func transition_to_scene(scene_name: String):
-	var tween = create_tween()
-	tween.tween_property(self, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(Callable(self, "_change_scene").bind(scene_name))
+## Transitions to a new scene
+func transition_to_scene(scene_name: String) -> void:
+	create_tween().tween_callback(Callable(self, "_change_scene").bind(scene_name))
 
-func _change_scene(scene_name: String):
+## Changes to the specified scene
+func _change_scene(scene_name: String) -> void:
 	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
 		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)
-
 #endregion

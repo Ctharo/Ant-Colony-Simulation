@@ -15,7 +15,7 @@ func save_data() -> void:
 	var dir = DirAccess.open("user://")
 	if not dir.dir_exists(SAVE_DIR):
 		dir.make_dir(SAVE_DIR)
-	
+
 	save_file(COLONY_SAVE_FILE, current_colony_data)
 	save_file(ANT_SAVE_FILE, current_ant_data)
 
@@ -42,7 +42,7 @@ func load_file(_save_file: String, default_file: String) -> Dictionary:
 				return json_result
 			else:
 				push_error("Error: Malformed save data in " + _save_file)
-	
+
 	push_warning("No save file found for " + _save_file + ". Loading default data.")
 	var default_data = FileAccess.open(default_file, FileAccess.READ)
 	if default_data:
@@ -56,7 +56,7 @@ func load_file(_save_file: String, default_file: String) -> Dictionary:
 			push_error("Error: Malformed default data in " + default_file)
 	else:
 		push_error("Error: Could not open default data file " + default_file)
-	
+
 	return {}
 
 # Colony-related functions
@@ -190,7 +190,7 @@ func get_colony_behavior(colony_name: String) -> Array:
 func save_colony_behavior(colony_name: String, colony_behavior: Array) -> void:
 	if colony_name not in current_colony_data:
 		current_colony_data[colony_name] = {"ant_profiles": [], "colony_behavior": []}
-	
+
 	current_colony_data[colony_name]["colony_behavior"] = colony_behavior
 	save_data()
 
@@ -200,7 +200,7 @@ func get_property_value(colony_name: String, property_path: String) -> Variant:
 	var colony_data = get_colony_data(colony_name)
 	var path_parts = property_path.split(".")
 	var current_value = colony_data
-	
+
 	for part in path_parts:
 		if current_value is Dictionary and part in current_value:
 			current_value = current_value[part]
@@ -214,19 +214,19 @@ func get_property_value(colony_name: String, property_path: String) -> Variant:
 		else:
 			push_warning("Invalid property path: " + property_path)
 			return null
-	
+
 	return current_value
 
 func set_property_value(colony_name: String, property_path: String, value: Variant) -> void:
 	var colony_data = get_colony_data(colony_name)
 	var path_parts = property_path.split(".")
 	var current_dict = colony_data
-	
+
 	for i in range(path_parts.size() - 1):
 		var part = path_parts[i]
 		if part not in current_dict:
 			current_dict[part] = {}
 		current_dict = current_dict[part]
-	
+
 	current_dict[path_parts[-1]] = value
 	save_colony(colony_name, colony_data)

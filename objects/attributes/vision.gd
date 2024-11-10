@@ -33,6 +33,13 @@ func _init_properties() -> void:
 			.with_dependencies(["vision.range"])  # Depends on range property
 			.described_as("Food items within vision range")
 			.build(),
+		Property.create("foods_in_range_mass")
+			.of_type(Property.Type.FLOAT)
+			.with_attribute(name)
+			.with_dependencies(["foods_in_range"])
+			.with_getter(Callable(self, "_get_foods_in_range_mass"))
+			.described_as("Food within reach range mass")
+			.build(),
 		Property.create("foods_in_range_count")
 			.of_type(Property.Type.INT)
 			.with_attribute(name)
@@ -68,6 +75,9 @@ func _get_ants_in_range_count() -> int:
 
 func _get_foods_in_range() -> Foods:
 	return Foods.in_range(ant.global_position, range, true)
+
+func _get_foods_in_range_mass() -> float:
+	return _get_foods_in_range().mass()
 
 func _get_foods_in_range_count() -> int:
 	return _get_foods_in_range().size()

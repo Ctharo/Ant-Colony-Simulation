@@ -7,6 +7,11 @@ func _ready():
 	create_ui()
 	animate_ui_elements()
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):  # Escape key
+		_on_quit_button_pressed()
+		get_viewport().set_input_as_handled()
+
 func create_ui():
 	# Create a background
 	var background = ColorRect.new()
