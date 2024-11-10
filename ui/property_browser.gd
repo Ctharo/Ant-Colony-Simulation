@@ -84,10 +84,43 @@ func create_components() -> void:
 	var c: Colony = Colony.new()
 	a.colony = c
 
-	a.global_position = Vector2(randf_range(0, 1800), randf_range(0, 800))
-	c.global_position = Vector2(randf_range(0, 1800), randf_range(0, 800))
+	a.global_position = _get_random_position()
+	c.global_position = _get_random_position()
+
+	a.carried_food.add_food(randf_range(0.0, 200.0))
+
+	add_child(a)
+
+	a.set_physics_process(false)
+	a.set_process(false)
+
+	# Add a bunch of food randomly
+	for i in range(randi_range(1000, 5000)):
+		var food: Food = Food.new(randf_range(0.0, 50.0))
+		food.global_position = _get_random_position()
+		add_child(food)
+
+	# Add a bunch of pheromones randomly
+	for i in range(randi_range(1000, 5000)):
+		var pheromone: Pheromone = Pheromone.new(
+				_get_random_position(),
+				["food", "home"].pick_random(),
+				randf_range(0.0, 100.0), a
+			)
+		add_child(pheromone)
+
+	# Add a bunch of other ants randomly
+	for i in range(randi_range(50, 100)):
+		var ant: Ant = Ant.new()
+		ant.global_position = _get_random_position()
+		add_child(ant)
+		ant.set_physics_process(false)
+		ant.set_process(false)
 
 	show_ant(a)
+
+func _get_random_position() -> Vector2:
+	return Vector2(randf_range(0, 1800), randf_range(0, 800))
 
 ## Creates the main container
 func _create_main_container() -> VBoxContainer:
