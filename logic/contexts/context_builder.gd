@@ -15,7 +15,7 @@ var _property_access: PropertyAccess
 func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
 	ant = p_ant
 	condition_configs = p_condition_configs
-	_property_access = PropertyAccess.new(ant)
+	_property_access = ant._property_access
 
 #region Property Management
 ## Registers properties required by a condition configuration
@@ -42,6 +42,7 @@ func _register_property(property_path: String) -> void:
 		"Registered required property: %s" % property_path
 	)
 
+#TODO we already have a caching system, cant we just use the PropertyAccess cache from Ant?
 ## Gets a context value, using cache if available
 func get_context_value(property_path: String) -> Variant:
 	# Check cache first
