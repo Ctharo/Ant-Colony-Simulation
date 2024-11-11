@@ -56,11 +56,6 @@ var description_label: Label
 var _loading_label: Label
 #endregion
 
-var _processing_click: bool = false
-## Debug flag to track event flow
-var _event_source: String = ""
-## Add a button identifier constant
-const BTN_EXPAND = 0
 
 #region Initialization
 func _ready() -> void:
@@ -132,8 +127,8 @@ func create_components() -> void:
 
 	var to_create = {
 		"food": randi_range(1000, 5000),
-		"pheromones": randi_range(1000, 5000),
-		"ants": randi_range(50, 100)
+		"pheromones": randi_range(1750, 7500),
+		"ants": randi_range(75, 150)
 	}
 	_staged_creation(to_create, a)
 	show_ant(a)
@@ -152,14 +147,6 @@ func _show_loading_indicator() -> void:
 	_loading_label.set_anchors_preset(Control.PRESET_CENTER)
 
 	add_child(_loading_label)
-
-	# Connect our content_created signal to hide the label
-	content_created.connect(_on_content_created)
-
-func _on_content_created() -> void:
-	if _loading_label:
-		_loading_label.queue_free()
-		_loading_label = null
 
 ## Creates the main container
 func _create_main_container() -> VBoxContainer:
@@ -494,38 +481,38 @@ func _get_attribute_names() -> Array[String]:
 #region Component Creation
 ## Handles staged creation of components
 func _staged_creation(params: Dictionary, main_ant: Ant) -> void:
+	var items_created: int
+	for key in params:
+		items_created += params.get(key, 0)
 	var timer = Timer.new()
 	add_child(timer)
 	timer.wait_time = 0.016  # ~60fps
-	timer.connect("timeout", Callable(self, "_create_batch").bind(params, main_ant, timer))
+	timer.connect("timeout", Callable(self, "_create_batch").bind(params, timer))
 	timer.start()
+	await content_created
+	_loading_label.text ="Finished! Created %s items" % items_created
+	await get_tree().create_timer(2.5).timeout
+	if _loading_label:
+		_loading_label.queue_free()
+		_loading_label = null
 
 ## Creates a batch of components per frame
-func _create_batch(params: Dictionary, main_ant: Ant, timer: Timer) -> void:
+func _create_batch(params: Dictionary, timer: Timer) -> void:
 	var items_created = 0
 
 	# Create food
 	while params.food > 0 and items_created < ITEMS_PER_FRAME:
+		_loading_label.text ="Creating content: food (%s)" % params.food
 		var food = Food.new(randf_range(0.0, 50.0))
 		food.global_position = _get_random_position()
 		add_child(food)
 		params.food -= 1
 		items_created += 1
 
-	# Create pheromones if food is done
-	while params.food == 0 and params.pheromones > 0 and items_created < ITEMS_PER_FRAME:
-		var pheromone = Pheromone.new(
-			_get_random_position(),
-			["food", "home"].pick_random(),
-			randf_range(0.0, 100.0),
-			main_ant
-		)
-		add_child(pheromone)
-		params.pheromones -= 1
-		items_created += 1
 
 	# Create ants if pheromones are done
 	while params.food == 0 and params.pheromones == 0 and params.ants > 0 and items_created < ITEMS_PER_FRAME:
+		_loading_label.text ="Creating content: ants (%s)" % params.ants
 		var ant = Ant.new()
 		ant.global_position = _get_random_position()
 		add_child(ant)
@@ -533,6 +520,21 @@ func _create_batch(params: Dictionary, main_ant: Ant, timer: Timer) -> void:
 		ant.set_process(false)
 		params.ants -= 1
 		items_created += 1
+
+	# Create pheromones if food is done
+	while params.food == 0 and params.pheromones > 0 and items_created < ITEMS_PER_FRAME:
+		_loading_label.text ="Creating content: pheromones (%s)" % params.pheromones
+		var pheromone = Pheromone.new(
+			_get_random_position(),
+			["food", "home"].pick_random(),
+			randf_range(0.0, 100.0),
+			Ants.all().as_array().pick_random()
+		)
+		add_child(pheromone)
+		params.pheromones -= 1
+		items_created += 1
+
+
 
 	# Stop if everything is created
 	if params.food == 0 and params.pheromones == 0 and params.ants == 0:
