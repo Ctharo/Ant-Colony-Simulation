@@ -1,9 +1,7 @@
 class_name PropertyAccess
 extends RefCounted
-## Front-end class for accessing ant properties with caching support
 
 #region Signals
-## Emitted when a property value changes
 signal property_changed(path: String, old_value: Variant, new_value: Variant)
 #endregion
 
@@ -68,7 +66,9 @@ func get_property(path: Path) -> NestedProperty:
 		_error("Property group not found: %s" % group_name)
 		return null
 
-	return group.get_property(path.to_string())
+	# Create path for within the group (remove group name)
+	var group_path = Path.new(path.parts.slice(1))
+	return group.get_at_path(group_path)
 
 ## Get a property by string path
 func get_property_from_str(path: String) -> NestedProperty:
@@ -87,6 +87,10 @@ func get_property_value(path: Path) -> Variant:
 	var property = get_property(path)
 	if not property:
 		_error("Property not found: %s" % path)
+		return null
+
+	if property.type != NestedProperty.Type.PROPERTY:
+		_error("Cannot get value from container property: %s" % path)
 		return null
 
 	var value = property.get_value()
@@ -108,6 +112,12 @@ func set_property_value(path: Path, value: Variant) -> Result:
 			"Property not found: %s" % path
 		)
 
+	if property.type != NestedProperty.Type.PROPERTY:
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Cannot set value for container property: %s" % path
+		)
+
 	var old_value = property.get_value()
 	var result = property.set_value(value)
 
@@ -126,18 +136,24 @@ func get_group_properties(group_name: String) -> Array[NestedProperty]:
 		_error("Property group not found: %s" % group_name)
 		return []
 
-	return group.get_properties()
+	return group.get_root().get_properties()
 
 ## Get all registered group names
 func get_group_names() -> Array[String]:
-	var a: Array[String] = []
-	for key in _property_groups.keys():
-		a.append(key)
-	return a
+	var names: Array[String] = []
+	names.append_array(_property_groups.keys())
+	return names
 
 ## Get a property group by name
 func get_group(name: String) -> PropertyGroup:
 	return _property_groups.get(name)
+
+## Get children at a specific path
+func get_children_at_path(path: Path) -> Array[NestedProperty]:
+	var property = get_property(path)
+	if not property or property.type != NestedProperty.Type.CONTAINER:
+		return []
+	return property.children.values()
 #endregion
 
 #region Cache Management
@@ -160,7 +176,8 @@ func _invalidate_group_cache(group_name: String) -> void:
 	if not group:
 		return
 
-	for property in group.get_properties():
+	# Get properties directly from the group's root
+	for property in group.get_root().get_properties():
 		_invalidate_cache(property.get_path())
 #endregion
 

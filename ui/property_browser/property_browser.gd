@@ -99,7 +99,7 @@ var loading_label: Label
 func _ready() -> void:
 	_configure_window()
 	_initialize_ui_builder()
-	create_components()
+	#create_components()
 	_setup_signals()
 	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
 
@@ -128,6 +128,7 @@ func _initialize_ui_builder() -> void:
 	group_label = refs.group_label
 	description_label = refs.description_label
 	back_button = refs.back_button
+	loading_label = refs.loading_label
 
 	_on_ui_created()
 

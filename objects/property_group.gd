@@ -68,6 +68,10 @@ func set_value_at_path(path: Path, value: Variant) -> Result:
 		)
 	return node.set_value(value)
 
+## Gets all properties in this group
+func get_properties() -> Array[NestedProperty]:
+	return _root.get_properties()
+
 ## Gets all leaf (value) properties under a path
 func get_properties_at_path(path: Path) -> Array[NestedProperty]:
 	var node = get_at_path(path)

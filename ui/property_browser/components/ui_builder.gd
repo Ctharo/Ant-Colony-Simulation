@@ -48,6 +48,8 @@ func create_ui(parent_window: Window) -> Dictionary:
 	refs.group_label = _create_group_label(main_container)
 	refs.description_label = _create_description_panel(main_container)
 	refs.back_button = _create_navigation_controls(main_container)
+	refs.loading_label = _create_loading_label(main_container)
+
 
 	ui_created.emit()
 	return refs
@@ -258,10 +260,8 @@ func _create_close_button(parent: Control) -> Button:
 
 	return close_button
 
-## Creates and displays a loading indicator
-func show_loading_indicator(parent_window: Window) -> void:
+func _create_loading_label(parent: Control) -> Label:
 	loading_label = Label.new()
-	loading_label.text = "Creating content..."
 	loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
@@ -272,7 +272,16 @@ func show_loading_indicator(parent_window: Window) -> void:
 	# Center in window
 	loading_label.set_anchors_preset(Control.PRESET_CENTER)
 
-	parent_window.add_child(loading_label)
+	parent.add_child(loading_label)
+	loading_label.visible = false
+
+	return loading_label
+
+## Creates and displays a loading indicator
+func show_loading_indicator(parent_window: Window) -> void:
+	loading_label.text = "Creating content..."
+	loading_label.visible = true
+
 
 ## Updates the loading indicator text
 func update_loading_text(text: String) -> void:
