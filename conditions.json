@@ -22,7 +22,7 @@
 			"description": "Check if food is reachable by ant",
 			"evaluation": {
 				"operator": "GREATER_THAN",
-				"property": "reach.food_in_reach_count",
+				"property": "reach.food_in_range_count",
 				"type": "PropertyCheck",
 				"value": 1
 			}
@@ -31,7 +31,7 @@
 			"description": "Check if food is visible to ant",
 			"evaluation": {
 				"operator": "GREATER_THAN",
-				"property": "vision.food_in_view_count",
+				"property": "vision.food_in_range_count",
 				"type": "PropertyCheck",
 				"value": 0
 			}

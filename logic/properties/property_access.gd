@@ -33,6 +33,9 @@ func remove_attribute(name: String) -> Result:
 func get_property(path: Path) -> Property:
 	return _get_attribute_property(path)
 
+func get_attribute(attribute_name: String) -> Attribute:
+	return _attributes_container.get(attribute_name)
+
 func get_property_from_str(path: String) -> Property:
 	if not Helper.is_full_path(path):
 		return null

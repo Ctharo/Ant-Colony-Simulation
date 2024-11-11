@@ -325,28 +325,14 @@ func _configure_tree_columns() -> void:
 	properties_tree.column_titles_visible = true
 
 ## Populates a tree item with property data
-func _populate_tree_item(item: TreeItem, property: Property) -> void:
+func _populate_tree_item(item: TreeItem, property: Variant) -> void:
 	if not property:
 		return
 
-	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
-	item.set_text(COL_TYPE, Property.type_to_string(property.type))
-
-	var value_text = Property.format_value(property.value)
-	var wrapped_text = _wrap_text(value_text)
-
-	item.set_text(COL_VALUE, _get_condensed_text(value_text))
-	item.set_tooltip_text(COL_VALUE, value_text)
-	item.set_metadata(1, wrapped_text)
-	item.set_selectable(COL_VALUE, true)
-
-	var dependencies_text = "None" if property.dependencies.is_empty() else "\n".join(property.dependencies)
-	item.set_text(COL_DEPENDENCIES, dependencies_text)
-
-	if not property.dependencies.is_empty():
-		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
-
-	item.set_metadata(0, property)
+	if property is Property:
+		_populate_regular_property(item, property)
+	elif property is NestedProperty:
+		_populate_nested_property(item, property)
 
 ## Handles tree item selection
 func _on_item_selected(location, button) -> void:
@@ -359,6 +345,49 @@ func _on_item_selected(location, button) -> void:
 		_handle_value_cell_click(selected)
 	else:
 		_collapse_expanded_cell()
+
+## Populates a tree item with regular property data
+func _populate_regular_property(item: TreeItem, property: Property) -> void:
+	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
+	item.set_text(COL_TYPE, Property.type_to_string(property.type))
+	var value_text = Property.format_value(property.value)
+	var wrapped_text = _wrap_text(value_text)
+	item.set_text(COL_VALUE, _get_condensed_text(value_text))
+	item.set_tooltip_text(COL_VALUE, value_text)
+	item.set_metadata(1, wrapped_text)
+	item.set_selectable(COL_VALUE, true)
+	var dependencies_text = "None" if property.dependencies.is_empty() else "\n".join(property.dependencies)
+	item.set_text(COL_DEPENDENCIES, dependencies_text)
+	if not property.dependencies.is_empty():
+		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
+	item.set_metadata(0, property)
+
+## Populates a tree item with nested property data
+func _populate_nested_property(item: TreeItem, property: NestedProperty) -> void:
+	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
+
+	if property.type == NestedProperty.Type.CONTAINER:
+		item.set_text(COL_TYPE, "Group")
+		item.set_selectable(COL_VALUE, false)
+		# Add children
+		for child in property.children.values():
+			var child_item = properties_tree.create_item(item)
+			_populate_nested_property(child_item, child)
+	else:
+		item.set_text(COL_TYPE, Property.type_to_string(property.value_type))
+		var value = property.get_value()
+		var value_text = Property.format_value(value)
+		var wrapped_text = _wrap_text(value_text)
+		item.set_text(COL_VALUE, _get_condensed_text(value_text))
+		item.set_tooltip_text(COL_VALUE, value_text)
+		item.set_metadata(1, wrapped_text)
+		item.set_selectable(COL_VALUE, true)
+
+	var dependencies_text = "None" if property.dependencies.is_empty() else "\n".join(property.dependencies)
+	item.set_text(COL_DEPENDENCIES, dependencies_text)
+	if not property.dependencies.is_empty():
+		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
+	item.set_metadata(0, property)
 
 ### Handles value cell click events
 func _handle_value_cell_click(item: TreeItem) -> void:
@@ -404,12 +433,15 @@ func _on_property_selected() -> void:
 		_warn("No valid property selected")
 		return
 
-	var property = selected.get_metadata(0) as Property
+	var property = selected.get_metadata(0)
 	if not property:
 		_warn("No valid property info found for selection")
 		return
 
-	_update_property_selection(property)
+	if property is Property:
+		_update_property_selection(property)
+	elif property is NestedProperty and property.type == NestedProperty.Type.PROPERTY:
+		_update_nested_property_selection(property)
 
 ## Handles close button press
 func _on_close_pressed() -> void:
@@ -438,6 +470,7 @@ func _refresh_attributes() -> void:
 		attribute_list.add_item(attribute_name.capitalize())
 
 ## Populates properties for a given attribute
+## Populates properties for a given attribute
 func _populate_properties(attribute: String) -> void:
 	_trace("Populating properties for attribute: %s" % attribute)
 	properties_tree.clear()
@@ -445,20 +478,46 @@ func _populate_properties(attribute: String) -> void:
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 
-	var properties = _get_attribute_properties(attribute)
-	if properties.is_empty():
-		_warn("No properties found for attribute: %s" % attribute)
-		return
+	# Get both regular and nested properties
+	var regular_properties = _get_regular_properties(attribute)
+	var nested_properties = _get_nested_properties(attribute)
 
-	for property in properties:
+	# Add regular properties first
+	for property in regular_properties:
 		var item = properties_tree.create_item(root)
-		_populate_tree_item(item, property)
+		_populate_regular_property(item, property)
 
-## Updates UI after property selection
+	# Add nested properties
+	for property in nested_properties:
+		var item = properties_tree.create_item(root)
+		_populate_nested_property(item, property)
+
+## Gets regular attribute properties
+func _get_regular_properties(attribute: String) -> Array[Property]:
+	if not current_ant:
+		push_error("No ant set for property access")
+		return []
+	return current_ant.get_attribute_properties(attribute)
+
+## Gets nested attribute properties
+func _get_nested_properties(attribute: String) -> Array[NestedProperty]:
+	if not current_ant:
+		push_error("No ant set for property access")
+		return []
+	return current_ant.get_attribute_nested_properties(attribute)
+
+## Updates UI for regular property selection
 func _update_property_selection(property: Property) -> void:
-	description_label.text = property.description if not property.description.is_empty() else "No description available."
-	var path = property.path.full
+	var path = current_attribute + "." + property.name
 	path_label.text = path
+	description_label.text = property.description
+	property_selected.emit(path)
+
+## Updates UI for nested property selection
+func _update_nested_property_selection(property: NestedProperty) -> void:
+	var path = current_attribute + "." + property.get_full_path()
+	path_label.text = path
+	description_label.text = property.description
 	property_selected.emit(path)
 #endregion
 
@@ -533,8 +592,6 @@ func _create_batch(params: Dictionary, timer: Timer) -> void:
 		add_child(pheromone)
 		params.pheromones -= 1
 		items_created += 1
-
-
 
 	# Stop if everything is created
 	if params.food == 0 and params.pheromones == 0 and params.ants == 0:

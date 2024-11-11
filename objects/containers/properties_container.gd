@@ -5,11 +5,16 @@ extends RefCounted
 signal property_added(property: Property)
 signal property_removed(name: String)
 signal property_changed(name: String, old_value: Variant, new_value: Variant)
+signal nested_property_added(property: NestedProperty)
+signal nested_property_removed(path: String)
 #endregion
 
 #region Member Variables
 ## Dictionary mapping property names to their PropertyInfo
-var _properties: Dictionary = {}
+var _properties: Dictionary = {}  # name -> Property
+
+## Dictionary mapping property names to their NestedProperty
+var _nested_properties: Dictionary = {}  # name -> NestedProperty
 
 ## Reference to the owner object
 var _owner: Object
@@ -50,7 +55,27 @@ func expose_property(property: Property) -> Result:
 
 	# Setup property
 	_properties[property.name] = property
-	property_added.emit(property.name)
+	property_added.emit(property)
+	return Result.new()
+
+## Exposes a nested property structure
+func expose_nested_property(property: NestedProperty) -> Result:
+	# Validate root property
+	if has_nested_property(property.name):
+		return Result.new(
+			Result.ErrorType.DUPLICATE,
+			"Nested property '%s' already exists" % property.name
+		)
+
+	# Validate all getters/setters in the tree
+	var validation_result = _validate_nested_property_tree(property)
+	if validation_result.has_error():
+		return validation_result
+
+	# Setup property
+	_nested_properties[property.name] = property
+	_setup_nested_dependencies(property)
+	nested_property_added.emit(property)
 	return Result.new()
 
 ## Removes a property from the container
@@ -63,44 +88,106 @@ func remove_property(name: String) -> Result:
 	_properties.erase(name)
 	property_removed.emit(name)
 	return Result.new()
+
+## Removes a nested property and all its children
+func remove_nested_property(name: String) -> Result:
+	if not has_nested_property(name):
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
+			"Nested property '%s' doesn't exist" % name
+		)
+
+	var property = _nested_properties[name]
+	_cleanup_nested_dependencies(property)
+	_nested_properties.erase(name)
+	nested_property_removed.emit(property.get_full_path())
+	return Result.new()
 #endregion
 
 #region Property Access
 ## Gets a property if exists else returns null
-func get_property(name: String) -> Property:
-	if not has_property(name):
+func get_property(path: String) -> Property:
+	if has_property(path):
+		return _properties[path]
+	return null
+
+## Gets a nested property by its full path
+func get_nested_property(path: String) -> NestedProperty:
+	var parts = path.split(".", true, 1)
+	var root_name = parts[0]
+
+	if not _nested_properties.has(root_name):
 		return null
-	return _properties[name]
+
+	if parts.size() == 1:
+		return _nested_properties[root_name]
+
+	return _nested_properties[root_name].get_child(parts[1])
+
+## Gets a property value by its full path
+func get_property_value(path: String) -> Variant:
+	# Try regular property first
+	var property = get_property(path)
+	if property != null:
+		return property.value
+
+	# Try nested property
+	var nested = get_nested_property(path)
+	if nested != null and nested.type == NestedProperty.Type.PROPERTY:
+		return nested.get_value()
+
+	return null
+
+## Sets a property value by its full path
+func set_property_value(path: String, value: Variant) -> Result:
+	# Try regular property first
+	var property = get_property(path)
+	if property != null:
+		var old_value = property.value
+		var result = property.set_value(value)
+		if not result.has_error():
+			property_changed.emit(path, old_value, value)
+		return result
+
+	# Try nested property
+	var nested = get_nested_property(path)
+	if nested != null and nested.type == NestedProperty.Type.PROPERTY:
+		var old_value = nested.get_value()
+		var result = nested.set_value(value)
+		if not result.has_error():
+			property_changed.emit(nested.get_full_path(), old_value, value)
+		return result
+
+	return Result.new(
+		Result.ErrorType.NOT_FOUND,
+		"Property '%s' not found" % path
+	)
 #endregion
 
 #region Property Information
 func get_properties() -> Array[Property]:
 	var properties: Array[Property] = []
-	for name in get_property_names():
-		properties.append(get_property(name))
+	for property in _properties.values():
+		properties.append(property)
 	return properties
 
 func get_property_names() -> Array[String]:
 	var names: Array[String] = []
-	for key: String in _properties:
+	for key in _properties.keys():
 		names.append(key)
 	return names
 
-func get_property_path(property_name: String) -> Path:
-	if not has_property(property_name):
-		return null
-	if Helper.is_full_path(property_name):
-		return Path.parse(property_name)
-	return get_property(property_name).path
+func get_nested_property_paths() -> Array[String]:
+	var paths: Array[String] = []
+	for property in _nested_properties.values():
+		_collect_nested_paths(property, paths)
+	return paths
 
 func has_property(name: String) -> bool:
 	return _properties.has(name)
 
-## Returns full_path format String names of dependencies belonging to property
-func get_property_dependencies(property_name: String) -> Array[String]:
-	if not has_property(property_name):
-		return []
-	return get_property(property_name).dependencies
+func has_nested_property(path: String) -> bool:
+	return get_nested_property(path) != null
 #endregion
 
 #region Helper Functions
@@ -113,35 +200,59 @@ func _validate_property_accessors(name: String, getter: Callable, setter: Callab
 
 	return true
 
+func _validate_nested_property_tree(property: NestedProperty) -> Result:
+	# Validate this property's accessors if it's a leaf
+	if property.type == NestedProperty.Type.PROPERTY:
+		if not _is_valid_getter(property.getter):
+			return Result.new(
+				Result.ErrorType.INVALID_GETTER,
+				"Invalid getter for property '%s'" % property.get_full_path()
+			)
+		if property.setter.is_valid() and not _is_valid_setter(property.setter):
+			return Result.new(
+				Result.ErrorType.INVALID_SETTER,
+				"Invalid setter for property '%s'" % property.get_full_path()
+			)
+
+	# Recursively validate children
+	for child in property.children.values():
+		var result = _validate_nested_property_tree(child)
+		if result.has_error():
+			return result
+
+	return Result.new()
+
+func _setup_nested_dependencies(property: NestedProperty) -> void:
+	if property.type == NestedProperty.Type.PROPERTY:
+		# Add this property's dependencies to the map
+		for dependency in property.dependencies:
+			if not _local_dependency_map.has(dependency):
+				_local_dependency_map[dependency] = []
+			_local_dependency_map[dependency].append(property.get_full_path())
+
+	# Recursively process children
+	for child in property.children.values():
+		_setup_nested_dependencies(child)
+
+func _cleanup_nested_dependencies(property: NestedProperty) -> void:
+	if property.type == NestedProperty.Type.PROPERTY:
+		# Remove this property's dependencies from the map
+		var full_path = property.get_full_path()
+		for deps in _local_dependency_map.values():
+			deps.erase(full_path)
+
+	# Recursively process children
+	for child in property.children.values():
+		_cleanup_nested_dependencies(child)
+
+func _collect_nested_paths(property: NestedProperty, paths: Array[String]) -> void:
+	paths.append(property.get_full_path())
+	for child in property.children.values():
+		_collect_nested_paths(child, paths)
+
 func _is_valid_getter(getter: Callable) -> bool:
-	if not getter.is_valid() or not getter.get_object() or getter.get_method().is_empty():
-		return false
-	return getter.get_argument_count() == 0 and getter.get_object().has_method(getter.get_method())
+	return Property.is_valid_getter(getter)
 
 func _is_valid_setter(setter: Callable) -> bool:
-	if not setter.is_valid() or not setter.get_object() or setter.get_method().is_empty():
-		return false
-	return setter.get_argument_count() == 1 and setter.get_object().has_method(setter.get_method())
-
-func _is_valid_type(value: Variant, expected_type: Property.Type) -> bool:
-	match expected_type:
-		Property.Type.BOOL:
-			return typeof(value) == TYPE_BOOL
-		Property.Type.INT:
-			return typeof(value) == TYPE_INT
-		Property.Type.FLOAT:
-			return typeof(value) == TYPE_FLOAT
-		Property.Type.STRING:
-			return typeof(value) == TYPE_STRING
-		Property.Type.VECTOR2:
-			return value is Vector2
-		Property.Type.VECTOR3:
-			return value is Vector3
-		Property.Type.ARRAY:
-			return value is Array
-		Property.Type.DICTIONARY:
-			return value is Dictionary
-		Property.Type.OBJECT:
-			return value is Object
-	return false
+	return Property.is_valid_setter(setter)
 #endregion

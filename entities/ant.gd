@@ -178,6 +178,9 @@ func _init_attributes() -> void:
 func get_property(path: Path) -> Property:
 	return _property_access.get_property(path)
 
+func get_attribute(attr_name: String) -> Attribute:
+	return _property_access.get_attribute(attr_name)
+
 func get_property_value(path: Path) -> Variant:
 	return _property_access.get_property_value(path)
 #endregion
@@ -189,6 +192,12 @@ func get_attribute_properties(attribute: String) -> Array[Property]:
 		return []
 
 	return _property_access.get_attribute_properties(attribute)
+
+func get_attribute_nested_properties(attribute_name: String) -> Array[NestedProperty]:
+	var attribute = get_attribute(attribute_name)
+	if not attribute or not attribute._properties_container:
+		return []
+	return attribute._properties_container.get_nested_properties()
 
 ## Get all attribute names
 func get_attribute_names() -> Array[String]:
