@@ -130,7 +130,10 @@ func get_group_properties(group_name: String) -> Array[NestedProperty]:
 
 ## Get all registered group names
 func get_group_names() -> Array[String]:
-	return _property_groups.keys()
+	var a: Array[String] = []
+	for key in _property_groups.keys():
+		a.append(key)
+	return a
 
 ## Get a property group by name
 func get_group(name: String) -> PropertyGroup:

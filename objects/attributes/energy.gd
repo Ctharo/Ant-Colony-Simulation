@@ -91,13 +91,13 @@ func _init_properties() -> void:
 		.build())
 
 	# Register properties with error handling
-	var result = register_property(levels_prop)
-	if not result.is_ok():
+	var result = register_at_path(Path.parse("energy"), levels_prop)
+	if not result.success():
 		push_error("Failed to register levels property: %s" % result.get_error())
 		return
 
-	result = register_property(status_prop)
-	if not result.is_ok():
+	result = register_at_path(Path.parse("energy"), status_prop)
+	if not result.success():
 		push_error("Failed to register status property: %s" % result.get_error())
 		return
 

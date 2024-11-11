@@ -25,34 +25,41 @@ func _init_properties() -> void:
 		.build())
 
 	# Create foods container with nested properties
+	# Create foods container with properties
 	var foods_prop = (Property.create("foods")
 		.as_container()
-		.described_as("Information about food items within reach")
-		.with_children([
-			Property.create("in_range")
+		.described_as("Properties related to food in reach range")
+		.with_child(
+			(Property.create("in_range")
 				.as_property(Property.Type.FOODS)
 				.with_getter(Callable(self, "_get_foods_in_range"))
 				.with_dependency("reach.range")
-				.described_as("Collection of food items within reach distance")
-				.build(),
-
-			Property.create("count")
+				.described_as("Food items within reach range")
+				.build())
+		).with_child(
+			(Property.create("count")
 				.as_property(Property.Type.INT)
 				.with_getter(Callable(self, "_get_foods_in_range_count"))
 				.with_dependency("reach.foods.in_range")
-				.described_as("Number of food items currently within reach")
-				.build()
-		])
-		.build())
+				.described_as("Food within reach range count")
+				.build())
+		).with_child(
+			(Property.create("mass")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_foods_in_range_mass"))
+				.with_dependency("reach.foods.in_range")
+				.described_as("Total mass of food within reach range")
+				.build())
+		).build())
 
 	# Register properties with error handling
-	var result = register_property(range_prop)
-	if not result.is_ok():
+	var result = register_at_path(Path.parse("reach") ,range_prop)
+	if not result.success():
 		push_error("Failed to register range property: %s" % result.get_error())
 		return
 
-	result = register_property(foods_prop)
-	if not result.is_ok():
+	result = register_at_path(Path.parse("reach") ,foods_prop)
+	if not result.success():
 		push_error("Failed to register foods property: %s" % result.get_error())
 		return
 
@@ -83,6 +90,15 @@ func _get_foods_in_range_count() -> int:
 	if not foods:
 		return 0
 	return foods.size()
+
+func _get_foods_in_range_mass() -> float:
+	var foods = _get_foods_in_range()
+	var mass: float = 0.0
+	if not foods:
+		return 0
+	for food in foods:
+		mass += food.mass
+	return mass
 #endregion
 
 #region Public Methods

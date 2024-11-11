@@ -67,9 +67,9 @@ func _init_properties() -> void:
 		).build())
 
 	# Register all properties
-	register_property(range_prop)
-	register_property(ants)
-	register_property(foods)
+	register_at_path(Path.parse("vision") ,range_prop)
+	register_at_path(Path.parse("vision") ,ants)
+	register_at_path(Path.parse("vision") ,foods)
 
 #endregion
 

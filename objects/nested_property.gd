@@ -12,6 +12,7 @@ enum Type {
 #region Member Variables
 var name: String
 var type: Type
+var path: Path : get = get_path
 var value_type: Property.Type  # Only used if type is PROPERTY
 var getter: Callable
 var setter: Callable
@@ -46,6 +47,14 @@ func add_child(child: NestedProperty) -> void:
 	child.parent = self
 	children[child.name] = child
 
+## Gets a child by name directly from this node's children
+func get_child(child_name: String) -> NestedProperty:
+	return children.get(child_name)
+
+## Checks if this node has a child with the given name
+func has_child(child_name: String) -> bool:
+	return children.has(child_name)
+
 func get_child_by_path(path: Path) -> NestedProperty:
 	if path.parts.is_empty() or path.parts[0] != name:
 		return null
@@ -62,6 +71,30 @@ func get_child_by_path(path: Path) -> NestedProperty:
 
 	var remaining_path = Path.new(path.parts.slice(1))
 	return children[child_name].get_child_by_path(remaining_path)
+
+func get_child_by_string_path(path_string: String) -> NestedProperty:
+	if path_string.is_empty():
+		return null
+
+	# Convert dot notation to path parts
+	var parts = path_string.split(".")
+
+	# Create a proper Path object
+	var path = Path.new(parts)
+
+	return get_child_by_path(path)
+
+## Checks if a child exists at the given string path
+func has_child_at_path(path_string: String) -> bool:
+	return get_child_by_string_path(path_string) != null
+
+## Gets child names at a specific path depth
+## Returns empty array if path doesn't exist or has no children
+func get_child_names_at_path(path_string: String) -> Array[String]:
+	var property = get_child_by_string_path(path_string)
+	if property and property.type == Type.CONTAINER:
+		return property.children.keys()
+	return []
 
 func get_path() -> Path:
 	var parts: Array[String] = []

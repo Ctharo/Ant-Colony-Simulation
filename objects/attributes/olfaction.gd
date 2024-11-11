@@ -31,7 +31,7 @@ func _init_properties() -> void:
 		.described_as("Information about pheromones within detection range")
 		.with_children([
 			# All pheromones
-			Property.create("all")
+			Property.create("list")
 				.as_property(Property.Type.PHEROMONES)
 				.with_getter(Callable(self, "_get_pheromones_in_range"))
 				.with_dependency("olfaction.range")
@@ -90,13 +90,13 @@ func _init_properties() -> void:
 		.build())
 
 	# Register properties with error handling
-	var result = register_property(range_prop)
-	if not result.is_ok():
+	var result = register_at_path(Path.parse("olfaction"),range_prop)
+	if not result.success():
 		push_error("Failed to register range property: %s" % result.get_error())
 		return
 
-	result = register_property(pheromones_prop)
-	if not result.is_ok():
+	result = register_at_path(Path.parse("olfaction"), pheromones_prop)
+	if not result.success():
 		push_error("Failed to register pheromones property: %s" % result.get_error())
 		return
 

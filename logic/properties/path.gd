@@ -11,9 +11,14 @@ var full: String : get = _get_full_path
 const SEPARATOR = "."
 
 func _init(path_parts: Array[String]) -> void:
-	parts = path_parts.map(func(part): return part.to_lower())
+	var a: Array[String]
+	for part in path_parts:
+		a.append(part)
+	parts = a
 
 func _get_full_path() -> String:
+	if parts.is_empty():
+		return ""
 	return SEPARATOR.join(parts)
 
 ## Gets the branch (first part) of the path
@@ -26,9 +31,14 @@ func get_property() -> String:
 
 ## Gets the parent path (all parts except the last)
 func get_parent() -> Path:
-	if parts.size() <= 1:
+	if is_root():
 		return null
 	return Path.new(parts.slice(0, -1))
+
+func is_root() -> bool:
+	if parts.size() <= 1:
+		return true
+	return false
 
 ## Returns true if this path is a descendant of the given path
 func is_descendant_of(other: Path) -> bool:

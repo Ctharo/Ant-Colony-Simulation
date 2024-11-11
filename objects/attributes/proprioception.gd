@@ -43,13 +43,13 @@ func _init_properties() -> void:
 		.build())
 
 	# Register properties with error handling
-	var result = register_property(position_prop)
-	if not result.is_ok():
+	var result = register_at_path(Path.parse("proprioception"), position_prop)
+	if not result.success():
 		push_error("Failed to register position property: %s" % result.get_error())
 		return
 
-	result = register_property(colony_prop)
-	if not result.is_ok():
+	result = register_at_path(Path.parse("proprioception"), colony_prop)
+	if not result.success():
 		push_error("Failed to register colony properties: %s" % result.get_error())
 		return
 
@@ -68,7 +68,7 @@ func _get_distance_to_colony() -> float:
 		push_error("Cannot get colony distance: ant reference is null")
 		return 0.0
 
-	var colony_pos = ant.get_property_value(Path.parse("colony.position"))
+	var colony_pos = ant.get_property_value("colony.position")
 	if not colony_pos:
 		_trace("Could not get colony position")
 		return 0.0

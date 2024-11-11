@@ -72,13 +72,13 @@ func _init_properties() -> void:
 		.build())
 
 	# Register properties with error handling
-	var result = register_property(rates_prop)
-	if not result.is_ok():
+	var result = register_at_path(Path.parse("speed"), rates_prop)
+	if not result.success():
 		push_error("Failed to register rates property: %s" % result.get_error())
 		return
 
-	result = register_property(calculators_prop)
-	if not result.is_ok():
+	result = register_at_path(Path.parse("speed") ,calculators_prop)
+	if not result.success():
 		push_error("Failed to register calculators property: %s" % result.get_error())
 		return
 
