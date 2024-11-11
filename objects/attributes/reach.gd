@@ -1,86 +1,101 @@
 class_name Reach
-extends Attribute
+extends PropertyGroup
 
-#region Properties
-## Maximum range the ant can reach
-var range: float = 15.0 : get = _get_range, set = _set_range
+#region Constants
+const DEFAULT_RANGE := 15.0
 #endregion
 
-#region Lifecycle Methods
-func _init(_ant: Ant) -> void:
-	super._init("Reach", _ant)
+#region Member Variables
+## The maximum reach distance of the ant
+var _range: float = DEFAULT_RANGE
+#endregion
 
+func _init(ant: Ant) -> void:
+	super._init("reach", ant)
+	_trace("Reach component initialized with range: %.2f" % _range)
+
+## Initialize all properties for the Reach component
 func _init_properties() -> void:
-	_properties_container.expose_properties([
-		Property.create("range")
-			.of_type(Property.Type.FLOAT)
-			.with_getter(Callable(self, "_get_range"))
-			.with_setter(Callable(self, "_set_range"))
-			.described_as("Maximum range the ant can reach from its current position")
-			.build(),
-		Property.create("foods_in_range")
-			.of_type(Property.Type.FOODS)
-			.with_attribute(name)
-			.with_dependencies(["range", "proprioception.position"])
-			.with_getter(Callable(self, "_get_foods_in_range"))
-			.described_as("Food within reach range")
-			.build(),
-		Property.create("foods_in_range_mass")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute(name)
-			.with_dependencies(["foods_in_range"])
-			.with_getter(Callable(self, "_get_foods_in_range_mass"))
-			.described_as("Food within reach range mass")
-			.build(),
-		Property.create("foods_in_range_count")
-			.of_type(Property.Type.INT)
-			.with_attribute(name)
-			.with_dependencies(["foods_in_range"])
-			.with_getter(Callable(self, "_get_foods_in_range_count"))
-			.described_as("Food within reach range count")
-			.build(),
-		Property.create("ants_in_range")
-			.of_type(Property.Type.ANTS)
-			.with_attribute(name)
-			.with_dependencies(["range", "proprioception.position"])
-			.with_getter(Callable(self, "_get_ants_in_range"))
-			.described_as("Ants within reach range")
-			.build(),
-		Property.create("ants_in_range_count")
-			.of_type(Property.Type.INT)
-			.with_attribute(name)
-			.with_dependencies(["ants_in_range"])
-			.with_getter(Callable(self, "_get_ants_in_range_count"))
-			.described_as("Ants within reach range count")
-			.build(),
-	])
+	# Create range property with validation
+	var range_prop = (Property.create("range")
+		.as_property(Property.Type.FLOAT)
+		.with_getter(Callable(self, "_get_range"))
+		.with_setter(Callable(self, "_set_range"))
+		.described_as("Maximum distance the ant can reach to interact with objects")
+		.build())
+
+	# Create foods container with nested properties
+	var foods_prop = (Property.create("foods")
+		.as_container()
+		.described_as("Information about food items within reach")
+		.with_children([
+			Property.create("in_range")
+				.as_property(Property.Type.FOODS)
+				.with_getter(Callable(self, "_get_foods_in_range"))
+				.with_dependency("reach.range")
+				.described_as("Collection of food items within reach distance")
+				.build(),
+
+			Property.create("count")
+				.as_property(Property.Type.INT)
+				.with_getter(Callable(self, "_get_foods_in_range_count"))
+				.with_dependency("reach.foods.in_range")
+				.described_as("Number of food items currently within reach")
+				.build()
+		])
+		.build())
+
+	# Register properties with error handling
+	var result = register_property(range_prop)
+	if not result.is_ok():
+		push_error("Failed to register range property: %s" % result.get_error())
+		return
+
+	result = register_property(foods_prop)
+	if not result.is_ok():
+		push_error("Failed to register foods property: %s" % result.get_error())
+		return
+
+	_trace("Properties initialized successfully")
+
+#region Property Getters and Setters
+func _get_range() -> float:
+	return _range
+
+func _set_range(value: float) -> void:
+	if value <= 0:
+		push_error("Reach range must be positive")
+		return
+
+	var old_value = _range
+	_range = value
+	_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
+
+func _get_foods_in_range() -> Foods:
+	if not ant:
+		push_error("Cannot get foods in range: ant reference is null")
+		return null
+
+	return Foods.in_range(ant.global_position, _range)
+
+func _get_foods_in_range_count() -> int:
+	var foods = _get_foods_in_range()
+	if not foods:
+		return 0
+	return foods.size()
 #endregion
 
 #region Public Methods
-func is_within_range(point: Vector2) -> bool:
-	return point.distance_to(ant.global_position) <= range
-#endregion
+## Reset reach distance to default value
+func reset_range() -> void:
+	_set_range(DEFAULT_RANGE)
+	_trace("Range reset to default: %.2f" % DEFAULT_RANGE)
 
-#region Private Methods
-func _get_range() -> float:
-	return range
+## Check if a specific position is within reach
+func is_position_in_range(position: Vector2) -> bool:
+	if not ant:
+		push_error("Cannot check position: ant reference is null")
+		return false
 
-func _get_foods_in_range() -> Foods:
-	return Foods.in_range(ant.global_position, range, true)
-
-func _get_foods_in_range_mass() -> float:
-	return _get_foods_in_range().mass()
-
-func _get_foods_in_range_count() -> int:
-	return _get_foods_in_range().size()
-
-func _get_ants_in_range() -> Ants:
-	return Ants.in_range(ant, range)
-
-func _get_ants_in_range_count() -> int:
-	return _get_ants_in_range().size()
-
-func _set_range(value: float) -> void:
-	if range != value:
-		range = value
+	return ant.global_position.distance_to(position) <= _range
 #endregion

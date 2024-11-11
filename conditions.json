@@ -1,121 +1,121 @@
 {
-	"conditions": {
-		"AtHome": {
-			"description": "Check if ant within boundary of colony radius",
-			"evaluation": {
-				"operator": "LESS_THAN",
-				"property": "proprioception.distance_to_colony",
-				"type": "PropertyCheck",
-				"value_from": "colony.radius"
-			}
-		},
-		"IsCarryingFood": {
-			"description": "Check if ant is carrying any food",
-			"evaluation": {
-				"operator": "EQUALS",
-				"property": "strength.is_carrying_food",
-				"type": "PropertyCheck",
-				"value": true
-			}
-		},
-		"IsFoodInReach": {
-			"description": "Check if food is reachable by ant",
-			"evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "reach.food_in_range_count",
-				"type": "PropertyCheck",
-				"value": 1
-			}
-		},
-		"IsFoodInView": {
-			"description": "Check if food is visible to ant",
-			"evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "vision.food_in_range_count",
-				"type": "PropertyCheck",
-				"value": 0
-			}
-		},
-		"IsFoodPheromoneSensed": {
-			"description": "Check if food pheromones are detected",
-			"evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "olfaction.food_pheromones_sensed_count",
-				"type": "PropertyCheck",
-				"value": 0
-			}
-		},
-		"IsHomePheromoneSensed": {
-			"description": "Check if home pheromones are detected",
-			"evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "olfaction.home_pheromones_sensed_count",
-				"type": "PropertyCheck",
-				"value": 0
-			}
-		},
-		"LowEnergy": {
-			"description": "Check if ant's energy is below threshold",
-			"evaluation": {
-				"operator": "LESS_THAN",
-				"property": "energy.current_level",
-				"type": "PropertyCheck",
-				"value_from": "energy.low_energy_threshold"
-			}
-		},
-		"OverloadedWithFood": {
-			"description": "Check if ant is carrying near maximum capacity",
-			"evaluation": {
-				"operator": "GREATER_THAN_EQUAL",
-				"property": "strength.carried_food_mass",
-				"type": "PropertyCheck",
-				"value_from": "strength.carry_max"
-			}
-		},
-		"IsCarryingFood": {
-			 "description": "Whether the ant is currently carrying food",
-			 "evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "strength.carried_food_mass",
-				"type": "PropertyCheck",
-				"value": 0
-			}
-		},
-		"IsHomePheromoneSensed": {
-			  "description": "Whether any home pheromones are currently sensed",
-			  "evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "olfaction.home_pheromones_sensed_count",
-				"type": "PropertyCheck",
-				"value": 0
-		  }
-		},
-		"IsFoodPheromoneSensed": {
-			  "description": "Whether any food pheromones are currently sensed",
-			  "evaluation": {
-				"operator": "GREATER_THAN",
-				"property": "olfaction.food_pheromones_sensed_count",
-				"type": "PropertyCheck",
-				"value": 0
-		  }
-		},
-		"IsEnergyCriticallyLow": {
-		  "description": "Whether energy is below critical threshold",
-		  "evaluation": {
-			"operator": "LESS_THAN",
-			"property": "energy.percentage",
-			"type": "PropertyCheck",
-			"value": 20.0
-		  }
-		},
-		"IsEnergyFull": {
-		  "description": "Whether energy is at maximum level",
-		  "evaluation": {
-			"operator": "EQUALS",
-			"property": "energy.current_level",
-			"type": "PropertyCheck",
-			"value_from": "energy.max_level"
-		  }
-		},
+  "conditions": {
+	"AtHome": {
+	  "description": "Check if ant within boundary of colony radius",
+	  "evaluation": {
+		"operator": "LESS_THAN",
+		"property": "proprioception.colony.distance",
+		"type": "PropertyCheck",
+		"value_from": "colony.radius"
+	  }
+	},
+	"IsCarryingFood": {
+	  "description": "Check if ant is carrying any food",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "strength.capacity.current_load",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"IsFoodInReach": {
+	  "description": "Check if food is reachable by ant",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "reach.foods.count",
+		"type": "PropertyCheck",
+		"value": 1
+	  }
+	},
+	"IsFoodInView": {
+	  "description": "Check if food is visible to ant",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "vision.foods.count",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"IsFoodPheromoneSensed": {
+	  "description": "Check if food pheromones are detected",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.food.count",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"IsHomePheromoneSensed": {
+	  "description": "Check if home pheromones are detected",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.home.count",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"LowEnergy": {
+	  "description": "Check if ant's energy is below threshold",
+	  "evaluation": {
+		"operator": "LESS_THAN",
+		"property": "energy.levels.current",
+		"type": "PropertyCheck",
+		"value_from": "energy.thresholds.low"
+	  }
+	},
+	"OverloadedWithFood": {
+	  "description": "Check if ant is carrying near maximum capacity",
+	  "evaluation": {
+		"operator": "GREATER_THAN_EQUAL",
+		"property": "strength.capacity.current_load",
+		"type": "PropertyCheck",
+		"value_from": "strength.capacity.maximum"
+	  }
+	},
+	"IsCarryingFood": {
+	  "description": "Whether the ant is currently carrying food",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "strength.capacity.current_load",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"IsHomePheromoneSensed": {
+	  "description": "Whether any home pheromones are currently sensed",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.home.count",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"IsFoodPheromoneSensed": {
+	  "description": "Whether any food pheromones are currently sensed",
+	  "evaluation": {
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.food.count",
+		"type": "PropertyCheck",
+		"value": 0
+	  }
+	},
+	"IsEnergyCriticallyLow": {
+	  "description": "Whether energy is below critical threshold",
+	  "evaluation": {
+		"operator": "LESS_THAN",
+		"property": "energy.status.percentage",
+		"type": "PropertyCheck",
+		"value": 20.0
+	  }
+	},
+	"IsEnergyFull": {
+	  "description": "Whether energy is at maximum level",
+	  "evaluation": {
+		"operator": "EQUALS",
+		"property": "energy.status.is_full",
+		"type": "PropertyCheck",
+		"value": true
+	  }
 	}
+  }
 }

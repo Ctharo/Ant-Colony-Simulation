@@ -1,90 +1,121 @@
 class_name Strength
-extends Attribute
+extends PropertyGroup
 
-#region Properties
-## Base strength level of the ant
-var level: int = 10 : get = _get_level, set = _set_level
-
-## Maximum number of units the ant can carry at a time
-var carry_max: float : get = _get_carry_max
-
-var carried_food_mass: float : get = _get_carried_food_mass
-
-var mass_available: float : get = _get_mass_available
-
-## Mass carryable ([member carry_max]) is equal to [member level] * [member strength_factor]
+#region Constants
+## Factor used to calculate maximum carry weight from strength level
 const STRENGTH_FACTOR: float = 20.0
 #endregion
 
-#region Lifecycle Methods
-func _init(_ant: Ant) -> void:
-	super._init("Strength", _ant)
+#region Member Variables
+## Base strength level of the ant
+var _level: int = 10
+#endregion
 
+func _init(ant: Ant) -> void:
+	super._init("strength", ant)
+	_trace("Strength component initialized with level: %d" % _level)
+
+## Initialize all properties for the Strength component
 func _init_properties() -> void:
-	_properties_container.expose_properties([
-		Property.create("level")
-			.of_type(Property.Type.INT)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_level"))
-			.with_setter(Callable(self, "_set_level"))
-			.described_as("Base strength level of the ant")
-			.build(),
+	# Create base level property
+	var level_prop = (Property.create("level")
+		.as_property(Property.Type.INT)
+		.with_getter(Callable(self, "_get_level"))
+		.with_setter(Callable(self, "_set_level"))
+		.described_as("Base strength level of the ant")
+		.build())
 
-		Property.create("carry_max")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_carry_max"))
-			.described_as("Maximum weight the ant can carry based on strength level")
-			.build(),
+	# Create carrying capacity container with nested properties
+	var capacity_prop = (Property.create("capacity")
+		.as_container()
+		.described_as("Information about ant's carrying capacity")
+		.with_children([
+			Property.create("maximum")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_carry_max"))
+				.with_dependency("strength.level")
+				.described_as("Maximum weight the ant can carry based on strength level")
+				.build(),
 
-		Property.create("carried_food_mass")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute(name)
-			.with_dependencies(["carry_max", "carried_food_mass"])
-			.with_getter(Callable(self, "_get_carried_food_mass"))
-			.described_as("Sum of ant's carried food")
-			.build(),
+			Property.create("current_load")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_carried_food_mass"))
+				.described_as("Current total mass of carried food")
+				.build(),
 
-		Property.create("mass_available")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute(name)
-			.with_dependencies(["carry_max", "carried_food_mass"])
-			.with_getter(Callable(self, "_get_mass_available"))
-			.described_as("Difference between carry max and current carried mass")
-			.build(),
+			Property.create("available")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_mass_available"))
+				.with_dependencies([
+					"strength.capacity.maximum",
+					"strength.capacity.current_load"
+				])
+				.described_as("Remaining carrying capacity available")
+				.build(),
 
-		Property.create("is_carrying_food")
-			.of_type(Property.Type.BOOL)
-			.with_attribute(name)
-			.with_dependencies(["carried_food_mass"])
-			.with_getter(Callable(self, "_is_carrying_food"))
-			.described_as("Checks if ant is currently carrying any food")
-			.build()
-	])
-#endregion
+			Property.create("is_carrying")
+				.as_property(Property.Type.BOOL)
+				.with_getter(Callable(self, "_is_carrying_food"))
+				.with_dependency("strength.capacity.current_load")
+				.described_as("Whether the ant is currently carrying any food")
+				.build()
+		])
+		.build())
 
-#region Public Methods
-func can_carry(weight: float) -> bool:
-	return weight <= mass_available
-#endregion
+	# Register properties with error handling
+	var result = register_property(level_prop)
+	if not result.is_ok():
+		push_error("Failed to register level property: %s" % result.get_error())
+		return
 
-#region Private Methods
+	result = register_property(capacity_prop)
+	if not result.is_ok():
+		push_error("Failed to register capacity property: %s" % result.get_error())
+		return
 
-func _get_carried_food_mass()-> float:
+	_trace("Properties initialized successfully")
+
+#region Property Getters and Setters
+func _get_level() -> int:
+	return _level
+
+func _set_level(value: int) -> void:
+	if value <= 0:
+		push_error("Strength level must be positive")
+		return
+
+	var old_value = _level
+	_level = value
+	_trace("Level updated: %d -> %d" % [old_value, _level])
+
+func _get_carry_max() -> float:
+	return STRENGTH_FACTOR * _level
+
+func _get_carried_food_mass() -> float:
+	if not ant:
+		push_error("Cannot get carried food mass: ant reference is null")
+		return 0.0
+
 	return ant.carried_food.mass()
 
 func _get_mass_available() -> float:
-	return carry_max - carried_food_mass
+	return _get_carry_max() - _get_carried_food_mass()
 
 func _is_carrying_food() -> bool:
-	return carried_food_mass > 0
+	return _get_carried_food_mass() > 0
+#endregion
 
-func _get_level() -> int:
-	return level
+#region Public Methods
+## Check if the ant can carry additional weight
+func can_carry(weight: float) -> bool:
+	if weight < 0:
+		push_error("Cannot check negative weight")
+		return false
 
-func _set_level(value: int) -> void:
-	level = value
+	return weight <= _get_mass_available()
 
-func _get_carry_max() -> float:
-	return STRENGTH_FACTOR * level
+## Reset strength level to default value
+func reset_level() -> void:
+	_set_level(10)
+	_trace("Level reset to default: 10")
 #endregion

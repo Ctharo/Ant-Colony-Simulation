@@ -1,99 +1,167 @@
 class_name Olfaction
-extends Attribute
+extends PropertyGroup
+## Component responsible for ant's sense of smell and pheromone detection
 
-#region Properties
-## Max range at which the ant can sense scents
-var range: float = 100.0 : get = _get_range, set = _set_range
-var pheromones_in_range: Pheromones : get = _get_pheromones_in_range
-var food_pheromones_in_range: Pheromones : get = _get_food_pheromones_in_range
+#region Constants
+const DEFAULT_RANGE := 100.0
 #endregion
 
-#region Lifecycle Methods
-func _init(_ant: Ant) -> void:
-	super._init("Olfaction", _ant)
+#region Member Variables
+## Maximum range at which the ant can detect scents
+var _range: float = DEFAULT_RANGE
+#endregion
 
+func _init(ant: Ant) -> void:
+	super._init("olfaction", ant)
+	_trace("Olfaction component initialized with range: %.2f" % _range)
+
+## Initialize all properties for the Olfaction component
 func _init_properties() -> void:
-	_properties_container.expose_properties([
-		Property.create("range")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_range"))
-			.with_setter(Callable(self, "_set_range"))
-			.described_as("Maximum range at which the ant can smell things")
-			.build(),
-		Property.create("pheromones_in_range")
-			.of_type(Property.Type.PHEROMONES)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_pheromones_in_range"))
-			.with_dependencies(["range"])  # Depends on range property
-			.described_as("List of pheromones within olfactory range")
-			.build(),
-		Property.create("pheromones_in_range_count")
-			.of_type(Property.Type.INT)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_pheromones_in_range_count"))
-			.with_dependencies(["pheromones_in_range"])  # Depends on range property
-			.described_as("Count of pheromones within olfactory range")
-			.build(),
-		Property.create("food_pheromones_in_range")
-			.of_type(Property.Type.PHEROMONES)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_food_pheromones_in_range"))
-			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
-			.described_as("List of food pheromones within olfactory range")
-			.build(),
-		Property.create("food_pheromones_in_range_count")
-			.of_type(Property.Type.INT)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_food_pheromones_in_range_count"))
-			.with_dependencies(["olfaction.food_pheromones_in_range"])  # Use full path for cross-property dependencies
-			.described_as("Count of food pheromones within olfactory range")
-			.build(),
-		Property.create("home_pheromones_in_range")
-			.of_type(Property.Type.PHEROMONES)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_home_pheromones_in_range"))
-			.with_dependencies(["olfaction.pheromones_in_range"])  # Use full path for cross-property dependencies
-			.described_as("List of home pheromones within olfactory range")
-			.build(),
-		Property.create("home_pheromones_in_range_count")
-			.of_type(Property.Type.INT)
-			.with_attribute(name)
-			.with_getter(Callable(self, "_get_home_pheromones_in_range_count"))
-			.with_dependencies(["olfaction.home_pheromones_in_range"])  # Use full path for cross-property dependencies
-			.described_as("Count of home pheromones within olfactory range")
-			.build(),
-	])
+	# Create range property
+	var range_prop = (Property.create("range")
+		.as_property(Property.Type.FLOAT)
+		.with_getter(Callable(self, "_get_range"))
+		.with_setter(Callable(self, "_set_range"))
+		.described_as("Maximum range at which the ant can smell things")
+		.build())
+
+	# Create pheromones container with nested properties
+	var pheromones_prop = (Property.create("pheromones")
+		.as_container()
+		.described_as("Information about pheromones within detection range")
+		.with_children([
+			# All pheromones
+			Property.create("all")
+				.as_property(Property.Type.PHEROMONES)
+				.with_getter(Callable(self, "_get_pheromones_in_range"))
+				.with_dependency("olfaction.range")
+				.described_as("All pheromones within olfactory range")
+				.build(),
+
+			Property.create("count")
+				.as_property(Property.Type.INT)
+				.with_getter(Callable(self, "_get_pheromones_in_range_count"))
+				.with_dependency("olfaction.pheromones.all")
+				.described_as("Count of all pheromones within range")
+				.build(),
+
+			# Food pheromones
+			Property.create("food")
+				.as_container()
+				.described_as("Food-related pheromone information")
+				.with_children([
+					Property.create("list")
+						.as_property(Property.Type.PHEROMONES)
+						.with_getter(Callable(self, "_get_food_pheromones_in_range"))
+						.with_dependency("olfaction.range")
+						.described_as("Food pheromones within range")
+						.build(),
+
+					Property.create("count")
+						.as_property(Property.Type.INT)
+						.with_getter(Callable(self, "_get_food_pheromones_in_range_count"))
+						.with_dependency("olfaction.pheromones.food.list")
+						.described_as("Count of food pheromones within range")
+						.build()
+				])
+				.build(),
+
+			# Home pheromones
+			Property.create("home")
+				.as_container()
+				.described_as("Home-related pheromone information")
+				.with_children([
+					Property.create("list")
+						.as_property(Property.Type.PHEROMONES)
+						.with_getter(Callable(self, "_get_home_pheromones_in_range"))
+						.with_dependency("olfaction.range")
+						.described_as("Home pheromones within range")
+						.build(),
+
+					Property.create("count")
+						.as_property(Property.Type.INT)
+						.with_getter(Callable(self, "_get_home_pheromones_in_range_count"))
+						.with_dependency("olfaction.pheromones.home.list")
+						.described_as("Count of home pheromones within range")
+						.build()
+				])
+				.build()
+		])
+		.build())
+
+	# Register properties with error handling
+	var result = register_property(range_prop)
+	if not result.is_ok():
+		push_error("Failed to register range property: %s" % result.get_error())
+		return
+
+	result = register_property(pheromones_prop)
+	if not result.is_ok():
+		push_error("Failed to register pheromones property: %s" % result.get_error())
+		return
+
+	_trace("Properties initialized successfully")
+
+#region Property Getters and Setters
+func _get_range() -> float:
+	return _range
+
+func _set_range(value: float) -> void:
+	if value <= 0:
+		push_error("Olfaction range must be positive")
+		return
+
+	var old_value = _range
+	_range = value
+
+	if old_value != _range:
+		_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
+
+func _get_pheromones_in_range() -> Pheromones:
+	if not ant:
+		push_error("Cannot get pheromones: ant reference is null")
+		return null
+
+	return Pheromones.in_range(ant.global_position, _range)
+
+func _get_pheromones_in_range_count() -> int:
+	var pheromones = _get_pheromones_in_range()
+	return pheromones.size() if pheromones else 0
+
+func _get_food_pheromones_in_range() -> Pheromones:
+	if not ant:
+		push_error("Cannot get food pheromones: ant reference is null")
+		return null
+
+	return Pheromones.in_range(ant.global_position, _range, "food")
+
+func _get_food_pheromones_in_range_count() -> int:
+	var pheromones = _get_food_pheromones_in_range()
+	return pheromones.size() if pheromones else 0
+
+func _get_home_pheromones_in_range() -> Pheromones:
+	if not ant:
+		push_error("Cannot get home pheromones: ant reference is null")
+		return null
+
+	return Pheromones.in_range(ant.global_position, _range, "home")
+
+func _get_home_pheromones_in_range_count() -> int:
+	var pheromones = _get_home_pheromones_in_range()
+	return pheromones.size() if pheromones else 0
 #endregion
 
 #region Public Methods
+## Check if a point is within olfactory range
 func is_within_range(point: Vector2) -> bool:
-	return ant.global_position.distance_to(point) < range
-#endregion
+	if not ant:
+		push_error("Cannot check range: ant reference is null")
+		return false
 
-#region Private Methods
-func _get_range() -> float:
-	return range
+	return ant.global_position.distance_to(point) < _range
 
-func _get_pheromones_in_range() -> Pheromones:
-	return Pheromones.in_range(ant.global_position, range)
-
-func _get_pheromones_in_range_count() -> int:
-	return _get_pheromones_in_range().size()
-
-func _get_food_pheromones_in_range() -> Pheromones:
-	return Pheromones.in_range(ant.global_position, range, "food")
-
-func _get_food_pheromones_in_range_count() -> int:
-	return _get_food_pheromones_in_range().size()
-
-func _get_home_pheromones_in_range() -> Pheromones:
-	return Pheromones.in_range(ant.global_position, range, "home")
-
-func _get_home_pheromones_in_range_count() -> int:
-	return _get_home_pheromones_in_range().size()
-
-func _set_range(value: float) -> void:
-	if range != value:
-		range = value
+## Reset olfactory range to default value
+func reset_range() -> void:
+	_set_range(DEFAULT_RANGE)
+	_trace("Range reset to default: %.2f" % DEFAULT_RANGE)
 #endregion
