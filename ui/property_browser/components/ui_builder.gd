@@ -41,19 +41,122 @@ func create_ui(parent_window: Window) -> Dictionary:
 
 	var refs := {}
 
+	# Top sections
 	refs.mode_switch = _create_mode_selector(main_container)
-	refs.group_list = _create_group_list(main_container)
-	refs.properties_tree = _create_properties_tree(main_container)
-	refs.path_label = _create_path_display(main_container)
-	refs.group_label = _create_group_label(main_container)
-	refs.description_label = _create_description_panel(main_container)
 	refs.back_button = _create_navigation_controls(main_container)
+	
+	# Create split with its sides
+	var content_split = _create_content_split(parent_window, refs)
+	main_container.add_child(content_split)
+	
+	# Bottom sections
+	refs.path_label = _create_path_display(main_container)
 	refs.loading_label = _create_loading_label(main_container)
-
+	_create_close_button(main_container)
 
 	ui_created.emit()
 	return refs
 
+## Creates the main content split layout and its contents
+func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitContainer:
+	var content_split := HSplitContainer.new()
+	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_split.custom_minimum_size.y = 600
+	content_split.split_offset = 200
+
+	# Create and add left side (Groups)
+	var left_side := VBoxContainer.new()
+	left_side.name = "LeftPanel"
+	content_split.add_child(left_side)
+	
+	refs.group_label = _create_group_label(left_side)
+	_create_search_box(left_side)
+	refs.group_list = _create_group_list(left_side)
+
+	# Create and add right side (Properties)
+	var right_side := VBoxContainer.new()
+	right_side.name = "RightPanel"
+	content_split.add_child(right_side)
+	
+	var properties_label := Label.new()
+	properties_label.text = "Properties"
+	right_side.add_child(properties_label)
+	
+	refs.properties_tree = _create_properties_tree(right_side)
+	refs.description_label = _create_description_panel(right_side)
+
+	return content_split
+
+## Creates and configures the properties tree
+func _create_properties_tree(parent: Control) -> Tree:
+	var tree := Tree.new()
+	tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tree.custom_minimum_size.y = PROPERTIES_TREE_MIN_HEIGHT
+	parent.add_child(tree)
+	return tree
+
+## Creates the description panel, returns the label
+func _create_description_panel(parent: Control) -> Label:
+	var description_panel := PanelContainer.new()
+	description_panel.name = "DescriptionPanel"
+	description_panel.custom_minimum_size.y = DESCRIPTION_PANEL_HEIGHT
+	description_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	parent.add_child(description_panel)
+
+	var description_container := VBoxContainer.new()
+	description_container.add_theme_constant_override("separation", 5)
+	description_panel.add_child(description_container)
+
+	var description_title := Label.new()
+	description_title.text = "Description"
+	description_container.add_child(description_title)
+
+	var label = Label.new()
+	label.name = "DescriptionLabel"
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.custom_minimum_size.y = 100
+	description_container.add_child(label)
+	description_label = label
+
+	return label
+
+## Creates the group label
+func _create_group_label(parent: Control) -> Label:
+	group_label = Label.new()
+	group_label.text = "Property Groups"
+	group_label.add_theme_font_size_override("font_size", 16)
+	parent.add_child(group_label)
+	return group_label
+
+## Creates and configures the group list
+func _create_group_list(parent: Control) -> ItemList:
+	group_list = ItemList.new()
+	group_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	group_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	group_list.custom_minimum_size.y = 300
+	group_list.select_mode = ItemList.SELECT_SINGLE
+	group_list.same_column_width = true
+
+	_apply_group_list_style(group_list)
+	parent.add_child(group_list)
+
+	return group_list
+
+## Creates the properties panel with tree view and description
+func _create_properties_panel(parent: Control) -> VBoxContainer:
+	var right_container := VBoxContainer.new()
+	right_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_container.add_theme_constant_override("separation", 10)
+	parent.add_child(right_container)
+	
+	# Properties tree label and tree will be added here
+	# Description panel will be added here
+	
+	return right_container
 
 ## Creates the main container with proper layout settings
 func _create_main_container() -> VBoxContainer:
@@ -83,11 +186,6 @@ func _create_navigation_controls(parent: Control) -> Button:
 	back_button.disabled = true
 	nav_container.add_child(back_button)
 
-	var current_path_label := Label.new()
-	current_path_label.text = "Current Path: /"
-	current_path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nav_container.add_child(current_path_label)
-
 	return back_button
 
 ## Creates the mode selection UI
@@ -105,20 +203,6 @@ func _create_mode_selector(parent: Control) -> OptionButton:
 
 	return mode_switch
 
-## Creates the main content split layout
-func _create_content_split(parent: Control) -> HSplitContainer:
-	var content_split := HSplitContainer.new()
-	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content_split.custom_minimum_size.y = 600
-	content_split.split_offset = -600
-	parent.add_child(content_split)
-
-	_create_group_panel(content_split)
-	_create_properties_panel(content_split)
-
-	return content_split
-
 ## Creates the property group selection panel
 func _create_group_panel(parent: Control) -> VBoxContainer:
 	var group_container := VBoxContainer.new()
@@ -133,13 +217,6 @@ func _create_group_panel(parent: Control) -> VBoxContainer:
 
 	return group_container
 
-## Creates the group label
-func _create_group_label(parent: Control) -> Label:
-	group_label = Label.new()
-	group_label.text = "Property Groups"
-	group_label.add_theme_font_size_override("font_size", 16)
-	parent.add_child(group_label)
-	return group_label
 
 ## Creates the search box for filtering groups
 func _create_search_box(parent: Control) -> LineEdit:
@@ -148,20 +225,6 @@ func _create_search_box(parent: Control) -> LineEdit:
 	search_box.clear_button_enabled = true
 	parent.add_child(search_box)
 	return search_box
-
-## Creates and configures the group list
-func _create_group_list(parent: Control) -> ItemList:
-	group_list = ItemList.new()
-	group_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	group_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	group_list.custom_minimum_size.y = 300
-	group_list.select_mode = ItemList.SELECT_SINGLE
-	group_list.same_column_width = true
-
-	_apply_group_list_style(group_list)
-	parent.add_child(group_list)
-
-	return group_list
 
 ## Applies styling to the group list
 func _apply_group_list_style(list: ItemList) -> void:
@@ -172,63 +235,6 @@ func _apply_group_list_style(list: ItemList) -> void:
 
 	list.add_theme_color_override("font_color", Color.html("#ecf0f1"))
 	list.add_theme_color_override("font_selected_color", Color.html("#2ecc71"))
-
-## Creates the properties panel with tree view and description
-func _create_properties_panel(parent: Control) -> VBoxContainer:
-	var right_container := VBoxContainer.new()
-	right_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right_container.add_theme_constant_override("separation", 10)
-	parent.add_child(right_container)
-
-	_create_properties_tree(right_container)
-	_create_description_panel(right_container)
-
-	return right_container
-
-## Creates and configures the properties tree
-func _create_properties_tree(parent: Control) -> Tree:
-	var tree_container := VBoxContainer.new()
-	tree_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tree_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parent.add_child(tree_container)
-
-	var properties_label := Label.new()
-	properties_label.text = "Properties"
-	tree_container.add_child(properties_label)
-
-	var tree := Tree.new()
-	tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tree.custom_minimum_size.y = 400
-	tree_container.add_child(tree)
-
-	return tree
-
-## Creates the description panel, returns the label
-func _create_description_panel(parent: Control) -> Label:
-	var description_panel := PanelContainer.new()
-	description_panel.name = "DescriptionPanel"
-	description_panel.custom_minimum_size.y = DESCRIPTION_PANEL_HEIGHT
-	parent.add_child(description_panel)
-
-	var description_container := VBoxContainer.new()
-	description_container.add_theme_constant_override("separation", 5)
-	description_panel.add_child(description_container)
-
-	var description_title := Label.new()
-	description_title.text = "Description"
-	description_container.add_child(description_title)
-
-	var label = Label.new()
-	label.name = "DescriptionLabel"
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	label.custom_minimum_size.y = 100
-	description_container.add_child(label)
-	description_label = label
-
-	return label
 
 ## Creates the property path display
 func _create_path_display(parent: Control) -> Label:

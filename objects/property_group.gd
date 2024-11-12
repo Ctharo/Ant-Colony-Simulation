@@ -34,9 +34,9 @@ func _init_properties() -> void:
 ## Gets a property or group by path
 ## Can return either a container (group) or leaf (property)
 func get_at_path(path: Path) -> NestedProperty:
-	if path.is_root():
+	if path.is_root() or path.is_group_root():
 		return _root
-	return _root.get_child_by_string_path(path.full)
+	return _root.get_child_by_string_path(path.get_subpath().full)
 
 ## Gets children at a specific path
 ## Returns empty array if path doesn't exist or points to a leaf
@@ -59,12 +59,12 @@ func set_value_at_path(path: Path, value: Variant) -> Result:
 	if not node:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
-			"Path '%s' doesn't exist" % path
+			"Path '%s' doesn't exist" % path.full
 		)
 	if node.type != NestedProperty.Type.PROPERTY:
 		return Result.new(
 			Result.ErrorType.TYPE_MISMATCH,
-			"Path '%s' points to a container, not a property" % path
+			"Path '%s' points to a container, not a property" % path.full
 		)
 	return node.set_value(value)
 
@@ -85,7 +85,7 @@ func get_root() -> NestedProperty:
 
 ## Registers a new property or container at a path
 func register_at_path(path: Path, property: NestedProperty) -> Result:
-	if not path:
+	if path.is_root():
 		if not property:
 			return Result.new(
 				Result.ErrorType.TYPE_MISMATCH,
@@ -93,16 +93,18 @@ func register_at_path(path: Path, property: NestedProperty) -> Result:
 			)
 		_root.add_child(property)
 		return Result.new()
-
-	var parent_path = path.get_branch()
-	var parent = get_at_path(Path.parse(parent_path))
-
+		
+	var parent_path = path.get_parent()
+	if parent_path.is_root():
+		_root.add_child(property)
+		return Result.new()
+		
+	var parent = get_at_path(parent_path)
 	if not parent or parent.type != NestedProperty.Type.CONTAINER:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
-			"Parent path '%s' doesn't exist or isn't a container" % parent_path
+			"Parent path '%s' doesn't exist or isn't a container" % parent_path.full
 		)
-
 	parent.add_child(property)
 	return Result.new()
 #endregion
