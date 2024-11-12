@@ -60,9 +60,12 @@ func _setup_column(index: int, title: String, expandable: bool, min_width: int) 
 
 ## Connect necessary signals
 func _setup_signals() -> void:
-	properties_tree.item_mouse_selected.connect(_on_item_selected)
+	properties_tree.item_selected.connect(_on_item_selected)
 	properties_tree.nothing_selected.connect(_on_tree_deselected)
 	properties_tree.item_activated.connect(_on_tree_item_activated)
+	
+	# Add double-click handling for values
+	properties_tree.item_mouse_selected.connect(_on_item_mouse_selected)
 #endregion
 
 #region Property View Management
@@ -167,9 +170,8 @@ func _set_dependencies_text(item: TreeItem, dependencies: Array) -> void:
 #endregion
 
 #region Signal Handling
-## Handle item selection in the tree
 ## Handle item selection
-func _on_item_selected(_location, _button) -> void:
+func _on_item_selected() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
 		return
@@ -184,7 +186,7 @@ func _on_item_selected(_location, _button) -> void:
 	# Just emit standard selection
 	property_selected.emit(node.path)
 
-## Handle double-click/activation
+## Handle double-click/activation of tree items
 func _on_tree_item_activated() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
@@ -194,9 +196,22 @@ func _on_tree_item_activated() -> void:
 	if not node:
 		return
 		
-	# Emit activation for navigation handling
+	# Emit activation signal with the path
 	property_activated.emit(node.path)
+
+## Handle mouse selection (for value column expansion)
+func _on_item_mouse_selected(position: Vector2, mouse_button_index: int) -> void:
+	var selected = properties_tree.get_selected()
+	if not selected:
+		return
+		
+	# Get the clicked column
+	var clicked_column = properties_tree.get_column_at_position(position)
 	
+	# If value column was clicked
+	if clicked_column == COL_VALUE:
+		_handle_value_cell_click(selected)
+
 #endregion
 
 #region Item Selected handling

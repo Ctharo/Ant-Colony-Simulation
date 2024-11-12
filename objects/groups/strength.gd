@@ -11,8 +11,8 @@ const STRENGTH_FACTOR: float = 20.0
 var _level: int = 10
 #endregion
 
-func _init(ant: Ant) -> void:
-	super._init("strength", ant)
+func _init(_ant: Ant) -> void:
+	super._init("strength", _ant)
 	_trace("Strength component initialized with level: %d" % _level)
 
 ## Initialize all properties for the Strength component

@@ -11,8 +11,8 @@ const DEFAULT_RANGE := 100.0
 var _range: float = DEFAULT_RANGE
 #endregion
 
-func _init(ant: Ant) -> void:
-	super._init("olfaction", ant)
+func _init(_ant: Ant) -> void:
+	super._init("olfaction", _ant)
 	_trace("Olfaction component initialized with range: %.2f" % _range)
 
 ## Initialize all properties for the Olfaction component

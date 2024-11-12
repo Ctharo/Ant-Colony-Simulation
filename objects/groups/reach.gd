@@ -10,8 +10,8 @@ const DEFAULT_RANGE := 15.0
 var _range: float = DEFAULT_RANGE
 #endregion
 
-func _init(ant: Ant) -> void:
-	super._init("reach", ant)
+func _init(_ant: Ant) -> void:
+	super._init("reach", _ant)
 	_trace("Reach component initialized with range: %.2f" % _range)
 
 ## Initialize all properties for the Reach component

@@ -99,7 +99,7 @@ func _evaluate_operator_condition(condition: Dictionary, context: Dictionary) ->
 			return false
 
 ## Evaluate a property check condition
-func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
+func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> bool:
 	if not evaluation.has("property"):
 		_log_error("Property check missing 'property' field: %s" % evaluation)
 		return false

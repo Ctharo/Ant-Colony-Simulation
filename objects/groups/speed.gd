@@ -16,8 +16,8 @@ var _harvesting_rate: float = DEFAULT_RATE
 var _storing_rate: float = DEFAULT_RATE
 #endregion
 
-func _init(ant: Ant) -> void:
-	super._init("speed", ant)
+func _init(_ant: Ant) -> void:
+	super._init("speed", _ant)
 	_trace("Speed component initialized with default rates")
 
 ## Initialize all properties for the Speed component

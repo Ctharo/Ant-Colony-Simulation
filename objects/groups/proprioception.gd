@@ -2,8 +2,8 @@ class_name Proprioception
 extends PropertyGroup
 ## The component of the ant responsible for sense of direction
 
-func _init(ant: Ant) -> void:
-	super._init("proprioception", ant)
+func _init(_ant: Ant) -> void:
+	super._init("proprioception", _ant)
 	_trace("Proprioception component initialized")
 
 ## Initialize all properties for the Proprioception component

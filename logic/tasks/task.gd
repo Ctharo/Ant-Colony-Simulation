@@ -184,8 +184,8 @@ func _find_next_valid_behavior(context: Dictionary) -> Behavior:
 	priorities.reverse()
 	
 	# Check behaviors in priority order
-	for priority in priorities:
-		var behaviors_at_priority = priority_groups[priority]
+	for _priority in priorities:
+		var behaviors_at_priority = priority_groups[_priority]
 		for behavior in behaviors_at_priority:
 			DebugLogger.trace(DebugLogger.Category.BEHAVIOR,
 				"\nChecking behavior: %s (Priority: %d)" % [behavior.name, behavior.priority]
@@ -196,7 +196,7 @@ func _find_next_valid_behavior(context: Dictionary) -> Behavior:
 		
 		if not behaviors_at_priority.is_empty():
 			DebugLogger.trace(DebugLogger.Category.BEHAVIOR,
-				"No behaviors at priority %d could activate" % priority
+				"No behaviors at priority %d could activate" % _priority
 			)
 	
 	return null

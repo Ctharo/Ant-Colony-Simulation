@@ -55,21 +55,21 @@ func get_child(child_name: String) -> NestedProperty:
 func has_child(child_name: String) -> bool:
 	return children.has(child_name)
 
-func get_child_by_path(path: Path) -> NestedProperty:
-	if path.parts.is_empty() or path.parts[0] != name:
+func get_child_by_path(_path: Path) -> NestedProperty:
+	if _path.parts.is_empty() or _path.parts[0] != name:
 		return null
 
-	if path.parts.size() == 1:
+	if _path.parts.size() == 1:
 		return self
 
-	var child_name = path.parts[1]
+	var child_name = _path.parts[1]
 	if not children.has(child_name):
 		return null
 
-	if path.parts.size() == 2:
+	if _path.parts.size() == 2:
 		return children[child_name]
 
-	var remaining_path = Path.new(path.parts.slice(1))
+	var remaining_path = Path.new(_path.parts.slice(1))
 	return children[child_name].get_child_by_path(remaining_path)
 
 func get_child_by_string_path(path_string: String) -> NestedProperty:
@@ -80,9 +80,9 @@ func get_child_by_string_path(path_string: String) -> NestedProperty:
 	var parts = path_string.split(".")
 
 	# Create a proper Path object
-	var path = Path.new(parts)
+	var _path = Path.new(parts)
 
-	return get_child_by_path(path)
+	return get_child_by_path(_path)
 
 ## Checks if a child exists at the given string path
 func has_child_at_path(path_string: String) -> bool:

@@ -13,10 +13,10 @@ func as_array() -> Array[Ant]:
 	return a
 
 ## Pass ant so we can exclude the caller from the list of other ants
-static func in_range(_ant: Ant, range: float) -> Ants:
+static func in_range(_ant: Ant, _range: float) -> Ants:
 	var a: Ants = Ants.new()
 	for ant: Ant in Ants.all():
-		if ant.global_position.distance_to(_ant.global_position) <= range:
+		if ant.global_position.distance_to(_ant.global_position) <= _range:
 			if ant != _ant: # Exclude the ant calling
 				a.append(ant)
 	return a

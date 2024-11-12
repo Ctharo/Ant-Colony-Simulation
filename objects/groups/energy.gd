@@ -19,8 +19,8 @@ var _max_level: float = DEFAULT_MAX_ENERGY
 var _current_level: float = DEFAULT_MAX_ENERGY
 #endregion
 
-func _init(ant: Ant) -> void:
-	super._init("energy", ant)
+func _init(_ant: Ant) -> void:
+	super._init("energy", _ant)
 	_trace("Energy component initialized with level: %.2f/%.2f" % [_current_level, _max_level])
 
 ## Initialize all properties for the Energy component

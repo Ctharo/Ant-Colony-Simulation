@@ -13,7 +13,7 @@ var _property_groups: Dictionary = {}  # name -> PropertyGroup
 var _cache: Cache
 #endregion
 
-func _init(owner: Object, use_caching: bool = true) -> void:
+func _init(_owner: Object, use_caching: bool = true) -> void:
 	_cache = Cache.new() if use_caching else null
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 

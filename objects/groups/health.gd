@@ -19,8 +19,8 @@ var _max_level: float = DEFAULT_MAX_HEALTH
 var _current_level: float = DEFAULT_MAX_HEALTH
 #endregion
 
-func _init(ant: Ant) -> void:
-	super._init("health", ant)
+func _init(_ant: Ant) -> void:
+	super._init("health", _ant)
 	_trace("Health component initialized with level: %.2f/%.2f" % [_current_level, _max_level])
 
 ## Initialize all properties for the Health component

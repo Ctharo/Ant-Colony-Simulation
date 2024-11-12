@@ -91,7 +91,7 @@ func _ready() -> void:
 	_initialize_navigation()
 	_initialize_property_manager()
 	create_components()
-	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
+	DebugLogger.set_log_level(DebugLogger.LogLevel.ERROR)
 
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
@@ -141,26 +141,28 @@ func _initialize_navigation() -> void:
 	
 	# Connect navigation signals
 	back_button.pressed.connect(navigation_manager.navigate_back)
-	group_list.item_selected.connect(navigation_manager.select_group)  # Selection, not navigation
-	properties_tree.item_selected.connect(func(): _on_property_selected())  # Handle property selection
+	group_list.item_selected.connect(_on_group_selected)
+	properties_tree.item_selected.connect(_on_property_selected)
+	properties_tree.item_activated.connect(_on_property_activated)  # Add this for double-click
 	navigation_manager.path_changed.connect(_on_path_changed)
 
 ## Initialize the property manager component
 func _initialize_property_manager() -> void:
 	property_manager = PropertyManager.new(properties_tree, description_label)
-	property_manager.property_activated.connect(_on_property_activated)
 
 ## Called when UI is created
 func _on_ui_created() -> void:
-	group_list.item_selected.connect(_on_group_selected)
 	_setup_logging()
 #endregion
 
 #region Navigation Handlers
 ## Handle selection in group list
 func _on_group_selected(index: int) -> void:
-	navigation_manager.select_group(index)
+	var group_text = group_list.get_item_text(index)
+	var path = Path.parse(group_text)
+	navigation_manager.handle_activation(path)
 
+## Handle single-click property selection
 func _on_property_selected() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
@@ -168,31 +170,27 @@ func _on_property_selected() -> void:
 		
 	var node = selected.get_metadata(0) as NestedProperty
 	if node:
-		navigation_manager.handle_property_activation(node.path)
+		# Just update the path label for selection
+		path_label.text = node.path.full
+		property_selected.emit(node.path.full)
 
-## Handle property/container activation
-func _on_property_activated(property_path: Path) -> void:
-	# Get the node at this path
-	var group = current_ant.get_property_group(property_path.get_group_name())
-	if not group:
+## Handle double-click property activation
+func _on_property_activated() -> void:
+	var selected = properties_tree.get_selected()
+	if not selected:
 		return
 		
-	var node: NestedProperty
-	if property_path.is_group_root():
-		node = group.get_root()
-	else:
-		node = group.get_at_path(property_path.get_subpath())
-	
+	var node = selected.get_metadata(0) as NestedProperty
 	if not node:
 		return
 		
 	if node.type == NestedProperty.Type.CONTAINER:
-		# Container activation - navigate
-		navigation_manager.navigate_to_container(property_path)
+		# Navigate into containers on double-click
+		navigation_manager.handle_activation(node.path)
 	else:
-		# Property activation - just update path
-		navigation_manager.handle_property_activation(property_path)
-	
+		# Just update path for properties
+		path_label.text = node.path.full
+		
 ## Handle path changes in navigation
 func _on_path_changed(new_path: Path) -> void:
 	if not current_ant:
@@ -218,7 +216,6 @@ func _on_path_changed(new_path: Path) -> void:
 	
 	if node:
 		property_manager.update_property_view(node)
-
 #endregion
 
 #region Public Interface
