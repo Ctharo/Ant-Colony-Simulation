@@ -85,7 +85,7 @@ var loading_label: Label
 #region Initialization
 ## Called when the node enters the scene tree
 func _ready() -> void:
-	DebugLogger.set_log_level(DebugLogger.LogLevel.ERROR)
+	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
 	DebugLogger.set_from_enabled("property_browser")
 	DebugLogger.set_from_enabled("property_access")
 	DebugLogger.set_from_enabled("property_browser_navigation")
