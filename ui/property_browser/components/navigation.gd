@@ -40,7 +40,9 @@ func set_ant(ant: Ant) -> void:
 #region Navigation Methods
 func navigate_back() -> void:
 	if _navigation_history.size() > 0:
+		var from = _current_path
 		_current_path = _navigation_history.pop_back()
+		_trace("Navigating from %s to %s" % [from.full, _current_path.full])
 		refresh_view_for_path(_current_path)
 		_back_button.disabled = _navigation_history.is_empty()
 		path_changed.emit(_current_path)
@@ -51,7 +53,6 @@ func handle_selection(path: Path) -> void:
 	var group = _ant.get_property_group(path.get_group_name())
 	if not group:
 		return
-		
 	var node: NestedProperty
 	if path.is_group_root():
 		node = group.get_root()
@@ -66,8 +67,9 @@ func handle_selection(path: Path) -> void:
 	_path_label.text = path.full
 	path_changed.emit(path)
 
-## Handles item activation (double click)
+## Main method for handling activation of properties or containers
 func handle_activation(path: Path) -> void:
+	
 	var group = _ant.get_property_group(path.get_group_name())
 	if not group:
 		return
@@ -82,32 +84,56 @@ func handle_activation(path: Path) -> void:
 		return
 		
 	if node.type == NestedProperty.Type.CONTAINER:
-		# Add current path to history unless we're at root
+		# First navigation from root
+		if _navigation_history.is_empty() and _current_path.is_root():
+			_navigation_history.append(_current_path)
+					
+		# Check if we're navigating between siblings
+		var is_sibling_navigation = false
 		if not _current_path.is_root():
+			var parent_current = _current_path.get_parent()
+			var parent_new = path.get_parent()
+			
+			
+			# If both have same parent, we're navigating between siblings
+			if parent_current and parent_new and parent_current.full == parent_new.full:
+				is_sibling_navigation = true
+				
+		
+		# If going between siblings, don't modify history
+		if not is_sibling_navigation:
 			_navigation_history.append(_current_path)
 		
 		_current_path = path
 		_back_button.disabled = _navigation_history.is_empty()
 		
-		# Update UI for new container level
+		# Update UI
 		_group_label.text = "Group: %s" % path.get_group_name()
 		_update_sibling_containers(node, path)
 		_update_property_tree(node)
 		_path_label.text = path.full
-		path_changed.emit(path)
+		
+	else:
+		# Property activation - just update path label
+		_path_label.text = path.full
 	
-## Handle selection in group list
+	path_changed.emit(path)
+	
 ## Handle selection in group list
 func select_group(group_index: int) -> void:
 	var group_text = _group_list.get_item_text(group_index)
+	_trace("Group %s selected" % group_text)
 	var path = Path.parse(group_text)
 	handle_selection(path)
 
 ## Handle activation in group list
 func activate_group(group_index: int) -> void:
 	var group_text = _group_list.get_item_text(group_index)
+	_trace("Group %s activated" % group_text)
 	var path = Path.parse(group_text)
 	handle_activation(path)
+
+## Update [member _group_list] with sibling [class property_group]s
 func _update_sibling_containers(node: NestedProperty, path: Path) -> void:
 	_group_list.clear()
 	
@@ -128,7 +154,8 @@ func _update_sibling_containers(node: NestedProperty, path: Path) -> void:
 	if parent_path.is_group_root():
 		parent_node = group.get_root()
 	else:
-		parent_node = group.get_at_path(parent_path.get_subpath())
+		# Get parent node by path
+		parent_node = group.get_at_path(parent_path.path.sub)
 		
 	if parent_node and parent_node.type == NestedProperty.Type.CONTAINER:
 		# Add all container siblings including current container
@@ -142,7 +169,6 @@ func get_current_path() -> Path:
 	return _current_path
 #endregion
 
-#region View Management
 #region View Management
 func refresh_root_view() -> void:
 	if not _ant:
@@ -313,4 +339,25 @@ func _add_item_with_tooltip(path: Path, node: NestedProperty) -> void:
 		
 		if not tooltip.is_empty():
 			_group_list.set_item_tooltip(idx, tooltip)
+			
+## Log a trace message
+func _trace(message: String) -> void:
+	DebugLogger.trace(DebugLogger.Category.PROPERTY,
+		message,
+		{"from": "property_browser_navigation"}
+	)
+
+## Log an error message
+func _error(message: String) -> void:
+	DebugLogger.error(DebugLogger.Category.PROPERTY,
+		message,
+		{"from": "property_browser_navigation"}
+	)
+
+## Log a warning message
+func _warn(message: String) -> void:
+	DebugLogger.warn(DebugLogger.Category.PROPERTY,
+		message,
+		{"from": "property_browser_navigation"}
+	)
 #endregion

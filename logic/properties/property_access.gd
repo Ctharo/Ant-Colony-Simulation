@@ -186,18 +186,20 @@ func _trace(message: String) -> void:
 	DebugLogger.trace(
 		DebugLogger.Category.PROPERTY,
 		message,
-		{"From": "property_access"}
+		{"from": "property_access"}
 	)
 
 func _warn(message: String) -> void:
 	DebugLogger.warn(
 		DebugLogger.Category.PROPERTY,
-		message
+		message,
+		{"from": "property_access"}
 	)
 
 func _error(message: String) -> void:
 	DebugLogger.error(
 		DebugLogger.Category.PROPERTY,
-		message
+		message,
+		{"from": "property_access"}
 	)
 #endregion

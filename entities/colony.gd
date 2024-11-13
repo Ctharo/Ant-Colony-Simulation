@@ -9,6 +9,9 @@ var _radius: float = 10.0
 ## Collection of food resources
 var foods: Foods
 
+## Ants belonging to this colony
+var ants: Ants
+
 ## Property management system
 var _property_group: PropertyGroup
 #endregion
@@ -17,6 +20,9 @@ func _ready() -> void:
 	_property_group = _create_property_group()
 	_trace("Colony initialized with radius: %.2f" % _radius)
 
+
+func add_ant(ant: Ant) -> void:
+	ants.append(ant)
 
 ## Create the colony's property group with all properties
 func _create_property_group() -> PropertyGroup:
@@ -168,8 +174,8 @@ func set_property_value(path: String, value: Variant) -> Result:
 #region Helper Methods
 func _trace(message: String) -> void:
 	DebugLogger.trace(
-		DebugLogger.Category.PROPERTY,
+		DebugLogger.Category.ENTITY,
 		message,
-		{"From": "colony"}
+		{"from": "colony"}
 	)
 #endregion

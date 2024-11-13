@@ -108,31 +108,21 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 	var operator = evaluation.get("operator", "EQUALS")
 
 	# Get the property value using PropertyAccess
-	var property_result = _property_access.get_property(property_name)
-	if property_result.is_error():
-		_log_error(property_result.error_message)
+	var property: NestedProperty = _property_access.get_property(Path.parse(property_name))
+	if not property:
+		_log_error("Problem retreiving property: %s" % property_name)
 		return false
 
-	var property_value = property_result.value
-
-	var debug_info = "  ├─ Checking property '%s'\n" % property_name
-	debug_info += "  │  ├─ Current value: %s" % Property.format_value(property_value)
-	_log_trace(debug_info)
+	var property_value = property.value
 
 	# Special handling for empty checks
 	if operator in ["NOT_EMPTY", "IS_EMPTY"]:
 		var is_empty = _is_empty(property_value)
-		_log_trace("  │  ├─ Checking if %s (result: %s)" % [
-			"not empty" if operator == "NOT_EMPTY" else "empty",
-			not is_empty if operator == "NOT_EMPTY" else is_empty
-		])
 		return not is_empty if operator == "NOT_EMPTY" else is_empty
 
 	# Handle different value sources using PropertyEvaluator for comparison
 	if "value" in evaluation:
 		var compare_value = evaluation.value
-		_log_trace("  │  ├─ Comparing with fixed value: %s" % \
-			Property.format_value(compare_value))
 		return _compare_values(property_value, compare_value, operator)
 
 	elif "value_from" in evaluation:
@@ -142,10 +132,6 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 			return false
 
 		var compare_value = compare_prop_result.value
-		_log_trace("  │  ├─ Comparing with '%s' value: %s" % [
-			evaluation.value_from,
-			Property.format_value(compare_value)
-		])
 		return _compare_values(property_value, compare_value, operator)
 
 	_log_error("Invalid property check configuration: %s" % evaluation)

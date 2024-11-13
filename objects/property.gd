@@ -74,7 +74,6 @@ class Builder:
 		description = p_description
 		return self
 
-
 	func build() -> NestedProperty:
 		if type == NestedProperty.Type.PROPERTY and not Property.is_valid_getter(getter):
 			push_error("Invalid getter for property %s" % name)

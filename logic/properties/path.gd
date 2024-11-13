@@ -7,6 +7,9 @@ var parts: Array[String]
 ## The complete path string
 var full: String : get = get_full_path
 
+## The sub-path
+var sub: Path : get = get_subpath
+
 ## Static path separator
 const SEPARATOR = "."
 

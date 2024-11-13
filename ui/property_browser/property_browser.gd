@@ -11,7 +11,7 @@ signal content_created
 
 #region Constants
 ## Window configuration
-const WINDOW_SIZE_PERCENTAGE := 0.8
+const WINDOW_SIZE_PERCENTAGE := 0.62
 
 ## Number of items to process per frame for staged creation
 const ITEMS_PER_FRAME = 50
@@ -38,13 +38,13 @@ var property_manager: PropertyManager
 
 #region Member Variables
 ## Number of food items to simulate
-var foods_to_spawn: int = randi_range(1500, 5000)
+var foods_to_spawn: int = randi_range(0, 0)
 
 ## Number of ants to simulate
-var ants_to_spawn: int = randi_range(100, 500)
+var ants_to_spawn: int = randi_range(0, 0)
 
 ## Number of pheromones to simulate
-var pheromones_to_spawn: int = randi_range(500, 5000)
+var pheromones_to_spawn: int = randi_range(0, 0)
 
 ## Reference to current Ant instance
 var current_ant: Ant
@@ -85,13 +85,16 @@ var loading_label: Label
 #region Initialization
 ## Called when the node enters the scene tree
 func _ready() -> void:
+	DebugLogger.set_log_level(DebugLogger.LogLevel.ERROR)
+	DebugLogger.set_from_enabled("property_browser")
+	DebugLogger.set_from_enabled("property_access")
+	DebugLogger.set_from_enabled("property_browser_navigation")
+	_trace("PropertyBrowser UI initialization complete")
 	_configure_window()
-	if _initialize_ui_builder():
-		_on_ui_created()
+	_initialize_ui_builder()
 	_initialize_navigation()
 	_initialize_property_manager()
-	create_components()
-	DebugLogger.set_log_level(DebugLogger.LogLevel.ERROR)
+	generate_content()
 
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
@@ -104,13 +107,11 @@ func _configure_window() -> void:
 	title = "Ant Property Browser"
 	visibility_changed.connect(func(): visible = true)
 	
-	exclusive = true
 	unresizable = false
-	min_size = Vector2(800, 500)
 	
 	var screen_size := DisplayServer.screen_get_size()
 	size = screen_size * WINDOW_SIZE_PERCENTAGE
-	position = (screen_size - size) / 2
+	position = Vector2.ZERO
 
 ## Initialize the UI builder component
 func _initialize_ui_builder() -> bool:
@@ -150,9 +151,6 @@ func _initialize_navigation() -> void:
 func _initialize_property_manager() -> void:
 	property_manager = PropertyManager.new(properties_tree, description_label)
 
-## Called when UI is created
-func _on_ui_created() -> void:
-	_setup_logging()
 #endregion
 
 #region Navigation Handlers
@@ -220,35 +218,35 @@ func _on_path_changed(new_path: Path) -> void:
 
 #region Public Interface
 ## Show properties for the given ant
-func show_ant(ant: Ant) -> void:
+func create_ant_to_browse() -> void:
+	var ant: Ant = Ant.new()
+	var colony: Colony = Colony.new()
+	ant.colony = colony
+	
+	ant.global_position = _get_random_position()
+	colony.global_position = _get_random_position()
+	ant.carried_food.add_food(randf_range(0.0, 200.0))
+	
+	add_child(ant)
+	ant.set_physics_process(false)
+	ant.set_process(false)
 	current_ant = ant
 	navigation_manager.set_ant(ant)
 #endregion
 
 #region Component Creation
 ## Create simulation components
-func create_components() -> void:
-	ui_builder.show_loading_indicator(self)
-	
-	var a: Ant = Ant.new()
-	var c: Colony = Colony.new()
-	a.colony = c
-	
-	a.global_position = _get_random_position()
-	c.global_position = _get_random_position()
-	a.carried_food.add_food(randf_range(0.0, 200.0))
-	
-	add_child(a)
-	a.set_physics_process(false)
-	a.set_process(false)
+func generate_content() -> void:
+	create_ant_to_browse()
+	if foods_to_spawn + pheromones_to_spawn + ants_to_spawn > 0:
+		ui_builder.show_loading_indicator(self)
 	
 	var to_create = {
 		"food": foods_to_spawn,
 		"pheromones": pheromones_to_spawn,
 		"ants": ants_to_spawn
 	}
-	_staged_creation(to_create, a)
-	show_ant(a)
+	_staged_creation(to_create, current_ant)
 
 ## Create components in stages to avoid freezing
 func _staged_creation(params: Dictionary, main_ant: Ant) -> void:
@@ -310,28 +308,25 @@ func _create_batch(params: Dictionary, timer: Timer) -> void:
 func _get_random_position() -> Vector2:
 	return Vector2(randf_range(0, 1800), randf_range(0, 800))
 
-## Set up logging
-func _setup_logging() -> void:
-	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
-	_trace("PropertyBrowser UI initialization complete")
-
 ## Log a trace message
 func _trace(message: String) -> void:
 	DebugLogger.trace(DebugLogger.Category.PROPERTY,
 		message,
-		{"From": "property_browser"}
+		{"from": "property_browser"}
 	)
 
 ## Log an error message
 func _error(message: String) -> void:
 	DebugLogger.error(DebugLogger.Category.PROPERTY,
-		message
+		message,
+		{"from": "property_browser"}
 	)
 
 ## Log a warning message
 func _warn(message: String) -> void:
 	DebugLogger.warn(DebugLogger.Category.PROPERTY,
-		message
+		message,
+		{"from": "property_browser"}
 	)
 
 ## Handle close button press

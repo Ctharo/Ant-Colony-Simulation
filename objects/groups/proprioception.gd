@@ -68,7 +68,7 @@ func _get_distance_to_colony() -> float:
 		push_error("Cannot get colony distance: ant reference is null")
 		return 0.0
 
-	var colony_pos = ant.get_property_value("colony.position")
+	var colony_pos = ant.get_property_value(Path.parse("colony.position"))
 	if not colony_pos:
 		_trace("Could not get colony position")
 		return 0.0
@@ -80,7 +80,7 @@ func _get_direction_to_colony() -> Vector2:
 		push_error("Cannot get colony direction: ant reference is null")
 		return Vector2.ZERO
 
-	var colony_pos = ant.get_property_value("colony.position")
+	var colony_pos = ant.get_property_value(Path.parse("colony.position"))
 	if not colony_pos:
 		_trace("Could not get colony position")
 		return Vector2.ZERO

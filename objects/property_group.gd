@@ -16,20 +16,13 @@ func _init(p_name: String, p_ant: Ant = null) -> void:
 		.as_container()
 		.described_as("Property group for %s" % name)
 		.build())
-	DebugLogger.trace(
-		DebugLogger.Category.PROGRAM,
-		"Property group initialized: %s" % name,
-		{"From": "property_group"}
-	)
+	_trace("Property group initialized: %s" % name)
 	_init_properties()
 
 #region Property Management
 ## Virtual method that derived classes will implement to define their properties
 func _init_properties() -> void:
-	DebugLogger.warn(
-		DebugLogger.Category.PROPERTY,
-		"Property group %s did not initialize properties" % [name]
-	)
+	_warn("Property group %s did not initialize properties" % [name])
 
 ## Gets a property or group by path
 ## Can return either a container (group) or leaf (property)
@@ -114,6 +107,18 @@ func _trace(message: String) -> void:
 	DebugLogger.trace(
 		DebugLogger.Category.PROPERTY,
 		message,
-		{"From": "property_group"}
+		{"from": "property_group"}
+	)
+func _warn(message: String) -> void:
+	DebugLogger.warn(
+		DebugLogger.Category.PROPERTY,
+		message,
+		{"from": "property_group"}
+	)
+func _error(message: String) -> void:
+	DebugLogger.error(
+		DebugLogger.Category.PROPERTY,
+		message,
+		{"from": "property_group"}
 	)
 #endregion

@@ -1,0 +1,94 @@
+[gd_scene load_steps=6 format=3 uid="uid://csrvvfq3x0u3r"]
+
+[ext_resource type="Script" path="res://entities/ant.gd" id="1_yavfj"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ikxuy"]
+radius = 2.57142
+height = 20.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bgmjh"]
+radius = 200.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2p8x4"]
+radius = 50.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_epip7"]
+
+[node name="Ant" type="CharacterBody2D" groups=["ant"]]
+z_index = 5
+z_as_relative = false
+scale = Vector2(1.16667, 1.04406)
+disable_mode = 1
+collision_layer = 2
+collision_mask = 0
+input_pickable = true
+motion_mode = 1
+script = ExtResource("1_yavfj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+unique_name_in_owner = true
+visible = false
+rotation = 1.5708
+shape = SubResource("CapsuleShape2D_ikxuy")
+debug_color = Color(0.552941, 0.752941, 0, 0.419608)
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+unique_name_in_owner = true
+path_desired_distance = 15.0
+target_desired_distance = 5.0
+path_max_distance = 50.0
+navigation_layers = 3
+avoidance_layers = 2
+
+[node name="SenseArea" type="Area2D" parent="."]
+unique_name_in_owner = true
+visible = false
+rotation = 1.5708
+collision_layer = 0
+collision_mask = 59
+input_pickable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SenseArea"]
+position = Vector2(-1.07288e-05, 0.125512)
+scale = Vector2(1, 0.897145)
+shape = SubResource("CircleShape2D_bgmjh")
+
+[node name="SightArea" type="Area2D" parent="."]
+unique_name_in_owner = true
+visible = false
+rotation = 1.5708
+collision_layer = 0
+collision_mask = 59
+input_pickable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SightArea"]
+shape = SubResource("CircleShape2D_2p8x4")
+
+[node name="ReachArea" type="Area2D" parent="."]
+unique_name_in_owner = true
+visible = false
+modulate = Color(0.678431, 0.678431, 0, 1)
+collision_mask = 48
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ReachArea"]
+shape = SubResource("CircleShape2D_epip7")
+debug_color = Color(0.321569, 0.25098, 0.027451, 0.419608)
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+unique_name_in_owner = true
+self_modulate = Color(0.462745, 0.678431, 0.94902, 1)
+position = Vector2(0.0969868, 0.10746)
+rotation = 1.5708
+scale = Vector2(0.0961376, 0.124693)
+
+[node name="MouthMarker" type="Marker2D" parent="."]
+unique_name_in_owner = true
+modulate = Color(0.352941, 0.513726, 0.172549, 1)
+position = Vector2(10.4286, 0)
+gizmo_extents = 5.0
+
+[connection signal="navigation_finished" from="NavigationAgent2D" to="." method="_on_nav_agent_navigation_finished"]
+[connection signal="velocity_computed" from="NavigationAgent2D" to="." method="_on_nav_agent_velocity_computed"]
+[connection signal="body_entered" from="SightArea" to="." method="_on_sight_area_body_entered"]
+[connection signal="body_exited" from="SightArea" to="." method="_on_sight_area_body_exited"]
+[connection signal="body_entered" from="ReachArea" to="." method="_on_reach_area_entered"]

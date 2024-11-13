@@ -86,6 +86,9 @@ func get_context_value(path: Path) -> Variant:
 		return null
 
 	var property = _property_access.get_property(path)
+	if not property:
+		_error("Problem with retrieving property: %s" % path.full)
+		return
 	_trace("Evaluated property '%s' = %s" % [path.full, Property.format_value(property.value)])
 	return property.value
 #endregion

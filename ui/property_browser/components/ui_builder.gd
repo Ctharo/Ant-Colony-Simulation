@@ -14,10 +14,14 @@ var loading_label: Label
 ## Constants for styling
 const MIN_WINDOW_SIZE := Vector2(800, 500)
 const CONTENT_PADDING := 10
-const GROUP_LIST_MIN_WIDTH := 100
+const GROUP_LIST_MIN_WIDTH := 270
+const GROUP_LIST_MAX_WIDTH := 300
 const PROPERTIES_TREE_MIN_HEIGHT := 400
+const DESCRIPTION_PANEL_MIN_HEIGHT := 100
+const DESCRIPTION_PANEL_MAX_HEIGHT := 250
 const DESCRIPTION_PANEL_HEIGHT := 150
 const BUTTON_SIZE := Vector2(100, 30)
+const SPLIT_RATIO := 0.25  # Left panel takes 25% of the width
 
 ## Signal declarations
 signal ui_created
@@ -36,8 +40,14 @@ func initialize(refs: Dictionary) -> void:
 
 ## Creates all UI elements and layout
 func create_ui(parent_window: Window) -> Dictionary:
+	# Set up window size constraints
+	parent_window.min_size = MIN_WINDOW_SIZE
+	
 	var main_container := _create_main_container()
 	parent_window.add_child(main_container)
+	
+	# Connect to window resize signal
+	parent_window.size_changed.connect(_on_window_resize.bind(parent_window))
 
 	var refs := {}
 
@@ -56,18 +66,18 @@ func create_ui(parent_window: Window) -> Dictionary:
 
 	ui_created.emit()
 	return refs
-
+	
 ## Creates the main content split layout and its contents
 func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitContainer:
 	var content_split := HSplitContainer.new()
 	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content_split.custom_minimum_size.y = 600
-	content_split.split_offset = 200
+	content_split.split_offset = GROUP_LIST_MIN_WIDTH
 
 	# Create and add left side (Groups)
 	var left_side := VBoxContainer.new()
 	left_side.name = "LeftPanel"
+	left_side.size_flags_horizontal = Control.SIZE_FILL
 	content_split.add_child(left_side)
 	
 	refs.group_label = _create_group_label(left_side)
@@ -77,10 +87,10 @@ func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitCon
 	# Create and add right side (Properties)
 	var right_side := VBoxContainer.new()
 	right_side.name = "RightPanel"
+	right_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_split.add_child(right_side)
 	
-	var properties_label := Label.new()
-	properties_label.text = "Properties"
+	var properties_label := _create_styled_label("Properties", 16)
 	right_side.add_child(properties_label)
 	
 	refs.properties_tree = _create_properties_tree(right_side)
@@ -97,32 +107,34 @@ func _create_properties_tree(parent: Control) -> Tree:
 	parent.add_child(tree)
 	return tree
 
-## Creates the description panel, returns the label
+## Creates the description panel with dynamic sizing
 func _create_description_panel(parent: Control) -> Label:
 	var description_panel := PanelContainer.new()
 	description_panel.name = "DescriptionPanel"
-	description_panel.custom_minimum_size.y = DESCRIPTION_PANEL_HEIGHT
-	description_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	description_panel.custom_minimum_size.y = DESCRIPTION_PANEL_MIN_HEIGHT
+	description_panel.size_flags_vertical = Control.SIZE_FILL
+	description_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(description_panel)
 
 	var description_container := VBoxContainer.new()
 	description_container.add_theme_constant_override("separation", 5)
+	description_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	description_panel.add_child(description_container)
 
-	var description_title := Label.new()
-	description_title.text = "Description"
+	var description_title := _create_styled_label("Description", 16)
 	description_container.add_child(description_title)
 
 	var label = Label.new()
 	label.name = "DescriptionLabel"
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.custom_minimum_size.y = 100
 	description_container.add_child(label)
 	description_label = label
 
 	return label
-
+	
 ## Creates the group label
 func _create_group_label(parent: Control) -> Label:
 	group_label = Label.new()
@@ -131,12 +143,12 @@ func _create_group_label(parent: Control) -> Label:
 	parent.add_child(group_label)
 	return group_label
 
-## Creates and configures the group list
+## Creates and configures the group list with dynamic sizing
 func _create_group_list(parent: Control) -> ItemList:
 	group_list = ItemList.new()
 	group_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	group_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	group_list.custom_minimum_size.y = 300
+	group_list.custom_minimum_size = Vector2(GROUP_LIST_MIN_WIDTH, 300)
 	group_list.select_mode = ItemList.SELECT_SINGLE
 	group_list.same_column_width = true
 
@@ -158,22 +170,20 @@ func _create_properties_panel(parent: Control) -> VBoxContainer:
 	
 	return right_container
 
-## Creates the main container with proper layout settings
+## Creates the main container with responsive layout
 func _create_main_container() -> VBoxContainer:
 	var container := VBoxContainer.new()
-
+	
 	# Use full rect preset with padding
-	container.set_anchors_and_offsets_preset(
-		Control.PRESET_FULL_RECT,
-		Control.PRESET_MODE_MINSIZE,
-		CONTENT_PADDING
-	)
-
-	# Set minimum size and expansion
-	container.custom_minimum_size = MIN_WINDOW_SIZE
+	container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	container.set_offset(SIDE_LEFT, CONTENT_PADDING)
+	container.set_offset(SIDE_TOP, CONTENT_PADDING)
+	container.set_offset(SIDE_RIGHT, -CONTENT_PADDING)
+	container.set_offset(SIDE_BOTTOM, -CONTENT_PADDING)
+	
 	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
+	
 	return container
 
 ## Creates the navigation controls section
@@ -288,7 +298,6 @@ func show_loading_indicator(parent_window: Window) -> void:
 	loading_label.text = "Creating content..."
 	loading_label.visible = true
 
-
 ## Updates the loading indicator text
 func update_loading_text(text: String) -> void:
 	if loading_label:
@@ -299,6 +308,33 @@ func remove_loading_indicator() -> void:
 	if loading_label:
 		loading_label.queue_free()
 		loading_label = null
+
+## Handle window resize events
+func _on_window_resize(window: Window) -> void:
+	var available_width := window.size.x - (2 * CONTENT_PADDING)
+	var available_height := window.size.y - (2 * CONTENT_PADDING)
+	
+	# Calculate split offset based on window size
+	if is_instance_valid(group_list):
+		var split_width: int = max(
+			min(available_width * SPLIT_RATIO, GROUP_LIST_MAX_WIDTH),
+			GROUP_LIST_MIN_WIDTH
+		)
+		group_list.custom_minimum_size.x = split_width
+	
+	# Adjust description panel height based on available space
+	if is_instance_valid(description_label):
+		var parent_container = description_label.get_parent().get_parent() as PanelContainer
+		if parent_container:
+			var desc_height: int = min(
+				available_height * 0.25,  # Take up to 25% of height
+				DESCRIPTION_PANEL_MAX_HEIGHT
+			)
+			parent_container.custom_minimum_size.y = max(
+				desc_height,
+				DESCRIPTION_PANEL_MIN_HEIGHT
+			)
+
 
 ## Helper method to create styled labels
 func _create_styled_label(text: String, font_size: int = 14) -> Label:

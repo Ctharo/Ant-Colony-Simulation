@@ -105,7 +105,7 @@ func take_damage(amount: float) -> void:
 	if amount <= 0:
 		return
 
-	var current_health = get_property_value("health.levels.current")
+	var current_health = get_property_value(Path.parse("health.levels.current"))
 	damaged.emit()
 
 	# Update health through property system
@@ -127,20 +127,22 @@ func consume_food(amount: float) -> void:
 	var consumed = carried_food.consume(amount)
 	if consumed > 0:
 		# Replenish energy through property system
-		var current_energy = get_property_value("energy.levels.current")
+		var current_energy = get_property_value(Path.parse("energy.levels.current"))
 		_property_access.set_property_value(
 			Path.parse("energy.levels.current"),
 			current_energy + consumed
 		)
 
 func move(direction: Vector2, delta: float) -> void:
-	var speed = get_property_value("speed.rates.movement")
+	var speed = get_property_value(Path.parse("speed.rates.movement"))
+	if not speed:
+		speed = 1.0
 	var vector = direction * speed * delta
 	_move_to(global_position + vector)
 
 func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
-	DebugLogger.info(DebugLogger.Category.ACTION, "Ant would be moving now to location %s" % location)
+	DebugLogger.info(DebugLogger.Category.ACTION, "Ant would be moving now to location %s" % location, {"from": "ant"})
 
 func store_food(_colony: Colony, _time: float) -> float:
 	var storing_amount: float = carried_food.mass()
@@ -187,14 +189,14 @@ func _init_property_groups() -> void:
 			_trace("Registered property group: %s" % group.name)
 
 #region Property Access Interface
-func get_property(path: String) -> NestedProperty:
-	return _property_access.get_property_from_str(path)
+func get_property(path: Path) -> NestedProperty:
+	return _property_access.get_property(path)
 
 func get_property_group(group_name: String) -> PropertyGroup:
 	return _property_access.get_group(group_name)
 
-func get_property_value(path: String) -> Variant:
-	return _property_access.get_property_value(Path.parse(path))
+func get_property_value(path: Path) -> Variant:
+	return _property_access.get_property_value(path)
 
 func set_property_value(path: String, value: Variant) -> Result:
 	return _property_access.set_property_value(Path.parse(path), value)
@@ -207,13 +209,27 @@ func get_group_properties(group_name: String) -> Array[NestedProperty]:
 func get_group_names() -> Array[String]:
 	return _property_access.get_group_names()
 #endregion
-#endregion
+
 
 #region Logging Methods
 func _trace(message: String) -> void:
 	DebugLogger.trace(
-		DebugLogger.Category.PROPERTY,
+		DebugLogger.Category.ENTITY,
 		message,
-		{"From": "ant"}
+		{"from": "ant"}
+	)
+
+## Log an error message
+func _error(message: String) -> void:
+	DebugLogger.error(DebugLogger.Category.ENTITY,
+		message,
+		{"from": "ant"}
+	)
+
+## Log a warning message
+func _warn(message: String) -> void:
+	DebugLogger.warn(DebugLogger.Category.ENTITY,
+		message,
+		{"from": "ant"}
 	)
 #endregion

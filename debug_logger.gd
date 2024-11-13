@@ -18,28 +18,29 @@ enum Category {
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages
 	CONTEXT,        ## Context building messages
+	ENTITY,         ## Ant, colony, pheromone, etc. related messages
 	PROPERTY,       ## Property-related messsages
-	ATTRIBUTE,      ## Attribute-related messages
 	TRANSITION,     ## State transition messages
 	HIERARCHY,      ## Tree hierarchy messages
 	PROGRAM         ## Program-related messages
-
 }
 
 ## Current log level
 static var log_level := LogLevel.INFO
 
+static var enabled_from := {}
+
 ## Enabled categories (dictionary for O(1) lookup)
 static var enabled_categories := {
-	Category.TASK: true,
-	Category.ACTION: true,
-	Category.BEHAVIOR: true,
-	Category.CONDITION: true,
-	Category.PROPERTY: true,
-	Category.ATTRIBUTE: true,
-	Category.CONTEXT: true,
-	Category.TRANSITION: true,
-	Category.HIERARCHY: true,
+	Category.TASK: false,
+	Category.ACTION: false,
+	Category.BEHAVIOR: false,
+	Category.CONDITION: false,
+	Category.PROPERTY: false,
+	Category.CONTEXT: false,
+	Category.ENTITY: false,
+	Category.TRANSITION: false,
+	Category.HIERARCHY: false,
 	Category.PROGRAM: true
 }
 
@@ -59,27 +60,38 @@ const CATEGORY_NAMES := {
 	Category.BEHAVIOR: "BEHAVIOR",
 	Category.CONDITION: "CONDITION",
 	Category.PROPERTY: "PROPERTY",
-	Category.ATTRIBUTE: "ATTRIBUTE",
 	Category.CONTEXT: "CONTEXT",
+	Category.ENTITY: "ENTITY",
 	Category.TRANSITION: "TRANSITION",
 	Category.HIERARCHY: "HIERARCHY",
 	Category.PROGRAM: "PROGRAM"
 }
 
 ## Enable or disable specific categories
-static func set_category_enabled(category: Category, enabled: bool) -> void:
+static func set_category_enabled(category: Category, enabled: bool = true) -> void:
 	enabled_categories[category] = enabled
+	var t = "Enabled" if enabled else "Disabled"
+	info(DebugLogger.Category.PROGRAM, "%s logging category %s" % [t, CATEGORY_NAMES[category]])
 
 ## Set the global log level
 static func set_log_level(level: LogLevel) -> void:
 	log_level = level
 	info(DebugLogger.Category.PROGRAM, "Set log level to %s" % level)
 
+static func set_from_enabled(from_string: String, enabled: bool = true) -> void:
+	enabled_from[from_string] = enabled
+	var t = "Enabled" if enabled else "Disabled"
+	info(DebugLogger.Category.PROGRAM, "%s logs from %s" % [t, from_string])
 
 ## Log a message with specified level and category
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:
-	if level > log_level or not enabled_categories.get(category, false):
-		return
+	var log_level_check: bool = level > log_level
+	var sent_from: String = context.get("from", "")
+	var enabled_sender = enabled_from.get(sent_from, false)
+	if log_level_check:
+		if not enabled_sender:
+			return
+		
 
 	var timestamp = Time.get_datetime_string_from_system()
 	var level_name = LogLevel.keys()[level]
