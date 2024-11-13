@@ -85,13 +85,20 @@ static func set_from_enabled(from_string: String, enabled: bool = true) -> void:
 
 ## Log a message with specified level and category
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:
-	var log_level_check: bool = level > log_level
+	var log_level_check: bool = level <= log_level
 	var sent_from: String = context.get("from", "")
 	var enabled_sender = enabled_from.get(sent_from, false)
-	if log_level_check:
-		if not enabled_sender:
-			return
+	var enabled_category = enabled_categories.get(category)
+	
+	## Is it important enough?
+	if not log_level_check:
+		return
+	
+	## Is it in either permission list?
+	if not (enabled_sender or enabled_category):
+		return
 		
+
 
 	var timestamp = Time.get_datetime_string_from_system()
 	var level_name = LogLevel.keys()[level]
