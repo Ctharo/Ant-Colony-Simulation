@@ -7,7 +7,11 @@ signal path_changed(new_path: Path)
 
 #region Member Variables
 ## Navigation history
-var _navigation_history: Array[Path] = []
+var _navigation_history: Array[Path] = [] :
+	set(value):
+		_navigation_history = value
+		_back_button.disabled = _navigation_history.is_empty()
+		
 var _current_path: Path = Path.new([])
 
 ## Reference to UI components
@@ -28,7 +32,6 @@ func _init(components: Dictionary) -> void:
 	_properties_tree = components.properties_tree
 	
 	# Initialize UI state
-	_back_button.disabled = true
 	_path_label.text = "none"
 	_group_label.text = "Property Groups"
 
@@ -44,7 +47,6 @@ func navigate_back() -> void:
 		_current_path = _navigation_history.pop_back()
 		_trace("Navigating from %s to %s" % [from.full, _current_path.full])
 		refresh_view_for_path(_current_path)
-		_back_button.disabled = _navigation_history.is_empty()
 		path_changed.emit(_current_path)
 
 
@@ -94,18 +96,15 @@ func handle_activation(path: Path) -> void:
 			var parent_current = _current_path.get_parent()
 			var parent_new = path.get_parent()
 			
-			
 			# If both have same parent, we're navigating between siblings
 			if parent_current and parent_new and parent_current.full == parent_new.full:
 				is_sibling_navigation = true
 				
-		
 		# If going between siblings, don't modify history
 		if not is_sibling_navigation:
 			_navigation_history.append(_current_path)
 		
 		_current_path = path
-		_back_button.disabled = _navigation_history.is_empty()
 		
 		# Update UI
 		_group_label.text = "Group: %s" % path.get_group_name()
@@ -189,7 +188,6 @@ func refresh_root_view() -> void:
 	# Update labels for root view
 	_path_label.text = ""
 	_group_label.text = "Group: root"
-	_back_button.disabled = true
 
 func refresh_view_for_path(path: Path) -> void:
 	if not _ant:
