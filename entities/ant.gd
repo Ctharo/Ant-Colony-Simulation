@@ -178,13 +178,7 @@ func _init_property_groups() -> void:
 	for group in groups:
 		var result = _property_access.register_group(group)
 		if not result.success():
-			DebugLogger.error(
-				DebugLogger.Category.PROPERTY,
-				"Failed to register property group %s: %s" % [
-					group.name,
-					result.get_error()
-				]
-			)
+			_error("Failed to register property group %s: %s" % [group.name, result.get_error()])
 		else:
 			_trace("Registered property group: %s" % group.name)
 
@@ -214,6 +208,13 @@ func get_group_names() -> Array[String]:
 #region Logging Methods
 func _trace(message: String) -> void:
 	DebugLogger.trace(
+		DebugLogger.Category.ENTITY,
+		message,
+		{"from": "ant"}
+	)
+
+func _info(message: String) -> void:
+	DebugLogger.info(
 		DebugLogger.Category.ENTITY,
 		message,
 		{"from": "ant"}
