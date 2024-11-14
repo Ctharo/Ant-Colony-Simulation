@@ -351,34 +351,38 @@ func _get_active_task_recursive(task: Task) -> Task:
 func _trace(message: String) -> void:
 	DebugLogger.trace(DebugLogger.Category.TASK,
 		message,
-		{"From": "task_tree"}
+		{"from": "task_tree"}
 	)
 
 ## Logs a warning message
 ## [param message] The message to log
 func _warn(message: String) -> void:
 	DebugLogger.warn(DebugLogger.Category.TASK,
-		message
+		message,
+		{"from": "task_tree"}
 	)
 
 ## Logs a debug message
 ## [param message] The message to log
 func _debug(message: String) -> void:
 	DebugLogger.debug(DebugLogger.Category.TASK,
-		message
+		message,
+		{"from": "task_tree"}
 	)
 
 ## Logs an info message
 ## [param message] The message to log
 func _info(message: String) -> void:
 	DebugLogger.info(DebugLogger.Category.TASK,
-		message
+		message,
+		{"from": "task_tree"}
 	)
 
 ## Logs an error message
 ## [param message] The message to log
 func _error(message: String) -> void:
 	DebugLogger.error(DebugLogger.Category.TASK,
-		message
+		message,
+		{"from": "task_tree"}
 	)
 #endregion
