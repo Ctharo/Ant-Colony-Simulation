@@ -1,5 +1,5 @@
 class_name PropertyAccess
-extends RefCounted
+extends BaseRefCounted
 
 #region Signals
 signal property_changed(path: String, old_value: Variant, new_value: Variant)
@@ -14,6 +14,9 @@ var _cache: Cache
 #endregion
 
 func _init(_owner: Object, use_caching: bool = true) -> void:
+	log_category = DebugLogger.Category.PROPERTY
+	log_from = "property_access"
+	
 	_cache = Cache.new() if use_caching else null
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 
@@ -179,27 +182,4 @@ func _invalidate_group_cache(group_name: String) -> void:
 	# Get properties directly from the group's root
 	for property in group.get_root().get_properties():
 		_invalidate_cache(property.get_path())
-#endregion
-
-#region Logging Methods
-func _trace(message: String) -> void:
-	DebugLogger.trace(
-		DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_access"}
-	)
-
-func _warn(message: String) -> void:
-	DebugLogger.warn(
-		DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_access"}
-	)
-
-func _error(message: String) -> void:
-	DebugLogger.error(
-		DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_access"}
-	)
 #endregion

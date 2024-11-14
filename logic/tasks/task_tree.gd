@@ -1,6 +1,6 @@
 ## A hierarchical tree structure for managing AI behavior tasks and their execution
 class_name TaskTree
-extends Node
+extends BaseNode
 
 #region Signals
 ## Signal emitted when the tree's active task changes
@@ -40,6 +40,11 @@ var _cache: Cache = Cache.new()
 ## Last known active task for change detection
 var _last_active_task: Task
 #endregion
+
+
+func _ready() -> void:
+	log_from = "task_tree"
+	log_category = DebugLogger.Category.TASK
 
 #region Public Methods
 ## Creates a new TaskTree instance with the specified ant agent
@@ -157,7 +162,7 @@ func print_active_task_chain() -> void:
 		chain.append(active.name)
 		if active.get_active_behavior():
 			chain.append(active.get_active_behavior().name)
-		DebugLogger.info(DebugLogger.Category.TASK, "Active task chain: -> ".join(chain))
+		_info("Active task chain: -> ".join(chain))
 #endregion
 
 #region Private Helper Methods
@@ -277,7 +282,7 @@ func _log_behavior_transition(previous_behavior: Behavior, current_behavior: Beh
 	if not conditions.is_empty():
 		var context = gather_context()
 		var conditions_info = "║\n║   Conditions:"
-		DebugLogger.debug(DebugLogger.Category.CONDITION, conditions_info)
+		_debug(conditions_info)
 
 		for condition in conditions:
 			var result = condition.is_met({}, context)
@@ -302,7 +307,7 @@ func _format_behavior_info(behavior: Behavior, indent: String, is_active: bool) 
 ## [param indent] Current indentation string
 func _print_behavior_conditions(behavior: Behavior, indent: String) -> void:
 	var conditions_header = "%s║   │\n%s║   │   Conditions:" % [indent, indent]
-	DebugLogger.debug(DebugLogger.Category.CONDITION, conditions_header)
+	_debug(conditions_header)
 
 	for condition in behavior.get_conditions():
 		_print_condition_recursive(condition, indent + "║   │   ")
@@ -343,46 +348,4 @@ func _get_active_task_recursive(task: Task) -> Task:
 			highest_priority = behavior.priority
 
 	return highest_priority_task
-#endregion
-
-#region Logging Methods
-## Logs a trace message
-## [param message] The message to log
-func _trace(message: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.TASK,
-		message,
-		{"from": "task_tree"}
-	)
-
-## Logs a warning message
-## [param message] The message to log
-func _warn(message: String) -> void:
-	DebugLogger.warn(DebugLogger.Category.TASK,
-		message,
-		{"from": "task_tree"}
-	)
-
-## Logs a debug message
-## [param message] The message to log
-func _debug(message: String) -> void:
-	DebugLogger.debug(DebugLogger.Category.TASK,
-		message,
-		{"from": "task_tree"}
-	)
-
-## Logs an info message
-## [param message] The message to log
-func _info(message: String) -> void:
-	DebugLogger.info(DebugLogger.Category.TASK,
-		message,
-		{"from": "task_tree"}
-	)
-
-## Logs an error message
-## [param message] The message to log
-func _error(message: String) -> void:
-	DebugLogger.error(DebugLogger.Category.TASK,
-		message,
-		{"from": "task_tree"}
-	)
 #endregion

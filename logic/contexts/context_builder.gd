@@ -6,7 +6,7 @@
 ## - Context building for condition evaluation
 ## - Property access management
 class_name ContextBuilder
-extends RefCounted
+extends BaseRefCounted
 
 #region Properties
 ## The ant agent this context builder is associated with
@@ -87,7 +87,7 @@ func get_context_value(path: Path) -> Variant:
 
 	var property = _property_access.get_property(path)
 	if not property:
-		_error("Problem with retrieving property: %s" % path.full)
+		_error("Problem retrieving property: %s" % path.full)
 		return
 	_trace("Evaluated property '%s' = %s" % [path.full, Property.format_value(property.value)])
 	return property.value
@@ -116,42 +116,4 @@ func _log_required_properties() -> void:
 		formatted_list += "\n  - " + str(prop)
 
 	_trace("Required properties for update:%s" % formatted_list)
-#endregion
-
-#region Logging Methods
-## Logs a trace level message
-## [param message] The message to log
-func _trace(message: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.CONTEXT,
-		message,
-		{"From": "context_builder"}
-	)
-
-## Logs a warning level message
-## [param message] The message to log
-func _warn(message: String) -> void:
-	DebugLogger.warn(DebugLogger.Category.CONTEXT,
-		message
-	)
-
-## Logs a debug level message
-## [param message] The message to log
-func _debug(message: String) -> void:
-	DebugLogger.debug(DebugLogger.Category.CONTEXT,
-		message
-	)
-
-## Logs an info level message
-## [param message] The message to log
-func _info(message: String) -> void:
-	DebugLogger.info(DebugLogger.Category.CONTEXT,
-		message
-	)
-
-## Logs an error level message
-## [param message] The message to log
-func _error(message: String) -> void:
-	DebugLogger.error(DebugLogger.Category.CONTEXT,
-		message
-	)
 #endregion

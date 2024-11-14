@@ -1,5 +1,5 @@
 class_name PropertyGroup
-extends RefCounted
+extends BaseRefCounted
 
 #region Member Variables
 var ant: Ant
@@ -10,6 +10,8 @@ var _root: NestedProperty
 #endregion
 
 func _init(p_name: String, p_ant: Ant = null) -> void:
+	log_from = "property_group"
+	log_category = DebugLogger.Category.PROPERTY
 	name = p_name.to_snake_case()
 	ant = p_ant
 	_root = (Property.create(name)
@@ -100,25 +102,4 @@ func register_at_path(path: Path, property: NestedProperty) -> Result:
 		)
 	parent.add_child(property)
 	return Result.new()
-#endregion
-
-#region Helper Methods
-func _trace(message: String) -> void:
-	DebugLogger.trace(
-		DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_group"}
-	)
-func _warn(message: String) -> void:
-	DebugLogger.warn(
-		DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_group"}
-	)
-func _error(message: String) -> void:
-	DebugLogger.error(
-		DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_group"}
-	)
 #endregion

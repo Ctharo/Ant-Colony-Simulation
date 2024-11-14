@@ -11,6 +11,8 @@ enum LogLevel {
 	TRACE = 5    ## Most verbose logging
 }
 
+static var show_context: bool = true
+
 ## Categories for different components
 enum Category {
 	TASK,           ## Task-related messages
@@ -67,6 +69,12 @@ const CATEGORY_NAMES := {
 	Category.PROGRAM: "PROGRAM"
 }
 
+## Enable or disable context print
+static func set_show_context(enabled: bool = true) -> void:
+	show_context = enabled
+	var t = "Enabled" if enabled else "Disabled"
+	info(DebugLogger.Category.PROGRAM, "%s show_context" % t)
+
 ## Enable or disable specific categories
 static func set_category_enabled(category: Category, enabled: bool = true) -> void:
 	enabled_categories[category] = enabled
@@ -105,7 +113,7 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 	var category_name = CATEGORY_NAMES[category]
 	var color = COLORS.get(level, "ffffff")
 
-	var formatted_message = "[color=#%s][%s][%s][%s] %s[/color]" % [
+	var formatted_message = "[color=#%s][%s][%s][%s] %s [/color]" % [
 		color,
 		timestamp,
 		level_name,

@@ -1,5 +1,5 @@
 class_name PropertiesContainer
-extends RefCounted
+extends BaseRefCounted
 
 #region Signals
 signal property_added(property: Property)
