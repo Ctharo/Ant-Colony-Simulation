@@ -1,5 +1,5 @@
 class_name Energy
-extends PropertyGroup
+extends AntPropertyGroup
 ## Component responsible for managing ant's energy state
 
 #region Signals

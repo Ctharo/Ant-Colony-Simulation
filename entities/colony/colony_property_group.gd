@@ -1,4 +1,4 @@
-class_name ColonyProperties
+class_name ColonyPropertyGroup
 extends PropertyGroup
 
 ## Reference to the parent colony node

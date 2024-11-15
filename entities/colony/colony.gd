@@ -13,7 +13,7 @@ var foods: Foods
 var ants: Ants = Ants.new([])
 
 ## Property management system
-var _property_group: ColonyProperties = ColonyProperties.new(self)
+var _property_group: ColonyPropertyGroup = ColonyPropertyGroup.new(self)
 
 #region Logging
 ## Default category for logging
