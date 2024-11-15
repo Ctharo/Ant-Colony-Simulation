@@ -1,6 +1,7 @@
 class_name Ant
 extends CharacterBody2D
 
+#region Signals
 signal spawned
 signal food_spotted
 signal ant_spotted
@@ -8,7 +9,9 @@ signal action_completed
 signal pheromone_sensed
 signal damaged
 signal died
+#endregion
 
+#region Member Variables
 ## The unique identifier for this ant
 var id: int
 
@@ -37,6 +40,7 @@ var nav_agent: NavigationAgent2D
 ## Task update timer
 var task_update_timer: float = 0.0
 
+## Property access system
 var _property_access: PropertyAccess :
 	get:
 		if not _property_access:
@@ -51,10 +55,23 @@ const CACHE_DURATIONS = {
 	"colony": 0.2,      # Colony-related data stays valid for 0.2 seconds
 	"stats": 0.0        # Stats are always recalculated
 }
+#endregion
 
-func _init():
-	_init_attributes()
+## Default category for logging
+@export var log_category: DebugLogger.Category = DebugLogger.Category.ENTITY
 
+## Source identifier for logging
+@export var log_from: String :
+	set(value):
+		log_from = value
+		_configure_logger()
+
+## Array of additional categories this node can log to
+@export var additional_log_categories: Array[DebugLogger.Category] = []
+
+func _init() -> void:
+	log_from = "ant"
+	_init_property_groups()
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 
 	if task_tree and task_tree.get_active_task():
@@ -72,85 +89,91 @@ func _process(delta: float) -> void:
 		task_tree.update(delta)
 		task_update_timer = 0.0
 
-
+#region Colony Management
 func set_colony(_colony: Colony) -> void:
 	if colony != _colony:
 		colony = _colony
-		var a: Attribute = create_attribute_from_node(colony, "Colony")
-		_property_access.register_attribute(a)
+		# Register colony properties if available
+		if colony and colony.has_method("get_property_group"):
+			var colony_group = colony.get_property_group()
+			var result = _property_access.register_group(colony_group)
+			if not result.success():
+				_error("Failed to register colony properties: %s" % result.error_message)
+#endregion
 
-func create_attribute_from_node(node: Node, _name: String) -> Attribute:
-	var a: Attribute = Attribute.new(_name)
-	a._properties_container = node.properties_container
-	return a
-
+#region Event Handlers
 func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
 	pass
 
 func _on_active_task_changed(_new_task: Task) -> void:
 	pass
+#endregion
 
-## Handle the ant taking damage
+#region Action Methods
 func take_damage(amount: float) -> void:
-	var current_health = get_property_value(Path.parse("health.current_value"))
+	if amount <= 0:
+		return
+
+	var current_health = get_property_value(Path.parse("health.levels.current"))
 	damaged.emit()
 
-## Emit a pheromone at the current position
+	# Update health through property system
+	_property_access.set_property_value(
+		Path.parse("health.levels.current"),
+		current_health - amount
+	)
+
 func emit_pheromone(type: String, concentration: float) -> void:
-	print("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
+	_info("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
 	#var new_pheromone = Pheromone.new(position, type, concentration, self)
 	# Add the pheromone to the world (implementation depends on your world management system)
 
-#region Action methods
-## Perform an action (placeholder for more complex behavior)
-## Meant to serve as access for all actions prompted by the TaskManager
 func perform_action(_action: Action) -> void:
 	# Implement ant behavior here
 	action_completed.emit()
 
-## Handle the ant consuming food for energy
 func consume_food(amount: float) -> void:
 	var consumed = carried_food.consume(amount)
+	if consumed > 0:
+		# Replenish energy through property system
+		var current_energy = get_property_value(Path.parse("energy.levels.current"))
+		_property_access.set_property_value(
+			Path.parse("energy.levels.current"),
+			current_energy + consumed
+		)
 
-## Move the ant to a new position
 func move(direction: Vector2, delta: float) -> void:
-	var vector = direction * get_property_value(Path.parse("speed.movement_rate")) * delta
+	var speed = get_property_value(Path.parse("speed.rates.movement"))
+	if not speed:
+		speed = 1.0
+	var vector = direction * speed * delta
 	_move_to(global_position + vector)
-
 
 func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
-	DebugLogger.info(DebugLogger.Category.ACTION, "Ant would be moving now to location %s" % location)
+	_info("Ant would be moving now to location %s" % location)
 
-## Store food into colony over a given time period[br]
-##Returns amount stored[br]
-##** Note, not currently using argument _time **
 func store_food(_colony: Colony, _time: float) -> float:
 	var storing_amount: float = carried_food.mass()
 	var total_stored = _colony.foods.add_food(storing_amount)
-	DebugLogger.info(DebugLogger.Category.ACTION,"Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
+	_info("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
 	carried_food.clear()
 	return storing_amount
 
 func attack(current_target_entity: Ant, _delta: float) -> void:
-	DebugLogger.info(DebugLogger.Category.ACTION,"Attack action called against %s" % current_target_entity.name)
-
+	_info("Attack action called against %s" % current_target_entity.name)
 #endregion
 
-#region Property Access Helper Methods
-## Initialize property access
+#region Property System
 func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
+	_trace("Property access system initialized")
 
-func _init_attributes() -> void:
+func _init_property_groups() -> void:
 	if not _property_access:
-		DebugLogger.error(
-			DebugLogger.Category.PROPERTY,
-			"Property access not configured for attribute initialization"
-		)
-		return
+		_init_property_access()
 
-	var attributes = [
+	var groups = [
 		Energy.new(self),
 		Reach.new(self),
 		Vision.new(self),
@@ -161,38 +184,51 @@ func _init_attributes() -> void:
 		Proprioception.new(self)
 	]
 
-	for attribute in attributes:
-		var result = _property_access.register_attribute(attribute)
+	for group in groups:
+		var result = _property_access.register_group(group)
 		if not result.success():
-			DebugLogger.error(
-				DebugLogger.Category.PROPERTY,
-				"Failed to register attribute %s: %s" % [
-					attribute.name,
-					result.error_message
-				]
-			)
-#endregion
+			_error("Failed to register property group %s: %s" % [group.name, result.get_error()])
 
 #region Property Access Interface
-## Core Property Access
-func get_property(path: Path) -> Property:
+func get_property(path: Path) -> NestedProperty:
 	return _property_access.get_property(path)
+
+func get_property_group(group_name: String) -> PropertyGroup:
+	return _property_access.get_group(group_name)
 
 func get_property_value(path: Path) -> Variant:
 	return _property_access.get_property_value(path)
+
+func set_property_value(path: String, value: Variant) -> Result:
+	return _property_access.set_property_value(Path.parse(path), value)
 #endregion
 
-#region Attribute Access Interface
-## Get properties for a specific attribute
-func get_attribute_properties(attribute: String) -> Array[Property]:
-	if attribute.is_empty() or not _property_access:
-		return []
+#region Property Group Access
+func get_group_properties(group_name: String) -> Array[NestedProperty]:
+	return _property_access.get_group_properties(group_name)
 
-	return _property_access.get_attribute_properties(attribute)
+func get_group_names() -> Array[String]:
+	return _property_access.get_group_names()
+#endregion
 
-## Get all attribute names
-func get_attribute_names() -> Array[String]:
-	if not _property_access:
-		return []
-	return _property_access.get_attribute_names()
+func _configure_logger() -> void:
+	var categories = [log_category] as Array[DebugLogger.Category]
+	categories.append_array(additional_log_categories)
+	DebugLogger.configure_source(log_from, true, categories)
+
+#region Logging Methods
+func _trace(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.trace(category, message, {"from": log_from})
+
+func _debug(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.debug(category, message, {"from": log_from})
+
+func _info(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.info(category, message, {"from": log_from})
+
+func _warn(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.warn(category, message, {"from": log_from})
+
+func _error(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.error(category, message, {"from": log_from})
 #endregion

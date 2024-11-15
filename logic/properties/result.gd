@@ -9,6 +9,7 @@ enum ErrorType {
 	NO_CONTAINER,       # Container object not found
 	NOT_FOUND,          # Something doesn't exist
 	ACCESS_ERROR,       # Error accessing
+	INVALID_ARGUMENT,   # Invalid argument passed
 	TYPE_MISMATCH,      # Type doesn't match expected
 	DUPLICATE,          # Something already exists
 	INVALID_GETTER,     # Getter method is invalid

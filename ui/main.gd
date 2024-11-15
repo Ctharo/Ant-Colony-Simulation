@@ -116,7 +116,12 @@ func _on_ant_editor_button_pressed():
 	transition_to_scene("ant_behavior_editor")
 
 func _on_property_browser_button_pressed():
-	transition_to_scene("property_browser")
+	# Instead of transitioning to a scene, create the PropertyBrowser directly
+	var property_browser = load("res://ui/property_browser/property_browser.gd").new()
+	get_tree().root.add_child(property_browser)
+	# Optional: fade out main menu
+	var tween = create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.5)
 
 func _on_settings_button_pressed():
 	DebugLogger.info(DebugLogger.Category.PROGRAM, "Settings pressed")

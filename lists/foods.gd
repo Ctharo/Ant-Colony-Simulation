@@ -38,10 +38,10 @@ static func are_available() -> Foods:
 			f.append(food)
 	return f
 
-static func in_range(location: Vector2, range: float, available_foods: bool = false) -> Foods:
+static func in_range(location: Vector2, _range: float, available_foods: bool = false) -> Foods:
 	var f: Foods = Foods.new()
 	for food: Food in Foods.all():
-		if food.get_position().distance_to(location) <= range:
+		if food.get_position().distance_to(location) <= _range:
 			if available_foods == food.is_available:
 				f.append(food)
 			elif not available_foods:

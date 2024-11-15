@@ -1,102 +1,181 @@
 class_name Colony
 extends Node2D
+## The ant colony node that manages colony-wide properties and resources
 
-var radius: float = 10.0 : get = _get_radius
-var area: float : get = _get_area
+#region Member Variables
+## Colony radius in units
+var _radius: float = 10.0
+
+## Collection of food resources
 var foods: Foods
-var properties_container: PropertiesContainer
 
-func _init() -> void:
-	properties_container = PropertiesContainer.new(self)
-	properties_container.property_added.connect(
-		func(property): _trace("Property %s added to properties container" % property)
-	)
-	_init_properties()
+## Ants belonging to this colony
+var ants: Ants
 
-# Virtual method that derived classes will implement
-func _init_properties() -> void:
-	properties_container.expose_properties([
-		Property.create("position")
-			.of_type(Property.Type.VECTOR2)
-			.with_attribute("Colony")
-			.with_getter(Callable(self, "_get_position"))
-			.described_as("Location of the colony in global coordinates")
-			.build(),
-		Property.create("radius")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute("Colony")
-			.with_getter(Callable(self, "_get_radius"))
-			.described_as("Size of the colony radius in units")
-			.build(),
-		Property.create("area")
-			.of_type(Property.Type.FLOAT)
-			.with_attribute("Colony")
-			.with_dependencies(["radius"])
-			.with_getter(Callable(self, "_get_area"))
-			.described_as("Size of the colony area in units squared")
-			.build()
-	])
+## Property management system
+var _property_group: PropertyGroup
+#endregion
 
+func _ready() -> void:
+	_property_group = _create_property_group()
+	_trace("Colony initialized with radius: %.2f" % _radius)
+
+
+func add_ant(ant: Ant) -> void:
+	ants.append(ant)
+
+## Create the colony's property group with all properties
+func _create_property_group() -> PropertyGroup:
+	var group = (PropertyGroup.new("Colony")
+		.with_name("colony")
+		.with_owner(self)
+		.build())
+
+	_init_properties(group)
+	return group
+
+## Initialize all properties for the colony
+func _init_properties(group: PropertyGroup) -> void:
+	# Create base properties container
+	var base_prop = (Property.create("base")
+		.as_container()
+		.described_as("Basic colony properties")
+		.with_children([
+			Property.create("position")
+				.as_property(Property.Type.VECTOR2)
+				.with_getter(Callable(self, "_get_position"))
+				.described_as("Location of the colony in global coordinates")
+				.build(),
+
+			Property.create("radius")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_radius"))
+				.with_setter(Callable(self, "_set_radius"))
+				.described_as("Size of the colony radius in units")
+				.build()
+		])
+		.build())
+
+	# Create metrics container with computed properties
+	var metrics_prop = (Property.create("metrics")
+		.as_container()
+		.described_as("Colony size metrics")
+		.with_children([
+			Property.create("area")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_area"))
+				.with_dependency("colony.base.radius")
+				.described_as("Size of the colony area in units squared")
+				.build(),
+
+			Property.create("perimeter")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_perimeter"))
+				.with_dependency("colony.base.radius")
+				.described_as("Length of colony perimeter in units")
+				.build()
+		])
+		.build())
+
+	# Create resources container
+	var resources_prop = (Property.create("resources")
+		.as_container()
+		.described_as("Colony resource information")
+		.with_children([
+			Property.create("food_count")
+				.as_property(Property.Type.INT)
+				.with_getter(Callable(self, "_get_food_count"))
+				.described_as("Number of food items in colony storage")
+				.build(),
+
+			Property.create("total_food_mass")
+				.as_property(Property.Type.FLOAT)
+				.with_getter(Callable(self, "_get_total_food_mass"))
+				.described_as("Total mass of stored food")
+				.build()
+		])
+		.build())
+
+	# Register properties with error handling
+	var result = group.register_property(base_prop)
+	if not result.is_ok():
+		push_error("Failed to register base properties: %s" % result.get_error())
+		return
+
+	result = group.register_property(metrics_prop)
+	if not result.is_ok():
+		push_error("Failed to register metrics properties: %s" % result.get_error())
+		return
+
+	result = group.register_property(resources_prop)
+	if not result.is_ok():
+		push_error("Failed to register resources properties: %s" % result.get_error())
+		return
+
+	_trace("Colony properties initialized successfully")
+
+#region Property Getters and Setters
 func _get_position() -> Vector2:
 	return global_position
 
 func _get_radius() -> float:
-	return radius
+	return _radius
+
+func _set_radius(value: float) -> void:
+	if value <= 0:
+		push_error("Colony radius must be positive")
+		return
+
+	var old_value = _radius
+	_radius = value
+
+	if old_value != _radius:
+		_trace("Colony radius updated: %.2f -> %.2f" % [old_value, _radius])
 
 func _get_area() -> float:
-	return PI * radius * radius
+	return PI * _radius * _radius
 
+func _get_perimeter() -> float:
+	return 2 * PI * _radius
 
-#region Property Management
-## Get property metadata
-## Returns: Property or null if not found
-func get_property(name: String) -> Property:
-	return properties_container.get_property(name)
+func _get_food_count() -> int:
+	return foods.size() if foods else 0
 
-## Get a property's value
-## Returns: PropertyResult with value or error information
-func get_property_value(name: String) -> Variant:
-	var property = get_property(name)
+func _get_total_food_mass() -> float:
+	return foods.total_mass() if foods else 0.0
+#endregion
+
+#region Public Property Interface
+## Get the colony's property group
+func get_property_group() -> PropertyGroup:
+	return _property_group
+
+## Get a property value by path
+func get_property_value(path: String) -> Variant:
+	var property = _property_group.get_property(path)
 	if not property:
-		var error_msg: String = "Property '%s' not found" % name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
+		push_error("Property not found: %s" % path)
+		return null
+
+	return property.get_value()
+
+## Set a property value by path
+func set_property_value(path: String, value: Variant) -> Result:
+	var property = _property_group.get_property(path)
+	if not property:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
-			error_msg
+			"Property not found: %s" % path
 		)
 
-	if not property.has_valid_getter():
-		var error_msg: String = "Invalid getter for property '%s'" % name
-		DebugLogger.error(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, error_msg])
-		return Result.new(
-			Result.ErrorType.INVALID_GETTER,
-			error_msg
-		)
-
-	# Get the value
-	var value = property.value
-
-	# Validate result
-	if value == null:
-		var warn_msg: String = "Getter for property '%s' returned null" % name
-		DebugLogger.warn(DebugLogger.Category.PROPERTY, "Failed to retrieve property value %s -> %s" % [name, warn_msg])
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
-			warn_msg
-		)
-
-	return value
+	return property.set_value(value)
 #endregion
 
 #region Helper Methods
-## Check if a getter requires arguments
-## Returns: bool indicating if the getter needs arguments
-static func _getter_requires_args(getter: Callable) -> bool:
-	return getter.get_argument_count() > 0
-#endregion
-
 func _trace(message: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY,
+	DebugLogger.trace(
+		DebugLogger.Category.ENTITY,
 		message,
-		{"From": "component"}
+		{"from": "colony"}
 	)
+#endregion

@@ -1,5 +1,5 @@
 class_name Property
-extends RefCounted
+extends BaseRefCounted
 
 ## Supported property types
 enum Type {
@@ -18,35 +18,35 @@ enum Type {
 	UNKNOWN
 }
 
-var name: String
-var attribute_name: String
-var path: Path : get = _get_path
-var type: Type
-var value: Variant : get = _get_value, set = set_value
-var getter: Callable
-var setter: Callable
-var dependencies: Array[String]
-var description: String
-var writable: bool : get = _writable
+func _init() -> void:
+	log_category = DebugLogger.Category.PROPERTY
+	log_from = "property"
 
-class Builder:
+class Builder extends BaseRefCounted:
 	var name: String
-	var attribute_name: String
-	var type: Type
+	var type: NestedProperty.Type
+	var value_type: Property.Type
 	var getter: Callable
 	var setter: Callable
-	var dependencies: Array[String]
+	var dependencies: Array[Path]
 	var description: String
+	var children: Array[NestedProperty]
 
 	func _init(p_name: String) -> void:
 		name = p_name.to_lower()
+		type = NestedProperty.Type.CONTAINER  # Default to container
+		log_category = DebugLogger.Category.PROPERTY
+		log_from = "property.builder"
+		dependencies = []
+		children = []
 
-	func with_attribute(p_name: String) -> Builder:
-		attribute_name = p_name.to_lower()
+	func as_container() -> Builder:
+		type = NestedProperty.Type.CONTAINER
 		return self
 
-	func of_type(p_type: Type) -> Builder:
-		type = p_type
+	func as_property(p_type: Property.Type) -> Builder:
+		type = NestedProperty.Type.PROPERTY
+		value_type = p_type
 		return self
 
 	func with_getter(p_getter: Callable) -> Builder:
@@ -61,54 +61,51 @@ class Builder:
 
 	func with_dependencies(p_dependencies: Array[String]) -> Builder:
 		for dependency in p_dependencies:
-			if not Helper.is_full_path(dependency):
-				# Fix if possible, abort otherwise
-				if attribute_name.is_empty():
-					DebugLogger.warn(DebugLogger.Category.PROPERTY, "Cannot set dependency %s for property %s as invalid path format" % [dependency, name])
-					return
-				dependency = attribute_name + "." + dependency
-			dependencies.append(dependency)
+			dependencies.append(Path.parse(dependency))
+		return self
+
+	func with_dependency(path: String) -> Builder:
+		dependencies.append(Path.parse(path))
+		return self
+
+	func with_child(child: NestedProperty) -> Builder:
+		children.append(child)
+		return self
+
+	func with_children(p_children: Array[NestedProperty]) -> Builder:
+		children.append_array(p_children)
 		return self
 
 	func described_as(p_description: String) -> Builder:
 		description = p_description
 		return self
 
-	func build() -> Property:
-		return Property.new(name, type, attribute_name, getter, setter, dependencies, description)
+	func build() -> NestedProperty:
+		if type == NestedProperty.Type.PROPERTY and not Property.is_valid_getter(getter):
+			_error("Invalid getter for property %s" % name)
+			return null
 
-func _init(p_name: String, p_type: Type, p_attribute_name: String, p_getter: Callable, p_setter: Callable = Callable(), p_dependencies: Array[String] = [], p_description: String = "") -> void:
-	name = p_name
-	type = p_type
-	attribute_name = p_attribute_name
-	getter = p_getter
-	setter = p_setter
-	dependencies = p_dependencies
-	description = p_description
+		if setter.is_valid() and not Property.is_valid_setter(setter):
+			_error("Invalid setter for property %s" % name)
+			return null
 
-func _get_value() -> Variant:
-	return getter.call()
-
-static func create(p_name: String) -> Builder:
-	return Builder.new(p_name)
-
-func set_value(p_value: Variant) -> Result:
-	if not Property.is_valid_type(value, type):
-		return Result.new(
-			Result.ErrorType.TYPE_MISMATCH,
-			"Cannot set property value"
+		var prop := NestedProperty.new(
+			name,
+			type,
+			value_type,
+			getter,
+			setter,
+			dependencies,
+			description
 		)
-	setter.call(p_value)
-	return Result.new()
 
-func has_valid_getter() -> bool:
-	return Property.is_valid_getter(getter)
+		for child in children:
+			prop.add_child(child)
 
-func _get_path() -> Path:
-	return Path.new(attribute_name, name)
+		return prop
 
-func _writable() -> bool:
-	return Property.is_valid_setter(setter)
+static func create(name: String) -> Builder:
+	return Builder.new(name)
 
 #region Statics
 static func is_valid_getter(p_getter: Callable) -> bool:
@@ -166,38 +163,44 @@ static func format_value(value: Variant) -> String:
 				var p: Array[String]
 				for pheromone in value:
 					p.append("T: %s, [%.1f]" % [pheromone.type, pheromone.concentration])
-				return Property.format_value(p)
+				return format_value(p)
 			elif value is Foods:
 				var f: Array[String]
 				for food in value:
 					f.append("Mass: %.1f" % [food.mass])
-				return Property.format_value(f)
+				return format_value(f)
 			elif value is Ants:
-				return Property.format_value(value.to_array())
+				return format_value(value.to_array())
 			else:
 				return value.to_string()
 		_:
 			return str(value)
 
-static func is_valid_type(value: Variant, expected_type: Property.Type) -> bool:
+static func is_valid_type(value: Variant, expected_type: Type) -> bool:
 	match expected_type:
-		Property.Type.BOOL:
+		Type.BOOL:
 			return typeof(value) == TYPE_BOOL
-		Property.Type.INT:
+		Type.INT:
 			return typeof(value) == TYPE_INT
-		Property.Type.FLOAT:
+		Type.FLOAT:
 			return typeof(value) == TYPE_FLOAT
-		Property.Type.STRING:
+		Type.STRING:
 			return typeof(value) == TYPE_STRING
-		Property.Type.VECTOR2:
+		Type.VECTOR2:
 			return value is Vector2
-		Property.Type.VECTOR3:
+		Type.VECTOR3:
 			return value is Vector3
-		Property.Type.ARRAY:
+		Type.ARRAY:
 			return value is Array
-		Property.Type.DICTIONARY:
+		Type.DICTIONARY:
 			return value is Dictionary
-		Property.Type.OBJECT:
+		Type.FOODS:
+			return value is Foods
+		Type.PHEROMONES:
+			return value is Pheromones
+		Type.ANTS:
+			return value is Ants
+		Type.OBJECT:
 			return value is Object
 	return false
 #endregion

@@ -94,7 +94,7 @@ func _parse_expression(expression: String) -> String:
 	return parts
 
 ## Evaluates a parsed expression # TODO
-func _evaluate_parsed_expression(parsed: Dictionary, context: Dictionary) -> bool:
+func _evaluate_parsed_expression(_parsed: Dictionary, _context: Dictionary) -> bool:
 	return false
 #endregion
 

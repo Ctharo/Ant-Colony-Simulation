@@ -1,5 +1,5 @@
 class_name TaskConfig
-extends RefCounted
+extends BaseRefCounted
 
 ## Signal emitted when tasks are loaded
 signal tasks_loaded
@@ -25,18 +25,22 @@ const ACTION_TYPES = {
 	"Rest": Action.Rest
 }
 
+func _init() -> void:
+	log_from = "task_config"
+	log_category = DebugLogger.Category.TASK
+
 ## Load configurations from JSON files
 func load_configs(tasks_path: String, behaviors_path: String, conditions_path: String) -> Error:
 	# Load conditions first
 	var conditions_file := FileAccess.open(conditions_path, FileAccess.READ)
 	if not conditions_file:
-		push_error("Failed to open conditions config file: %s" % conditions_path)
+		_error("Failed to open conditions config file: %s" % conditions_path)
 		return ERR_FILE_NOT_FOUND
 	
 	var json := JSON.new()
 	var result := json.parse(conditions_file.get_as_text())
 	if result != OK:
-		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
+		_error("Failed to parse conditions JSON: %s" % json.get_error_message())
 		return result
 	
 	condition_configs = json.data.conditions
@@ -44,12 +48,12 @@ func load_configs(tasks_path: String, behaviors_path: String, conditions_path: S
 	# Load behaviors
 	var behaviors_file := FileAccess.open(behaviors_path, FileAccess.READ)
 	if not behaviors_file:
-		push_error("Failed to open behaviors config file: %s" % behaviors_path)
+		_error("Failed to open behaviors config file: %s" % behaviors_path)
 		return ERR_FILE_NOT_FOUND
 	
 	result = json.parse(behaviors_file.get_as_text())
 	if result != OK:
-		push_error("Failed to parse behaviors JSON: %s" % json.get_error_message())
+		_error("Failed to parse behaviors JSON: %s" % json.get_error_message())
 		return result
 	
 	behavior_configs = json.data.behaviors
@@ -57,12 +61,12 @@ func load_configs(tasks_path: String, behaviors_path: String, conditions_path: S
 	# Load tasks
 	var tasks_file := FileAccess.open(tasks_path, FileAccess.READ)
 	if not tasks_file:
-		push_error("Failed to open tasks config file: %s" % tasks_path)
+		_error("Failed to open tasks config file: %s" % tasks_path)
 		return ERR_FILE_NOT_FOUND
 	
 	result = json.parse(tasks_file.get_as_text())
 	if result != OK:
-		push_error("Failed to parse tasks JSON: %s" % json.get_error_message())
+		_error("Failed to parse tasks JSON: %s" % json.get_error_message())
 		return result
 	
 	task_configs = json.data.tasks
@@ -71,10 +75,10 @@ func load_configs(tasks_path: String, behaviors_path: String, conditions_path: S
 
 ## Create a complete task instance with its behaviors
 func create_task(task_type: String, priority: int, ant: Ant = null) -> Task:
-	DebugLogger.info(DebugLogger.Category.TASK, "Creating task: %s" % task_type)
+	_info("Creating task: %s" % task_type)
 	
 	if not task_type in task_configs:
-		DebugLogger.error(DebugLogger.Category.TASK, "No configuration found for task type: %s" % task_type)
+		_error("No configuration found for task type: %s" % task_type)
 		return null
 	
 	var config = task_configs[task_type]
@@ -97,7 +101,7 @@ func create_task(task_type: String, priority: int, ant: Ant = null) -> Task:
 ## Add conditions to a target (Task or Behavior) from configuration
 func _add_conditions_from_config(target: RefCounted, conditions_config: Array) -> void:
 	if not (target is Task or target is Behavior):
-		DebugLogger.error(DebugLogger.Category.TASK, "Target must be either Task or Behavior")
+		_error("Target must be either Task or Behavior")
 		return
 		
 	for condition_data in conditions_config:
@@ -118,7 +122,7 @@ func _resolve_condition_config(condition_data: Variant) -> Dictionary:
 	# Handle string condition names (reference to predefined conditions)
 	if condition_data is String:
 		if not condition_data in condition_configs:
-			DebugLogger.error(DebugLogger.Category.TASK, "Unknown condition: %s" % condition_data)
+			_error("Unknown condition: %s" % condition_data)
 			return {}
 		return condition_configs[condition_data]
 	
@@ -141,7 +145,7 @@ func _resolve_condition_config(condition_data: Variant) -> Dictionary:
 					return Operator.not_condition(subcond)
 		return condition_data
 	
-	DebugLogger.error(DebugLogger.Category.TASK, "Invalid condition data: %s" % condition_data)
+	_error("Invalid condition data: %s" % condition_data)
 	return {}
 
 ## Add behaviors to the task from configuration
@@ -155,7 +159,7 @@ func _add_behaviors_from_config(task: Task, behaviors_config: Array, ant: Ant) -
 func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 	var behavior_type = behavior_data.type
 	if not behavior_type in behavior_configs:
-		DebugLogger.error(DebugLogger.Category.BEHAVIOR, "Unknown behavior type: %s" % behavior_type)
+		_error("Unknown behavior type: %s" % behavior_type)
 		return null
 	
 	var config = behavior_configs[behavior_type]
@@ -189,7 +193,7 @@ func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 func create_action(action_data: Dictionary, ant: Ant) -> Action:
 	var action_type = action_data.type
 	if not action_type in ACTION_TYPES:
-		DebugLogger.error(DebugLogger.Category.ACTION, "Unknown action type: %s" % action_type)
+		_error("Unknown action type: %s" % action_type)
 		return null
 	
 	var action_class: GDScript = ACTION_TYPES[action_type]
@@ -220,7 +224,7 @@ func validate_config() -> bool:
 		if "behaviors" in config:
 			for behavior_data in config.behaviors:
 				if not behavior_data.type in behavior_configs:
-					push_error("Task '%s' references undefined behavior: %s" % 
+					_error("Task '%s' references undefined behavior: %s" % 
 							 [task_type, behavior_data.type])
 					return false
 	
@@ -229,7 +233,7 @@ func validate_config() -> bool:
 		var config = behavior_configs[behavior_type]
 		if "action" in config:
 			if not config.action.type in ACTION_TYPES:
-				push_error("Behavior '%s' references undefined action: %s" % 
+				_error("Behavior '%s' references undefined action: %s" % 
 						  [behavior_type, config.action.type])
 				return false
 	
