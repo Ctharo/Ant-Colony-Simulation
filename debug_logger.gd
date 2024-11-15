@@ -24,6 +24,7 @@ enum Category {
 	PROPERTY,       ## Property-related messsages
 	TRANSITION,     ## State transition messages
 	HIERARCHY,      ## Tree hierarchy messages
+	UI,             ## UI-related messages
 	PROGRAM         ## Program-related messages
 }
 
@@ -43,6 +44,7 @@ static var enabled_categories := {
 	Category.ENTITY: false,
 	Category.TRANSITION: false,
 	Category.HIERARCHY: false,
+	Category.UI: true,           
 	Category.PROGRAM: true
 }
 
