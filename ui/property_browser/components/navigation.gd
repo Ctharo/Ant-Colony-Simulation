@@ -1,5 +1,5 @@
 class_name PropertyBrowserNavigation
-extends RefCounted
+extends BaseRefCounted
 
 #region Signals
 signal path_changed(new_path: Path)
@@ -12,7 +12,8 @@ var _navigation_history: Array[Path] = [] :
 		_navigation_history = value
 		_back_button.disabled = _navigation_history.is_empty()
 		
-var _current_path: Path = Path.new([])
+## Current path with automatic label update
+var _current_path: Path = Path.new([]) : set = set_current_path, get = get_current_path
 
 ## Reference to UI components
 var _back_button: Button
@@ -25,16 +26,14 @@ var _ant: Ant
 
 #region Initialization
 func _init(components: Dictionary) -> void:
+	log_category = DebugLogger.Category.UI
+	log_from = "property_browser_navigation"
 	_back_button = components.back_button
 	_path_label = components.path_label
 	_group_label = components.group_label
 	_group_list = components.group_list
 	_properties_tree = components.properties_tree
 	
-	# Initialize UI state
-	_path_label.text = "none"
-	_group_label.text = "Property Groups"
-
 func set_ant(ant: Ant) -> void:
 	_ant = ant
 	refresh_root_view()
@@ -44,7 +43,7 @@ func set_ant(ant: Ant) -> void:
 func navigate_back() -> void:
 	if _navigation_history.size() > 0:
 		var from = _current_path
-		_current_path = _navigation_history.pop_back()
+		set_current_path(_navigation_history.pop_back())
 		_trace("Navigating from %s to %s" % [from.full, _current_path.full])
 		refresh_view_for_path(_current_path)
 		path_changed.emit(_current_path)
@@ -103,15 +102,13 @@ func handle_activation(path: Path) -> void:
 		# If going between siblings, don't modify history
 		if not is_sibling_navigation:
 			_navigation_history.append(_current_path)
-		
-		_current_path = path
+	
+		set_current_path(path)
 		
 		# Update UI
-		_group_label.text = "Group: %s" % path.get_group_name()
 		_update_sibling_containers(node, path)
 		_update_property_tree(node)
-		_path_label.text = path.full
-		
+
 	else:
 		# Property activation - just update path label
 		_path_label.text = path.full
@@ -164,6 +161,13 @@ func _update_sibling_containers(node: NestedProperty, path: Path) -> void:
 				_group_list.add_item(child_path.full)
 				_add_item_with_tooltip(child_path, child)
 
+func set_current_path(value: Path = Path.new([])) -> void:
+		_current_path = value
+		if _path_label:
+			_path_label.text = value.full if value else "none"
+		if _group_label and value:
+			_group_label.text = "Group: %s" % value.get_group_name()
+
 func get_current_path() -> Path:
 	return _current_path
 #endregion
@@ -175,7 +179,7 @@ func refresh_root_view() -> void:
 		
 	_group_list.clear()
 	_properties_tree.clear()
-	_current_path = Path.new([])
+	set_current_path()
 	_navigation_history.clear()
 
 	var groups = _ant.get_group_names()
@@ -337,25 +341,5 @@ func _add_item_with_tooltip(path: Path, node: NestedProperty) -> void:
 		
 		if not tooltip.is_empty():
 			_group_list.set_item_tooltip(idx, tooltip)
-			
-## Log a trace message
-func _trace(message: String) -> void:
-	DebugLogger.trace(DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_browser_navigation"}
-	)
 
-## Log an error message
-func _error(message: String) -> void:
-	DebugLogger.error(DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_browser_navigation"}
-	)
-
-## Log a warning message
-func _warn(message: String) -> void:
-	DebugLogger.warn(DebugLogger.Category.PROPERTY,
-		message,
-		{"from": "property_browser_navigation"}
-	)
 #endregion
