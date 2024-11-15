@@ -237,13 +237,14 @@ func _on_path_changed(new_path: Path) -> void:
 func create_ant_to_browse() -> void:
 	var ant: Ant = Ant.new()
 	var colony: Colony = Colony.new()
-	ant.colony = colony
+	colony.add_ant(ant)
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
 	ant.carried_food.add_food(randf_range(0.0, 200.0))
 
 	add_child(ant)
+	add_child(colony)
 	ant.set_physics_process(false)
 	ant.set_process(false)
 	current_ant = ant

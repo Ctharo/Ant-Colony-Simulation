@@ -24,7 +24,7 @@ func _init_properties() -> void:
 		.as_container()
 		.described_as("Properties related to ants in vision range")
 		.with_child(
-			(Property.create("in_range")
+			(Property.create("list")
 				.as_property(Property.Type.ANTS)
 				.with_getter(Callable(self, "_get_ants_in_range"))
 				.with_dependency("vision.range")
@@ -44,7 +44,7 @@ func _init_properties() -> void:
 		.as_container()
 		.described_as("Properties related to food in vision range")
 		.with_child(
-			(Property.create("in_range")
+			(Property.create("list")
 				.as_property(Property.Type.FOODS)
 				.with_getter(Callable(self, "_get_foods_in_range"))
 				.with_dependency("vision.range")

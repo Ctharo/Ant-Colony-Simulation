@@ -170,9 +170,11 @@ func _init_property_access() -> void:
 	_trace("Property access system initialized")
 
 func _init_property_groups() -> void:
+	_debug("Initializing property groups...")
+	
 	if not _property_access:
 		_init_property_access()
-
+		
 	var groups = [
 		Energy.new(self),
 		Reach.new(self),
@@ -183,12 +185,20 @@ func _init_property_groups() -> void:
 		Speed.new(self),
 		Proprioception.new(self)
 	]
-
+	
 	for group in groups:
+		_trace("Registering property group: %s" % group.name)
 		var result = _property_access.register_group(group)
 		if not result.success():
-			_error("Failed to register property group %s: %s" % [group.name, result.get_error()])
-
+			_error("Failed to register property group %s: %s" % [
+				group.name, 
+				result.get_error()
+			])
+		else:
+			_debug("Successfully registered property group: %s" % group.name)
+	
+	_debug("Property group initialization complete")
+	
 #region Property Access Interface
 func get_property(path: Path) -> NestedProperty:
 	return _property_access.get_property(path)
