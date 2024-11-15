@@ -13,7 +13,6 @@ var _range: float = DEFAULT_RANGE
 
 func _init(_ant: Ant) -> void:
 	super._init("olfaction", _ant)
-	_trace("Olfaction component initialized with range: %.2f" % _range)
 
 ## Initialize all properties for the Olfaction component
 func _init_properties() -> void:
@@ -92,15 +91,14 @@ func _init_properties() -> void:
 	# Register properties with error handling
 	var result = register_at_path(Path.parse("olfaction"),range_prop)
 	if not result.success():
-		push_error("Failed to register range property: %s" % result.get_error())
+		_error("Failed to register olfaction.range property: %s" % result.get_error())
 		return
 
 	result = register_at_path(Path.parse("olfaction"), pheromones_prop)
 	if not result.success():
-		push_error("Failed to register pheromones property: %s" % result.get_error())
+		_error("Failed to register olfaction.pheromones property: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
 
 #region Property Getters and Setters
 func _get_range() -> float:

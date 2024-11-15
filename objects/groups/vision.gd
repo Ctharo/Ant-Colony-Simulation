@@ -67,10 +67,17 @@ func _init_properties() -> void:
 		).build())
 
 	# Register all properties
-	register_at_path(Path.parse("vision") ,range_prop)
-	register_at_path(Path.parse("vision") ,ants)
-	register_at_path(Path.parse("vision") ,foods)
+	var result: Result = register_at_path(Path.parse("vision"), range_prop)
+	if not result.success():
+		_error("Failed to register vision.range property: %s" % result.get_error())
 
+	result = register_at_path(Path.parse("vision"), ants)
+	if not result.success():
+		_error("Failed to register vision.ants property: %s" % result.get_error())
+
+	result = register_at_path(Path.parse("vision"), foods)
+	if not result.success():
+		_error("Failed to register vision.foods property: %s" % result.get_error())
 #endregion
 
 #region Public Methods

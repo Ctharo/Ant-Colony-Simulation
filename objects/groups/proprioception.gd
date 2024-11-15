@@ -4,7 +4,6 @@ extends PropertyGroup
 
 func _init(_ant: Ant) -> void:
 	super._init("proprioception", _ant)
-	_trace("Proprioception component initialized")
 
 ## Initialize all properties for the Proprioception component
 func _init_properties() -> void:
@@ -45,27 +44,26 @@ func _init_properties() -> void:
 	# Register properties with error handling
 	var result = register_at_path(Path.parse("proprioception"), position_prop)
 	if not result.success():
-		push_error("Failed to register position property: %s" % result.get_error())
+		_error("Failed to register proprioception.position property: %s" % result.get_error())
 		return
 
 	result = register_at_path(Path.parse("proprioception"), colony_prop)
 	if not result.success():
-		push_error("Failed to register colony properties: %s" % result.get_error())
+		_error("Failed to register proprioception.colony properties: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
 
 #region Property Getters
 func _get_position() -> Vector2:
 	if not ant:
-		push_error("Cannot get position: ant reference is null")
+		_error("Cannot get position: ant reference is null")
 		return Vector2.ZERO
 
 	return ant.global_position
 
 func _get_distance_to_colony() -> float:
 	if not ant:
-		push_error("Cannot get colony distance: ant reference is null")
+		_error("Cannot get colony distance: ant reference is null")
 		return 0.0
 
 	var colony_pos = ant.get_property_value(Path.parse("colony.position"))
@@ -77,7 +75,7 @@ func _get_distance_to_colony() -> float:
 
 func _get_direction_to_colony() -> Vector2:
 	if not ant:
-		push_error("Cannot get colony direction: ant reference is null")
+		_error("Cannot get colony direction: ant reference is null")
 		return Vector2.ZERO
 
 	var colony_pos = ant.get_property_value(Path.parse("colony.position"))
@@ -92,7 +90,7 @@ func _get_direction_to_colony() -> Vector2:
 ## Get direction from ant's current position to a specific location
 func get_direction_to(location: Vector2) -> Vector2:
 	if not ant:
-		push_error("Cannot get direction: ant reference is null")
+		_error("Cannot get direction: ant reference is null")
 		return Vector2.ZERO
 
 	return _direction_to(location)
@@ -100,7 +98,7 @@ func get_direction_to(location: Vector2) -> Vector2:
 ## Get distance from ant's current position to a specific location
 func get_distance_to(location: Vector2) -> float:
 	if not ant:
-		push_error("Cannot get distance: ant reference is null")
+		_error("Cannot get distance: ant reference is null")
 		return 0.0
 
 	return _get_position().distance_to(location)

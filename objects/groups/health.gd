@@ -21,7 +21,6 @@ var _current_level: float = DEFAULT_MAX_HEALTH
 
 func _init(_ant: Ant) -> void:
 	super._init("health", _ant)
-	_trace("Health component initialized with level: %.2f/%.2f" % [_current_level, _max_level])
 
 ## Initialize all properties for the Health component
 func _init_properties() -> void:
@@ -86,15 +85,14 @@ func _init_properties() -> void:
 	# Register properties with error handling
 	var result = register_at_path(Path.parse("health"), levels_prop)
 	if not result.success():
-		push_error("Failed to register levels property: %s" % result.get_error())
+		_error("Failed to register health.levels property: %s" % result.get_error())
 		return
 
 	result = register_at_path(Path.parse("health"), status_prop)
 	if not result.success():
-		push_error("Failed to register status property: %s" % result.get_error())
+		_error("Failed to register health.status property: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
 
 #region Property Getters and Setters
 func _get_max_level() -> float:
@@ -102,8 +100,7 @@ func _get_max_level() -> float:
 
 func _set_max_level(value: float) -> void:
 	if is_zero_approx(value):
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
+		_warn(
 			"Attempted to set health.levels.maximum to zero -> Action not allowed"
 		)
 		return
@@ -149,7 +146,7 @@ func is_full() -> bool:
 ## Add health points, not exceeding maximum
 func heal(amount: float) -> void:
 	if amount < 0:
-		push_error("Cannot heal negative amount")
+		_error("Cannot heal negative amount")
 		return
 
 	_set_current_level(_current_level + amount)
@@ -157,7 +154,7 @@ func heal(amount: float) -> void:
 ## Subtract health points, not going below zero
 func damage(amount: float) -> void:
 	if amount < 0:
-		push_error("Cannot damage negative amount")
+		_error("Cannot damage negative amount")
 		return
 
 	_set_current_level(_current_level - amount)

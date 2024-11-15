@@ -12,7 +12,6 @@ var _range: float = DEFAULT_RANGE
 
 func _init(_ant: Ant) -> void:
 	super._init("reach", _ant)
-	_trace("Reach component initialized with range: %.2f" % _range)
 
 ## Initialize all properties for the Reach component
 func _init_properties() -> void:
@@ -55,15 +54,14 @@ func _init_properties() -> void:
 	# Register properties with error handling
 	var result = register_at_path(Path.parse("reach") ,range_prop)
 	if not result.success():
-		push_error("Failed to register range property: %s" % result.get_error())
+		_error("Failed to register reach.range property: %s" % result.get_error())
 		return
 
 	result = register_at_path(Path.parse("reach") ,foods_prop)
 	if not result.success():
-		push_error("Failed to register foods property: %s" % result.get_error())
+		_error("Failed to register reach.foods property: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
 
 #region Property Getters and Setters
 func _get_range() -> float:
@@ -71,7 +69,7 @@ func _get_range() -> float:
 
 func _set_range(value: float) -> void:
 	if value <= 0:
-		push_error("Reach range must be positive")
+		_error("Reach range must be positive")
 		return
 
 	var old_value = _range
@@ -80,7 +78,7 @@ func _set_range(value: float) -> void:
 
 func _get_foods_in_range() -> Foods:
 	if not ant:
-		push_error("Cannot get foods in range: ant reference is null")
+		_error("Cannot get foods in range: ant reference is null")
 		return null
 
 	return Foods.in_range(ant.global_position, _range)
@@ -110,7 +108,7 @@ func reset_range() -> void:
 ## Check if a specific position is within reach
 func is_position_in_range(position: Vector2) -> bool:
 	if not ant:
-		push_error("Cannot check position: ant reference is null")
+		_error("Cannot check position: ant reference is null")
 		return false
 
 	return ant.global_position.distance_to(position) <= _range

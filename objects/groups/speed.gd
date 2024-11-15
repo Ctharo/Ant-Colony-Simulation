@@ -18,7 +18,6 @@ var _storing_rate: float = DEFAULT_RATE
 
 func _init(_ant: Ant) -> void:
 	super._init("speed", _ant)
-	_trace("Speed component initialized with default rates")
 
 ## Initialize all properties for the Speed component
 func _init_properties() -> void:
@@ -74,15 +73,14 @@ func _init_properties() -> void:
 	# Register properties with error handling
 	var result = register_at_path(Path.parse("speed"), rates_prop)
 	if not result.success():
-		push_error("Failed to register rates property: %s" % result.get_error())
+		_error("Failed to register speed.rates property: %s" % result.get_error())
 		return
 
-	result = register_at_path(Path.parse("speed") ,calculators_prop)
+	result = register_at_path(Path.parse("speed"), calculators_prop)
 	if not result.success():
-		push_error("Failed to register calculators property: %s" % result.get_error())
+		_error("Failed to register speed.calculators property: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
 
 #region Property Getters and Setters
 func _get_movement_rate() -> float:
@@ -90,8 +88,7 @@ func _get_movement_rate() -> float:
 
 func _set_movement_rate(rate: float) -> void:
 	if is_zero_approx(rate):
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
+		_warn(
 			"Attempted to set speed.rates.movement to zero -> Action not allowed"
 		)
 		return
@@ -107,10 +104,7 @@ func _get_harvesting_rate() -> float:
 
 func _set_harvesting_rate(rate: float) -> void:
 	if is_zero_approx(rate):
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
-			"Attempted to set speed.rates.harvesting to zero -> Action not allowed"
-		)
+		_warn("Attempted to set speed.rates.harvesting to zero -> Action not allowed")
 		return
 
 	var old_rate = _harvesting_rate
@@ -124,10 +118,7 @@ func _get_storing_rate() -> float:
 
 func _set_storing_rate(rate: float) -> void:
 	if is_zero_approx(rate):
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
-			"Attempted to set speed.rates.storing to zero -> Action not allowed"
-		)
+		_warn("Attempted to set speed.rates.storing to zero -> Action not allowed")
 		return
 
 	var old_rate = _storing_rate
@@ -147,7 +138,7 @@ func _get_harvest_per_second() -> float:
 ## Calculate time required to move a given distance
 func time_to_move(distance: float) -> float:
 	if distance < 0:
-		push_error("Cannot calculate time for negative distance")
+		_error("Cannot calculate time for negative distance")
 		return INF
 
 	return distance / _movement_rate if _movement_rate > 0 else INF
@@ -155,7 +146,7 @@ func time_to_move(distance: float) -> float:
 ## Calculate amount that can be harvested in a given time period
 func harvest_amount(time: float) -> float:
 	if time < 0:
-		push_error("Cannot calculate harvest amount for negative time")
+		_error("Cannot calculate harvest amount for negative time")
 		return 0.0
 
 	return _harvesting_rate * time

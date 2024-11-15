@@ -21,11 +21,11 @@ var _current_level: float = DEFAULT_MAX_ENERGY
 
 func _init(_ant: Ant) -> void:
 	super._init("energy", _ant)
-	_trace("Energy component initialized with level: %.2f/%.2f" % [_current_level, _max_level])
 
-## Initialize all properties for the Energy component
 func _init_properties() -> void:
-	# Create levels container with energy level properties
+	_debug("Initializing energy properties...")
+
+	# Create levels container
 	var levels_prop = (Property.create("levels")
 		.as_container()
 		.described_as("Energy level information")
@@ -36,7 +36,6 @@ func _init_properties() -> void:
 				.with_setter(Callable(self, "_set_max_level"))
 				.described_as("Maximum energy level the ant can have")
 				.build(),
-
 			Property.create("current")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_current_level"))
@@ -46,7 +45,9 @@ func _init_properties() -> void:
 		])
 		.build())
 
-	# Create status container with computed energy properties
+	_log_structure(levels_prop, "Created levels container")
+
+	# Create status container
 	var status_prop = (Property.create("status")
 		.as_container()
 		.described_as("Energy status information")
@@ -60,7 +61,6 @@ func _init_properties() -> void:
 				])
 				.described_as("Current energy level as a percentage of max energy")
 				.build(),
-
 			Property.create("replenishable")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_replenishable_amount"))
@@ -70,7 +70,6 @@ func _init_properties() -> void:
 				])
 				.described_as("Amount of energy that can be replenished")
 				.build(),
-
 			Property.create("is_full")
 				.as_property(Property.Type.BOOL)
 				.with_getter(Callable(self, "_get_is_full"))
@@ -80,7 +79,6 @@ func _init_properties() -> void:
 				])
 				.described_as("Whether energy is at maximum level")
 				.build(),
-
 			Property.create("is_depleted")
 				.as_property(Property.Type.BOOL)
 				.with_getter(Callable(self, "_get_is_depleted"))
@@ -90,18 +88,23 @@ func _init_properties() -> void:
 		])
 		.build())
 
-	# Register properties with error handling
+	_log_structure(status_prop, "Created status container")
+
+	# Register properties
+	_debug("Registering energy.levels property...")
 	var result = register_at_path(Path.parse("energy"), levels_prop)
 	if not result.success():
-		push_error("Failed to register levels property: %s" % result.get_error())
+		_error("Failed to register energy.levels property: %s" % result.get_error())
 		return
 
+	_debug("Registering energy.status property...")
 	result = register_at_path(Path.parse("energy"), status_prop)
 	if not result.success():
-		push_error("Failed to register status property: %s" % result.get_error())
+		_error("Failed to register energy.status property: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
+	_trace("Successfully initialized all energy properties with structure:")
+	_log_structure(_root)
 
 #region Property Getters and Setters
 func _get_max_level() -> float:
@@ -109,8 +112,7 @@ func _get_max_level() -> float:
 
 func _set_max_level(value: float) -> void:
 	if is_zero_approx(value):
-		DebugLogger.warn(
-			DebugLogger.Category.PROPERTY,
+		_warn(
 			"Attempted to set energy.levels.maximum to zero -> Action not allowed"
 		)
 		return
@@ -159,7 +161,7 @@ func is_full() -> bool:
 ## Add energy points, not exceeding maximum
 func replenish(amount: float) -> void:
 	if amount < 0:
-		push_error("Cannot replenish negative amount")
+		_error("Cannot replenish negative amount")
 		return
 
 	_set_current_level(_current_level + amount)
@@ -168,7 +170,7 @@ func replenish(amount: float) -> void:
 ## Returns true if had enough energy to consume
 func consume(amount: float) -> bool:
 	if amount < 0:
-		push_error("Cannot consume negative amount")
+		_error("Cannot consume negative amount")
 		return false
 
 	if amount > _current_level:

@@ -13,7 +13,6 @@ var _level: int = 10
 
 func _init(_ant: Ant) -> void:
 	super._init("strength", _ant)
-	_trace("Strength component initialized with level: %d" % _level)
 
 ## Initialize all properties for the Strength component
 func _init_properties() -> void:
@@ -65,15 +64,14 @@ func _init_properties() -> void:
 	# Register properties with error handling
 	var result = register_at_path(Path.parse("strength"), level_prop)
 	if not result.success():
-		push_error("Failed to register level property: %s" % result.get_error())
+		_error("Failed to register strength.level property: %s" % result.get_error())
 		return
 
 	result = register_at_path(Path.parse("strength"), capacity_prop)
 	if not result.success():
-		push_error("Failed to register capacity property: %s" % result.get_error())
+		_error("Failed to register strength.capacity property: %s" % result.get_error())
 		return
 
-	_trace("Properties initialized successfully")
 
 #region Property Getters and Setters
 func _get_level() -> int:
@@ -81,7 +79,7 @@ func _get_level() -> int:
 
 func _set_level(value: int) -> void:
 	if value <= 0:
-		push_error("Strength level must be positive")
+		_error("Strength level must be positive")
 		return
 
 	var old_value = _level
@@ -93,7 +91,7 @@ func _get_carry_max() -> float:
 
 func _get_carried_food_mass() -> float:
 	if not ant:
-		push_error("Cannot get carried food mass: ant reference is null")
+		_error("Cannot get carried food mass: ant reference is null")
 		return 0.0
 
 	return ant.carried_food.mass()
@@ -109,7 +107,7 @@ func _is_carrying_food() -> bool:
 ## Check if the ant can carry additional weight
 func can_carry(weight: float) -> bool:
 	if weight < 0:
-		push_error("Cannot check negative weight")
+		_error("Cannot check negative weight")
 		return false
 
 	return weight <= _get_mass_available()

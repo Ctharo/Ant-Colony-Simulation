@@ -165,8 +165,6 @@ func _create_properties_panel(parent: Control) -> VBoxContainer:
 	right_container.add_theme_constant_override("separation", 10)
 	parent.add_child(right_container)
 
-	# Properties tree label and tree will be added here
-	# Description panel will be added here
 
 	return right_container
 

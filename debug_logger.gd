@@ -157,20 +157,38 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 	var category_name = CATEGORY_NAMES[category]
 	var color = COLORS.get(level, "ffffff")
 
-	var formatted_message = "[color=#%s][%s][%s][%s]%s %s[/color]" % [
-		color,
-		timestamp,
-		level_name,
-		category_name,
-		"[%s]" % source if source else "",
-		message
-	]
+	# Split message into lines and format each line
+	var lines = message.split("\n")
+	var formatted_message = ""
+
+	for i in range(lines.size()):
+		var line = lines[i]
+		if i == 0:
+			# First line gets full header
+			formatted_message += "[color=#%s][%s][%s][%s]%s %s" % [
+				color,
+				timestamp,
+				level_name,
+				category_name,
+				"[%s]" % source if source else "",
+				line
+			]
+		else:
+			# Subsequent lines get indented and colored
+			formatted_message += "\n[color=#%s]    %s" % [
+				color,
+				line
+			]
 
 	# Add context information if provided and enabled
 	if show_context and not context.is_empty():
-		formatted_message += "\n  Context: " + str(context)
+		formatted_message += "\n[color=#%s]    Context: %s" % [color, str(context)]
+
+	# Add color end tag just once at the end
+	formatted_message += "[/color]"
 
 	print_rich(formatted_message)
+
 #endregion
 
 #region Convenience Methods
