@@ -57,9 +57,21 @@ const CACHE_DURATIONS = {
 }
 #endregion
 
-func _init() -> void:
-	_init_property_groups()
+## Default category for logging
+@export var log_category: DebugLogger.Category = DebugLogger.Category.ENTITY
 
+## Source identifier for logging
+@export var log_from: String :
+	set(value):
+		log_from = value
+		_configure_logger()
+
+## Array of additional categories this node can log to
+@export var additional_log_categories: Array[DebugLogger.Category] = []
+
+func _init() -> void:
+	log_from = "ant"
+	_init_property_groups()
 	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 
 	if task_tree and task_tree.get_active_task():
@@ -86,10 +98,7 @@ func set_colony(_colony: Colony) -> void:
 			var colony_group = colony.get_property_group()
 			var result = _property_access.register_group(colony_group)
 			if not result.success():
-				DebugLogger.error(
-					DebugLogger.Category.PROPERTY,
-					"Failed to register colony properties: %s" % result.error_message
-				)
+				_error("Failed to register colony properties: %s" % result.error_message)
 #endregion
 
 #region Event Handlers
@@ -115,7 +124,7 @@ func take_damage(amount: float) -> void:
 	)
 
 func emit_pheromone(type: String, concentration: float) -> void:
-	print("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
+	_info("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
 	#var new_pheromone = Pheromone.new(position, type, concentration, self)
 	# Add the pheromone to the world (implementation depends on your world management system)
 
@@ -142,17 +151,17 @@ func move(direction: Vector2, delta: float) -> void:
 
 func _move_to(location: Vector2) -> void:
 	#nav_agent.target_position = global_position + location
-	DebugLogger.info(DebugLogger.Category.ACTION, "Ant would be moving now to location %s" % location, {"from": "ant"})
+	_info("Ant would be moving now to location %s" % location)
 
 func store_food(_colony: Colony, _time: float) -> float:
 	var storing_amount: float = carried_food.mass()
 	var total_stored = _colony.foods.add_food(storing_amount)
-	DebugLogger.info(DebugLogger.Category.ACTION, "Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
+	_info("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
 	carried_food.clear()
 	return storing_amount
 
 func attack(current_target_entity: Ant, _delta: float) -> void:
-	DebugLogger.info(DebugLogger.Category.ACTION, "Attack action called against %s" % current_target_entity.name)
+	_info("Attack action called against %s" % current_target_entity.name)
 #endregion
 
 #region Property System
@@ -179,8 +188,6 @@ func _init_property_groups() -> void:
 		var result = _property_access.register_group(group)
 		if not result.success():
 			_error("Failed to register property group %s: %s" % [group.name, result.get_error()])
-		else:
-			_trace("Registered property group: %s" % group.name)
 
 #region Property Access Interface
 func get_property(path: Path) -> NestedProperty:
@@ -204,33 +211,24 @@ func get_group_names() -> Array[String]:
 	return _property_access.get_group_names()
 #endregion
 
+func _configure_logger() -> void:
+	var categories = [log_category] as Array[DebugLogger.Category]
+	categories.append_array(additional_log_categories)
+	DebugLogger.configure_source(log_from, true, categories)
 
 #region Logging Methods
-func _trace(message: String) -> void:
-	DebugLogger.trace(
-		DebugLogger.Category.ENTITY,
-		message,
-		{"from": "ant"}
-	)
+func _trace(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.trace(category, message, {"from": log_from})
 
-func _info(message: String) -> void:
-	DebugLogger.info(
-		DebugLogger.Category.ENTITY,
-		message,
-		{"from": "ant"}
-	)
+func _debug(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.debug(category, message, {"from": log_from})
 
-## Log an error message
-func _error(message: String) -> void:
-	DebugLogger.error(DebugLogger.Category.ENTITY,
-		message,
-		{"from": "ant"}
-	)
+func _info(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.info(category, message, {"from": log_from})
 
-## Log a warning message
-func _warn(message: String) -> void:
-	DebugLogger.warn(DebugLogger.Category.ENTITY,
-		message,
-		{"from": "ant"}
-	)
+func _warn(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.warn(category, message, {"from": log_from})
+
+func _error(message: String, category: DebugLogger.Category = log_category) -> void:
+	DebugLogger.error(category, message, {"from": log_from})
 #endregion

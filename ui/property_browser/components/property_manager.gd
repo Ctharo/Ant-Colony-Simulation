@@ -1,5 +1,5 @@
 class_name PropertyManager
-extends RefCounted
+extends BaseRefCounted
 
 ## Emitted when a property is activated
 signal property_activated(property_path: Path)
@@ -34,6 +34,7 @@ var description_label: Label
 
 #region Initialization
 func _init(tree: Tree, desc_label: Label) -> void:
+	log_from = "property_browser_property_manager"
 	properties_tree = tree
 	description_label = desc_label
 	_configure_tree_columns()
@@ -42,12 +43,12 @@ func _init(tree: Tree, desc_label: Label) -> void:
 ## Configure the tree columns with proper settings
 func _configure_tree_columns() -> void:
 	properties_tree.columns = 4
-	
+
 	_setup_column(COL_NAME, "Property", true, COLUMN_WIDTHS.NAME)
 	_setup_column(COL_TYPE, "Type", false, COLUMN_WIDTHS.TYPE)
 	_setup_column(COL_VALUE, "Value", true, COLUMN_WIDTHS.VALUE)
 	_setup_column(COL_DEPENDENCIES, "Dependencies", true, COLUMN_WIDTHS.DEPENDENCIES)
-	
+
 	properties_tree.column_titles_visible = true
 
 ## Set up individual column properties
@@ -63,7 +64,7 @@ func _setup_signals() -> void:
 	properties_tree.item_selected.connect(_on_item_selected)
 	properties_tree.nothing_selected.connect(_on_tree_deselected)
 	properties_tree.item_activated.connect(_on_tree_item_activated)
-	
+
 	# Add double-click handling for values
 	properties_tree.item_mouse_selected.connect(_on_item_mouse_selected)
 #endregion
@@ -74,7 +75,7 @@ func update_property_view(node: NestedProperty) -> void:
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
-	
+
 	if node.type == NestedProperty.Type.CONTAINER:
 		_populate_container_contents(root, node)
 	else:
@@ -86,23 +87,23 @@ func update_property_view(node: NestedProperty) -> void:
 func _populate_container_contents(parent_item: TreeItem, container: NestedProperty) -> void:
 	var properties: Array[NestedProperty] = []
 	var containers: Array[NestedProperty] = []
-	
+
 	for child in container.children.values():
 		if child.type == NestedProperty.Type.PROPERTY:
 			properties.append(child)
 		else:
 			containers.append(child)
-	
+
 	properties.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
 	containers.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
-	
+
 	# Add properties first
 	for property in properties:
 		var item = properties_tree.create_item(parent_item)
 		item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
 		_populate_property_item(item, property)
 		item.set_metadata(0, property)
-	
+
 	# Then add containers
 	for sub_container in containers:
 		var item = properties_tree.create_item(parent_item)
@@ -116,32 +117,32 @@ func _populate_container_item(item: TreeItem, container: NestedProperty) -> void
 	item.set_custom_bg_color(COL_TYPE, Color.html("#2c3e50"))
 	item.set_text(COL_VALUE, "")
 	item.set_selectable(COL_VALUE, false)
-	
+
 	var child_count = container.children.size()
 	item.set_tooltip_text(COL_NAME, "Container with %d items" % child_count)
 	item.set_custom_font_size(COL_NAME, 17)
 	item.set_metadata(0, container)
-	
+
 	_set_dependencies_text(item, container.dependencies)
 
 ## Populate a property item in the tree
 func _populate_property_item(item: TreeItem, property: NestedProperty) -> void:
 	item.set_text(COL_TYPE, Property.type_to_string(property.value_type))
-	
+
 	var value = property.get_value()
 	var value_text = Property.format_value(value)
 	var wrapped_text = _wrap_text(value_text)
-	
+
 	item.set_text(COL_VALUE, _get_condensed_text(value_text))
 	item.set_tooltip_text(COL_VALUE, value_text)
 	item.set_metadata(1, wrapped_text)
 	item.set_selectable(COL_VALUE, true)
-	
+
 	_set_dependencies_text(item, property.dependencies)
-	
+
 	if property.description:
 		item.set_tooltip_text(COL_NAME, property.description)
-	
+
 	item.set_metadata(0, property)
 	_style_property_item(item, property)
 
@@ -149,7 +150,7 @@ func _populate_property_item(item: TreeItem, property: NestedProperty) -> void:
 func _populate_single_property(parent_item: TreeItem, property: NestedProperty) -> void:
 	if property.type != NestedProperty.Type.PROPERTY:
 		return
-	
+
 	var item = properties_tree.create_item(parent_item)
 	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
 	_populate_property_item(item, property)
@@ -164,7 +165,7 @@ func _set_dependencies_text(item: TreeItem, dependencies: Array) -> void:
 		str_array.map(func(p): return p.full)
 	)
 	item.set_text(COL_DEPENDENCIES, dependencies_text)
-	
+
 	if not dependencies.is_empty():
 		item.set_tooltip_text(COL_DEPENDENCIES, "Dependencies:\n" + dependencies_text)
 #endregion
@@ -175,14 +176,14 @@ func _on_item_selected() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
 		return
-	
+
 	var node = selected.get_metadata(0) as NestedProperty
 	if not node:
 		return
-		
+
 	# Update description
 	_update_description(node)
-	
+
 	# Just emit standard selection
 	property_selected.emit(node.path)
 
@@ -191,11 +192,11 @@ func _on_tree_item_activated() -> void:
 	var selected = properties_tree.get_selected()
 	if not selected:
 		return
-		
+
 	var node = selected.get_metadata(0) as NestedProperty
 	if not node:
 		return
-		
+
 	# Emit activation signal with the path
 	property_activated.emit(node.path)
 
@@ -204,10 +205,10 @@ func _on_item_mouse_selected(position: Vector2, mouse_button_index: int) -> void
 	var selected = properties_tree.get_selected()
 	if not selected:
 		return
-		
+
 	# Get the clicked column
 	var clicked_column = properties_tree.get_column_at_position(position)
-	
+
 	# If value column was clicked
 	if clicked_column == COL_VALUE:
 		_handle_value_cell_click(selected)

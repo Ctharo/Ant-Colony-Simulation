@@ -16,7 +16,7 @@ var _cache: Cache
 func _init(_owner: Object, use_caching: bool = true) -> void:
 	log_category = DebugLogger.Category.PROPERTY
 	log_from = "property_access"
-	
+
 	_cache = Cache.new() if use_caching else null
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 

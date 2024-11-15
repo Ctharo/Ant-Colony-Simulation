@@ -42,10 +42,10 @@ func initialize(refs: Dictionary) -> void:
 func create_ui(parent_window: Window) -> Dictionary:
 	# Set up window size constraints
 	parent_window.min_size = MIN_WINDOW_SIZE
-	
+
 	var main_container := _create_main_container()
 	parent_window.add_child(main_container)
-	
+
 	# Connect to window resize signal
 	parent_window.size_changed.connect(_on_window_resize.bind(parent_window))
 
@@ -54,11 +54,11 @@ func create_ui(parent_window: Window) -> Dictionary:
 	# Top sections
 	refs.mode_switch = _create_mode_selector(main_container)
 	refs.back_button = _create_navigation_controls(main_container)
-	
+
 	# Create split with its sides
 	var content_split = _create_content_split(parent_window, refs)
 	main_container.add_child(content_split)
-	
+
 	# Bottom sections
 	refs.path_label = _create_path_display(main_container)
 	refs.loading_label = _create_loading_label(main_container)
@@ -66,7 +66,7 @@ func create_ui(parent_window: Window) -> Dictionary:
 
 	ui_created.emit()
 	return refs
-	
+
 ## Creates the main content split layout and its contents
 func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitContainer:
 	var content_split := HSplitContainer.new()
@@ -79,7 +79,7 @@ func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitCon
 	left_side.name = "LeftPanel"
 	left_side.size_flags_horizontal = Control.SIZE_FILL
 	content_split.add_child(left_side)
-	
+
 	refs.group_label = _create_group_label(left_side)
 	_create_search_box(left_side)
 	refs.group_list = _create_group_list(left_side)
@@ -89,10 +89,10 @@ func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitCon
 	right_side.name = "RightPanel"
 	right_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_split.add_child(right_side)
-	
+
 	var properties_label := _create_styled_label("Properties", 16)
 	right_side.add_child(properties_label)
-	
+
 	refs.properties_tree = _create_properties_tree(right_side)
 	refs.description_label = _create_description_panel(right_side)
 
@@ -134,7 +134,7 @@ func _create_description_panel(parent: Control) -> Label:
 	description_label = label
 
 	return label
-	
+
 ## Creates the group label
 func _create_group_label(parent: Control) -> Label:
 	group_label = Label.new()
@@ -164,26 +164,26 @@ func _create_properties_panel(parent: Control) -> VBoxContainer:
 	right_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right_container.add_theme_constant_override("separation", 10)
 	parent.add_child(right_container)
-	
+
 	# Properties tree label and tree will be added here
 	# Description panel will be added here
-	
+
 	return right_container
 
 ## Creates the main container with responsive layout
 func _create_main_container() -> VBoxContainer:
 	var container := VBoxContainer.new()
-	
+
 	# Use full rect preset with padding
 	container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	container.set_offset(SIDE_LEFT, CONTENT_PADDING)
 	container.set_offset(SIDE_TOP, CONTENT_PADDING)
 	container.set_offset(SIDE_RIGHT, -CONTENT_PADDING)
 	container.set_offset(SIDE_BOTTOM, -CONTENT_PADDING)
-	
+
 	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	
+
 	return container
 
 ## Creates the navigation controls section
@@ -313,7 +313,7 @@ func remove_loading_indicator() -> void:
 func _on_window_resize(window: Window) -> void:
 	var available_width := window.size.x - (2 * CONTENT_PADDING)
 	var available_height := window.size.y - (2 * CONTENT_PADDING)
-	
+
 	# Calculate split offset based on window size
 	if is_instance_valid(group_list):
 		var split_width: int = max(
@@ -321,7 +321,7 @@ func _on_window_resize(window: Window) -> void:
 			GROUP_LIST_MIN_WIDTH
 		)
 		group_list.custom_minimum_size.x = split_width
-	
+
 	# Adjust description panel height based on available space
 	if is_instance_valid(description_label):
 		var parent_container = description_label.get_parent().get_parent() as PanelContainer

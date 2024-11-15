@@ -1,5 +1,5 @@
 class_name NestedProperty
-extends RefCounted
+extends BaseRefCounted
 ## Responsible for tree structure and value handling
 ##
 ##
@@ -40,9 +40,12 @@ func _init(
 	description = p_description
 	children = {}
 
+	log_category = DebugLogger.Category.PROPERTY
+	log_from = "nested_property"
+
 func add_child(child: NestedProperty) -> void:
 	if type != Type.CONTAINER:
-		push_error("Cannot add child to non-container property")
+		_error("Cannot add child to non-container property")
 		return
 	child.parent = self
 	children[child.name] = child
@@ -119,10 +122,10 @@ func get_properties() -> Array[NestedProperty]:
 
 func get_value() -> Variant:
 	if type != Type.PROPERTY:
-		push_error("Cannot get value of container property")
+		_error("Cannot get value of container property")
 		return null
 	if not Property.is_valid_getter(getter):
-		push_error("Invalid getter for property")
+		_error("Invalid getter for property")
 		return null
 	return getter.call()
 

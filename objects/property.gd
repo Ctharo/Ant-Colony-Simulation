@@ -1,5 +1,5 @@
 class_name Property
-extends RefCounted
+extends BaseRefCounted
 
 ## Supported property types
 enum Type {
@@ -18,7 +18,11 @@ enum Type {
 	UNKNOWN
 }
 
-class Builder:
+func _init() -> void:
+	log_category = DebugLogger.Category.PROPERTY
+	log_from = "property"
+
+class Builder extends BaseRefCounted:
 	var name: String
 	var type: NestedProperty.Type
 	var value_type: Property.Type
@@ -31,6 +35,8 @@ class Builder:
 	func _init(p_name: String) -> void:
 		name = p_name.to_lower()
 		type = NestedProperty.Type.CONTAINER  # Default to container
+		log_category = DebugLogger.Category.PROPERTY
+		log_from = "property.builder"
 		dependencies = []
 		children = []
 
@@ -76,11 +82,11 @@ class Builder:
 
 	func build() -> NestedProperty:
 		if type == NestedProperty.Type.PROPERTY and not Property.is_valid_getter(getter):
-			push_error("Invalid getter for property %s" % name)
+			_error("Invalid getter for property %s" % name)
 			return null
 
 		if setter.is_valid() and not Property.is_valid_setter(setter):
-			push_error("Invalid setter for property %s" % name)
+			_error("Invalid setter for property %s" % name)
 			return null
 
 		var prop := NestedProperty.new(

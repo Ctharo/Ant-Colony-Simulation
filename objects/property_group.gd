@@ -12,6 +12,7 @@ var _root: NestedProperty
 func _init(p_name: String, p_ant: Ant = null) -> void:
 	log_from = "property_group"
 	log_category = DebugLogger.Category.PROPERTY
+
 	name = p_name.to_snake_case()
 	ant = p_ant
 	_root = (Property.create(name)
@@ -88,12 +89,12 @@ func register_at_path(path: Path, property: NestedProperty) -> Result:
 			)
 		_root.add_child(property)
 		return Result.new()
-		
+
 	var parent_path = path.get_parent()
 	if parent_path.is_root():
 		_root.add_child(property)
 		return Result.new()
-		
+
 	var parent = get_at_path(parent_path)
 	if not parent or parent.type != NestedProperty.Type.CONTAINER:
 		return Result.new(

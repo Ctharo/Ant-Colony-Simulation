@@ -1,21 +1,6 @@
 extends Node2D
 
 func _ready() -> void:
-	DebugLogger.set_from_enabled("ant")
-
-	DebugLogger.set_from_enabled("condition_evaluator")
-	DebugLogger.set_from_enabled("context_builder")
-	DebugLogger.set_from_enabled("property_access")
-	DebugLogger.set_from_enabled("task_config")
-	DebugLogger.set_from_enabled("task_tree")
-	DebugLogger.set_from_enabled("task_tree_builder")
-
-	DebugLogger.set_category_enabled(DebugLogger.Category.ACTION)
-	DebugLogger.set_category_enabled(DebugLogger.Category.TASK)
-	DebugLogger.set_category_enabled(DebugLogger.Category.CONDITION)
-	DebugLogger.set_category_enabled(DebugLogger.Category.CONTEXT)
-
-
 	spawn_ants(1)
 
 ## Handle unhandled input events
