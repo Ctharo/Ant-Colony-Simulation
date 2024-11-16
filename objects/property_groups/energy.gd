@@ -20,91 +20,51 @@ var _current_level: float = DEFAULT_MAX_ENERGY
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("energy", PropertyNode.Type.CONTAINER, _entity)
+	# First create self as container
+	super._init("energy", Type.CONTAINER, _entity)
 
-func _init_properties() -> void:
-	_debug("Initializing energy properties...")
+	# Then build and copy children
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("levels", "Energy level information")\
+			.value("maximum", Property.Type.FLOAT,
+				Callable(self, "_get_max_level"),
+				Callable(self, "_set_max_level"),
+				[],
+				"Maximum energy level")\
+			.value("current", Property.Type.FLOAT,
+				Callable(self, "_get_current_level"),
+				Callable(self, "_set_current_level"),
+				[],
+				"Current energy level")\
+		.up()\
+		.container("status", "Energy status information")\
+			.value("percentage", Property.Type.FLOAT,
+				Callable(self, "_get_percentage"),
+				Callable(),
+				["energy.levels.current", "energy.levels.maximum"],
+				"Current energy level as a percentage of max energy")\
+			.value("replenishable", Property.Type.FLOAT,
+				Callable(self, "_get_replenishable_amount"),
+				Callable(),
+				["energy.levels.current", "energy.levels.maximum"],
+				"Amount of energy that can be replenished")\
+			.value("is_full", Property.Type.BOOL,
+				Callable(self, "_get_is_full"),
+				Callable(),
+				["energy.levels.current", "energy.levels.maximum"],
+				"Whether energy is at maximum level")\
+			.value("is_depleted", Property.Type.BOOL,
+				Callable(self, "_get_is_depleted"),
+				Callable(),
+				["energy.levels.current"],
+				"Whether energy is completely depleted")\
+		.build()
 
-	# Create levels container
-	var levels_prop = (Property.create("levels")
-		.as_container()
-		.described_as("Energy level information")
-		.with_children([
-			Property.create("maximum")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_max_level"))
-				.with_setter(Callable(self, "_set_max_level"))
-				.described_as("Maximum energy level")
-				.build(),
-			Property.create("current")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_current_level"))
-				.with_setter(Callable(self, "_set_current_level"))
-				.described_as("Current energy level")
-				.build()
-		])
-		.build())
+	# Copy children from built tree
+	for child in tree.children.values():
+		add_child(child)
 
-	_log_structure(levels_prop, "Created levels container")
-
-	# Create status container
-	var status_prop = (Property.create("status")
-		.as_container()
-		.described_as("Energy status information")
-		.with_children([
-			Property.create("percentage")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_percentage"))
-				.with_dependencies([
-					"energy.levels.current",
-					"energy.levels.maximum"
-				])
-				.described_as("Current energy level as a percentage of max energy")
-				.build(),
-			Property.create("replenishable")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_replenishable_amount"))
-				.with_dependencies([
-					"energy.levels.current",
-					"energy.levels.maximum"
-				])
-				.described_as("Amount of energy that can be replenished")
-				.build(),
-			Property.create("is_full")
-				.as_property(Property.Type.BOOL)
-				.with_getter(Callable(self, "_get_is_full"))
-				.with_dependencies([
-					"energy.levels.current",
-					"energy.levels.maximum"
-				])
-				.described_as("Whether energy is at maximum level")
-				.build(),
-			Property.create("is_depleted")
-				.as_property(Property.Type.BOOL)
-				.with_getter(Callable(self, "_get_is_depleted"))
-				.with_dependency("energy.levels.current")
-				.described_as("Whether energy is completely depleted")
-				.build()
-		])
-		.build())
-
-	_log_structure(status_prop, "Created status container")
-
-	# Register properties
-	_debug("Registering energy.levels property...")
-	var result = register_at_path(Path.parse("energy"), levels_prop)
-	if not result.success():
-		_error("Failed to register energy.levels property: %s" % result.get_error())
-		return
-
-	_debug("Registering energy.status property...")
-	result = register_at_path(Path.parse("energy"), status_prop)
-	if not result.success():
-		_error("Failed to register energy.status property: %s" % result.get_error())
-		return
-
-	_trace("Successfully initialized all energy properties with structure:")
-	_log_structure(_root)
+	_trace("Energy property tree initialized")
 
 #region Property Getters and Setters
 func _get_max_level() -> float:

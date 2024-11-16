@@ -56,12 +56,29 @@ func _init(
 	value_type = p_value_type
 	getter = p_getter
 	setter = p_setter
-	dependencies = dependencies
+	dependencies = p_dependencies
 	description = p_description
 
 	log_category = DebugLogger.Category.PROPERTY
 	log_from = "property_node"
 
+static func create(p_name: String, p_type: Type) -> PropertyNode:
+	return PropertyNode.new(p_name, p_type)
+
+func copy_from(other: PropertyNode) -> void:
+	name = other.name
+	type = other.type
+	entity = other.entity
+	value_type = other.value_type
+	getter = other.getter
+	setter = other.setter
+	dependencies = other.dependencies.duplicate()
+	description = other.description
+
+	# Copy children
+	children.clear()
+	for child in other.children.values():
+		add_child(child)
 
 #region Tree Navigation
 func get_path() -> Path:
@@ -168,11 +185,10 @@ func get_all_containers() -> Array[PropertyNode]:
 	return containers
 #endregion
 
-#region Builder Pattern
-static func create_tree(entity: Node) -> PropertyNodeBuilder:
-	return PropertyNodeBuilder.new(entity)
+static func create_tree(entity: Node) -> PropertyNode.Builder:
+	return PropertyNode.Builder.new(entity)
 
-class PropertyNodeBuilder:
+class Builder:
 	var _entity: Node
 	var _current: PropertyNode
 	var _root: PropertyNode
@@ -180,7 +196,7 @@ class PropertyNodeBuilder:
 	func _init(entity: Node):
 		_entity = entity
 
-	func container(name: String, description: String = "") -> PropertyNodeBuilder:
+	func container(name: String, description: String = "") -> PropertyNode.Builder:
 		var node = PropertyNode.new(
 			name,
 			Type.CONTAINER,
@@ -201,19 +217,32 @@ class PropertyNodeBuilder:
 
 		return self
 
-	func value(name: String, type: Property.Type, getter: Callable, setter: Callable = Callable()) -> PropertyNodeBuilder:
+	func value(
+		name: String,
+		type: Property.Type,
+		getter: Callable,
+		setter: Callable = Callable(),
+		dependencies: Array[String] = [],
+		description: String = ""
+	) -> PropertyNode.Builder:
+		var path_dependencies: Array[Path] = []
+		for dep in dependencies:
+			path_dependencies.append(Path.parse(dep))
+
 		var node = PropertyNode.new(
 			name,
 			Type.VALUE,
 			_entity,
 			type,
 			getter,
-			setter
+			setter,
+			path_dependencies,
+			description
 		)
 		_current.add_child(node)
 		return self
 
-	func up() -> PropertyNodeBuilder:
+	func up() -> PropertyNode.Builder:
 		if _current.parent:
 			_current = _current.parent
 		return self

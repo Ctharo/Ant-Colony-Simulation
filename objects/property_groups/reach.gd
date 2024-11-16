@@ -16,7 +16,7 @@ func _init(_entity: Node) -> void:
 ## Initialize all properties for the Reach component
 func _init_properties() -> void:
 	# Create range property with validation
-	var range_prop = (Property.create("range")
+	var range_prop = (PropertyNode.PropertyNodeBuilder.new(entity)
 		.as_property(Property.Type.FLOAT)
 		.with_getter(Callable(self, "_get_range"))
 		.with_setter(Callable(self, "_set_range"))
@@ -52,12 +52,12 @@ func _init_properties() -> void:
 		).build())
 
 	# Register properties with error handling
-	var result = register_at_path(Path.parse("reach") ,range_prop)
+	var result = register(Path.parse("reach"), range_prop)
 	if not result.success():
 		_error("Failed to register reach.range property: %s" % result.get_error())
 		return
 
-	result = register_at_path(Path.parse("reach") ,foods_prop)
+	result = register_at_path(Path.parse("reach"), foods_prop)
 	if not result.success():
 		_error("Failed to register reach.foods property: %s" % result.get_error())
 		return
