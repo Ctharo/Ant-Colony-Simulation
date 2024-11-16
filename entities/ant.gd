@@ -94,31 +94,8 @@ func set_colony(p_colony: Colony) -> void:
 	if _colony != p_colony:
 		_colony = p_colony
 		_register_colony_properties()
-		
-func _register_colony_properties() -> void:
-	if not _colony:
-		_warn("Cannot register colony properties: no colony set")
-		return
 
-	# Get colony's property groups and register them under the "colony" path
-	for group_name in _colony.get_group_names():
-		var colony_group = _colony.get_property_group(group_name)
-		if colony_group:
-			var result = _property_access.register_group_at_path(
-				colony_group,
-				Path.parse("colony")
-			)
-			
-			if result.success():
-				_debug("Registered colony group: %s" % group_name)
-			else:
-				_error("Failed to register colony group '%s': %s" % [
-					group_name,
-					result.get_error()
-				])
 
-	_debug("Colony properties registered successfully")
-	
 #endregion
 
 #region Event Handlers
@@ -189,13 +166,22 @@ func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
 	_trace("Property access system initialized")
 
+func register_property_node(node: PropertyNode, at_path: Path = null) -> void:
+	if not node:
+		_warn("No node to register")
+		return
+
+	_trace("Registering property node: %s" % node.name)
+	var result: Result = _property_access.register_group_at_path(node, at_path)
+	if not result.success():
+		_error("Failed to register property node %s: %s" % [node.name, result.error_message])
+	else:
+		_debug("Successfully registered property node: %s" % node.name)
+
 func _init_property_groups() -> void:
-	_debug("Initializing property groups...")
-	
-	if not _property_access:
-		_init_property_access()
-		
-	var groups = [
+	_debug("Initializing property nodes...")
+
+	var nodes = [
 		Energy.new(self),
 		Reach.new(self),
 		Vision.new(self),
@@ -203,28 +189,28 @@ func _init_property_groups() -> void:
 		Strength.new(self),
 		Health.new(self),
 		Speed.new(self),
+		Storage.new(self),
 		Proprioception.new(self)
 	]
-	
-	for group in groups:
-		_trace("Registering property group: %s" % group.name)
-		var result = _property_access.register_group(group)
-		if not result.success():
-			_error("Failed to register property group %s: %s" % [
-				group.name, 
-				result.get_error()
-			])
-		else:
-			_debug("Successfully registered property group: %s" % group.name)
-	
-	_debug("Property group initialization complete")
-	
-#region Property Access Interface
-func get_property(path: Path) -> NestedProperty:
-	return _property_access.get_property(path)
 
-func get_property_group(group_name: String) -> PropertyGroup:
-	return _property_access.get_group(group_name)
+	for node in nodes:
+		register_property_node(node)
+
+	_debug("Property group initialization complete")
+
+func _register_colony_properties() -> void:
+	if not _colony:
+		_warn("Cannot register colony properties: no colony set")
+		return
+
+	var node: PropertyNode = _colony.get_as_node()
+	register_property_node(node)
+	_debug("Colony properties registered successfully")
+
+
+#region Property Access Interface
+func get_property(path: Path) -> PropertyNode:
+	return _property_access.get_property(path)
 
 func get_property_value(path: Path) -> Variant:
 	return _property_access.get_property_value(path)
@@ -233,8 +219,8 @@ func set_property_value(path: String, value: Variant) -> Result:
 	return _property_access.set_property_value(Path.parse(path), value)
 #endregion
 
-#region Property Group Access
-func get_group_properties(group_name: String) -> Array[NestedProperty]:
+#region Property Node Access
+func get_group_properties(group_name: String) -> Array[PropertyNode]:
 	return _property_access.get_group_properties(group_name)
 
 func get_group_names() -> Array[String]:

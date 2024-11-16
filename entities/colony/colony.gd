@@ -29,7 +29,7 @@ var _property_access: PropertyAccess:
 ## Array of additional categories this node can log to
 @export var additional_log_categories: Array[DebugLogger.Category] = []
 
-func _ready() -> void:
+func _init() -> void:
 	log_from = "colony"
 	_init_property_groups()
 
@@ -48,36 +48,39 @@ func _init_property_access() -> void:
 
 func _init_property_groups() -> void:
 	_debug("Initializing property groups...")
-	
+
 	if not _property_access:
 		_init_property_access()
-		
-	var groups = [
-		Vision.new(self),
+
+	var nodes = [
+		Reach.new(self),
 		Storage.new(self),
-		Strength.new(self)
-		# Add other property groups as needed
 	]
-	
-	for group in groups:
-		_trace("Registering property group: %s" % group.name)
-		var result = _property_access.register_group(group)
-		if not result.success():
-			_error("Failed to register property group %s: %s" % [
-				group.name, 
-				result.get_error()
-			])
-		else:
-			_debug("Successfully registered property group: %s" % group.name)
-	
-	_debug("Property group initialization complete")
+
+	for node in nodes:
+		register_property_node(node)
+
+	set_property_value("reach.range", 50.0)
+	_debug("Property node initialization complete")
 
 #region Property Access Interface
-func get_property(path: String) -> NestedProperty:
-	return _property_access.get_property(Path.parse(path))
+func get_as_node() -> PropertyNode:
+	var root = PropertyNode.create_tree(self)\
+		.container("colony")\
+		.build()
 
-func get_property_group(group_name: String) -> PropertyGroup:
-	return _property_access.get_group(group_name)
+	var group_names = get_group_names()
+	for group_name in group_names:
+		var node = get_property(group_name)
+		if node:
+			for child in node.children.values():
+				root.add_child(child)
+
+	return root
+
+#region Property Access Interface
+func get_property(path: String) -> PropertyNode:
+	return _property_access.get_property(Path.parse(path))
 
 func get_property_value(path: String) -> Variant:
 	return _property_access.get_property_value(Path.parse(path))
@@ -85,8 +88,8 @@ func get_property_value(path: String) -> Variant:
 func set_property_value(path: String, value: Variant) -> Result:
 	return _property_access.set_property_value(Path.parse(path), value)
 
-#region Property Group Access
-func get_group_properties(group_name: String) -> Array[NestedProperty]:
+#region Property Node Access
+func get_group_properties(group_name: String) -> Array[PropertyNode]:
 	return _property_access.get_group_properties(group_name)
 
 func get_group_names() -> Array[String]:
@@ -122,7 +125,7 @@ func _get_food_count() -> int:
 
 func _get_total_food_mass() -> float:
 	return foods.total_mass() if foods else 0.0
-	
+
 func _get_foods() -> Foods:
 	return foods if foods else Foods.new([])
 
@@ -138,7 +141,7 @@ func _get_average_ant_energy() -> float:
 	var total_energy := 0.0
 	for ant in ants:
 		total_energy += ant.get_property_value("energy.levels.current")
-	return total_energy / ants.size()	
+	return total_energy / ants.size()
 
 #endregion
 

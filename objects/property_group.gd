@@ -15,7 +15,7 @@ func _init(p_name: String, p_entity: Node = null) -> void:
 	name = p_name.to_snake_case()
 	log_from = name if not name.is_empty() else "property_group"
 	log_category = DebugLogger.Category.PROPERTY
-	
+
 	_root = (Property.create(name)
 		.as_container()
 		.described_as("Property group for %s" % name)

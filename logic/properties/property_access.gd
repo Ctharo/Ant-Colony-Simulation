@@ -1,51 +1,57 @@
 class_name PropertyAccess
 extends BaseRefCounted
+## Central system for managing property trees and accessing properties
 
 #region Signals
 signal property_changed(path: String, old_value: Variant, new_value: Variant)
 #endregion
 
 #region Member Variables
-## Container for all property groups
-var _property_groups: Dictionary = {}  # name -> PropertyGroup
+## Root level property containers
+var _property_groups: Dictionary = {}  # name -> PropertyNode
 
 ## Caching system for property values
 var _cache: Cache
+
+## Owner entity for context
+var _owner: Object
 #endregion
 
-func _init(_owner: Object, use_caching: bool = true) -> void:
+func _init(owner: Object, use_caching: bool = true) -> void:
+	_owner = owner
+	_cache = Cache.new() if use_caching else null
+
 	log_category = DebugLogger.Category.PROPERTY
 	log_from = "property_access"
 
-	_cache = Cache.new() if use_caching else null
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 
 #region Property Group Management
-## Registers a new property group at the root level
-func register_group(group: PropertyGroup) -> Result:
-	return register_group_at_path(group, null)
+## Registers a new property tree at the root level
+func register_group(root: PropertyNode) -> Result:
+	return register_group_at_path(root, null)
 
-## Registers a new property group at a specific path
-func register_group_at_path(group: PropertyGroup, parent_path: Path) -> Result:
-	if not group:
+## Registers a property tree at a specific path
+func register_group_at_path(root: PropertyNode, parent_path: Path) -> Result:
+	if not root:
 		return Result.new(
 			Result.ErrorType.INVALID_ARGUMENT,
-			"Cannot register null property group"
+			"Cannot register null property node"
 		)
 
-	# For root registration, use original logic
+	# For root registration
 	if not parent_path:
-		if _property_groups.has(group.name):
+		if _property_groups.has(root.name):
 			return Result.new(
 				Result.ErrorType.DUPLICATE,
-				"Property group '%s' already registered" % group.name
+				"Property group '%s' already registered" % root.name
 			)
-		_property_groups[group.name] = group
-		_invalidate_group_cache(group.name)
-		_trace("Registered root property group: %s" % group.name)
+		_property_groups[root.name] = root
+		_invalidate_group_cache(root.name)
+		_trace("Registered root property group: %s" % root.name)
 		return Result.new()
 
-	# For nested registration, ensure parent path exists and is a container
+	# For nested registration
 	var parent = get_property(parent_path)
 	if not parent:
 		return Result.new(
@@ -53,30 +59,30 @@ func register_group_at_path(group: PropertyGroup, parent_path: Path) -> Result:
 			"Parent path not found: %s" % parent_path
 		)
 
-	if parent.type != NestedProperty.Type.CONTAINER:
+	if parent.type != PropertyNode.Type.CONTAINER:
 		return Result.new(
 			Result.ErrorType.TYPE_MISMATCH,
 			"Parent path is not a container: %s" % parent_path
 		)
 
-	# Add the group's root properties as children of the parent container
-	for child in group.get_root().children.values():
+	# Add all children of the root to the parent container
+	for child in root.children.values():
 		parent.add_child(child)
 
 	_invalidate_cache(parent_path)
 	_trace("Registered nested property group '%s' at path '%s'" % [
-		group.name,
+		root.name,
 		parent_path
 	])
 	return Result.new()
 
-## Removes a property group from a specific path
+## Removes a property tree from a specific path
 func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
 	if not parent_path:
 		return remove_group(group_name)
 
 	var parent = get_property(parent_path)
-	if not parent or parent.type != NestedProperty.Type.CONTAINER:
+	if not parent or parent.type != PropertyNode.Type.CONTAINER:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
 			"Parent container not found: %s" % parent_path
@@ -85,7 +91,7 @@ func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
 	var removed = false
 	for child in parent.children.values():
 		if child.name == group_name:
-			parent.remove_child(child)
+			parent.remove_child(child.name)
 			removed = true
 			break
 
@@ -102,7 +108,7 @@ func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
 	])
 	return Result.new()
 
-## Removes a property group from the system
+## Removes a property tree from the system
 func remove_group(name: String) -> Result:
 	if not _property_groups.has(name):
 		return Result.new(
@@ -119,7 +125,7 @@ func remove_group(name: String) -> Result:
 
 #region Core Property Access
 ## Get a property by its path
-func get_property(path: Path) -> NestedProperty:
+func get_property(path: Path) -> PropertyNode:
 	if not path or path.parts.is_empty():
 		_error("Invalid property path")
 		return null
@@ -130,12 +136,15 @@ func get_property(path: Path) -> NestedProperty:
 		_error("Property group not found: %s" % group_name)
 		return null
 
-	# Create path for within the group (remove group name)
-	var group_path = Path.new(path.parts.slice(1))
-	return group.get_at_path(group_path)
+	# If only requesting the root group
+	if path.parts.size() == 1:
+		return group
+
+	# Look for nested property
+	return group.find_node(Path.new(path.parts.slice(1)))
 
 ## Get a property by string path
-func get_property_from_str(path: String) -> NestedProperty:
+func get_property_from_str(path: String) -> PropertyNode:
 	if not path:
 		_error("Invalid property path")
 		return null
@@ -153,7 +162,7 @@ func get_property_value(path: Path) -> Variant:
 		_error("Property not found: %s" % path)
 		return null
 
-	if property.type != NestedProperty.Type.PROPERTY:
+	if property.type != PropertyNode.Type.VALUE:
 		_error("Cannot get value from container property: %s" % path)
 		return null
 
@@ -176,7 +185,7 @@ func set_property_value(path: Path, value: Variant) -> Result:
 			"Property not found: %s" % path
 		)
 
-	if property.type != NestedProperty.Type.PROPERTY:
+	if property.type != PropertyNode.Type.VALUE:
 		return Result.new(
 			Result.ErrorType.TYPE_MISMATCH,
 			"Cannot set value for container property: %s" % path
@@ -194,13 +203,13 @@ func set_property_value(path: Path, value: Variant) -> Result:
 
 #region Property Access Methods
 ## Get all properties for a group
-func get_group_properties(group_name: String) -> Array[NestedProperty]:
+func get_group_properties(group_name: String) -> Array[PropertyNode]:
 	var group = _property_groups.get(group_name)
 	if not group:
 		_error("Property group not found: %s" % group_name)
 		return []
 
-	return group.get_root().get_properties()
+	return group.get_all_values()
 
 ## Get all registered group names
 func get_group_names() -> Array[String]:
@@ -208,14 +217,10 @@ func get_group_names() -> Array[String]:
 	names.append_array(_property_groups.keys())
 	return names
 
-## Get a property group by name
-func get_group(name: String) -> PropertyGroup:
-	return _property_groups.get(name)
-
 ## Get children at a specific path
-func get_children_at_path(path: Path) -> Array[NestedProperty]:
+func get_children_at_path(path: Path) -> Array[PropertyNode]:
 	var property = get_property(path)
-	if not property or property.type != NestedProperty.Type.CONTAINER:
+	if not property or property.type != PropertyNode.Type.CONTAINER:
 		return []
 	return property.children.values()
 #endregion
@@ -227,7 +232,7 @@ func _invalidate_cache(path: Path) -> void:
 		_cache.invalidate(path)
 		# Invalidate any properties that depend on this one
 		for group in _property_groups.values():
-			for property in group.get_properties():
+			for property in group.get_all_values():
 				if property.dependencies.has(path):
 					_cache.invalidate(property.get_path())
 
@@ -240,7 +245,6 @@ func _invalidate_group_cache(group_name: String) -> void:
 	if not group:
 		return
 
-	# Get properties directly from the group's root
-	for property in group.get_root().get_properties():
+	for property in group.get_all_values():
 		_invalidate_cache(property.get_path())
 #endregion
