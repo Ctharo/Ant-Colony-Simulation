@@ -8,7 +8,7 @@ signal property_changed(path: String, old_value: Variant, new_value: Variant)
 
 #region Member Variables
 ## Root level property containers
-var _property_groups: Dictionary = {}  # name -> PropertyNode
+var _property_nodes: Dictionary = {}  # name -> PropertyNode
 
 ## Caching system for property values
 var _cache: Cache
@@ -28,11 +28,11 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 
 #region Property Group Management
 ## Registers a new property tree at the root level
-func register_group(root: PropertyNode) -> Result:
-	return register_group_at_path(root, null)
+func register_node(root: PropertyNode) -> Result:
+	return register_node_at_path(root, null)
 
 ## Registers a property tree at a specific path
-func register_group_at_path(root: PropertyNode, parent_path: Path) -> Result:
+func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 	if not root:
 		return Result.new(
 			Result.ErrorType.INVALID_ARGUMENT,
@@ -41,12 +41,12 @@ func register_group_at_path(root: PropertyNode, parent_path: Path) -> Result:
 
 	# For root registration
 	if not parent_path:
-		if _property_groups.has(root.name):
+		if _property_nodes.has(root.name):
 			return Result.new(
 				Result.ErrorType.DUPLICATE,
 				"Property group '%s' already registered" % root.name
 			)
-		_property_groups[root.name] = root
+		_property_nodes[root.name] = root
 		_invalidate_group_cache(root.name)
 		_trace("Registered root property group: %s" % root.name)
 		return Result.new()
@@ -110,14 +110,14 @@ func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
 
 ## Removes a property tree from the system
 func remove_group(name: String) -> Result:
-	if not _property_groups.has(name):
+	if not _property_nodes.has(name):
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
 			"Property group '%s' not found" % name
 		)
 
 	_invalidate_group_cache(name)
-	_property_groups.erase(name)
+	_property_nodes.erase(name)
 
 	_trace("Removed property group: %s" % name)
 	return Result.new()
@@ -131,7 +131,7 @@ func get_property(path: Path) -> PropertyNode:
 		return null
 
 	var group_name = path.parts[0]
-	var group = _property_groups.get(group_name)
+	var group = _property_nodes.get(group_name)
 	if not group:
 		_error("Property group not found: %s" % group_name)
 		return null
@@ -204,7 +204,7 @@ func set_property_value(path: Path, value: Variant) -> Result:
 #region Property Access Methods
 ## Get all properties for a group
 func get_group_properties(group_name: String) -> Array[PropertyNode]:
-	var group = _property_groups.get(group_name)
+	var group = _property_nodes.get(group_name)
 	if not group:
 		_error("Property group not found: %s" % group_name)
 		return []
@@ -214,7 +214,7 @@ func get_group_properties(group_name: String) -> Array[PropertyNode]:
 ## Get all registered group names
 func get_group_names() -> Array[String]:
 	var names: Array[String] = []
-	names.append_array(_property_groups.keys())
+	names.append_array(_property_nodes.keys())
 	return names
 
 ## Get children at a specific path
@@ -231,7 +231,7 @@ func _invalidate_cache(path: Path) -> void:
 	if _cache:
 		_cache.invalidate(path)
 		# Invalidate any properties that depend on this one
-		for group in _property_groups.values():
+		for group in _property_nodes.values():
 			for property in group.get_all_values():
 				if property.dependencies.has(path):
 					_cache.invalidate(property.get_path())
@@ -241,7 +241,7 @@ func _invalidate_group_cache(group_name: String) -> void:
 	if not _cache:
 		return
 
-	var group = _property_groups.get(group_name)
+	var group = _property_nodes.get(group_name)
 	if not group:
 		return
 

@@ -58,9 +58,18 @@ func _init_property_groups() -> void:
 	]
 
 	for node in nodes:
-		register_property_node(node)
+		_trace("Registering property group: %s" % node.name)
+		var result = _property_access.register_group(node)
+		if not result.success():
+			_error("Failed to register property group %s: %s" % [
+				node.name,
+				result.get_error()
+			])
+		else:
+			_debug("Successfully registered property group: %s" % node.name)
 
 	set_property_value("reach.range", 50.0)
+
 	_debug("Property node initialization complete")
 
 #region Property Access Interface
