@@ -1,9 +1,9 @@
 class_name Proprioception
-extends PropertyGroup
+extends PropertyNode
 ## The component responsible for sense of direction
 
 func _init(_entity: Node) -> void:
-	super._init("proprioception", _entity)
+	super._init("proprioception", PropertyNode.Type.CONTAINER, _entity)
 
 ## Initialize all properties for the Proprioception component
 func _init_properties() -> void:

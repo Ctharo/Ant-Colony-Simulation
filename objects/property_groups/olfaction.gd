@@ -1,5 +1,5 @@
 class_name Olfaction
-extends PropertyGroup
+extends PropertyNode
 ## Component responsible for ant's sense of smell and pheromone detection
 
 #region Constants
@@ -12,7 +12,7 @@ var _range: float = DEFAULT_RANGE
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("olfaction", _entity)
+	super._init("olfaction", PropertyNode.Type.CONTAINER, _entity)
 
 ## Initialize all properties for the Olfaction component
 func _init_properties() -> void:

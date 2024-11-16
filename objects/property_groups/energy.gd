@@ -1,5 +1,5 @@
 class_name Energy
-extends PropertyGroup
+extends PropertyNode
 ## Component responsible for managing energy state
 
 #region Signals
@@ -20,7 +20,7 @@ var _current_level: float = DEFAULT_MAX_ENERGY
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("energy", _entity)
+	super._init("energy", PropertyNode.Type.CONTAINER, _entity)
 
 func _init_properties() -> void:
 	_debug("Initializing energy properties...")

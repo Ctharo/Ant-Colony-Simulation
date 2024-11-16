@@ -1,5 +1,5 @@
 class_name Strength
-extends PropertyGroup
+extends PropertyNode
 
 #region Constants
 ## Factor used to calculate maximum carry weight from strength level
@@ -12,7 +12,7 @@ var _level: int = 10
 #endregion
 
 func _init(p_entity: Node) -> void:
-	super._init("strength", p_entity)
+	super._init("strength", PropertyNode.Type.CONTAINER, p_entity)
 
 func _init_properties() -> void:
 	# Create base level property

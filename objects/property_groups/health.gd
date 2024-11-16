@@ -1,5 +1,5 @@
 class_name Health
-extends PropertyGroup
+extends PropertyNode
 ## Component responsible for managing health state
 
 #region Signals
@@ -20,7 +20,7 @@ var _current_level: float = DEFAULT_MAX_HEALTH
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("health", _entity)
+	super._init("health", PropertyNode.Type.CONTAINER, _entity)
 
 ## Initialize all properties for the Health component
 func _init_properties() -> void:

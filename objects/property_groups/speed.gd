@@ -1,5 +1,5 @@
 class_name Speed
-extends PropertyGroup
+extends PropertyNode
 
 #region Constentitys
 const DEFAULT_RATE := 1.0
@@ -17,7 +17,7 @@ var _storing_rate: float = DEFAULT_RATE
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("speed", _entity)
+	super._init("speed", PropertyNode.Type.CONTAINER, _entity)
 
 ## Initialize all properties for the Speed component
 func _init_properties() -> void:

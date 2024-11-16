@@ -1,8 +1,8 @@
 class_name Storage
-extends PropertyGroup
+extends PropertyNode
 
 func _init(p_entity: Node) -> void:
-	super._init("storage", p_entity)
+	super._init("storage", PropertyNode.Type.CONTAINER, p_entity)
 
 func _init_properties() -> void:
 	# Create carrying capacity container with nested properties

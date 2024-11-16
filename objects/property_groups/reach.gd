@@ -1,5 +1,5 @@
 class_name Reach
-extends PropertyGroup
+extends PropertyNode
 
 #region Constentitys
 const DEFAULT_RANGE := 15.0
@@ -11,7 +11,7 @@ var _range: float = DEFAULT_RANGE
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("reach", _entity)
+	super._init("reach", PropertyNode.Type.CONTAINER, _entity)
 
 ## Initialize all properties for the Reach component
 func _init_properties() -> void:

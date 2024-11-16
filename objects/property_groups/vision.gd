@@ -1,5 +1,5 @@
 class_name Vision
-extends PropertyGroup
+extends PropertyNode
 
 #region Properties
 ## Maximum range at which the entity can see
@@ -8,7 +8,7 @@ var range: float = 50.0 : set = _set_range, get = _get_range
 
 #region Lifecycle Methods
 func _init(_entity: Node) -> void:
-	super._init("vision", _entity)
+	super._init("vision", PropertyNode.Type.CONTAINER, _entity)
 
 func _init_properties() -> void:
 	# Create range property

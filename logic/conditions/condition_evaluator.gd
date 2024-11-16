@@ -108,7 +108,7 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 	var operator = evaluation.get("operator", "EQUALS")
 
 	# Get the property value using PropertyAccess
-	var property: NestedProperty = _property_access.get_property(Path.parse(property_name))
+	var property: PropertyNode = _property_access.get_property(Path.parse(property_name))
 	if not property:
 		_error("Problem retreiving property: %s" % property_name)
 		return false
