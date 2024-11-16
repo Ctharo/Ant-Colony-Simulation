@@ -2,13 +2,13 @@ class_name Vision
 extends PropertyGroup
 
 #region Properties
-## Maximum range at which the ant can see
+## Maximum range at which the entity can see
 var range: float = 50.0 : set = _set_range, get = _get_range
 #endregion
 
 #region Lifecycle Methods
-func _init(_ant: Ant) -> void:
-	super._init("vision", _ant)
+func _init(_entity: Node) -> void:
+	super._init("vision", _entity)
 
 func _init_properties() -> void:
 	# Create range property
@@ -16,7 +16,7 @@ func _init_properties() -> void:
 		.as_property(Property.Type.FLOAT)
 		.with_getter(Callable(self, "_get_range"))
 		.with_setter(Callable(self, "_set_range"))
-		.described_as("Maximum range at which the ant can see")
+		.described_as("Maximum range at which the entity can see")
 		.build())
 
 	# Create ants container with properties
@@ -82,7 +82,7 @@ func _init_properties() -> void:
 
 #region Public Methods
 func is_within_range(point: Vector2) -> bool:
-	return point.distance_to(ant.global_position) <= range
+	return point.distance_to(entity.global_position) <= range
 #endregion
 
 #region Private Methods
@@ -90,13 +90,13 @@ func _get_range() -> float:
 	return range
 
 func _get_ants_in_range() -> Ants:
-	return Ants.in_range(ant, range)
+	return Ants.in_range(entity, range)
 
 func _get_ants_in_range_count() -> int:
 	return _get_ants_in_range().size()
 
 func _get_foods_in_range() -> Foods:
-	return Foods.in_range(ant.global_position, range, true)
+	return Foods.in_range(entity.global_position, range, true)
 
 func _get_foods_in_range_mass() -> float:
 	return _get_foods_in_range().mass()

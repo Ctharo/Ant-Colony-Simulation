@@ -5,52 +5,92 @@ extends Node2D
 #region Member Variables
 ## Colony radius in units
 var _radius: float = 10.0
-
 ## Collection of food resources
 var foods: Foods
-
 ## Ants belonging to this colony
 var ants: Ants = Ants.new([])
+## Property access system
+var _property_access: PropertyAccess:
+	get:
+		if not _property_access:
+			_init_property_access()
+		return _property_access
+#endregion
 
-## Property management system
-var _property_group: ColonyPropertyGroup = ColonyPropertyGroup.new(self)
-
-#region Logging
 ## Default category for logging
 @export var log_category: DebugLogger.Category = DebugLogger.Category.ENTITY
-
-## Array of additional categories this node can log to
-@export var additional_log_categories: Array[DebugLogger.Category] = []
 
 ## Source identifier for logging
 @export var log_from: String :
 	set(value):
 		log_from = value
 		_configure_logger()
-#endregion
+
+## Array of additional categories this node can log to
+@export var additional_log_categories: Array[DebugLogger.Category] = []
 
 func _ready() -> void:
 	log_from = "colony"
-	_trace("Colony initialized with radius: %.2f" % _radius)
+	_init_property_groups()
 
-func add_ant(ant: Ant) -> void:
-	ants.append(ant)
-	ant.colony = self
+func add_ant(_ant: Ant) -> Result:
+	if _ant is Ant and not _ant == null:
+		ants.append(_ant)
+		_ant.set_colony(self)
+		return Result.new()
+	else:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "ant argument is unexpected type")
 
-#region Property Access
-## Get the colony's property group
-func get_property_group() -> PropertyGroup:
-	return _property_group
+#region Property System
+func _init_property_access() -> void:
+	_property_access = PropertyAccess.new(self)
+	_trace("Property access system initialized")
 
-## Get a property value by path
+func _init_property_groups() -> void:
+	_debug("Initializing property groups...")
+	
+	if not _property_access:
+		_init_property_access()
+		
+	var groups = [
+		Vision.new(self),
+		Storage.new(self),
+		Strength.new(self)
+		# Add other property groups as needed
+	]
+	
+	for group in groups:
+		_trace("Registering property group: %s" % group.name)
+		var result = _property_access.register_group(group)
+		if not result.success():
+			_error("Failed to register property group %s: %s" % [
+				group.name, 
+				result.get_error()
+			])
+		else:
+			_debug("Successfully registered property group: %s" % group.name)
+	
+	_debug("Property group initialization complete")
+
+#region Property Access Interface
+func get_property(path: String) -> NestedProperty:
+	return _property_access.get_property(Path.parse(path))
+
+func get_property_group(group_name: String) -> PropertyGroup:
+	return _property_access.get_group(group_name)
+
 func get_property_value(path: String) -> Variant:
-	var parsed_path = Path.parse(path)
-	return _property_group.get_value_at_path(parsed_path)
+	return _property_access.get_property_value(Path.parse(path))
 
-## Set a property value by path
 func set_property_value(path: String, value: Variant) -> Result:
-	var parsed_path = Path.parse(path)
-	return _property_group.set_value_at_path(parsed_path, value)
+	return _property_access.set_property_value(Path.parse(path), value)
+
+#region Property Group Access
+func get_group_properties(group_name: String) -> Array[NestedProperty]:
+	return _property_access.get_group_properties(group_name)
+
+func get_group_names() -> Array[String]:
+	return _property_access.get_group_names()
 #endregion
 
 #region Property Getters and Setters

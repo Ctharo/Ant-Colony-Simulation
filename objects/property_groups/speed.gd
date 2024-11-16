@@ -1,50 +1,50 @@
 class_name Speed
 extends PropertyGroup
 
-#region Constants
+#region Constentitys
 const DEFAULT_RATE := 1.0
 #endregion
 
 #region Member Variables
-## Rate at which the ant can move (units/second)
+## Rate at which the entity can move (units/second)
 var _movement_rate: float = DEFAULT_RATE
 
-## Rate at which the ant can harvest resources (units/second)
+## Rate at which the entity can harvest resources (units/second)
 var _harvesting_rate: float = DEFAULT_RATE
 
-## Rate at which the ant can store resources (units/second)
+## Rate at which the entity can store resources (units/second)
 var _storing_rate: float = DEFAULT_RATE
 #endregion
 
-func _init(_ant: Ant) -> void:
-	super._init("speed", _ant)
+func _init(_entity: Node) -> void:
+	super._init("speed", _entity)
 
 ## Initialize all properties for the Speed component
 func _init_properties() -> void:
 	# Create rates container with nested properties
 	var rates_prop = (Property.create("rates")
 		.as_container()
-		.described_as("Various speed rates for ant activities")
+		.described_as("Various speed rates for entity activities")
 		.with_children([
 			Property.create("movement")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_movement_rate"))
 				.with_setter(Callable(self, "_set_movement_rate"))
-				.described_as("Rate at which the ant can move (units/second)")
+				.described_as("Rate at which the entity can move (units/second)")
 				.build(),
 
 			Property.create("harvesting")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_harvesting_rate"))
 				.with_setter(Callable(self, "_set_harvesting_rate"))
-				.described_as("Rate at which the ant can harvest resources (units/second)")
+				.described_as("Rate at which the entity can harvest resources (units/second)")
 				.build(),
 
 			Property.create("storing")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_storing_rate"))
 				.with_setter(Callable(self, "_set_storing_rate"))
-				.described_as("Rate at which the ant can store resources (units/second)")
+				.described_as("Rate at which the entity can store resources (units/second)")
 				.build()
 		])
 		.build())

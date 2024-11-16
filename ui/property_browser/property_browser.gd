@@ -241,7 +241,7 @@ func create_ant_to_browse() -> void:
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
-	ant.carried_food.add_food(randf_range(0.0, 200.0))
+	ant.foods.add_food(randf_range(0.0, 200.0))
 
 	add_child(ant)
 	add_child(colony)

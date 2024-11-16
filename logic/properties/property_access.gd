@@ -21,24 +21,85 @@ func _init(_owner: Object, use_caching: bool = true) -> void:
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 
 #region Property Group Management
-## Registers a new property group with the system
+## Registers a new property group at the root level
 func register_group(group: PropertyGroup) -> Result:
+	return register_group_at_path(group, null)
+
+## Registers a new property group at a specific path
+func register_group_at_path(group: PropertyGroup, parent_path: Path) -> Result:
 	if not group:
 		return Result.new(
 			Result.ErrorType.INVALID_ARGUMENT,
 			"Cannot register null property group"
 		)
 
-	if _property_groups.has(group.name):
+	# For root registration, use original logic
+	if not parent_path:
+		if _property_groups.has(group.name):
+			return Result.new(
+				Result.ErrorType.DUPLICATE,
+				"Property group '%s' already registered" % group.name
+			)
+		_property_groups[group.name] = group
+		_invalidate_group_cache(group.name)
+		_trace("Registered root property group: %s" % group.name)
+		return Result.new()
+
+	# For nested registration, ensure parent path exists and is a container
+	var parent = get_property(parent_path)
+	if not parent:
 		return Result.new(
-			Result.ErrorType.DUPLICATE,
-			"Property group '%s' already registered" % group.name
+			Result.ErrorType.NOT_FOUND,
+			"Parent path not found: %s" % parent_path
 		)
 
-	_property_groups[group.name] = group
-	_invalidate_group_cache(group.name)
+	if parent.type != NestedProperty.Type.CONTAINER:
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Parent path is not a container: %s" % parent_path
+		)
 
-	_trace("Registered property group: %s" % group.name)
+	# Add the group's root properties as children of the parent container
+	for child in group.get_root().children.values():
+		parent.add_child(child)
+
+	_invalidate_cache(parent_path)
+	_trace("Registered nested property group '%s' at path '%s'" % [
+		group.name,
+		parent_path
+	])
+	return Result.new()
+
+## Removes a property group from a specific path
+func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
+	if not parent_path:
+		return remove_group(group_name)
+
+	var parent = get_property(parent_path)
+	if not parent or parent.type != NestedProperty.Type.CONTAINER:
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
+			"Parent container not found: %s" % parent_path
+		)
+
+	var removed = false
+	for child in parent.children.values():
+		if child.name == group_name:
+			parent.remove_child(child)
+			removed = true
+			break
+
+	if not removed:
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
+			"Group '%s' not found at path '%s'" % [group_name, parent_path]
+		)
+
+	_invalidate_cache(parent_path)
+	_trace("Removed nested property group '%s' from path '%s'" % [
+		group_name,
+		parent_path
+	])
 	return Result.new()
 
 ## Removes a property group from the system

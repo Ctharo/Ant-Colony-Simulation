@@ -1,6 +1,6 @@
 class_name Energy
-extends AntPropertyGroup
-## Component responsible for managing ant's energy state
+extends PropertyGroup
+## Component responsible for managing energy state
 
 #region Signals
 ## Emitted when energy is completely depleted
@@ -19,8 +19,8 @@ var _max_level: float = DEFAULT_MAX_ENERGY
 var _current_level: float = DEFAULT_MAX_ENERGY
 #endregion
 
-func _init(_ant: Ant) -> void:
-	super._init("energy", _ant)
+func _init(_entity: Node) -> void:
+	super._init("energy", _entity)
 
 func _init_properties() -> void:
 	_debug("Initializing energy properties...")
@@ -34,13 +34,13 @@ func _init_properties() -> void:
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_max_level"))
 				.with_setter(Callable(self, "_set_max_level"))
-				.described_as("Maximum energy level the ant can have")
+				.described_as("Maximum energy level")
 				.build(),
 			Property.create("current")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_current_level"))
 				.with_setter(Callable(self, "_set_current_level"))
-				.described_as("Current energy level of the ant")
+				.described_as("Current energy level")
 				.build()
 		])
 		.build())

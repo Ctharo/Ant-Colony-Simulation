@@ -19,17 +19,17 @@ var id: int
 var role: String
 
 ## The colony this ant belongs to
-var colony: Colony : set = set_colony
+var _colony: Colony : set = set_colony
 
 ## The foods being carried by the ant
-var carried_food: Foods :
+var foods: Foods :
 	get:
-		if not carried_food:
-			carried_food = Foods.new()
-		return carried_food
+		if not foods:
+			foods = Foods.new()
+		return foods
 	set(value):
-		carried_food = value
-		carried_food.mark_as_carried()
+		foods = value
+		foods.mark_as_carried()
 
 ## The task tree for this ant
 var task_tree: TaskTree
@@ -90,15 +90,35 @@ func _process(delta: float) -> void:
 		task_update_timer = 0.0
 
 #region Colony Management
-func set_colony(_colony: Colony) -> void:
-	if colony != _colony:
-		colony = _colony
-		# Register colony properties if available
-		if colony and colony.has_method("get_property_group"):
-			var colony_group = colony.get_property_group()
-			var result = _property_access.register_group(colony_group)
-			if not result.success():
-				_error("Failed to register colony properties: %s" % result.error_message)
+func set_colony(p_colony: Colony) -> void:
+	if _colony != p_colony:
+		_colony = p_colony
+		_register_colony_properties()
+		
+func _register_colony_properties() -> void:
+	if not _colony:
+		_warn("Cannot register colony properties: no colony set")
+		return
+
+	# Get colony's property groups and register them under the "colony" path
+	for group_name in _colony.get_group_names():
+		var colony_group = _colony.get_property_group(group_name)
+		if colony_group:
+			var result = _property_access.register_group_at_path(
+				colony_group,
+				Path.parse("colony")
+			)
+			
+			if result.success():
+				_debug("Registered colony group: %s" % group_name)
+			else:
+				_error("Failed to register colony group '%s': %s" % [
+					group_name,
+					result.get_error()
+				])
+
+	_debug("Colony properties registered successfully")
+	
 #endregion
 
 #region Event Handlers
@@ -133,7 +153,7 @@ func perform_action(_action: Action) -> void:
 	action_completed.emit()
 
 func consume_food(amount: float) -> void:
-	var consumed = carried_food.consume(amount)
+	var consumed = foods.consume(amount)
 	if consumed > 0:
 		# Replenish energy through property system
 		var current_energy = get_property_value(Path.parse("energy.levels.current"))
@@ -154,10 +174,10 @@ func _move_to(location: Vector2) -> void:
 	_info("Ant would be moving now to location %s" % location)
 
 func store_food(_colony: Colony, _time: float) -> float:
-	var storing_amount: float = carried_food.mass()
+	var storing_amount: float = foods.mass()
 	var total_stored = _colony.foods.add_food(storing_amount)
 	_info("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
-	carried_food.clear()
+	foods.clear()
 	return storing_amount
 
 func attack(current_target_entity: Ant, _delta: float) -> void:

@@ -11,8 +11,8 @@ const DEFAULT_RANGE := 100.0
 var _range: float = DEFAULT_RANGE
 #endregion
 
-func _init(_ant: Ant) -> void:
-	super._init("olfaction", _ant)
+func _init(_entity: Node) -> void:
+	super._init("olfaction", _entity)
 
 ## Initialize all properties for the Olfaction component
 func _init_properties() -> void:
@@ -21,7 +21,7 @@ func _init_properties() -> void:
 		.as_property(Property.Type.FLOAT)
 		.with_getter(Callable(self, "_get_range"))
 		.with_setter(Callable(self, "_set_range"))
-		.described_as("Maximum range at which the ant can smell things")
+		.described_as("Maximum range at which to smell things")
 		.build())
 
 	# Create pheromones container with nested properties
@@ -116,33 +116,33 @@ func _set_range(value: float) -> void:
 		_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
 
 func _get_pheromones_in_range() -> Pheromones:
-	if not ant:
-		push_error("Cannot get pheromones: ant reference is null")
+	if not entity:
+		push_error("Cannot get pheromones: entity reference is null")
 		return null
 
-	return Pheromones.in_range(ant.global_position, _range)
+	return Pheromones.in_range(entity.global_position, _range)
 
 func _get_pheromones_in_range_count() -> int:
 	var pheromones = _get_pheromones_in_range()
 	return pheromones.size() if pheromones else 0
 
 func _get_food_pheromones_in_range() -> Pheromones:
-	if not ant:
-		push_error("Cannot get food pheromones: ant reference is null")
+	if not entity:
+		push_error("Cannot get food pheromones: entity reference is null")
 		return null
 
-	return Pheromones.in_range(ant.global_position, _range, "food")
+	return Pheromones.in_range(entity.global_position, _range, "food")
 
 func _get_food_pheromones_in_range_count() -> int:
 	var pheromones = _get_food_pheromones_in_range()
 	return pheromones.size() if pheromones else 0
 
 func _get_home_pheromones_in_range() -> Pheromones:
-	if not ant:
-		push_error("Cannot get home pheromones: ant reference is null")
+	if not entity:
+		push_error("Cannot get home pheromones: entity reference is null")
 		return null
 
-	return Pheromones.in_range(ant.global_position, _range, "home")
+	return Pheromones.in_range(entity.global_position, _range, "home")
 
 func _get_home_pheromones_in_range_count() -> int:
 	var pheromones = _get_home_pheromones_in_range()
@@ -152,11 +152,11 @@ func _get_home_pheromones_in_range_count() -> int:
 #region Public Methods
 ## Check if a point is within olfactory range
 func is_within_range(point: Vector2) -> bool:
-	if not ant:
-		push_error("Cannot check range: ant reference is null")
+	if not entity:
+		push_error("Cannot check range: entity reference is null")
 		return false
 
-	return ant.global_position.distance_to(point) < _range
+	return entity.global_position.distance_to(point) < _range
 
 ## Reset olfactory range to default value
 func reset_range() -> void:

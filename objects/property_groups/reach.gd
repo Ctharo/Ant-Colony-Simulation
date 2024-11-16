@@ -1,17 +1,17 @@
 class_name Reach
 extends PropertyGroup
 
-#region Constants
+#region Constentitys
 const DEFAULT_RANGE := 15.0
 #endregion
 
 #region Member Variables
-## The maximum reach distance of the ant
+## The maximum reach distance of the entity
 var _range: float = DEFAULT_RANGE
 #endregion
 
-func _init(_ant: Ant) -> void:
-	super._init("reach", _ant)
+func _init(_entity: Node) -> void:
+	super._init("reach", _entity)
 
 ## Initialize all properties for the Reach component
 func _init_properties() -> void:
@@ -20,7 +20,7 @@ func _init_properties() -> void:
 		.as_property(Property.Type.FLOAT)
 		.with_getter(Callable(self, "_get_range"))
 		.with_setter(Callable(self, "_set_range"))
-		.described_as("Maximum distance the ant can reach to interact with objects")
+		.described_as("Maximum distance the entity can reach to interact with objects")
 		.build())
 
 	# Create foods container with nested properties
@@ -77,11 +77,11 @@ func _set_range(value: float) -> void:
 	_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
 
 func _get_foods_in_range() -> Foods:
-	if not ant:
-		_error("Cannot get foods in range: ant reference is null")
+	if not entity:
+		_error("Cannot get foods in range: entity reference is null")
 		return null
 
-	return Foods.in_range(ant.global_position, _range)
+	return Foods.in_range(entity.global_position, _range)
 
 func _get_foods_in_range_count() -> int:
 	var foods = _get_foods_in_range()
@@ -107,9 +107,9 @@ func reset_range() -> void:
 
 ## Check if a specific position is within reach
 func is_position_in_range(position: Vector2) -> bool:
-	if not ant:
-		_error("Cannot check position: ant reference is null")
+	if not entity:
+		_error("Cannot check position: entity reference is null")
 		return false
 
-	return ant.global_position.distance_to(position) <= _range
+	return entity.global_position.distance_to(position) <= _range
 #endregion

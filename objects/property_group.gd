@@ -2,16 +2,20 @@ class_name PropertyGroup
 extends BaseRefCounted
 
 #region Member Variables
+## The node this property group belongs to (if any)
+var entity: Node
 var name: String
 var metadata: Dictionary = {}
 var description: String
 var _root: NestedProperty
 #endregion
 
-func _init(p_name: String) -> void:
-	log_from = p_name.to_snake_case() if not p_name.is_empty() else "property_group"
-	log_category = DebugLogger.Category.PROPERTY
+func _init(p_name: String, p_entity: Node = null) -> void:
+	entity = p_entity
 	name = p_name.to_snake_case()
+	log_from = name if not name.is_empty() else "property_group"
+	log_category = DebugLogger.Category.PROPERTY
+	
 	_root = (Property.create(name)
 		.as_container()
 		.described_as("Property group for %s" % name)
@@ -19,8 +23,6 @@ func _init(p_name: String) -> void:
 	_init_properties()
 
 #region Property Management
-
-
 ## Virtual method that derived classes will implement to define their properties
 func _init_properties() -> void:
 	_warn("Property group %s did not initialize properties" % [name])

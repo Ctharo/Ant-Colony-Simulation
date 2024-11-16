@@ -1,6 +1,6 @@
 class_name Health
 extends PropertyGroup
-## Component responsible for managing ant's health state
+## Component responsible for managing health state
 
 #region Signals
 ## Emitted when health reaches zero
@@ -19,8 +19,8 @@ var _max_level: float = DEFAULT_MAX_HEALTH
 var _current_level: float = DEFAULT_MAX_HEALTH
 #endregion
 
-func _init(_ant: Ant) -> void:
-	super._init("health", _ant)
+func _init(_entity: Node) -> void:
+	super._init("health", _entity)
 
 ## Initialize all properties for the Health component
 func _init_properties() -> void:
@@ -33,14 +33,14 @@ func _init_properties() -> void:
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_max_level"))
 				.with_setter(Callable(self, "_set_max_level"))
-				.described_as("Maximum health level the ant can have")
+				.described_as("Maximum health level")
 				.build(),
 
 			Property.create("current")
 				.as_property(Property.Type.FLOAT)
 				.with_getter(Callable(self, "_get_current_level"))
 				.with_setter(Callable(self, "_set_current_level"))
-				.described_as("Current health level of the ant")
+				.described_as("Current health level")
 				.build()
 		])
 		.build())
