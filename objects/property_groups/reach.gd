@@ -1,7 +1,12 @@
 class_name Reach
 extends PropertyNode
+## Component responsible for managing entity reach distance and food detection
 
-#region Constentitys
+#region Signals
+## Could add signals here if needed, following Energy pattern
+#endregion
+
+#region Constants
 const DEFAULT_RANGE := 15.0
 #endregion
 
@@ -11,57 +16,41 @@ var _range: float = DEFAULT_RANGE
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("reach", PropertyNode.Type.CONTAINER, _entity)
+	# First create self as container
+	super._init("reach", Type.CONTAINER, _entity)
+	
+	# Then build and copy children
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("range", "Reach distance information")\
+			.value("current", Property.Type.FLOAT,
+				Callable(self, "_get_range"),
+				Callable(self, "_set_range"),
+				[],
+				"Maximum distance the entity can reach to interact with objects")\
+		.up()\
+		.container("foods", "Properties related to food in reach range")\
+			.value("in_range", Property.Type.FOODS,
+				Callable(self, "_get_foods_in_range"),
+				Callable(),
+				["reach.range.current"],
+				"Food items within reach range")\
+			.value("count", Property.Type.INT,
+				Callable(self, "_get_foods_in_range_count"),
+				Callable(),
+				["reach.foods.in_range"],
+				"Number of food items within reach range")\
+			.value("mass", Property.Type.FLOAT,
+				Callable(self, "_get_foods_in_range_mass"),
+				Callable(),
+				["reach.foods.in_range"],
+				"Total mass of food within reach range")\
+		.build()
 
-## Initialize all properties for the Reach component
-func _init_properties() -> void:
-	# Create range property with validation
-	var range_prop = (PropertyNode.PropertyNodeBuilder.new(entity)
-		.as_property(Property.Type.FLOAT)
-		.with_getter(Callable(self, "_get_range"))
-		.with_setter(Callable(self, "_set_range"))
-		.described_as("Maximum distance the entity can reach to interact with objects")
-		.build())
+	# Copy children from built tree
+	for child in tree.children.values():
+		add_child(child)
 
-	# Create foods container with nested properties
-	# Create foods container with properties
-	var foods_prop = (Property.create("foods")
-		.as_container()
-		.described_as("Properties related to food in reach range")
-		.with_child(
-			(Property.create("in_range")
-				.as_property(Property.Type.FOODS)
-				.with_getter(Callable(self, "_get_foods_in_range"))
-				.with_dependency("reach.range")
-				.described_as("Food items within reach range")
-				.build())
-		).with_child(
-			(Property.create("count")
-				.as_property(Property.Type.INT)
-				.with_getter(Callable(self, "_get_foods_in_range_count"))
-				.with_dependency("reach.foods.in_range")
-				.described_as("Food within reach range count")
-				.build())
-		).with_child(
-			(Property.create("mass")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_foods_in_range_mass"))
-				.with_dependency("reach.foods.in_range")
-				.described_as("Total mass of food within reach range")
-				.build())
-		).build())
-
-	# Register properties with error handling
-	var result = register(Path.parse("reach"), range_prop)
-	if not result.success():
-		_error("Failed to register reach.range property: %s" % result.get_error())
-		return
-
-	result = register_at_path(Path.parse("reach"), foods_prop)
-	if not result.success():
-		_error("Failed to register reach.foods property: %s" % result.get_error())
-		return
-
+	_trace("Reach property tree initialized")
 
 #region Property Getters and Setters
 func _get_range() -> float:
@@ -69,18 +58,19 @@ func _get_range() -> float:
 
 func _set_range(value: float) -> void:
 	if value <= 0:
-		_error("Reach range must be positive")
+		_error("Attempted to set reach.range.current to non-positive value -> Action not allowed")
 		return
 
 	var old_value = _range
 	_range = value
-	_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
+
+	if old_value != _range:
+		_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
 
 func _get_foods_in_range() -> Foods:
 	if not entity:
 		_error("Cannot get foods in range: entity reference is null")
 		return null
-
 	return Foods.in_range(entity.global_position, _range)
 
 func _get_foods_in_range_count() -> int:
@@ -91,9 +81,10 @@ func _get_foods_in_range_count() -> int:
 
 func _get_foods_in_range_mass() -> float:
 	var foods = _get_foods_in_range()
-	var mass: float = 0.0
 	if not foods:
-		return 0
+		return 0.0
+		
+	var mass: float = 0.0
 	for food in foods:
 		mass += food.mass
 	return mass
@@ -101,7 +92,7 @@ func _get_foods_in_range_mass() -> float:
 
 #region Public Methods
 ## Reset reach distance to default value
-func reset_range() -> void:
+func reset() -> void:
 	_set_range(DEFAULT_RANGE)
 	_trace("Range reset to default: %.2f" % DEFAULT_RANGE)
 
@@ -110,6 +101,5 @@ func is_position_in_range(position: Vector2) -> bool:
 	if not entity:
 		_error("Cannot check position: entity reference is null")
 		return false
-
 	return entity.global_position.distance_to(position) <= _range
 #endregion
