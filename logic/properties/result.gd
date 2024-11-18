@@ -14,6 +14,7 @@ enum ErrorType {
 	DUPLICATE,          # Something already exists
 	INVALID_GETTER,     # Getter method is invalid
 	INVALID_SETTER,     # Setter method is invalid
+	SYSTEM_ERROR,       # Critical system component unavailable or not initialized
 	CACHE_ERROR         # Error with cache operations
 }
 

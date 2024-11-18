@@ -18,8 +18,8 @@ var _current_path: Path = Path.new([]) : set = set_current_path, get = get_curre
 ## Reference to UI components
 var _back_button: Button
 var _path_label: Label
-var _group_label: Label
-var _group_list: ItemList
+var _node_label: Label
+var _node_list: ItemList
 var _properties_tree: Tree
 var _ant: Ant
 #endregion
@@ -30,8 +30,8 @@ func _init(components: Dictionary) -> void:
 	log_from = "property_browser_navigation"
 	_back_button = components.back_button
 	_path_label = components.path_label
-	_group_label = components.group_label
-	_group_list = components.group_list
+	_node_label = components.group_label
+	_node_list = components.group_list
 	_properties_tree = components.properties_tree
 	
 func set_ant(ant: Ant) -> void:
@@ -117,28 +117,28 @@ func handle_activation(path: Path) -> void:
 	
 ## Handle selection in group list
 func select_group(group_index: int) -> void:
-	var group_text = _group_list.get_item_text(group_index)
+	var group_text = _node_list.get_item_text(group_index)
 	_trace("Group %s selected" % group_text)
 	var path = Path.parse(group_text)
 	handle_selection(path)
 
 ## Handle activation in group list
 func activate_group(group_index: int) -> void:
-	var group_text = _group_list.get_item_text(group_index)
+	var group_text = _node_list.get_item_text(group_index)
 	_trace("Group %s activated" % group_text)
 	var path = Path.parse(group_text)
 	handle_activation(path)
 
-## Update [member _group_list] with sibling [class property_group]s
+## Update [member _node_list] with sibling [class property_group]s
 func _update_sibling_containers(node: NestedProperty, path: Path) -> void:
-	_group_list.clear()
+	_node_list.clear()
 	
 	var parent_path = path.get_parent()
 	if parent_path == null or parent_path.parts.is_empty():
 		# Root level - show all root groups
 		var groups = _ant.get_group_names()
 		for group_name in groups:
-			_group_list.add_item(group_name)
+			_node_list.add_item(group_name)
 		return
 		
 	# Get parent's container children
@@ -158,15 +158,15 @@ func _update_sibling_containers(node: NestedProperty, path: Path) -> void:
 		for child in parent_node.children.values():
 			if child.type == NestedProperty.Type.CONTAINER:
 				var child_path = parent_path.append(child.name)
-				_group_list.add_item(child_path.full)
+				_node_list.add_item(child_path.full)
 				_add_item_with_tooltip(child_path, child)
 
 func set_current_path(value: Path = Path.new([])) -> void:
 		_current_path = value
 		if _path_label:
 			_path_label.text = value.full if value else "none"
-		if _group_label and value:
-			_group_label.text = "Group: %s" % value.get_group_name()
+		if _node_label and value:
+			_node_label.text = "Group: %s" % value.get_group_name()
 
 func get_current_path() -> Path:
 	return _current_path
@@ -177,22 +177,23 @@ func refresh_root_view() -> void:
 	if not _ant:
 		return
 		
-	_group_list.clear()
+	_node_list.clear()
 	_properties_tree.clear()
 	set_current_path()
 	_navigation_history.clear()
-
-	var groups = _ant.get_group_names()
-	for group_name in groups:
-		_group_list.add_item(group_name)
-		var group = _ant.get_property_group(group_name)
-		if group and group.description:
-			_group_list.set_item_tooltip(_group_list.item_count - 1, group.description)
+	
+	# Get all root level property nodes
+	var root_nodes = _ant.get_group_names()  # Could be renamed to get_root_nodes() in future
+	for node_name in root_nodes:
+		_node_list.add_item(node_name)
+		var node = _ant.get_property(Path.parse(node_name))
+		if node and node.description:
+			_node_list.set_item_tooltip(_node_list.item_count - 1, node.description)
 			
 	# Update labels for root view
 	_path_label.text = ""
-	_group_label.text = "Group: root"
-
+	_node_label.text = "Node: root"
+	
 func refresh_view_for_path(path: Path) -> void:
 	if not _ant:
 		return
@@ -216,7 +217,7 @@ func refresh_view_for_path(path: Path) -> void:
 		
 func _update_view_for_node(node: NestedProperty, path: Path) -> void:
 	_path_label.text = path.full
-	_group_label.text = "Group: %s" % path.get_group_name()
+	_node_label.text = "Group: %s" % path.get_group_name()
 	
 	if node.type == NestedProperty.Type.CONTAINER:
 		# Update both group list and property tree
@@ -245,7 +246,7 @@ func _update_property_tree(node: NestedProperty) -> void:
 
 #region Search and Filter
 func filter_groups(search_text: String) -> void:
-	_group_list.clear()
+	_node_list.clear()
 
 	if search_text.is_empty():
 		refresh_root_view()
@@ -274,7 +275,7 @@ func _set_path_labels(path: Path, update_group: bool) -> void:
 	
 	# Update group label only if requested
 	if update_group:
-		_group_label.text = "Group: %s" % (path.full)
+		_node_label.text = "Group: %s" % (path.full)
 
 func _show_children_at_path(path: Path) -> void:
 	if not _ant or path.parts.is_empty():
@@ -306,7 +307,7 @@ func _show_filtered_children(parent_path: Path, filter: String) -> void:
 		var groups = _ant.get_group_names()
 		for group_name in groups:
 			if group_name.to_lower().contains(filter):
-				_group_list.add_item(group_name)
+				_node_list.add_item(group_name)
 		return
 
 	var group = _ant.get_property_group(parent_path.get_group_name())
@@ -330,7 +331,7 @@ func _show_filtered_children(parent_path: Path, filter: String) -> void:
 
 #region Helper Methods
 func _add_item_with_tooltip(path: Path, node: NestedProperty) -> void:
-	var idx = _group_list.get_item_count() - 1
+	var idx = _node_list.get_item_count() - 1
 	if idx >= 0:
 		var tooltip = ""
 		if node.description:
@@ -340,6 +341,6 @@ func _add_item_with_tooltip(path: Path, node: NestedProperty) -> void:
 			tooltip += "\nValue: " + Property.format_value(node.get_value())
 		
 		if not tooltip.is_empty():
-			_group_list.set_item_tooltip(idx, tooltip)
+			_node_list.set_item_tooltip(idx, tooltip)
 
 #endregion

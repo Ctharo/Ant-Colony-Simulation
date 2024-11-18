@@ -8,7 +8,7 @@ signal property_changed(path: String, old_value: Variant, new_value: Variant)
 
 #region Member Variables
 ## Root level property containers
-var _property_nodes: Dictionary = {}  # name -> PropertyNode
+var _root_nodes: Dictionary = {}  # name -> PropertyNode
 
 ## Caching system for property values
 var _cache: Cache
@@ -26,7 +26,7 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 
-#region Property Group Management
+#region Property Node Management
 ## Registers a new property tree at the root level
 func register_node(root: PropertyNode) -> Result:
 	return register_node_at_path(root, null)
@@ -41,14 +41,14 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 
 	# For root registration
 	if not parent_path:
-		if _property_nodes.has(root.name):
+		if _root_nodes.has(root.name):
 			return Result.new(
 				Result.ErrorType.DUPLICATE,
-				"Property group '%s' already registered" % root.name
+				"Root node '%s' already registered" % root.name
 			)
-		_property_nodes[root.name] = root
-		_invalidate_group_cache(root.name)
-		_trace("Registered root property group: %s" % root.name)
+		_root_nodes[root.name] = root
+		_invalidate_node_cache(root.name)
+		_trace("Registered root node: %s" % root.name)
 		return Result.new()
 
 	# For nested registration
@@ -70,16 +70,16 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 		parent.add_child(child)
 
 	_invalidate_cache(parent_path)
-	_trace("Registered nested property group '%s' at path '%s'" % [
+	_trace("Registered nested node '%s' at path '%s'" % [
 		root.name,
 		parent_path
 	])
 	return Result.new()
 
 ## Removes a property tree from a specific path
-func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
+func remove_node_at_path(node_name: String, parent_path: Path) -> Result:
 	if not parent_path:
-		return remove_group(group_name)
+		return remove_node(node_name)
 
 	var parent = get_property(parent_path)
 	if not parent or parent.type != PropertyNode.Type.CONTAINER:
@@ -90,7 +90,7 @@ func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
 
 	var removed = false
 	for child in parent.children.values():
-		if child.name == group_name:
+		if child.name == node_name:
 			parent.remove_child(child.name)
 			removed = true
 			break
@@ -98,28 +98,28 @@ func remove_group_at_path(group_name: String, parent_path: Path) -> Result:
 	if not removed:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
-			"Group '%s' not found at path '%s'" % [group_name, parent_path]
+			"Node '%s' not found at path '%s'" % [node_name, parent_path]
 		)
 
 	_invalidate_cache(parent_path)
-	_trace("Removed nested property group '%s' from path '%s'" % [
-		group_name,
+	_trace("Removed nested node '%s' from path '%s'" % [
+		node_name,
 		parent_path
 	])
 	return Result.new()
 
-## Removes a property tree from the system
-func remove_group(name: String) -> Result:
-	if not _property_nodes.has(name):
+## Removes a property tree from the root level
+func remove_node(name: String) -> Result:
+	if not _root_nodes.has(name):
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
-			"Property group '%s' not found" % name
+			"Root node '%s' not found" % name
 		)
 
-	_invalidate_group_cache(name)
-	_property_nodes.erase(name)
+	_invalidate_node_cache(name)
+	_root_nodes.erase(name)
 
-	_trace("Removed property group: %s" % name)
+	_trace("Removed root node: %s" % name)
 	return Result.new()
 #endregion
 
@@ -130,18 +130,18 @@ func get_property(path: Path) -> PropertyNode:
 		_error("Invalid property path")
 		return null
 
-	var group_name = path.parts[0]
-	var group = _property_nodes.get(group_name)
-	if not group:
-		_error("Property group not found: %s" % group_name)
+	var root_name = path.parts[0]
+	var root = _root_nodes.get(root_name)
+	if not root:
+		_error("Root node not found: %s" % root_name)
 		return null
 
-	# If only requesting the root group
+	# If only requesting the root node
 	if path.parts.size() == 1:
-		return group
+		return root
 
 	# Look for nested property
-	return group.find_node(Path.new(path.parts.slice(1)))
+	return root.find_node(Path.new(path.parts.slice(1)))
 
 ## Get a property by string path
 func get_property_from_str(path: String) -> PropertyNode:
@@ -202,19 +202,19 @@ func set_property_value(path: Path, value: Variant) -> Result:
 #endregion
 
 #region Property Access Methods
-## Get all properties for a group
-func get_group_properties(group_name: String) -> Array[PropertyNode]:
-	var group = _property_nodes.get(group_name)
-	if not group:
-		_error("Property group not found: %s" % group_name)
+## Get all value properties for a root node
+func get_node_properties(node_name: String) -> Array[PropertyNode]:
+	var node = _root_nodes.get(node_name)
+	if not node:
+		_error("Root node not found: %s" % node_name)
 		return []
 
-	return group.get_all_values()
+	return node.get_all_values()
 
-## Get all registered group names
-func get_group_names() -> Array[String]:
+## Get all registered root node names
+func get_root_names() -> Array[String]:
 	var names: Array[String] = []
-	names.append_array(_property_nodes.keys())
+	names.append_array(_root_nodes.keys())
 	return names
 
 ## Get children at a specific path
@@ -231,20 +231,20 @@ func _invalidate_cache(path: Path) -> void:
 	if _cache:
 		_cache.invalidate(path)
 		# Invalidate any properties that depend on this one
-		for group in _property_nodes.values():
-			for property in group.get_all_values():
+		for root in _root_nodes.values():
+			for property in root.get_all_values():
 				if property.dependencies.has(path):
 					_cache.invalidate(property.get_path())
 
-## Invalidate cache for all properties in a group
-func _invalidate_group_cache(group_name: String) -> void:
+## Invalidate cache for all properties in a root node
+func _invalidate_node_cache(node_name: String) -> void:
 	if not _cache:
 		return
 
-	var group = _property_nodes.get(group_name)
-	if not group:
+	var node = _root_nodes.get(node_name)
+	if not node:
 		return
 
-	for property in group.get_all_values():
+	for property in node.get_all_values():
 		_invalidate_cache(property.get_path())
 #endregion

@@ -162,69 +162,100 @@ func attack(current_target_entity: Ant, _delta: float) -> void:
 #endregion
 
 #region Property System
+## Initialize the property access system
 func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
 	_trace("Property access system initialized")
 
+## Register a property node at the specified path
 func register_property_node(node: PropertyNode, at_path: Path = null) -> void:
 	if not node:
-		_warn("No node to register")
+		_warn("Attempted to register null property node -> Action not allowed")
 		return
 
 	_trace("Registering property node: %s" % node.name)
-	var result: Result = _property_access.register_group_at_path(node, at_path)
+	
+	var result: Result = _property_access.register_node_at_path(node, at_path)
 	if not result.success():
 		_error("Failed to register property node %s: %s" % [node.name, result.error_message])
 	else:
-		_debug("Successfully registered property node: %s" % node.name)
+		_trace("Successfully registered property node: %s" % node.name)
 
+## Initialize all component property nodes
 func _init_property_groups() -> void:
-	_debug("Initializing property nodes...")
-
+	_trace("Initializing property nodes...")
+	
 	var nodes = [
-		Energy.new(self),
-		Reach.new(self),
-		Vision.new(self),
-		Olfaction.new(self),
-		Strength.new(self),
-		Health.new(self),
-		Speed.new(self),
-		Storage.new(self),
-		Proprioception.new(self)
+		Energy.new(self),        # Energy management
+		Health.new(self),        # Health management
+		Speed.new(self),         # Movement and action rates
+		Strength.new(self),      # Base strength attributes
+		Storage.new(self),       # Item storage capacity
+		Vision.new(self),        # Visual perception
+		Olfaction.new(self),     # Scent detection
+		Reach.new(self),         # Interaction range
+		Proprioception.new(self) # Position awareness
 	]
 
 	for node in nodes:
 		register_property_node(node)
 
-	_debug("Property group initialization complete")
+	_trace("Property group initialization complete - %d components registered" % nodes.size())
 
+## Register colony-specific properties
 func _register_colony_properties() -> void:
 	if not _colony:
-		_warn("Cannot register colony properties: no colony set")
+		_warn("Cannot register colony properties: no colony reference available")
 		return
 
 	var node: PropertyNode = _colony.get_as_node()
-	register_property_node(node)
-	_debug("Colony properties registered successfully")
+	if not node:
+		_error("Failed to get colony property node")
+		return
 
+	register_property_node(node)
+	_trace("Colony properties registered successfully")
 
 #region Property Access Interface
+## Get a property node by path
 func get_property(path: Path) -> PropertyNode:
+	if not _property_access:
+		_error("Cannot get property: property access system not initialized")
+		return null
 	return _property_access.get_property(path)
 
+## Get a property value by path
 func get_property_value(path: Path) -> Variant:
+	if not _property_access:
+		_error("Cannot get property value: property access system not initialized")
+		return null
 	return _property_access.get_property_value(path)
 
+## Set a property value by path string
 func set_property_value(path: String, value: Variant) -> Result:
+	if not _property_access:
+		return Result.new(
+			Result.ErrorType.SYSTEM_ERROR,
+			"Cannot set property value: property access system not initialized"
+		)
 	return _property_access.set_property_value(Path.parse(path), value)
 #endregion
 
 #region Property Node Access
+## Get all properties in a group by group name
 func get_group_properties(group_name: String) -> Array[PropertyNode]:
+	if not _property_access:
+		_error("Cannot get group properties: property access system not initialized")
+		return []
 	return _property_access.get_group_properties(group_name)
 
-func get_group_names() -> Array[String]:
+## Get all registered root names
+func get_root_names() -> Array[String]:
+	if not _property_access:
+		_error("Cannot get root names: property access system not initialized")
+		return []
 	return _property_access.get_group_names()
+#endregion
 #endregion
 
 func _configure_logger() -> void:

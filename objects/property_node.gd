@@ -92,8 +92,6 @@ func get_path() -> Path:
 	return Path.new(parts)
 
 func find_node(path: Path) -> PropertyNode:
-	if path.is_empty():
-		return null
 
 	if path.parts[0] != name:
 		return null
@@ -225,6 +223,11 @@ class Builder:
 		dependencies: Array[String] = [],
 		description: String = ""
 	) -> PropertyNode.Builder:
+		# Ensure we have a valid container to add values to
+		if not _current:
+			# Create an implicit root container if none exists
+			container("root", "Implicit root container")
+			
 		var path_dependencies: Array[Path] = []
 		for dep in dependencies:
 			path_dependencies.append(Path.parse(dep))

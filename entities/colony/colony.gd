@@ -59,7 +59,7 @@ func _init_property_groups() -> void:
 
 	for node in nodes:
 		_trace("Registering property group: %s" % node.name)
-		var result = _property_access.register_group(node)
+		var result = _property_access.register_node(node)
 		if not result.success():
 			_error("Failed to register property group %s: %s" % [
 				node.name,

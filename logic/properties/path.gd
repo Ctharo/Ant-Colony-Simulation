@@ -87,6 +87,7 @@ func append(part: String) -> Path:
 	new_parts.append(part.to_lower())  # Ensure appended part is lowercase
 	return Path.new(new_parts)
 
+
 ## Static constructor from full path string
 static func parse(full_path: String) -> Path:
 	if full_path.to_lower() == "root":
