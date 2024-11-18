@@ -20,79 +20,46 @@ var _current_level: float = DEFAULT_MAX_HEALTH
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("health", PropertyNode.Type.CONTAINER, _entity)
+	# First create self as container
+	super._init("health", Type.CONTAINER, _entity)
 
-## Initialize all properties for the Health component
-func _init_properties() -> void:
-	# Create levels container with health level properties
-	var levels_prop = (Property.create("levels")
-		.as_container()
-		.described_as("Health level information")
-		.with_children([
-			Property.create("maximum")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_max_level"))
-				.with_setter(Callable(self, "_set_max_level"))
-				.described_as("Maximum health level")
-				.build(),
+	# Then build and copy children
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("levels", "Health level information")\
+			.value("maximum", Property.Type.FLOAT,
+				Callable(self, "_get_max_level"),
+				Callable(self, "_set_max_level"),
+				[],
+				"Maximum health level")\
+			.value("current", Property.Type.FLOAT,
+				Callable(self, "_get_current_level"),
+				Callable(self, "_set_current_level"),
+				[],
+				"Current health level")\
+		.up()\
+		.container("status", "Health status information")\
+			.value("percentage", Property.Type.FLOAT,
+				Callable(self, "_get_percentage"),
+				Callable(),
+				["health.levels.current", "health.levels.maximum"],
+				"Current health level as a percentage of max health")\
+			.value("replenishable", Property.Type.FLOAT,
+				Callable(self, "_get_replenishable_amount"),
+				Callable(),
+				["health.levels.current", "health.levels.maximum"],
+				"Amount of health that can be restored")\
+			.value("is_full", Property.Type.BOOL,
+				Callable(self, "_get_is_full"),
+				Callable(),
+				["health.levels.current", "health.levels.maximum"],
+				"Whether health is at maximum level")\
+		.build()
 
-			Property.create("current")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_current_level"))
-				.with_setter(Callable(self, "_set_current_level"))
-				.described_as("Current health level")
-				.build()
-		])
-		.build())
+	# Copy children from built tree
+	for child in tree.children.values():
+		add_child(child)
 
-	# Create status container with computed health properties
-	var status_prop = (Property.create("status")
-		.as_container()
-		.described_as("Health status information")
-		.with_children([
-			Property.create("percentage")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_percentage"))
-				.with_dependencies([
-					"health.levels.current",
-					"health.levels.maximum"
-				])
-				.described_as("Current health level as a percentage of max health")
-				.build(),
-
-			Property.create("replenishable")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_replenishable_amount"))
-				.with_dependencies([
-					"health.levels.current",
-					"health.levels.maximum"
-				])
-				.described_as("Amount of health that can be restored")
-				.build(),
-
-			Property.create("is_full")
-				.as_property(Property.Type.BOOL)
-				.with_getter(Callable(self, "_get_is_full"))
-				.with_dependencies([
-					"health.levels.current",
-					"health.levels.maximum"
-				])
-				.described_as("Whether health is at maximum level")
-				.build()
-		])
-		.build())
-
-	# Register properties with error handling
-	var result = register_at_path(Path.parse("health"), levels_prop)
-	if not result.success():
-		_error("Failed to register health.levels property: %s" % result.get_error())
-		return
-
-	result = register_at_path(Path.parse("health"), status_prop)
-	if not result.success():
-		_error("Failed to register health.status property: %s" % result.get_error())
-		return
-
+	_trace("Health property tree initialized")
 
 #region Property Getters and Setters
 func _get_max_level() -> float:

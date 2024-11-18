@@ -1,46 +1,41 @@
 class_name Storage
 extends PropertyNode
+## Component responsible for managing entity's storage capacity and contents
 
 func _init(p_entity: Node) -> void:
-	super._init("storage", PropertyNode.Type.CONTAINER, p_entity)
+	# First create self as container
+	super._init("storage", Type.CONTAINER, p_entity)
 
-func _init_properties() -> void:
-	# Create carrying capacity container with nested properties
-	var capacity_prop = (Property.create("capacity")
-		.as_container()
-		.described_as("Information about entity's storage capacity")
-		.with_children([
-			Property.create("maximum")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_max_capacity"))
-				.with_dependency("strength.level")
-				.described_as("Maximum weight the entity can store")
-				.build(),
-			Property.create("current")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_current_capacity"))
-				.described_as("Current total mass of stored items")
-				.build(),
-			Property.create("available")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_mass_available"))
-				.with_dependencies([
-					"storage.capacity.maximum",
-					"storage.capacity.current"
-				])
-				.described_as("Remaining storage capacity available")
-				.build(),
-			Property.create("is_storing")
-				.as_property(Property.Type.BOOL)
-				.with_getter(Callable(self, "_is_storing"))
-				.with_dependency("storage.capacity.current")
-				.described_as("Whether the entity is currently storing anything")
-				.build()
-		])
-		.build())
+	# Then build and copy children
+	var tree = PropertyNode.create_tree(p_entity)\
+		.container("capacity", "Information about entity's storage capacity")\
+			.value("maximum", Property.Type.FLOAT,
+				Callable(self, "_get_max_capacity"),
+				Callable(),
+				["strength.level"],
+				"Maximum weight the entity can store")\
+			.value("current", Property.Type.FLOAT,
+				Callable(self, "_get_current_capacity"),
+				Callable(),
+				[],
+				"Current total mass of stored items")\
+			.value("available", Property.Type.FLOAT,
+				Callable(self, "_get_mass_available"),
+				Callable(),
+				["storage.capacity.maximum", "storage.capacity.current"],
+				"Remaining storage capacity available")\
+			.value("is_storing", Property.Type.BOOL,
+				Callable(self, "_is_storing"),
+				Callable(),
+				["storage.capacity.current"],
+				"Whether the entity is currently storing anything")\
+		.build()
 
-	# Register properties
-	register_at_path(Path.parse("storage"), capacity_prop)
+	# Copy children from built tree
+	for child in tree.children.values():
+		add_child(child)
+
+	_trace("Storage property tree initialized")
 
 #region Property Getters and Setters
 func _get_max_capacity() -> float:

@@ -1,110 +1,115 @@
 class_name Vision
 extends PropertyNode
+## Component responsible for managing entity's visual perception
 
-#region Properties
-## Maximum range at which the entity can see
-var range: float = 50.0 : set = _set_range, get = _get_range
+#region Constants
+const DEFAULT_RANGE := 50.0
 #endregion
 
-#region Lifecycle Methods
+#region Member Variables
+## Maximum range at which the entity can see
+var _range: float = DEFAULT_RANGE
+#endregion
+
 func _init(_entity: Node) -> void:
-	super._init("vision", PropertyNode.Type.CONTAINER, _entity)
+	# First create self as container
+	super._init("vision", Type.CONTAINER, _entity)
 
-func _init_properties() -> void:
-	# Create range property
-	var range_prop = (Property.create("range")
-		.as_property(Property.Type.FLOAT)
-		.with_getter(Callable(self, "_get_range"))
-		.with_setter(Callable(self, "_set_range"))
-		.described_as("Maximum range at which the entity can see")
-		.build())
+	# Then build and copy children
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("range", "Vision range information")\
+			.value("current", Property.Type.FLOAT,
+				Callable(self, "_get_range"),
+				Callable(self, "_set_range"),
+				[],
+				"Maximum range at which the entity can see")\
+		.up()\
+		.container("ants", "Properties related to ants in vision range")\
+			.value("list", Property.Type.ANTS,
+				Callable(self, "_get_ants_in_range"),
+				Callable(),
+				["vision.range.current"],
+				"Ants within vision range")\
+			.value("count", Property.Type.INT,
+				Callable(self, "_get_ants_in_range_count"),
+				Callable(),
+				["vision.ants.list"],
+				"Number of ants within vision range")\
+		.up()\
+		.container("foods", "Properties related to food in vision range")\
+			.value("list", Property.Type.FOODS,
+				Callable(self, "_get_foods_in_range"),
+				Callable(),
+				["vision.range.current"],
+				"Food items within vision range")\
+			.value("count", Property.Type.INT,
+				Callable(self, "_get_foods_in_range_count"),
+				Callable(),
+				["vision.foods.list"],
+				"Number of food items within vision range")\
+			.value("mass", Property.Type.FLOAT,
+				Callable(self, "_get_foods_in_range_mass"),
+				Callable(),
+				["vision.foods.list"],
+				"Total mass of food within vision range")\
+		.build()
 
-	# Create ants container with properties
-	var ants = (Property.create("ants")
-		.as_container()
-		.described_as("Properties related to ants in vision range")
-		.with_child(
-			(Property.create("list")
-				.as_property(Property.Type.ANTS)
-				.with_getter(Callable(self, "_get_ants_in_range"))
-				.with_dependency("vision.range")
-				.described_as("Ants within vision range")
-				.build())
-		).with_child(
-			(Property.create("count")
-				.as_property(Property.Type.INT)
-				.with_getter(Callable(self, "_get_ants_in_range_count"))
-				.with_dependency("vision.ants.in_range")
-				.described_as("Ants within vision range count")
-				.build())
-		).build())
+	# Copy children from built tree
+	for child in tree.children.values():
+		add_child(child)
 
-	# Create foods container with properties
-	var foods = (Property.create("foods")
-		.as_container()
-		.described_as("Properties related to food in vision range")
-		.with_child(
-			(Property.create("list")
-				.as_property(Property.Type.FOODS)
-				.with_getter(Callable(self, "_get_foods_in_range"))
-				.with_dependency("vision.range")
-				.described_as("Food items within vision range")
-				.build())
-		).with_child(
-			(Property.create("count")
-				.as_property(Property.Type.INT)
-				.with_getter(Callable(self, "_get_foods_in_range_count"))
-				.with_dependency("vision.foods.in_range")
-				.described_as("Food within vision range count")
-				.build())
-		).with_child(
-			(Property.create("mass")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_foods_in_range_mass"))
-				.with_dependency("vision.foods.in_range")
-				.described_as("Total mass of food within vision range")
-				.build())
-		).build())
+	_trace("Vision property tree initialized")
 
-	# Register all properties
-	var result: Result = register_at_path(Path.parse("vision"), range_prop)
-	if not result.success():
-		_error("Failed to register vision.range property: %s" % result.get_error())
+#region Property Getters and Setters
+func _get_range() -> float:
+	return _range
 
-	result = register_at_path(Path.parse("vision"), ants)
-	if not result.success():
-		_error("Failed to register vision.ants property: %s" % result.get_error())
+func _set_range(value: float) -> void:
+	if value <= 0:
+		_error("Attempted to set vision.range.current to non-positive value -> Action not allowed")
+		return
 
-	result = register_at_path(Path.parse("vision"), foods)
-	if not result.success():
-		_error("Failed to register vision.foods property: %s" % result.get_error())
+	var old_value = _range
+	_range = value
+
+	if old_value != _range:
+		_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
+
+func _get_ants_in_range() -> Ants:
+	if not entity:
+		_error("Cannot get ants in range: entity reference is null")
+		return null
+	return Ants.in_range(entity, _range)
+
+func _get_ants_in_range_count() -> int:
+	var ants = _get_ants_in_range()
+	return ants.size() if ants else 0
+
+func _get_foods_in_range() -> Foods:
+	if not entity:
+		_error("Cannot get foods in range: entity reference is null")
+		return null
+	return Foods.in_range(entity.global_position, _range, true)
+
+func _get_foods_in_range_count() -> int:
+	var foods = _get_foods_in_range()
+	return foods.size() if foods else 0
+
+func _get_foods_in_range_mass() -> float:
+	var foods = _get_foods_in_range()
+	return foods.mass() if foods else 0.0
 #endregion
 
 #region Public Methods
+## Check if a point is within visual range
 func is_within_range(point: Vector2) -> bool:
-	return point.distance_to(entity.global_position) <= range
-#endregion
+	if not entity:
+		_error("Cannot check range: entity reference is null")
+		return false
+	return point.distance_to(entity.global_position) <= _range
 
-#region Private Methods
-func _get_range() -> float:
-	return range
-
-func _get_ants_in_range() -> Ants:
-	return Ants.in_range(entity, range)
-
-func _get_ants_in_range_count() -> int:
-	return _get_ants_in_range().size()
-
-func _get_foods_in_range() -> Foods:
-	return Foods.in_range(entity.global_position, range, true)
-
-func _get_foods_in_range_mass() -> float:
-	return _get_foods_in_range().mass()
-
-func _get_foods_in_range_count() -> int:
-	return _get_foods_in_range().size()
-
-func _set_range(value: float) -> void:
-	if range != value:
-		range = value
+## Reset vision range to default value
+func reset() -> void:
+	_set_range(DEFAULT_RANGE)
+	_trace("Range reset to default: %.2f" % DEFAULT_RANGE)
 #endregion

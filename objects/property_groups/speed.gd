@@ -1,7 +1,8 @@
 class_name Speed
 extends PropertyNode
+## Component responsible for managing entity movement and action rates
 
-#region Constentitys
+#region Constants
 const DEFAULT_RATE := 1.0
 #endregion
 
@@ -17,70 +18,46 @@ var _storing_rate: float = DEFAULT_RATE
 #endregion
 
 func _init(_entity: Node) -> void:
-	super._init("speed", PropertyNode.Type.CONTAINER, _entity)
+	# First create self as container
+	super._init("speed", Type.CONTAINER, _entity)
 
-## Initialize all properties for the Speed component
-func _init_properties() -> void:
-	# Create rates container with nested properties
-	var rates_prop = (Property.create("rates")
-		.as_container()
-		.described_as("Various speed rates for entity activities")
-		.with_children([
-			Property.create("movement")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_movement_rate"))
-				.with_setter(Callable(self, "_set_movement_rate"))
-				.described_as("Rate at which the entity can move (units/second)")
-				.build(),
+	# Then build and copy children
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("rates", "Various speed rates for entity activities")\
+			.value("movement", Property.Type.FLOAT,
+				Callable(self, "_get_movement_rate"),
+				Callable(self, "_set_movement_rate"),
+				[],
+				"Rate at which the entity can move (units/second)")\
+			.value("harvesting", Property.Type.FLOAT,
+				Callable(self, "_get_harvesting_rate"),
+				Callable(self, "_set_harvesting_rate"),
+				[],
+				"Rate at which the entity can harvest resources (units/second)")\
+			.value("storing", Property.Type.FLOAT,
+				Callable(self, "_get_storing_rate"),
+				Callable(self, "_set_storing_rate"),
+				[],
+				"Rate at which the entity can store resources (units/second)")\
+		.up()\
+		.container("calculators", "Helper properties for speed-based calculations")\
+			.value("time_to_move", Property.Type.FLOAT,
+				Callable(self, "_get_time_to_move"),
+				Callable(),
+				["speed.rates.movement"],
+				"Time required to move one unit of distance")\
+			.value("harvest_per_second", Property.Type.FLOAT,
+				Callable(self, "_get_harvest_per_second"),
+				Callable(),
+				["speed.rates.harvesting"],
+				"Amount that can be harvested in one second")\
+		.build()
 
-			Property.create("harvesting")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_harvesting_rate"))
-				.with_setter(Callable(self, "_set_harvesting_rate"))
-				.described_as("Rate at which the entity can harvest resources (units/second)")
-				.build(),
+	# Copy children from built tree
+	for child in tree.children.values():
+		add_child(child)
 
-			Property.create("storing")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_storing_rate"))
-				.with_setter(Callable(self, "_set_storing_rate"))
-				.described_as("Rate at which the entity can store resources (units/second)")
-				.build()
-		])
-		.build())
-
-	# Create calculators container with computed properties
-	var calculators_prop = (Property.create("calculators")
-		.as_container()
-		.described_as("Helper properties for speed-based calculations")
-		.with_children([
-			Property.create("time_to_move")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_time_to_move"))
-				.with_dependency("speed.rates.movement")
-				.described_as("Time required to move one unit of distance")
-				.build(),
-
-			Property.create("harvest_per_second")
-				.as_property(Property.Type.FLOAT)
-				.with_getter(Callable(self, "_get_harvest_per_second"))
-				.with_dependency("speed.rates.harvesting")
-				.described_as("Amount that can be harvested in one second")
-				.build()
-		])
-		.build())
-
-	# Register properties with error handling
-	var result = register_at_path(Path.parse("speed"), rates_prop)
-	if not result.success():
-		_error("Failed to register speed.rates property: %s" % result.get_error())
-		return
-
-	result = register_at_path(Path.parse("speed"), calculators_prop)
-	if not result.success():
-		_error("Failed to register speed.calculators property: %s" % result.get_error())
-		return
-
+	_trace("Speed property tree initialized")
 
 #region Property Getters and Setters
 func _get_movement_rate() -> float:
@@ -152,7 +129,7 @@ func harvest_amount(time: float) -> float:
 	return _harvesting_rate * time
 
 ## Reset all rates to their default values
-func reset_rates() -> void:
+func reset() -> void:
 	_set_movement_rate(DEFAULT_RATE)
 	_set_harvesting_rate(DEFAULT_RATE)
 	_set_storing_rate(DEFAULT_RATE)
