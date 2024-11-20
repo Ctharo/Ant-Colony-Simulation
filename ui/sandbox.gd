@@ -1,6 +1,7 @@
 extends Node2D
 
 func _ready() -> void:
+	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
 	spawn_ants(1)
 
 ## Handle unhandled input events
@@ -15,7 +16,7 @@ func _on_close_pressed():
 
 ## Transition to a new scene
 func transition_to_scene(scene_name: String) -> void:
-	var tween := create_tween().tween_callback(Callable(self, "_change_scene").bind(scene_name))
+	create_tween().tween_callback(Callable(self, "_change_scene").bind(scene_name))
 
 ## Change to a new scene
 func _change_scene(scene_name: String) -> void:

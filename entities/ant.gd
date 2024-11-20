@@ -168,7 +168,7 @@ func attack(current_target_entity: Ant, _delta: float) -> void:
 ## Initialize the property access system
 func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
-	_trace("Property access system initialized")
+	_debug("Property access system initialized")
 
 ## Register a property node at the specified path
 func register_property_node(node: PropertyNode, at_path: Path = null) -> void:

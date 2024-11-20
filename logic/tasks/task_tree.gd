@@ -229,7 +229,7 @@ func update(delta: float) -> void:
 	if current_active != previous_active:
 		_info("Task Transition: %s -> %s" % [
 			previous_active.name if previous_active else "None",
-			current_active.name
+			current_active.name if current_active else "None"
 		])
 
 	if current_behavior != previous_behavior:

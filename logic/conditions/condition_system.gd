@@ -54,6 +54,8 @@ var _condition_configs: Dictionary
 
 #region Initialization
 func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
+	log_category = DebugLogger.Category.CONDITION
+	log_from = "condition_system"
 	_property_access = PropertyAccess.new(p_ant)
 	_condition_configs = p_condition_configs
 	register_required_properties()
@@ -266,7 +268,7 @@ func _log_required_properties() -> void:
 	var formatted_list = ""
 	for prop in properties:
 		formatted_list += "\n  - " + str(prop)
-	_trace("Required properties:%s" % formatted_list)
+	_debug("Required properties:%s" % formatted_list)
 #endregion
 
 #region Static Helper Methods

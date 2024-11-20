@@ -16,7 +16,7 @@ enum Priority { LOWEST = 0, LOW = 25, MEDIUM = 50, HIGH = 75, HIGHEST = 100 }
 #region Builder
 ## Builder class for constructing behaviors
 class Builder:
-	extends RefCounted
+	extends BaseRefCounted
 
 	var _name: String = ""
 	var _priority: int
@@ -25,6 +25,8 @@ class Builder:
 	var _conditions: Array[ConditionSystem.Condition] = []
 
 	func _init(priority: int = Behavior.Priority.MEDIUM) -> void:
+		log_category = DebugLogger.Category.BEHAVIOR
+		log_from = "behavior.builder"
 		_priority = priority
 
 	## Set a name for the behavior
@@ -125,6 +127,7 @@ var _condition_system: ConditionSystem
 func _init(p_priority: int = Priority.MEDIUM) -> void:
 	priority = p_priority
 	log_category = DebugLogger.Category.BEHAVIOR
+	log_from = "behavior"
 #endregion
 
 #region Public Methods
