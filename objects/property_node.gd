@@ -227,7 +227,7 @@ class Builder:
 		if not _current:
 			# Create an implicit root container if none exists
 			container("root", "Implicit root container")
-			
+
 		var path_dependencies: Array[Path] = []
 		for dep in dependencies:
 			path_dependencies.append(Path.parse(dep))

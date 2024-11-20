@@ -71,12 +71,12 @@ func _setup_signals() -> void:
 
 #region Property View Management
 ## Update the property view with new node data
-func update_property_view(node: NestedProperty) -> void:
+func update_property_view(node: PropertyNode) -> void:
 	properties_tree.clear()
 	var root = properties_tree.create_item()
 	properties_tree.hide_root = true
 
-	if node.type == NestedProperty.Type.CONTAINER:
+	if node.type == PropertyNode.Type.CONTAINER:
 		_populate_container_contents(root, node)
 	else:
 		_populate_single_property(root, node)
@@ -84,25 +84,25 @@ func update_property_view(node: NestedProperty) -> void:
 	_update_description(node)
 
 ## Populate container contents in the tree
-func _populate_container_contents(parent_item: TreeItem, container: NestedProperty) -> void:
-	var properties: Array[NestedProperty] = []
-	var containers: Array[NestedProperty] = []
+func _populate_container_contents(parent_item: TreeItem, container: PropertyNode) -> void:
+	var values: Array[PropertyNode] = []
+	var containers: Array[PropertyNode] = []
 
 	for child in container.children.values():
-		if child.type == NestedProperty.Type.PROPERTY:
-			properties.append(child)
+		if child.type == PropertyNode.Type.VALUE:
+			values.append(child)
 		else:
 			containers.append(child)
 
-	properties.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
+	values.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
 	containers.sort_custom(func(a, b): return a.name.naturalnocasecmp_to(b.name) < 0)
 
-	# Add properties first
-	for property in properties:
+	# Add values first
+	for value_node in values:
 		var item = properties_tree.create_item(parent_item)
-		item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
-		_populate_property_item(item, property)
-		item.set_metadata(0, property)
+		item.set_text(COL_NAME, Helper.snake_to_readable(value_node.name))
+		_populate_property_item(item, value_node)
+		item.set_metadata(0, value_node)
 
 	# Then add containers
 	for sub_container in containers:
@@ -112,7 +112,7 @@ func _populate_container_contents(parent_item: TreeItem, container: NestedProper
 		item.set_metadata(0, sub_container)
 
 ## Populate a container item in the tree
-func _populate_container_item(item: TreeItem, container: NestedProperty) -> void:
+func _populate_container_item(item: TreeItem, container: PropertyNode) -> void:
 	item.set_text(COL_TYPE, "Container")
 	item.set_custom_bg_color(COL_TYPE, Color.html("#2c3e50"))
 	item.set_text(COL_VALUE, "")
@@ -126,10 +126,10 @@ func _populate_container_item(item: TreeItem, container: NestedProperty) -> void
 	_set_dependencies_text(item, container.dependencies)
 
 ## Populate a property item in the tree
-func _populate_property_item(item: TreeItem, property: NestedProperty) -> void:
-	item.set_text(COL_TYPE, Property.type_to_string(property.value_type))
+func _populate_property_item(item: TreeItem, node: PropertyNode) -> void:
+	item.set_text(COL_TYPE, Property.type_to_string(node.value_type))
 
-	var value = property.get_value()
+	var value = node.get_value()
 	var value_text = Property.format_value(value)
 	var wrapped_text = _wrap_text(value_text)
 
@@ -138,31 +138,28 @@ func _populate_property_item(item: TreeItem, property: NestedProperty) -> void:
 	item.set_metadata(1, wrapped_text)
 	item.set_selectable(COL_VALUE, true)
 
-	_set_dependencies_text(item, property.dependencies)
+	_set_dependencies_text(item, node.dependencies)
 
-	if property.description:
-		item.set_tooltip_text(COL_NAME, property.description)
+	if node.description:
+		item.set_tooltip_text(COL_NAME, node.description)
 
-	item.set_metadata(0, property)
-	_style_property_item(item, property)
+	item.set_metadata(0, node)
+	_style_property_item(item, node)
 
 ## Populate a single property in the tree
-func _populate_single_property(parent_item: TreeItem, property: NestedProperty) -> void:
-	if property.type != NestedProperty.Type.PROPERTY:
+func _populate_single_property(parent_item: TreeItem, node: PropertyNode) -> void:
+	if node.type != PropertyNode.Type.VALUE:
 		return
 
 	var item = properties_tree.create_item(parent_item)
-	item.set_text(COL_NAME, Helper.snake_to_readable(property.name))
-	_populate_property_item(item, property)
+	item.set_text(COL_NAME, Helper.snake_to_readable(node.name))
+	_populate_property_item(item, node)
 	item.set_collapsed(false)
 
 ## Set dependencies text for an item
-func _set_dependencies_text(item: TreeItem, dependencies: Array) -> void:
-	var str_array: Array[String] = []
-	for dependency in dependencies:
-		str_array.append(dependency.path.full)
-	var dependencies_text = "None" if str_array.is_empty() else "\n".join(
-		str_array.map(func(p): return p.full)
+func _set_dependencies_text(item: TreeItem, dependencies: Array[Path]) -> void:
+	var dependencies_text = "None" if dependencies.is_empty() else "\n".join(
+		dependencies.map(func(p): return p.full)
 	)
 	item.set_text(COL_DEPENDENCIES, dependencies_text)
 
@@ -177,14 +174,14 @@ func _on_item_selected() -> void:
 	if not selected:
 		return
 
-	var node = selected.get_metadata(0) as NestedProperty
+	var node = selected.get_metadata(0) as PropertyNode
 	if not node:
 		return
 
 	# Update description
 	_update_description(node)
 
-	# Just emit standard selection
+	# Emit standard selection
 	property_selected.emit(node.path)
 
 ## Handle double-click/activation of tree items
@@ -193,7 +190,7 @@ func _on_tree_item_activated() -> void:
 	if not selected:
 		return
 
-	var node = selected.get_metadata(0) as NestedProperty
+	var node = selected.get_metadata(0) as PropertyNode
 	if not node:
 		return
 
@@ -212,10 +209,9 @@ func _on_item_mouse_selected(position: Vector2, mouse_button_index: int) -> void
 	# If value column was clicked
 	if clicked_column == COL_VALUE:
 		_handle_value_cell_click(selected)
-
 #endregion
 
-#region Item Selected handling
+#region Item Selected Handling
 ## Handle clicking on a value cell
 func _handle_value_cell_click(item: TreeItem) -> void:
 	if item == _expanded_item:
@@ -242,9 +238,9 @@ func _on_tree_deselected() -> void:
 
 #region Helper Functions
 ## Style a property item based on its type
-func _style_property_item(item: TreeItem, property: NestedProperty) -> void:
+func _style_property_item(item: TreeItem, node: PropertyNode) -> void:
 	# Style based on property type
-	match property.value_type:
+	match node.value_type:
 		Property.Type.BOOL:
 			item.set_custom_bg_color(COL_TYPE, Color.html("#27ae60"))
 		Property.Type.INT, Property.Type.FLOAT:
@@ -259,7 +255,7 @@ func _style_property_item(item: TreeItem, property: NestedProperty) -> void:
 			item.set_custom_bg_color(COL_TYPE, Color.html("#7f8c8d"))
 
 	# Style if property has dependencies
-	if not property.dependencies.is_empty():
+	if not node.dependencies.is_empty():
 		item.set_custom_color(COL_DEPENDENCIES, Color.html("#e74c3c"))
 
 ## Get condensed text for display
@@ -290,8 +286,8 @@ func _wrap_text(text: String, width: int = 50) -> String:
 	return "\n".join(lines)
 
 ## Update description label with node information
-func _update_description(node: NestedProperty) -> void:
-	if node.type == NestedProperty.Type.PROPERTY:
+func _update_description(node: PropertyNode) -> void:
+	if node.type == PropertyNode.Type.VALUE:
 		description_label.text = node.description if node.description else "No description available"
 	else:
 		description_label.text = "Container with %d items" % node.children.size()

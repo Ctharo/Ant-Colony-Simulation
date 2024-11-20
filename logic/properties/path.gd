@@ -7,7 +7,7 @@ var parts: Array[String]
 ## The complete path string
 var full: String : get = get_full_path
 
-## The sub-path
+## The sub-path after the root
 var sub: Path : get = get_subpath
 
 ## Static path separator
@@ -19,21 +19,21 @@ func _init(path_parts: Array[String]) -> void:
 		a.append(part.to_lower())  # Ensure all parts are lowercase
 	parts = a
 
-## Gets the full path as a string, handling special cases
+## Gets the full path as a string
 func get_full_path() -> String:
 	if is_root():
 		return "root"
-	if is_group_root():
+	if is_root_node():
 		return parts[0]
 	return SEPARATOR.join(parts)
 
-## Gets the root name (first part) of the path
+## Gets the root node name (first part)
 func get_root_name() -> String:
 	if is_root():
 		return "root"
 	return parts[0]
 
-## Gets all parts after the group name as a new Path
+## Gets all parts after the root node as a new Path
 func get_subpath() -> Path:
 	if parts.size() <= 1:
 		return Path.new([])
@@ -43,17 +43,17 @@ func get_subpath() -> Path:
 func is_root() -> bool:
 	return parts.is_empty()
 
-## Returns true if this path only contains a group name
-func is_group_root() -> bool:
+## Returns true if this path only contains a root node
+func is_root_node() -> bool:
 	return parts.size() == 1
 
 ## Gets the parent path (all parts except the last)
 func get_parent() -> Path:
-	if is_root() or is_group_root():
+	if is_root() or is_root_node():
 		return Path.new([])
 	return Path.new(parts.slice(0, -1))
 
-## Gets the property name (last part) of the path
+## Gets the property/node name (last part)
 func get_property() -> String:
 	if is_root():
 		return "root"
@@ -87,16 +87,15 @@ func append(part: String) -> Path:
 	new_parts.append(part.to_lower())  # Ensure appended part is lowercase
 	return Path.new(new_parts)
 
-
 ## Static constructor from full path string
 static func parse(full_path: String) -> Path:
 	if full_path.to_lower() == "root":
 		return Path.new([])
 	return Path.new(full_path.to_lower().split(SEPARATOR))
 
-## Static constructor from branch and property
-static func from_branch_and_property(branch: String, property: String) -> Path:
-	return Path.new([branch.to_lower(), property.to_lower()])
+## Static constructor from root node and property
+static func from_root_and_property(root: String, property: String) -> Path:
+	return Path.new([root.to_lower(), property.to_lower()])
 
 ## Returns all ancestor paths including self, from root to leaf
 static func get_ancestor_paths(path: Path) -> Array[Path]:

@@ -53,8 +53,7 @@ func _init_property_groups() -> void:
 		_init_property_access()
 
 	var nodes = [
-		Reach.new(self),
-		Storage.new(self),
+		Reach.new(self)
 	]
 
 	for node in nodes:

@@ -1,17 +1,14 @@
 class_name PropertyBrowserUIBuilder
 extends RefCounted
 
-## UI references passed from main class
-var mode_switch: OptionButton
-var group_list: ItemList
-var properties_tree: Tree
-var path_label: Label
-var group_label: Label
-var description_label: Label
-var back_button: Button
-var loading_label: Label
+#region Signals
+## Signal declarations
+signal ui_created
+signal close_requested
+#endregion
 
-## Constants for styling
+#region Constants
+## UI Layout Constants
 const MIN_WINDOW_SIZE := Vector2(800, 500)
 const CONTENT_PADDING := 10
 const GROUP_LIST_MIN_WIDTH := 270
@@ -22,18 +19,28 @@ const DESCRIPTION_PANEL_MAX_HEIGHT := 250
 const DESCRIPTION_PANEL_HEIGHT := 150
 const BUTTON_SIZE := Vector2(100, 30)
 const SPLIT_RATIO := 0.25  # Left panel takes 25% of the width
+#endregion
 
-## Signal declarations
-signal ui_created
-signal close_requested
+#region UI References
+## UI controls
+var mode_switch: OptionButton
+var node_list: ItemList
+var properties_tree: Tree
+var path_label: Label
+var root_label: Label
+var description_label: Label
+var back_button: Button
+var loading_label: Label
+#endregion
 
+#region Public Interface
 ## Initialize the builder with UI element references
 func initialize(refs: Dictionary) -> void:
 	mode_switch = refs.get("mode_switch")
-	group_list = refs.get("group_list")
+	node_list = refs.get("node_list")
 	properties_tree = refs.get("properties_tree")
 	path_label = refs.get("path_label")
-	group_label = refs.get("group_label")
+	root_label = refs.get("root_label")
 	description_label = refs.get("description_label")
 	back_button = refs.get("back_button")
 	loading_label = refs.get("loading_label")
@@ -67,6 +74,24 @@ func create_ui(parent_window: Window) -> Dictionary:
 	ui_created.emit()
 	return refs
 
+## Creates and displays a loading indicator
+func show_loading_indicator(parent_window: Window) -> void:
+	loading_label.text = "Creating content..."
+	loading_label.visible = true
+
+## Updates the loading indicator text
+func update_loading_text(text: String) -> void:
+	if loading_label:
+		loading_label.text = text
+
+## Removes the loading indicator
+func remove_loading_indicator() -> void:
+	if loading_label:
+		loading_label.queue_free()
+		loading_label = null
+#endregion
+
+#region Layout Creation
 ## Creates the main content split layout and its contents
 func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitContainer:
 	var content_split := HSplitContainer.new()
@@ -74,15 +99,15 @@ func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitCon
 	content_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_split.split_offset = GROUP_LIST_MIN_WIDTH
 
-	# Create and add left side (Groups)
+	# Create and add left side (Property Tree)
 	var left_side := VBoxContainer.new()
 	left_side.name = "LeftPanel"
 	left_side.size_flags_horizontal = Control.SIZE_FILL
 	content_split.add_child(left_side)
 
-	refs.group_label = _create_group_label(left_side)
+	refs.root_label = _create_root_label(left_side)
 	_create_search_box(left_side)
-	refs.group_list = _create_group_list(left_side)
+	refs.node_list = _create_node_list(left_side)
 
 	# Create and add right side (Properties)
 	var right_side := VBoxContainer.new()
@@ -97,6 +122,42 @@ func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitCon
 	refs.description_label = _create_description_panel(right_side)
 
 	return content_split
+
+## Creates the main container with responsive layout
+func _create_main_container() -> VBoxContainer:
+	var container := VBoxContainer.new()
+	container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	container.set_offset(SIDE_LEFT, CONTENT_PADDING)
+	container.set_offset(SIDE_TOP, CONTENT_PADDING)
+	container.set_offset(SIDE_RIGHT, -CONTENT_PADDING)
+	container.set_offset(SIDE_BOTTOM, -CONTENT_PADDING)
+	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return container
+#endregion
+
+#region UI Components
+## Creates the root label
+func _create_root_label(parent: Control) -> Label:
+	root_label = Label.new()
+	root_label.text = "Property Tree"
+	root_label.add_theme_font_size_override("font_size", 16)
+	parent.add_child(root_label)
+	return root_label
+
+## Creates and configures the node list with dynamic sizing
+func _create_node_list(parent: Control) -> ItemList:
+	node_list = ItemList.new()
+	node_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	node_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	node_list.custom_minimum_size = Vector2(GROUP_LIST_MIN_WIDTH, 300)
+	node_list.select_mode = ItemList.SELECT_SINGLE
+	node_list.same_column_width = true
+
+	_apply_node_list_style(node_list)
+	parent.add_child(node_list)
+
+	return node_list
 
 ## Creates and configures the properties tree
 func _create_properties_tree(parent: Control) -> Tree:
@@ -135,55 +196,6 @@ func _create_description_panel(parent: Control) -> Label:
 
 	return label
 
-## Creates the group label
-func _create_group_label(parent: Control) -> Label:
-	group_label = Label.new()
-	group_label.text = "Property Groups"
-	group_label.add_theme_font_size_override("font_size", 16)
-	parent.add_child(group_label)
-	return group_label
-
-## Creates and configures the group list with dynamic sizing
-func _create_group_list(parent: Control) -> ItemList:
-	group_list = ItemList.new()
-	group_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	group_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	group_list.custom_minimum_size = Vector2(GROUP_LIST_MIN_WIDTH, 300)
-	group_list.select_mode = ItemList.SELECT_SINGLE
-	group_list.same_column_width = true
-
-	_apply_group_list_style(group_list)
-	parent.add_child(group_list)
-
-	return group_list
-
-## Creates the properties panel with tree view and description
-func _create_properties_panel(parent: Control) -> VBoxContainer:
-	var right_container := VBoxContainer.new()
-	right_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right_container.add_theme_constant_override("separation", 10)
-	parent.add_child(right_container)
-
-
-	return right_container
-
-## Creates the main container with responsive layout
-func _create_main_container() -> VBoxContainer:
-	var container := VBoxContainer.new()
-
-	# Use full rect preset with padding
-	container.set_anchors_preset(Control.PRESET_FULL_RECT)
-	container.set_offset(SIDE_LEFT, CONTENT_PADDING)
-	container.set_offset(SIDE_TOP, CONTENT_PADDING)
-	container.set_offset(SIDE_RIGHT, -CONTENT_PADDING)
-	container.set_offset(SIDE_BOTTOM, -CONTENT_PADDING)
-
-	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	return container
-
 ## Creates the navigation controls section
 func _create_navigation_controls(parent: Control) -> Button:
 	var nav_container := HBoxContainer.new()
@@ -206,43 +218,18 @@ func _create_mode_selector(parent: Control) -> OptionButton:
 	mode_container.add_child(mode_label)
 
 	mode_switch = OptionButton.new()
-	mode_switch.add_item("Attribute Properties", 0)
+	mode_switch.add_item("Property Tree View", 0)
 	mode_container.add_child(mode_switch)
 
 	return mode_switch
 
-## Creates the property group selection panel
-func _create_group_panel(parent: Control) -> VBoxContainer:
-	var group_container := VBoxContainer.new()
-	group_container.custom_minimum_size.x = GROUP_LIST_MIN_WIDTH
-	group_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	group_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	parent.add_child(group_container)
-
-	_create_group_label(group_container)
-	_create_search_box(group_container)
-	_create_group_list(group_container)
-
-	return group_container
-
-
-## Creates the search box for filtering groups
+## Creates the search box for filtering nodes
 func _create_search_box(parent: Control) -> LineEdit:
 	var search_box := LineEdit.new()
-	search_box.placeholder_text = "Search groups... (use '.' for paths)"
+	search_box.placeholder_text = "Search properties... (use '.' for paths)"
 	search_box.clear_button_enabled = true
 	parent.add_child(search_box)
 	return search_box
-
-## Applies styling to the group list
-func _apply_group_list_style(list: ItemList) -> void:
-	var style_box := StyleBoxFlat.new()
-	style_box.bg_color = Color.html("#2c3e50")
-	style_box.set_corner_radius_all(4)
-	list.add_theme_stylebox_override("panel", style_box)
-
-	list.add_theme_color_override("font_color", Color.html("#ecf0f1"))
-	list.add_theme_color_override("font_selected_color", Color.html("#2ecc71"))
 
 ## Creates the property path display
 func _create_path_display(parent: Control) -> Label:
@@ -260,6 +247,18 @@ func _create_path_display(parent: Control) -> Label:
 
 	return path_label
 
+## Creates the loading label
+func _create_loading_label(parent: Control) -> Label:
+	loading_label = Label.new()
+	loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	loading_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	loading_label.add_theme_font_size_override("font_size", 24)
+	loading_label.set_anchors_preset(Control.PRESET_CENTER)
+	parent.add_child(loading_label)
+	loading_label.visible = false
+	return loading_label
+
 ## Creates the close button
 func _create_close_button(parent: Control) -> Button:
 	var button_container := HBoxContainer.new()
@@ -273,54 +272,53 @@ func _create_close_button(parent: Control) -> Button:
 	button_container.add_child(close_button)
 
 	return close_button
+#endregion
 
-func _create_loading_label(parent: Control) -> Label:
-	loading_label = Label.new()
-	loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+#region Styling
+## Applies styling to the node list
+func _apply_node_list_style(list: ItemList) -> void:
+	var style_box := StyleBoxFlat.new()
+	style_box.bg_color = Color.html("#2c3e50")
+	style_box.set_corner_radius_all(4)
+	list.add_theme_stylebox_override("panel", style_box)
+	list.add_theme_color_override("font_color", Color.html("#ecf0f1"))
+	list.add_theme_color_override("font_selected_color", Color.html("#2ecc71"))
 
-	# Style the label
-	loading_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	loading_label.add_theme_font_size_override("font_size", 24)
+## Creates styled labels
+func _create_styled_label(text: String, font_size: int = 14) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	return label
 
-	# Center in window
-	loading_label.set_anchors_preset(Control.PRESET_CENTER)
+## Creates styled buttons
+func _create_styled_button(text: String, size: Vector2 = BUTTON_SIZE) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = size
+	return button
+#endregion
 
-	parent.add_child(loading_label)
-	loading_label.visible = false
-
-	return loading_label
-
-## Creates and displays a loading indicator
-func show_loading_indicator(parent_window: Window) -> void:
-	loading_label.text = "Creating content..."
-	loading_label.visible = true
-
-## Updates the loading indicator text
-func update_loading_text(text: String) -> void:
-	if loading_label:
-		loading_label.text = text
-
-## Removes the loading indicator
-func remove_loading_indicator() -> void:
-	if loading_label:
-		loading_label.queue_free()
-		loading_label = null
-
+#region Layout Updates
 ## Handle window resize events
 func _on_window_resize(window: Window) -> void:
 	var available_width := window.size.x - (2 * CONTENT_PADDING)
 	var available_height := window.size.y - (2 * CONTENT_PADDING)
 
-	# Calculate split offset based on window size
-	if is_instance_valid(group_list):
+	_update_split_layout(available_width)
+	_update_description_layout(available_height)
+
+## Update split container layout
+func _update_split_layout(available_width: float) -> void:
+	if is_instance_valid(node_list):
 		var split_width: int = max(
 			min(available_width * SPLIT_RATIO, GROUP_LIST_MAX_WIDTH),
 			GROUP_LIST_MIN_WIDTH
 		)
-		group_list.custom_minimum_size.x = split_width
+		node_list.custom_minimum_size.x = split_width
 
-	# Adjust description panel height based on available space
+## Update description panel layout
+func _update_description_layout(available_height: float) -> void:
 	if is_instance_valid(description_label):
 		var parent_container = description_label.get_parent().get_parent() as PanelContainer
 		if parent_container:
@@ -332,18 +330,4 @@ func _on_window_resize(window: Window) -> void:
 				desc_height,
 				DESCRIPTION_PANEL_MIN_HEIGHT
 			)
-
-
-## Helper method to create styled labels
-func _create_styled_label(text: String, font_size: int = 14) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
-	return label
-
-## Helper method to create styled buttons
-func _create_styled_button(text: String, size: Vector2 = BUTTON_SIZE) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.custom_minimum_size = size
-	return button
+#endregion

@@ -43,24 +43,24 @@ func _get_distance_to_colony() -> float:
 	if not entity:
 		_error("Cannot get colony distance: entity reference is null")
 		return 0.0
-		
+
 	var colony_pos = entity.get_property_value(Path.parse("colony.position"))
 	if not colony_pos:
 		_trace("Could not get colony position")
 		return 0.0
-		
+
 	return _get_position().distance_to(colony_pos)
 
 func _get_direction_to_colony() -> Vector2:
 	if not entity:
 		_error("Cannot get colony direction: entity reference is null")
 		return Vector2.ZERO
-		
+
 	var colony_pos = entity.get_property_value(Path.parse("colony.position"))
 	if not colony_pos:
 		_trace("Could not get colony position")
 		return Vector2.ZERO
-		
+
 	return _direction_to(colony_pos)
 #endregion
 

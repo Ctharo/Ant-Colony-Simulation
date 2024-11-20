@@ -18,7 +18,7 @@ var _range: float = DEFAULT_RANGE
 func _init(_entity: Node) -> void:
 	# First create self as container
 	super._init("reach", Type.CONTAINER, _entity)
-	
+
 	# Then build and copy children
 	var tree = PropertyNode.create_tree(_entity)\
 		.container("range", "Reach distance information")\
@@ -83,7 +83,7 @@ func _get_foods_in_range_mass() -> float:
 	var foods = _get_foods_in_range()
 	if not foods:
 		return 0.0
-		
+
 	var mass: float = 0.0
 	for food in foods:
 		mass += food.mass
