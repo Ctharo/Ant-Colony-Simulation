@@ -1,16 +1,8 @@
-## Builds and manages context for condition evaluation in behavior trees
-##
-## The ContextBuilder class handles:
-## - Property registration and tracking
-## - Value caching for efficient access # TODO: Probably shouldn't have caching
-## - Context building for condition evaluation
-## - Property access management
 class_name ContextBuilder
 extends BaseRefCounted
+## Builds and manages context for condition evaluation in behavior trees
 
 #region Properties
-## The ant agent this context builder is associated with
-var ant: Ant
 
 ## Configuration dictionary for conditions
 var condition_configs: Dictionary
@@ -24,25 +16,19 @@ var _property_access: PropertyAccess
 #endregion
 
 #region Initialization
-## Initializes a new ContextBuilder instance
-## [param p_ant] The ant agent to associate with this builder
-## [param p_condition_configs] Dictionary of condition configurations
 func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
-	ant = p_ant
 	condition_configs = p_condition_configs
-	_property_access = ant._property_access
+	_property_access = p_ant._property_access
 #endregion
 
 #region Public Methods
 ## Builds a complete context dictionary for condition evaluation
-## [return] Dictionary containing all context information including property values
 func build() -> Dictionary:
-	if not is_instance_valid(ant):
+	if not _property_access:
 		_error("ContextBuilder: Invalid ant reference")
 		return {}
 
 	var context = {
-		"ant": ant,
 		"condition_configs": condition_configs
 	}
 
@@ -56,15 +42,14 @@ func build() -> Dictionary:
 
 	_log_required_properties()
 
-	# Get values for all required properties using Path objects
+	# Get values for all required properties
 	for path_str in required_properties:
 		var path: Path = required_properties[path_str]
-		context[path_str] = get_context_value(path)
+		context[path_str] = get_property_value(path)
 
 	return context
 
 ## Registers properties required by a condition configuration
-## [param condition] The condition configuration dictionary
 func register_required_properties(condition: Dictionary) -> void:
 	match condition.get("type", ""):
 		"PropertyCheck":
@@ -77,31 +62,29 @@ func register_required_properties(condition: Dictionary) -> void:
 				if "evaluation" in operand:
 					register_required_properties(operand.evaluation)
 
-## Gets a context value, using cache if available
-## [param property_path] The path to the property to retrieve
-## [return] The value of the property
-func get_context_value(path: Path) -> Variant:
+## Gets a context value for a property path
+func get_property_value(path: Path) -> Variant:
 	if not path.full in required_properties:
 		_warn("Accessing unrequired property '%s'" % path.full)
 		return null
 
-	var property = _property_access.get_property(path)
-	if not property:
-		_error("Problem retrieving property: %s" % path.full)
-		return
-	_trace("Evaluated property '%s' = %s" % [path.full, Property.format_value(property.value)])
-	return property.value
+	var value = _property_access.get_property_value(path)
+	if value != null:
+		_trace("Evaluated property '%s' = %s" % [path.full, Property.format_value(value)])
+	return value
 #endregion
 
 #region Private Methods
 ## Registers a single property in the required properties list
-## [param property_path_str] The path to the property to register
 func _register_property(property_path_str: String) -> void:
 	if property_path_str.is_empty():
 		return
 
-	# Store both string and Path object for compatibility
 	var path := Path.parse(property_path_str)
+	if path.is_root():
+		_warn("Cannot register root path as required property")
+		return
+
 	required_properties[path.full] = path
 	_trace("Registered required property: %s" % path.full)
 

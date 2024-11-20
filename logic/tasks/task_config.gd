@@ -36,39 +36,39 @@ func load_configs(tasks_path: String, behaviors_path: String, conditions_path: S
 	if not conditions_file:
 		_error("Failed to open conditions config file: %s" % conditions_path)
 		return ERR_FILE_NOT_FOUND
-	
+
 	var json := JSON.new()
 	var result := json.parse(conditions_file.get_as_text())
 	if result != OK:
 		_error("Failed to parse conditions JSON: %s" % json.get_error_message())
 		return result
-	
+
 	condition_configs = json.data.conditions
-	
+
 	# Load behaviors
 	var behaviors_file := FileAccess.open(behaviors_path, FileAccess.READ)
 	if not behaviors_file:
 		_error("Failed to open behaviors config file: %s" % behaviors_path)
 		return ERR_FILE_NOT_FOUND
-	
+
 	result = json.parse(behaviors_file.get_as_text())
 	if result != OK:
 		_error("Failed to parse behaviors JSON: %s" % json.get_error_message())
 		return result
-	
+
 	behavior_configs = json.data.behaviors
-	
+
 	# Load tasks
 	var tasks_file := FileAccess.open(tasks_path, FileAccess.READ)
 	if not tasks_file:
 		_error("Failed to open tasks config file: %s" % tasks_path)
 		return ERR_FILE_NOT_FOUND
-	
+
 	result = json.parse(tasks_file.get_as_text())
 	if result != OK:
 		_error("Failed to parse tasks JSON: %s" % json.get_error_message())
 		return result
-	
+
 	task_configs = json.data.tasks
 	tasks_loaded.emit()
 	return OK
@@ -76,26 +76,26 @@ func load_configs(tasks_path: String, behaviors_path: String, conditions_path: S
 ## Create a complete task instance with its behaviors
 func create_task(task_type: String, priority: int, ant: Ant = null) -> Task:
 	_info("Creating task: %s" % task_type)
-	
+
 	if not task_type in task_configs:
 		_error("No configuration found for task type: %s" % task_type)
 		return null
-	
+
 	var config = task_configs[task_type]
 	var task = Task.new(priority)
-	
+
 	# Set basic properties
 	task.name = task_type
 	task.ant = ant
-	
+
 	# Add conditions from configuration
 	if "conditions" in config:
 		_add_conditions_from_config(task, config.conditions)
-	
+
 	# Add behaviors from configuration
 	if "behaviors" in config:
 		_add_behaviors_from_config(task, config.behaviors, ant)
-	
+
 	return task
 
 ## Add conditions to a target (Task or Behavior) from configuration
@@ -103,7 +103,7 @@ func _add_conditions_from_config(target: RefCounted, conditions_config: Array) -
 	if not (target is Task or target is Behavior):
 		_error("Target must be either Task or Behavior")
 		return
-		
+
 	for condition_data in conditions_config:
 		var condition = _create_condition(condition_data)
 		if condition:
@@ -111,11 +111,11 @@ func _add_conditions_from_config(target: RefCounted, conditions_config: Array) -
 
 
 ## Create a condition instance from configuration data
-func _create_condition(condition_data: Variant) -> Condition:
+func _create_condition(condition_data: Variant) -> ConditionSystem.Condition:
 	var config = _resolve_condition_config(condition_data)
 	if config.is_empty():
 		return null
-	return Condition.create_from_config(config)
+	return ConditionSystem.create_condition(config)
 
 ## Resolve condition configuration from various formats
 func _resolve_condition_config(condition_data: Variant) -> Dictionary:
@@ -125,7 +125,7 @@ func _resolve_condition_config(condition_data: Variant) -> Dictionary:
 			_error("Unknown condition: %s" % condition_data)
 			return {}
 		return condition_configs[condition_data]
-	
+
 	# Handle direct condition objects
 	if condition_data is Dictionary:
 		if condition_data.get("type") == "Operator":
@@ -144,7 +144,7 @@ func _resolve_condition_config(condition_data: Variant) -> Dictionary:
 					var subcond = _resolve_condition_config(condition_data.operands[0])
 					return Operator.not_condition(subcond)
 		return condition_data
-	
+
 	_error("Invalid condition data: %s" % condition_data)
 	return {}
 
@@ -161,19 +161,19 @@ func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 	if not behavior_type in behavior_configs:
 		_error("Unknown behavior type: %s" % behavior_type)
 		return null
-	
+
 	var config = behavior_configs[behavior_type]
 	var priority = Task.Priority[behavior_data.get("priority", "MEDIUM")]
 	var behavior = Behavior.new(priority)
-	
+
 	# Set basic properties
 	behavior.name = behavior_type
 	behavior.ant = ant
-	
+
 	# Add behavior-specific conditions if specified
 	if "conditions" in behavior_data:
 		_add_conditions_from_config(behavior, behavior_data.conditions)
-	
+
 	# Create and add action
 	if "action" in config:
 		var action_data = config.action
@@ -182,11 +182,11 @@ func _create_behavior_for_task(behavior_data: Dictionary, ant: Ant) -> Behavior:
 			action_data = action_data.duplicate()
 			action_data.params = action_data.get("params", {}).duplicate()
 			action_data.params.merge(behavior_data.params)
-		
+
 		var action = create_action(action_data, ant)
 		if action:
 			behavior.actions.append(action)
-	
+
 	return behavior
 
 ## Create an action from configuration data
@@ -195,19 +195,19 @@ func create_action(action_data: Dictionary, ant: Ant) -> Action:
 	if not action_type in ACTION_TYPES:
 		_error("Unknown action type: %s" % action_type)
 		return null
-	
+
 	var action_class: GDScript = ACTION_TYPES[action_type]
 	var builder: Action.Builder = action_class.create(action_class)
-	
+
 	# Add parameters if specified
 	if "params" in action_data:
 		for param_key in action_data.params:
 			builder.with_param(param_key, action_data.params[param_key])
-	
+
 	# Set cooldown if specified
 	if "cooldown" in action_data:
 		builder.with_cooldown(action_data.cooldown)
-	
+
 	var action = builder.build()
 	action.ant = ant
 	return action
@@ -224,17 +224,17 @@ func validate_config() -> bool:
 		if "behaviors" in config:
 			for behavior_data in config.behaviors:
 				if not behavior_data.type in behavior_configs:
-					_error("Task '%s' references undefined behavior: %s" % 
+					_error("Task '%s' references undefined behavior: %s" %
 							 [task_type, behavior_data.type])
 					return false
-	
+
 	# Check behaviors reference valid actions
 	for behavior_type in behavior_configs:
 		var config = behavior_configs[behavior_type]
 		if "action" in config:
 			if not config.action.type in ACTION_TYPES:
-				_error("Behavior '%s' references undefined action: %s" % 
+				_error("Behavior '%s' references undefined action: %s" %
 						  [behavior_type, config.action.type])
 				return false
-	
+
 	return true

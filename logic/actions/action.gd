@@ -1,5 +1,5 @@
 class_name Action
-extends RefCounted
+extends BaseRefCounted
 ## Interface between [class Behavior]s and [class Ant] action methods
 
 ## Signal emitted when action starts
@@ -46,12 +46,12 @@ class Builder:
 	var ant: Ant
 	## Parameters to be passed to the action
 	var params: Dictionary = {}
-	
+
 	## Initialize the builder with an action class
 	## @param action_class The class of action to build
 	func _init(action_class: GDScript):
 		action = action_class.new()
-	
+
 	## Add a parameter to the action
 	## @param key The parameter key
 	## @param value The parameter value
@@ -59,14 +59,14 @@ class Builder:
 	func with_param(key: String, value: Variant) -> Builder:
 		params[key] = value
 		return self
-	
+
 	## Set the cooldown time for the action
 	## @param time The cooldown time in seconds
 	## @return The builder for method chaining
 	func with_cooldown(time: float) -> Builder:
 		action.cooldown = time
 		return self
-	
+
 	## Build and return the configured action
 	## @return The configured action
 	func build() -> Action:
@@ -140,25 +140,25 @@ static func from_dict(data: Dictionary) -> Action:
 
 ## Action for moving the ant
 class Move extends Action:
-		
+
 	## Update the movement
 	func _update_action(delta: float) -> void:
 		if not "target_position" in params:
 			push_error("Move action requires target_position")
 			return
-			
+
 		var target_position = params["target_position"]
 		var movement_rate_modifier = params.get("rate_modifier", 1.0)
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate_modifier * ant.speed.movement_rate
 		ant.energy.deplete(delta * movement_rate_modifier * 0.1)
-	
+
 	## Check if we've reached the target
 	func is_completed() -> bool:
 		if not "target_position" in params:
 			return true
 		return ant.global_position.distance_to(params["target_position"]) < 1.0
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript) -> Builder:
 		return Action.create(Move)  # Fixed to not pass unnecessary parameter
@@ -167,18 +167,18 @@ class Move extends Action:
 ## Action for harvesting food
 class Harvest extends Action:
 	var current_food_source: Food
-	
+
 	## Update the harvest action
 	func _update_action(delta: float) -> void:
 		if not "target_food" in params:
 			push_error("Harvest action requires target_food parameter")
 			return
-			
+
 		current_food_source = params["target_food"]
 		if current_food_source and not current_food_source.is_depleted():
 			var harvest_rate_modifier = params.get("harvest_rate_modifier", 1.0)
 			var amount_harvested = ant.harvest_food(
-				current_food_source, 
+				current_food_source,
 				delta * harvest_rate_modifier * ant.speed.harvesting_rate
 			)
 			if amount_harvested > 0:
@@ -186,13 +186,13 @@ class Harvest extends Action:
 					print("Harvested %f amount of food" % amount_harvested)
 		else:
 			push_error("No valid food source to harvest")
-	
+
 	## Check if harvesting is completed
 	func is_completed() -> bool:
 		if not current_food_source:
 			return true
 		return not ant.can_carry_more() or current_food_source.is_depleted()
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Harvest)
@@ -203,16 +203,16 @@ class FollowPheromone extends Action:
 		if not "pheromone_type" in params:
 			push_error("FollowPheromone action requires pheromone_type parameter")
 			return
-			
+
 		var pheromone_type = params["pheromone_type"]
-		
+
 		var pheromone_direction = ant.get_strongest_pheromone_direction(pheromone_type)
-		
+
 		ant.move(pheromone_direction, delta)
-		
+
 	func is_completed() -> bool:
 		return false
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(FollowPheromone)
@@ -221,34 +221,34 @@ class FollowPheromone extends Action:
 class RandomMove extends Action:
 	var current_time: float = 0.0
 	var current_direction: Vector2 = Vector2.ZERO
-	
+
 	func _update_action(delta: float) -> void:
 		current_time += delta
-		
+
 		var move_duration = params.get("move_duration", 2.0)
 		if current_time >= move_duration or current_direction == Vector2.ZERO:
 			current_time = 0
 			current_direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
-		
-		#var movement_rate_modifier = params.get("movement_rate_modifier", 1.0) 
+
+		#var movement_rate_modifier = params.get("movement_rate_modifier", 1.0)
 		ant.move(current_direction, delta)
-	
+
 	func is_completed() -> bool:
 		return false
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(RandomMove)
-		
+
 ## Action for storing food in the colony
 class Store extends Action:
 	func _update_action(delta: float) -> void:
 		var store_rate_modifier = params.get("store_rate_modifier", 1.0)
 		ant.store_food(ant.colony, delta * store_rate_modifier * ant.speed.storing_rate)
-	
+
 	func is_completed() -> bool:
 		return ant.foods.is_empty()
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Store)
@@ -257,15 +257,15 @@ class Store extends Action:
 class Attack extends Action:
 	var current_target_entity: Node2D
 	var current_target_location: Vector2
-	
+
 	func _update_action(delta: float) -> void:
 		if not ("target_entity" in params or "target_location" in params):
 			push_error("Attack action requires either target_entity or target_location")
 			return
-			
+
 		if not is_ready():
 			return
-		
+
 		current_target_entity = params.get("target_entity")
 		current_target_location = params.get("target_location", Vector2.ZERO)
 		var attack_range_modifier = params.get("attack_range_modifier", 1.0)
@@ -280,15 +280,15 @@ class Attack extends Action:
 				ant.attack(current_target_entity, delta)
 			else:
 				ant.move_to(current_target_location, delta)
-	
+
 		current_cooldown = params.get("attack_cooldown", 1.0)
-		
+
 	## Check if attack is completed
 	func is_completed() -> bool:
 		if current_target_entity and not is_instance_valid(current_target_entity):
 			return true
 		return ant.energy.is_depleted()
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Attack)
@@ -296,25 +296,25 @@ class Attack extends Action:
 ## Action for moving to food
 class MoveToFood extends Action:
 	var current_target_food: Food = null
-	
+
 	func _update_action(delta: float) -> void:
 		if not "target_food" in params:
 			push_error("MoveToFood action requires target_food parameter")
 			return
-			
+
 		current_target_food = params["target_food"]
 		if not current_target_food:
 			push_error("No target food to move to")
 			return
-			
+
 		var movement_rate_modifier = params.get("rate_modifier", 1.0)
 		var direction = ant.global_position.direction_to(current_target_food.global_position)
-		ant.global_position += direction * movement_rate_modifier * ant.speed.movement_rate * delta 
-	
+		ant.global_position += direction * movement_rate_modifier * ant.speed.movement_rate * delta
+
 	func is_completed() -> bool:
 		return not is_instance_valid(current_target_food) or\
 			   ant.global_position.distance_to(current_target_food.global_position) < 1.0
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(MoveToFood)
@@ -322,25 +322,25 @@ class MoveToFood extends Action:
 ## Action for emitting pheromones
 class EmitPheromone extends Action:
 	var current_time: float = 0.0
-	
+
 	func _update_action(delta: float) -> void:
 		if not "pheromone_type" in params:
 			push_error("EmitPheromone action requires pheromone_type parameter")
 			return
-			
+
 		if not "emission_duration" in params:
 			push_error("EmitPheromone action requires emission_duration parameter")
 			return
-		
+
 		var pheromone_type = params["pheromone_type"]
 		var pheromone_strength = params.get("pheromone_strength", 1.0)
-		
+
 		ant.emit_pheromone(pheromone_type, pheromone_strength)
 		current_time += delta
-	
+
 	func is_completed() -> bool:
 		return current_time >= params.get("emission_duration", 0.0)
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(EmitPheromone)
@@ -350,10 +350,10 @@ class Rest extends Action:
 	func _update_action(delta: float) -> void:
 		var energy_gain_rate = params.get("energy_gain_rate", 10.0)
 		ant.energy.replenish(energy_gain_rate * delta)
-	
+
 	func is_completed() -> bool:
 		return ant.energy.is_full()
-	
+
 	## Static creator method
 	static func create(_action_class: GDScript = null) -> Builder:
 		return Action.create(Rest)

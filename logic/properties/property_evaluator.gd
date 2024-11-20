@@ -1,9 +1,6 @@
 class_name PropertyEvaluator
-extends RefCounted
+extends BaseRefCounted
 ## Evaluates property expressions and handles value comparisons
-##
-## Focuses on property expression evaluation, value comparison,
-## and type conversion without handling higher-level condition logic.
 
 #region Constants
 var COMPARISON_OPERATORS = {
@@ -37,43 +34,44 @@ var _property_access: PropertyAccess
 func _init(context: Dictionary = {}) -> void:
 	_property_access = PropertyAccess.new(context.ant)
 
-#region Expression Evaluation
-## Evaluates a property expression
-## Expression format: "property_name operator value" or "property_name"
-## Returns: PropertyResult with evaluation result
-func evaluate_expression(expression: String, context: Dictionary = {}) -> Variant:
-
-	# Parse expression
-	var parsed = _parse_expression(expression)
-	if not parsed.success():
-		return parsed
-
-	# Evaluate parsed expression
-	var result = _evaluate_parsed_expression(parsed.value, context)
-
-	return result
-
+#region Value Comparison
 ## Evaluates a direct comparison between two values
-## Returns: PropertyResult with boolean result
-func evaluate_comparison(
-	value1: Variant,
-	operator: String,
-	value2: Variant
-) -> Result:
+func evaluate_comparison(value1: Variant, operator: String, value2: Variant) -> Result:
 	if not COMPARISON_OPERATORS.has(operator):
 		return Result.new(
-			Result.ErrorType.INVALID_PATH,
+			Result.ErrorType.INVALID_OPERATOR,
 			"Unknown operator: %s" % operator
+		)
+
+	if value1 == null or value2 == null:
+		return Result.new(
+			Result.ErrorType.INVALID_VALUE,
+			"Cannot compare null values"
 		)
 
 	var compare_func = COMPARISON_OPERATORS[operator]
 	return Result.new(compare_func.call(value1, value2))
+
+## Compare values of the same type
+func compare_values(value1: Variant, value2: Variant, type: Property.Type) -> Result:
+	if not _is_type_match(value1, type) or not _is_type_match(value2, type):
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Values do not match expected type: %s" % Property.type_to_string(type)
+		)
+
+	return Result.new(value1 == value2)
 #endregion
 
 #region Type Conversion
-## Converts a value to the specified PropertyResult.PropertyType
-## Returns: PropertyResult with converted value
+## Converts a value to the specified Property.Type
 func convert_value(value: Variant, target_type: Property.Type) -> Result:
+	if value == null:
+		return Result.new(
+			Result.ErrorType.INVALID_VALUE,
+			"Cannot convert null value"
+		)
+
 	if _is_type_match(value, target_type):
 		return Result.new(value)
 
@@ -81,28 +79,13 @@ func convert_value(value: Variant, target_type: Property.Type) -> Result:
 	if not method or not has_method(method):
 		return Result.new(
 			Result.ErrorType.TYPE_MISMATCH,
-			"Cannot convert to type: %s" % Property.type_to_string(target_type)
+			"Cannot convert to type: %s" % target_type
 		)
 
 	return call(method, value)
 #endregion
 
-#region Expression Parsing
-## Parses an expression into components #TODO broken
-func _parse_expression(expression: String) -> String:
-	var parts = expression.strip_edges().split(" ", false)
-	return parts
-
-## Evaluates a parsed expression # TODO
-func _evaluate_parsed_expression(_parsed: Dictionary, _context: Dictionary) -> bool:
-	return false
-#endregion
-
 #region Helper Methods
-## Gets cache key for an expression
-func _get_cache_key(expression: String, context: Dictionary) -> String:
-	return "%s|%s" % [expression, str(context)]
-
 ## Checks if values are comparable
 static func _are_comparable(a: Variant, b: Variant) -> bool:
 	var type_a = typeof(a)
@@ -128,25 +111,6 @@ static func _contains_value(container: Variant, value: Variant) -> bool:
 	return false
 
 ## Checks if value matches expected type
-func _is_type_match(value: Variant, expected_type: Property.Type) -> bool:
-	match expected_type:
-		Property.Type.BOOL:
-			return typeof(value) == TYPE_BOOL
-		Property.Type.INT:
-			return typeof(value) == TYPE_INT
-		Property.Type.FLOAT:
-			return typeof(value) == TYPE_FLOAT
-		Property.Type.STRING:
-			return typeof(value) == TYPE_STRING
-		Property.Type.VECTOR2:
-			return value is Vector2
-		Property.Type.VECTOR3:
-			return value is Vector3
-		Property.Type.ARRAY:
-			return value is Array
-		Property.Type.DICTIONARY:
-			return value is Dictionary
-		Property.Type.OBJECT:
-			return value is Object
-	return false
+func _is_type_match(value: Variant, expected_type: int) -> bool:
+	return typeof(value) == expected_type
 #endregion

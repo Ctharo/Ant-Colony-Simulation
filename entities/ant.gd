@@ -11,6 +11,10 @@ signal damaged
 signal died
 #endregion
 
+#region Constants
+const DEFAULT_CONFIG_ROOT = "res://config/"
+#endregion
+
 #region Member Variables
 ## The unique identifier for this ant
 var id: int
@@ -64,12 +68,19 @@ var _property_access: PropertyAccess :
 func _init() -> void:
 	log_from = "ant"
 	_init_property_groups()
-	task_tree = TaskTree.create(self).with_root_task("CollectFood").build()
 
+	var config_root = ProjectSettings.get_setting("ai/config_path", DEFAULT_CONFIG_ROOT)
+	task_tree = TaskTree.create(self)\
+		.with_root_task("CollectFood")\
+		.with_config_paths(
+			config_root.path_join("ant_tasks.json"),
+			config_root.path_join("ant_behaviors.json"),
+			config_root.path_join("ant_conditions.json")
+		)\
+		.build()
 	if task_tree and task_tree.get_active_task():
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
-
 	add_to_group("ant")
 
 func _ready() -> void:
