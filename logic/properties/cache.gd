@@ -1,6 +1,6 @@
-## Caches property values for performance
 class_name Cache
 extends RefCounted
+## Caches property values for performance
 
 var values: Dictionary = {}
 var valid_until: Dictionary = {}

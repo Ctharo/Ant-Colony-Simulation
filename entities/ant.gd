@@ -47,14 +47,6 @@ var _property_access: PropertyAccess :
 			_init_property_access()
 		return _property_access
 
-## How long cached values remain valid (in seconds)
-const CACHE_DURATIONS = {
-	"pheromones": 0.1,  # Pheromone data stays valid for 0.1 seconds
-	"food": 0.1,        # Food detection stays valid for 0.1 seconds
-	"ants": 0.1,        # Nearby ants data stays valid for 0.1 seconds
-	"colony": 0.2,      # Colony-related data stays valid for 0.2 seconds
-	"stats": 0.0        # Stats are always recalculated
-}
 #endregion
 
 ## Default category for logging
@@ -179,7 +171,7 @@ func register_property_node(node: PropertyNode, at_path: Path = null) -> void:
 	if not result.success():
 		_error("Failed to register property node %s: %s" % [node.name, result.error_message])
 	else:
-		_trace("Successfully registered property node: %s" % node.name)
+		_debug("Successfully registered property node: %s" % node.name)
 
 ## Initialize all component property nodes
 func _init_property_groups() -> void:
@@ -232,22 +224,47 @@ func get_property_value(path: Path) -> Variant:
 	return _property_access.get_property_value(path)
 
 ## Set a property value by path string
-func set_property_value(path: String, value: Variant) -> Result:
+func set_property_value(path: Path, value: Variant) -> Result:
 	if not _property_access:
 		return Result.new(
 			Result.ErrorType.SYSTEM_ERROR,
 			"Cannot set property value: property access system not initialized"
 		)
-	return _property_access.set_property_value(Path.parse(path), value)
+	return _property_access.set_property_value(path, value)
+
+## Find a property node by path
+func find_property_node(path: Path) -> PropertyNode:
+	if not _property_access:
+		_error("Cannot find property node: property access system not initialized")
+		return null
+
+	if path.is_root():
+		return null
+
+	var root_node = get_root_node(path.get_root_name())
+	if not root_node:
+		return null
+
+	if path.is_root_node():
+		return root_node
+
+	return root_node.find_node(path)
 #endregion
 
-#region Property Node Access
-## Get all properties in a group by group name
-func get_group_properties(group_name: String) -> Array[PropertyNode]:
+#region Root Node Access
+## Get a root node by name
+func get_root_node(root_name: String) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot get group properties: property access system not initialized")
+		_error("Cannot get root node: property access system not initialized")
+		return null
+	return _property_access.get_root_node(root_name)
+
+## Get all value nodes in a root by root name
+func get_root_values(root_name: String) -> Array[PropertyNode]:
+	if not _property_access:
+		_error("Cannot get root values: property access system not initialized")
 		return []
-	return _property_access.get_group_properties(group_name)
+	return _property_access.get_root_values(root_name)
 
 ## Get all registered root names
 func get_root_names() -> Array[String]:
@@ -255,7 +272,13 @@ func get_root_names() -> Array[String]:
 		_error("Cannot get root names: property access system not initialized")
 		return []
 	return _property_access.get_root_names()
-#endregion
+
+## Get all containers under a root node
+func get_root_containers(root_name: String) -> Array[PropertyNode]:
+	if not _property_access:
+		_error("Cannot get root containers: property access system not initialized")
+		return []
+	return _property_access.get_root_containers(root_name)
 #endregion
 
 func _configure_logger() -> void:

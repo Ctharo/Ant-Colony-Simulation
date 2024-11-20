@@ -94,7 +94,7 @@ func get_path() -> Path:
 func find_node(path: Path) -> PropertyNode:
 
 	if path.parts[0] != name:
-		return null
+		return null # Often due to path.get_subpath
 
 	if path.parts.size() == 1:
 		return self

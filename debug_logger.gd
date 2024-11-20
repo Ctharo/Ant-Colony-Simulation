@@ -52,7 +52,7 @@ static var enabled_categories := {
 	Category.ACTION: false,
 	Category.BEHAVIOR: false,
 	Category.CONDITION: false,
-	Category.PROPERTY: false,
+	Category.PROPERTY: true,
 	Category.CONTEXT: false,
 	Category.ENTITY: true,
 	Category.TRANSITION: false,

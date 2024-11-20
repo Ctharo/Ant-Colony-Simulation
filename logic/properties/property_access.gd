@@ -7,7 +7,7 @@ signal property_changed(path: String, old_value: Variant, new_value: Variant)
 #endregion
 
 #region Member Variables
-## Root level property containers
+## Root level property container nodes
 var _root_nodes: Dictionary = {}  # name -> PropertyNode
 
 ## Caching system for property values
@@ -26,7 +26,7 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 
 	_trace("PropertyAccess initialized with caching: %s" % use_caching)
 
-#region Property Node Management
+#region Node Management
 ## Registers a new property tree at the root level
 func register_node(root: PropertyNode) -> Result:
 	return register_node_at_path(root, null)
@@ -52,7 +52,7 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 		return Result.new()
 
 	# For nested registration
-	var parent = get_property(parent_path)
+	var parent = find_property_node(parent_path)
 	if not parent:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
@@ -81,7 +81,7 @@ func remove_node_at_path(node_name: String, parent_path: Path) -> Result:
 	if not parent_path:
 		return remove_node(node_name)
 
-	var parent = get_property(parent_path)
+	var parent = find_property_node(parent_path)
 	if not parent or parent.type != PropertyNode.Type.CONTAINER:
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
@@ -123,95 +123,55 @@ func remove_node(name: String) -> Result:
 	return Result.new()
 #endregion
 
-#region Core Property Access
-## Get a property by its path
-func get_property(path: Path) -> PropertyNode:
-	if not path or path.parts.is_empty():
-		_error("Invalid property path")
+#region Node Access
+## Find a property node by its path
+func find_property_node(path: Path) -> PropertyNode:
+	if not path:
+		_error("Path cannot be null")
 		return null
 
-	var root_name = path.parts[0]
-	var root = _root_nodes.get(root_name)
+	if path.is_root():
+		_error("Cannot find node at root path")
+		return null
+
+	# Direct lookup for root level nodes
+	if path.is_root_node():
+		return get_root_node(path.get_root_name())
+
+	# Get root node first
+	var root = get_root_node(path.get_root_name())
+	if not root:
+		return null  # Error already logged by get_root_node
+
+	# Find nested node
+	return root.find_node(path)
+
+## Get a root node by name
+func get_root_node(name: String) -> PropertyNode:
+	var node = _root_nodes.get(name)
+	if not node:
+		_error("Root node not found: %s" % name)
+	return node
+
+## Get all value nodes in a root
+func get_root_values(root_name: String) -> Array[PropertyNode]:
+	var root = get_root_node(root_name)
 	if not root:
 		_error("Root node not found: %s" % root_name)
-		return null
-
-	# If only requesting the root node
-	if path.parts.size() == 1:
-		return root
-
-	# Look for nested property
-	return root.find_node(Path.new(path.parts.slice(1)))
-
-## Get a property by string path
-func get_property_from_str(path: String) -> PropertyNode:
-	if not path:
-		_error("Invalid property path")
-		return null
-
-	return get_property(Path.parse(path))
-
-## Get a property's value with caching support
-func get_property_value(path: Path) -> Variant:
-	# Check cache first if enabled
-	if _cache and _cache.has_valid_cache(path):
-		return _cache.get_cached(path)
-
-	var property = get_property(path)
-	if not property:
-		_error("Property not found: %s" % path)
-		return null
-
-	if property.type != PropertyNode.Type.VALUE:
-		_error("Cannot get value from container property: %s" % path)
-		return null
-
-	var value = property.get_value()
-
-	# Cache the value if caching is enabled
-	if _cache:
-		var result = _cache.cache_value(path, value)
-		if result.is_error():
-			_error("Problem caching value for %s: %s" % [path, result.get_error()])
-
-	return value
-
-## Set a property's value
-func set_property_value(path: Path, value: Variant) -> Result:
-	var property = get_property(path)
-	if not property:
-		return Result.new(
-			Result.ErrorType.NOT_FOUND,
-			"Property not found: %s" % path
-		)
-
-	if property.type != PropertyNode.Type.VALUE:
-		return Result.new(
-			Result.ErrorType.TYPE_MISMATCH,
-			"Cannot set value for container property: %s" % path
-		)
-
-	var old_value = property.get_value()
-	var result = property.set_value(value)
-
-	if result.is_ok():
-		_invalidate_cache(path)
-		property_changed.emit(path.to_string(), old_value, value)
-
-	return result
-#endregion
-
-#region Property Access Methods
-## Get all value properties for a root node
-func get_node_properties(node_name: String) -> Array[PropertyNode]:
-	var node = _root_nodes.get(node_name)
-	if not node:
-		_error("Root node not found: %s" % node_name)
 		return []
 
-	return node.get_all_values()
+	return root.get_all_values()
 
-## Get all registered root node names
+## Get all containers under a root node
+func get_root_containers(root_name: String) -> Array[PropertyNode]:
+	var root = get_root_node(root_name)
+	if not root:
+		_error("Root node not found: %s" % root_name)
+		return []
+
+	return root.get_all_containers()
+
+## Get all registered root names
 func get_root_names() -> Array[String]:
 	var names: Array[String] = []
 	names.append_array(_root_nodes.keys())
@@ -219,10 +179,61 @@ func get_root_names() -> Array[String]:
 
 ## Get children at a specific path
 func get_children_at_path(path: Path) -> Array[PropertyNode]:
-	var property = get_property(path)
-	if not property or property.type != PropertyNode.Type.CONTAINER:
+	var node = find_property_node(path)
+	if not node or node.type != PropertyNode.Type.CONTAINER:
 		return []
-	return property.children.values()
+	return node.children.values()
+#endregion
+
+#region Value Access
+## Get a property's value with caching support
+func get_property_value(path: Path) -> Variant:
+	# Check cache first if enabled
+	if _cache and _cache.has_valid_cache(path):
+		return _cache.get_cached(path)
+
+	var node = find_property_node(path)
+	if not node:
+		_error("Property not found: %s" % path.full)
+		return null
+
+	if node.type != PropertyNode.Type.VALUE:
+		_error("Cannot get value from container node: %s" % path.full)
+		return null
+
+	var value = node.get_value()
+
+	# Cache the value if caching is enabled
+	if _cache:
+		var result = _cache.cache_value(path, value)
+		if result.is_error():
+			_error("Problem caching value for %s: %s" % [path.full, result.get_error()])
+
+	return value
+
+## Set a property's value
+func set_property_value(path: Path, value: Variant) -> Result:
+	var node = find_property_node(path)
+	if not node:
+		return Result.new(
+			Result.ErrorType.NOT_FOUND,
+			"Property not found: %s" % path
+		)
+
+	if node.type != PropertyNode.Type.VALUE:
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Cannot set value for container node: %s" % path
+		)
+
+	var old_value = node.get_value()
+	var result = node.set_value(value)
+
+	if result.success():
+		_invalidate_cache(path)
+		property_changed.emit(path.full, old_value, value)
+
+	return result
 #endregion
 
 #region Cache Management
@@ -232,19 +243,19 @@ func _invalidate_cache(path: Path) -> void:
 		_cache.invalidate(path)
 		# Invalidate any properties that depend on this one
 		for root in _root_nodes.values():
-			for property in root.get_all_values():
-				if property.dependencies.has(path):
-					_cache.invalidate(property.get_path())
+			for value_node in root.get_all_values():
+				if value_node.dependencies.has(path):
+					_cache.invalidate(value_node.path)
 
 ## Invalidate cache for all properties in a root node
 func _invalidate_node_cache(node_name: String) -> void:
 	if not _cache:
 		return
 
-	var node = _root_nodes.get(node_name)
-	if not node:
+	var root = get_root_node(node_name)
+	if not root:
 		return
 
-	for property in node.get_all_values():
-		_invalidate_cache(property.get_path())
+	for value_node in root.get_all_values():
+		_invalidate_cache(value_node.path)
 #endregion

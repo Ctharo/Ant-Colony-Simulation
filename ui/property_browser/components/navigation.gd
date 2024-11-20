@@ -23,7 +23,7 @@ var _path_label: Label
 var _root_label: Label
 var _node_list: ItemList
 var _properties_tree: Tree
-var _ant: Ant
+var _property_access: PropertyAccess
 #endregion
 
 #region Initialization
@@ -36,23 +36,27 @@ func _init(components: Dictionary) -> void:
 	_node_list = components.node_list
 	_properties_tree = components.properties_tree
 
-func set_ant(ant: Ant) -> void:
-	_ant = ant
+func set_property_access(entity: Node) -> void:
+	for property in entity.get_property_list():
+		if property.name == "_property_access":
+			_property_access = entity._property_access
 	refresh_root_view()
 #endregion
 
 #region Navigation Methods
+## Navigate back to previous path
 func navigate_back() -> void:
 	if _navigation_history.size() > 0:
 		var from = _current_path
-		set_current_path(_navigation_history.pop_back())
-		_trace("Navigating from %s to %s" % [from.full, _current_path.full])
-		refresh_view_for_path(_current_path)
-		path_changed.emit(_current_path)
+		var previous = _navigation_history.pop_back()
+		set_current_path(previous)
+		_trace("Navigating back from %s to %s" % [from.full, previous.full])
+		refresh_view_for_path(previous)
+		path_changed.emit(previous)
 
 ## Handles item selection (single click)
 func handle_selection(path: Path) -> void:
-	var node = _ant.find_property_node(path)
+	var node = _property_access.find_property_node(path)
 	if not node:
 		return
 
@@ -62,77 +66,110 @@ func handle_selection(path: Path) -> void:
 
 ## Main method for handling activation of properties or containers
 func handle_activation(path: Path) -> void:
-	var node = _ant.find_property_node(path)
+	var node = _property_access.find_property_node(path)
 	if not node:
 		return
 
 	if node.type == PropertyNode.Type.CONTAINER:
-		# First navigation from root
-		if _navigation_history.is_empty() and _current_path.is_root():
-			_navigation_history.append(_current_path)
-
-		# Check if we're navigating between siblings
-		var is_sibling_navigation = false
-		if not _current_path.is_root():
-			var parent_current = _current_path.get_parent()
-			var parent_new = path.get_parent()
-
-			# If both have same parent, we're navigating between siblings
-			if parent_current and parent_new and parent_current.full == parent_new.full:
-				is_sibling_navigation = true
-
-		# If going between siblings, don't modify history
-		if not is_sibling_navigation:
-			_navigation_history.append(_current_path)
-
-		set_current_path(path)
-
-		# Update UI
-		_update_sibling_containers(node, path)
-		_update_property_tree(node)
+		_handle_container_activation(path, node)
 	else:
-		# Value node activation - just update path label
-		_path_label.text = path.full
+		_handle_value_activation(path)
 
 	path_changed.emit(path)
 
-## Handle selection in root list
-func select_node(node_index: int) -> void:
-	var node_text = _node_list.get_item_text(node_index)
-	_trace("Node %s selected" % node_text)
-	var path = Path.parse(node_text)
-	handle_selection(path)
+## Handle activation of a container node
+func _handle_container_activation(path: Path, node: PropertyNode) -> void:
+	var previous_path = _current_path
 
-## Handle activation in node list
-func activate_node(node_index: int) -> void:
-	var node_text = _node_list.get_item_text(node_index)
-	_trace("Node %s activated" % node_text)
-	var path = Path.parse(node_text)
-	handle_activation(path)
+	# Add current path to history before changing to new path
+	if not previous_path.is_root():
+		_add_to_navigation_history(previous_path)
 
-## Update [member _node_list] with sibling containers
-func _update_sibling_containers(node: PropertyNode, path: Path) -> void:
+	# Update current path
+	set_current_path(path)
+
+	_update_container_view(node, path)
+	_update_property_tree(node)
+
+## Handle activation of a value node
+func _handle_value_activation(path: Path) -> void:
+	_path_label.text = path.full
+
+## Add path to navigation history if valid
+func _add_to_navigation_history(path: Path) -> void:
+	# Skip if trying to add a duplicate of the last entry
+	if not _navigation_history.is_empty() and _navigation_history.back() == path:
+		return
+
+	# Add path to history (excluding root except when explicitly added)
+	if not path.is_root():
+		_navigation_history.append(path)
+#endregion
+
+#region View Management
+func refresh_root_view() -> void:
+	if not _property_access:
+		return
+
+	_node_list.clear()
+	_properties_tree.clear()
+	set_current_path()
+	_navigation_history.clear()
+
+	# Get all root level property nodes
+	var root_nodes = _property_access.get_root_names()
+	for node_name in root_nodes:
+		_node_list.add_item(node_name)
+		var node = _property_access.find_property_node(Path.parse(node_name))
+		if node and node.description:
+			_node_list.set_item_tooltip(_node_list.item_count - 1, node.description)
+
+	# Update labels for root view
+	_path_label.text = ""
+	_root_label.text = "Root View"
+
+func refresh_view_for_path(path: Path) -> void:
+	if not _property_access:
+		return
+
+	if path.is_root():
+		refresh_root_view()
+		return
+
+	var node = _property_access.find_property_node(path)
+	if node:
+		_update_view_for_node(node, path)
+
+func _update_view_for_node(node: PropertyNode, path: Path) -> void:
+	_path_label.text = path.full
+	_root_label.text = "Root: %s" % path.get_root_name()
+
+	if node.type == PropertyNode.Type.CONTAINER:
+		_update_container_view(node, path)
+		_update_property_tree(node)
+	else:
+		_update_property_tree(node)
+
+## Update node list to show only the current container
+func _update_container_view(node: PropertyNode, path: Path) -> void:
 	_node_list.clear()
 
-	var parent_path = path.get_parent()
-	if parent_path == null or parent_path.parts.is_empty():
-		# Root level - show all root containers
-		var roots = _ant.get_root_names()
-		for root_name in roots:
-			_node_list.add_item(root_name)
-		return
+	# Add only the current container to the list
+	_node_list.add_item(path.full)
+	if node.description:
+		_node_list.set_item_tooltip(0, node.description)
 
-	# Get parent container
-	var parent_node = _ant.find_property_node(parent_path)
-	if not parent_node or parent_node.type != PropertyNode.Type.CONTAINER:
-		return
+func _update_property_tree(node: PropertyNode) -> void:
+	_properties_tree.clear()
+	var root = _properties_tree.create_item()
+	_properties_tree.set_hide_root(true)
 
-	# Add all container siblings including current container
-	for child in parent_node.children.values():
-		if child.type == PropertyNode.Type.CONTAINER:
-			var child_path = parent_path.append(child.name)
-			_node_list.add_item(child_path.full)
-			_add_item_with_tooltip(child_path, child)
+	if node.type == PropertyNode.Type.CONTAINER:
+		_add_children_to_tree(root, node)
+	else:
+		# Single value node
+		var item = _properties_tree.create_item(root)
+		_setup_value_item(item, node)
 #endregion
 
 #region Path Management
@@ -145,120 +182,6 @@ func set_current_path(value: Path = Path.new([])) -> void:
 
 func get_current_path() -> Path:
 	return _current_path
-#endregion
-
-#region View Management
-func refresh_root_view() -> void:
-	if not _ant:
-		return
-
-	_node_list.clear()
-	_properties_tree.clear()
-	set_current_path()
-	_navigation_history.clear()
-
-	# Get all root level property nodes
-	var root_nodes = _ant.get_root_names()
-	for node_name in root_nodes:
-		_node_list.add_item(node_name)
-		var node = _ant.find_property_node(Path.parse(node_name))
-		if node and node.description:
-			_node_list.set_item_tooltip(_node_list.item_count - 1, node.description)
-
-	# Update labels for root view
-	_path_label.text = ""
-	_root_label.text = "Root View"
-
-func refresh_view_for_path(path: Path) -> void:
-	if not _ant:
-		return
-
-	if path.parts.is_empty():
-		refresh_root_view()
-		return
-
-	var node = _ant.find_property_node(path)
-	if node:
-		_update_view_for_node(node, path)
-
-func _update_view_for_node(node: PropertyNode, path: Path) -> void:
-	_path_label.text = path.full
-	_root_label.text = "Root: %s" % path.get_root_name()
-
-	if node.type == PropertyNode.Type.CONTAINER:
-		_update_sibling_containers(node, path)
-		_update_property_tree(node)
-	else:
-		_update_property_tree(node)
-
-func _update_property_tree(node: PropertyNode) -> void:
-	_properties_tree.clear()
-	var root = _properties_tree.create_item()
-	_properties_tree.set_hide_root(true)
-
-	if node.type == PropertyNode.Type.CONTAINER:
-		for child in node.children.values():
-			var item = _properties_tree.create_item(root)
-			item.set_text(0, child.name)
-			item.set_metadata(0, child)
-			if child.type == PropertyNode.Type.VALUE:
-				item.set_text(1, Property.type_to_string(child.value_type))
-				item.set_text(2, Property.format_value(child.get_value()))
-			else:
-				item.set_text(1, "Container")
-#endregion
-
-#region Search and Filter
-func filter_nodes(search_text: String) -> void:
-	_node_list.clear()
-
-	if search_text.is_empty():
-		refresh_root_view()
-		return
-
-	var search_path = Path.parse(search_text)
-
-	if search_text.ends_with("."):
-		var parent_path = search_path.get_parent()
-		_show_children_at_path(parent_path if parent_path else Path.new([]))
-		return
-
-	var parent_path = search_path.get_parent()
-	var filter = search_path.get_property().to_lower()
-	_show_filtered_children(parent_path if parent_path else Path.new([]), filter)
-
-func _show_children_at_path(path: Path) -> void:
-	if not _ant or path.parts.is_empty():
-		refresh_root_view()
-		return
-
-	var node = _ant.find_property_node(path)
-	if not node or node.type != PropertyNode.Type.CONTAINER:
-		return
-
-	for child in node.children.values():
-		var child_path = path.append(child.name)
-		_add_item_with_tooltip(child_path, child)
-
-func _show_filtered_children(parent_path: Path, filter: String) -> void:
-	if not _ant:
-		return
-
-	if parent_path.parts.is_empty():
-		var roots = _ant.get_root_names()
-		for root_name in roots:
-			if root_name.to_lower().contains(filter):
-				_node_list.add_item(root_name)
-		return
-
-	var parent_node = _ant.find_property_node(parent_path)
-	if not parent_node or parent_node.type != PropertyNode.Type.CONTAINER:
-		return
-
-	for child in parent_node.children.values():
-		if child.name.to_lower().contains(filter):
-			var child_path = parent_path.append(child.name)
-			_add_item_with_tooltip(child_path, child)
 #endregion
 
 #region Helper Methods
@@ -274,4 +197,48 @@ func _add_item_with_tooltip(path: Path, node: PropertyNode) -> void:
 
 		if not tooltip.is_empty():
 			_node_list.set_item_tooltip(idx, tooltip)
+
+func _add_children_to_tree(parent_item: TreeItem, parent_node: PropertyNode) -> void:
+	for child in parent_node.children.values():
+		var item = _properties_tree.create_item(parent_item)
+		item.set_text(0, child.name)
+		item.set_metadata(0, child)
+
+		if child.type == PropertyNode.Type.CONTAINER:
+			# Container node styling
+			item.set_text(1, "Container")
+			item.set_custom_color(1, Color(0.7, 0.7, 1.0))  # Light blue for containers
+			item.set_collapsed(true)  # Start collapsed
+			# Add expand/collapse arrow
+			#item.set_collapsed_icon(0, get_theme_icon("GuiTreeArrowRight", "EditorIcons"))
+			#item.set_expanded_icon(0, get_theme_icon("GuiTreeArrowDown", "EditorIcons"))
+			# Recursively add children
+			_add_children_to_tree(item, child)
+		else:
+			# Value node styling
+			_setup_value_item(item, child)
+
+
+
+func _setup_value_item(item: TreeItem, node: PropertyNode) -> void:
+	# Value node display
+	item.set_text(1, Property.type_to_string(node.value_type))
+	item.set_text(2, Property.format_value(node.get_value()))
+
+	# Add tooltip with description if available
+	if node.description:
+		item.set_tooltip_text(0, node.description)
+
+	# Style based on value type
+	match node.value_type:
+		Property.Type.FLOAT:
+			item.set_custom_color(2, Color(0.2, 0.8, 0.2))  # Green for numbers
+		Property.Type.INT:
+			item.set_custom_color(2, Color(0.2, 0.7, 0.2))  # Darker green for integers
+		Property.Type.BOOL:
+			item.set_custom_color(2, Color(0.8, 0.4, 0.4))  # Red for booleans
+		Property.Type.STRING:
+			item.set_custom_color(2, Color(0.8, 0.8, 0.2))  # Yellow for strings
+		Property.Type.VECTOR2:
+			item.set_custom_color(2, Color(0.4, 0.4, 0.8))  # Blue for vectors
 #endregion

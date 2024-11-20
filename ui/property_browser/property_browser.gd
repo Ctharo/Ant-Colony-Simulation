@@ -209,12 +209,12 @@ func _on_path_changed(new_path: Path) -> void:
 	if new_path.is_root():
 		return
 
-	var root_node = current_ant.get_property_root(new_path.get_root_name())
+	var root_node = current_ant.get_root_node(new_path.get_root_name())
 	if not root_node:
 		return
 
 	var node: PropertyNode
-	if new_path.is_group_root():
+	if new_path.is_root():
 		node = root_node
 	else:
 		node = root_node.find_node(new_path)
@@ -239,7 +239,7 @@ func create_ant_to_browse() -> void:
 	ant.set_physics_process(false)
 	ant.set_process(false)
 	current_ant = ant
-	navigation_manager.set_ant(ant)
+	navigation_manager.set_property_access(ant)
 #endregion
 
 #region Content Creation

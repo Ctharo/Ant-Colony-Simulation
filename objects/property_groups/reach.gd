@@ -21,12 +21,11 @@ func _init(_entity: Node) -> void:
 
 	# Then build and copy children
 	var tree = PropertyNode.create_tree(_entity)\
-		.container("range", "Reach distance information")\
-			.value("current", Property.Type.FLOAT,
-				Callable(self, "_get_range"),
-				Callable(self, "_set_range"),
-				[],
-				"Maximum distance the entity can reach to interact with objects")\
+		.value("range", Property.Type.FLOAT,
+			Callable(self, "_get_range"),
+			Callable(self, "_set_range"),
+			[],
+			"Maximum distance the entity can reach to interact with objects")\
 		.up()\
 		.container("foods", "Properties related to food in reach range")\
 			.value("in_range", Property.Type.FOODS,
