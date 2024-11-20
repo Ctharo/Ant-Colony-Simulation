@@ -95,6 +95,10 @@ func get_property_value(path: Path) -> Variant:
 		_warn("Accessing unrequired property '%s'" % path.full)
 		return null
 
+	var node: PropertyNode = _property_access.find_property_node(path)
+	if not node:
+		return null
+
 	var value = _property_access.get_property_value(path)
 	if value != null:
 		_trace("Evaluated property '%s' = %s" % [path.full, str(value)])
