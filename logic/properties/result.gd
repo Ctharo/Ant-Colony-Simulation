@@ -10,6 +10,8 @@ enum ErrorType {
 	NOT_FOUND,          # Something doesn't exist
 	ACCESS_ERROR,       # Error accessing
 	INVALID_ARGUMENT,   # Invalid argument passed
+	INVALID_OPERATOR,
+	INVALID_VALUE,
 	TYPE_MISMATCH,      # Type doesn't match expected
 	DUPLICATE,          # Something already exists
 	INVALID_GETTER,     # Getter method is invalid
