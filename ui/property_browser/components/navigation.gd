@@ -51,14 +51,34 @@ func navigate_back() -> void:
 		var previous = _navigation_history.pop_back()
 		set_current_path(previous)
 		_trace("Navigating back from %s to %s" % [from.full, previous.full])
-		refresh_view_for_path(previous)
+
+		# For any path (including root path nodes), select it in the root view
+		if previous.parts.size() <= 1:  # Root or root node
+			refresh_root_view()
+			if not previous.is_root():  # Root node selected
+				# Find and select the container in the node list
+				for i in range(_node_list.item_count):
+					if _node_list.get_item_text(i) == previous.full:
+						_node_list.select(i)
+						var node = _property_access.find_property_node(previous)
+						if node:
+							_update_property_tree(node)
+						break
+		else:
+			refresh_view_for_path(previous)
+
 		path_changed.emit(previous)
+	else:
+		refresh_root_view()
 
 ## Handles item selection (single click)
 func handle_selection(path: Path) -> void:
 	var node = _property_access.find_property_node(path)
 	if not node:
 		return
+
+	if node.type == PropertyNode.Type.CONTAINER:
+		_add_to_navigation_history(path)
 
 	_update_property_tree(node)
 	_path_label.text = path.full
@@ -81,9 +101,14 @@ func handle_activation(path: Path) -> void:
 func _handle_container_activation(path: Path, node: PropertyNode) -> void:
 	var previous_path = _current_path
 
-	# Add current path to history before changing to new path
+	# Add any missing parent paths to history
 	if not previous_path.is_root():
-		_add_to_navigation_history(previous_path)
+		var parent_path = path.get_parent()
+		if parent_path and not parent_path.is_root() and (_navigation_history.is_empty() or _navigation_history.back() != parent_path):
+			_add_to_navigation_history(parent_path)
+
+	# Add current path to history before changing to new path
+	_add_to_navigation_history(previous_path)
 
 	# Update current path
 	set_current_path(path)
@@ -104,6 +129,8 @@ func _add_to_navigation_history(path: Path) -> void:
 	# Add path to history (excluding root except when explicitly added)
 	if not path.is_root():
 		_navigation_history.append(path)
+		_back_button.disabled = false
+
 #endregion
 
 #region View Management
@@ -115,6 +142,7 @@ func refresh_root_view() -> void:
 	_properties_tree.clear()
 	set_current_path()
 	_navigation_history.clear()
+	_back_button.disabled = true
 
 	# Get all root level property nodes
 	var root_nodes = _property_access.get_root_names()
@@ -142,7 +170,7 @@ func refresh_view_for_path(path: Path) -> void:
 
 func _update_view_for_node(node: PropertyNode, path: Path) -> void:
 	_path_label.text = path.full
-	_root_label.text = "Root: %s" % path.get_root_name()
+	_root_label.text = "Node: %s" % path.get_root_name()
 
 	if node.type == PropertyNode.Type.CONTAINER:
 		_update_container_view(node, path)
@@ -178,7 +206,7 @@ func set_current_path(value: Path = Path.new([])) -> void:
 	if _path_label:
 		_path_label.text = value.full if value else "none"
 	if _root_label and value:
-		_root_label.text = "Root: %s" % value.get_root_name()
+		_root_label.text = "Node: %s" % value.get_root_name()
 
 func get_current_path() -> Path:
 	return _current_path
