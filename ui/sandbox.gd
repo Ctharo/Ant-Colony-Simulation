@@ -32,7 +32,7 @@ func spawn_ants(num_to_spawn: int = 1) -> void:
 
 		# Create a new ant
 		var ant = Ant.new()
-		ant.colony = colony
+		ant.set_colony(colony)
 		# Add the ant to the scene
 		add_child(ant)
 
