@@ -27,8 +27,8 @@ func get_full_path() -> String:
 		return parts[0]
 	return SEPARATOR.join(parts)
 
-## Gets the group name (first part) of the path
-func get_group_name() -> String:
+## Gets the root name (first part) of the path
+func get_root_name() -> String:
 	if is_root():
 		return "root"
 	return parts[0]

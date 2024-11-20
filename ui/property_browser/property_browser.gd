@@ -49,19 +49,19 @@ var pheromones_to_spawn: int = randi_range(0, 0)
 ## Reference to current Ant instance
 var current_ant: Ant
 
-## Current browsing mode (Direct/Group)
+## Current browsing mode (Direct/Tree)
 var current_mode: String = "Direct"
 
-## Currently selected property group
-var current_group: String
+## Currently selected property root
+var current_root: String
 #endregion
 
 #region UI Properties
 ## Mode selection dropdown
 var mode_switch: OptionButton
 
-## List of available property groups
-var group_list: ItemList
+## List of available property nodes
+var node_list: ItemList
 
 ## Tree view showing property details
 var properties_tree: Tree
@@ -69,8 +69,8 @@ var properties_tree: Tree
 ## Label showing selected property path
 var path_label: Label
 
-## Label showing current group name
-var group_label: Label
+## Label showing current root name
+var root_label: Label
 
 ## Label showing property description
 var description_label: Label
@@ -136,10 +136,10 @@ func _initialize_ui_builder() -> bool:
 
 	var refs = ui_builder.create_ui(self)
 	properties_tree = refs.properties_tree
-	group_list = refs.group_list
+	node_list = refs.node_list
 	mode_switch = refs.mode_switch
 	path_label = refs.path_label
-	group_label = refs.group_label
+	root_label = refs.root_label
 	description_label = refs.description_label
 	back_button = refs.back_button
 	loading_label = refs.loading_label
@@ -151,30 +151,29 @@ func _initialize_navigation() -> void:
 	navigation_manager = PropertyBrowserNavigation.new({
 		back_button = back_button,
 		path_label = path_label,
-		group_label = group_label,
-		group_list = group_list,
+		root_label = root_label,
+		node_list = node_list,
 		properties_tree = properties_tree
 	})
 
 	# Connect navigation signals
 	back_button.pressed.connect(navigation_manager.navigate_back)
-	group_list.item_selected.connect(_on_group_selected)
+	node_list.item_selected.connect(_on_node_selected)
 	properties_tree.item_selected.connect(_on_property_selected)
-	properties_tree.item_activated.connect(_on_property_activated)  # Add this for double-click
+	properties_tree.item_activated.connect(_on_property_activated)
 	navigation_manager.path_changed.connect(_on_path_changed)
 
 ## Initialize the property manager component
 func _initialize_property_manager() -> void:
 	property_manager = PropertyManager.new(properties_tree, description_label)
-
 #endregion
 
 #region Navigation Handlers
-## Handle selection in group list
-func _on_group_selected(index: int) -> void:
-	var group_text = group_list.get_item_text(index)
-	var path = Path.parse(group_text)
-	navigation_manager.handle_activation(path)
+## Handle selection in node list
+func _on_node_selected(index: int) -> void:
+	var node_text = node_list.get_item_text(index)
+	var path = Path.parse(node_text)
+	navigation_manager.handle_selection(path)
 
 ## Handle single-click property selection
 func _on_property_selected() -> void:
@@ -182,9 +181,8 @@ func _on_property_selected() -> void:
 	if not selected:
 		return
 
-	var node = selected.get_metadata(0) as NestedProperty
+	var node = selected.get_metadata(0) as PropertyNode
 	if node:
-		# Just update the path label for selection
 		path_label.text = node.path.full
 		property_selected.emit(node.path.full)
 
@@ -194,15 +192,13 @@ func _on_property_activated() -> void:
 	if not selected:
 		return
 
-	var node = selected.get_metadata(0) as NestedProperty
+	var node = selected.get_metadata(0) as PropertyNode
 	if not node:
 		return
 
-	if node.type == NestedProperty.Type.CONTAINER:
-		# Navigate into containers on double-click
+	if node.type == PropertyNode.Type.CONTAINER:
 		navigation_manager.handle_activation(node.path)
 	else:
-		# Just update path for properties
 		path_label.text = node.path.full
 
 ## Handle path changes in navigation
@@ -210,23 +206,18 @@ func _on_path_changed(new_path: Path) -> void:
 	if not current_ant:
 		return
 
-	# Empty path means we're at root - nothing to update
 	if new_path.is_root():
 		return
 
-	# Get the property group using the first part of the path
-	var group = current_ant.get_property_group(new_path.get_group_name())
-	if not group:
+	var root_node = current_ant.get_property_root(new_path.get_root_name())
+	if not root_node:
 		return
 
-	# Get the appropriate node based on path depth
-	var node: NestedProperty
+	var node: PropertyNode
 	if new_path.is_group_root():
-		# If we're at group root (e.g., "reach"), get the root node
-		node = group.get_root()
+		node = root_node
 	else:
-		# Otherwise get the node at the subpath (e.g., for "reach.foods", get node at "foods")
-		node = group.get_at_path(new_path.get_subpath())
+		node = root_node.find_node(new_path)
 
 	if node:
 		property_manager.update_property_view(node)
@@ -251,7 +242,7 @@ func create_ant_to_browse() -> void:
 	navigation_manager.set_ant(ant)
 #endregion
 
-#region Component Creation
+#region Content Creation
 ## Create simulation components
 func generate_content() -> void:
 	create_ant_to_browse()
@@ -320,11 +311,7 @@ func _create_batch(params: Dictionary, timer: Timer) -> void:
 		content_created.emit()
 #endregion
 
-#region Helper Functions
-## Get a random position within the simulation area
-func _get_random_position() -> Vector2:
-	return Vector2(randf_range(0, 1800), randf_range(0, 800))
-
+#region Scene Management
 ## Handle close button press
 func _on_close_pressed() -> void:
 	transition_to_scene("main")
@@ -339,13 +326,20 @@ func transition_to_scene(scene_name: String) -> void:
 func _change_scene(scene_name: String) -> void:
 	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
-		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)
+		_error("Failed to load scene: " + scene_name)
 #endregion
 
+#region Helper Functions
+## Get a random position within the simulation area
+func _get_random_position() -> Vector2:
+	return Vector2(randf_range(0, 1800), randf_range(0, 800))
+
+## Configure logger settings
 func _configure_logger() -> void:
 	var categories = [log_category] as Array[DebugLogger.Category]
 	categories.append_array(additional_log_categories)
 	DebugLogger.configure_source(log_from, true, categories)
+#endregion
 
 #region Logging Methods
 func _trace(message: String, category: DebugLogger.Category = log_category) -> void:

@@ -78,9 +78,9 @@ func get_as_node() -> PropertyNode:
 		.container("colony")\
 		.build()
 
-	var group_names = get_group_names()
-	for group_name in group_names:
-		var node = get_property(group_name)
+	var root_names = get_root_names()
+	for root_name in root_names:
+		var node = get_property(root_name)
 		if node:
 			for child in node.children.values():
 				root.add_child(child)
@@ -101,8 +101,8 @@ func set_property_value(path: String, value: Variant) -> Result:
 func get_group_properties(group_name: String) -> Array[PropertyNode]:
 	return _property_access.get_group_properties(group_name)
 
-func get_group_names() -> Array[String]:
-	return _property_access.get_group_names()
+func get_root_names() -> Array[String]:
+	return _property_access.get_root_names()
 #endregion
 
 #region Property Getters and Setters

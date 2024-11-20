@@ -18,11 +18,12 @@ var _current_path: Path = Path.new([]) : set = set_current_path, get = get_curre
 ## Reference to UI components
 var _back_button: Button
 var _path_label: Label
-var _node_label: Label
+var _root_label: Label
 var _node_list: ItemList
 var _properties_tree: Tree
 var _ant: Ant
 #endregion
+
 
 #region Initialization
 func _init(components: Dictionary) -> void:
@@ -30,8 +31,8 @@ func _init(components: Dictionary) -> void:
 	log_from = "property_browser_navigation"
 	_back_button = components.back_button
 	_path_label = components.path_label
-	_node_label = components.group_label
-	_node_list = components.group_list
+	_root_label = components.root_label
+	_node_list = components.node_list
 	_properties_tree = components.properties_tree
 	
 func set_ant(ant: Ant) -> void:
@@ -54,7 +55,7 @@ func handle_selection(path: Path) -> void:
 	var group = _ant.get_property_group(path.get_group_name())
 	if not group:
 		return
-	var node: NestedProperty
+	var node: PropertyNode
 	if path.is_group_root():
 		node = group.get_root()
 	else:
@@ -71,11 +72,11 @@ func handle_selection(path: Path) -> void:
 ## Main method for handling activation of properties or containers
 func handle_activation(path: Path) -> void:
 	
-	var group = _ant.get_property_group(path.get_group_name())
+	var group = _ant.get_property_group(path.get_root())
 	if not group:
 		return
 		
-	var node: NestedProperty
+	var node: PropertyNode
 	if path.is_group_root():
 		node = group.get_root()
 	else:
@@ -115,58 +116,51 @@ func handle_activation(path: Path) -> void:
 	
 	path_changed.emit(path)
 	
-## Handle selection in group list
-func select_group(group_index: int) -> void:
-	var group_text = _node_list.get_item_text(group_index)
-	_trace("Group %s selected" % group_text)
-	var path = Path.parse(group_text)
+## Handle selection in root list
+func select_root(root_index: int) -> void:
+	var root_text = _node_list.get_item_text(root_index)
+	_trace("Root %s selected" % root_text)
+	var path = Path.parse(root_text)
 	handle_selection(path)
 
 ## Handle activation in group list
-func activate_group(group_index: int) -> void:
-	var group_text = _node_list.get_item_text(group_index)
-	_trace("Group %s activated" % group_text)
-	var path = Path.parse(group_text)
+func activate_root(root_index: int) -> void:
+	var root_text = _node_list.get_item_text(root_index)
+	_trace("Root %s activated" % root_text)
+	var path = Path.parse(root_text)
 	handle_activation(path)
 
 ## Update [member _node_list] with sibling [class property_group]s
-func _update_sibling_containers(node: NestedProperty, path: Path) -> void:
+func _update_sibling_containers(node: PropertyNode, path: Path) -> void:
 	_node_list.clear()
 	
 	var parent_path = path.get_parent()
 	if parent_path == null or parent_path.parts.is_empty():
-		# Root level - show all root groups
-		var groups = _ant.get_group_names()
-		for group_name in groups:
-			_node_list.add_item(group_name)
+		# Root level - show all root containers
+		var roots = _ant.get_root_names()
+		for root_name in roots:
+			_node_list.add_item(root_name)
 		return
 		
-	# Get parent's container children
-	var group = _ant.get_property_group(parent_path.get_group_name())
-	if not group:
+	# Get parent container
+	var parent_node = _ant.find_property_node(parent_path)
+	if not parent_node or parent_node.type != PropertyNode.Type.CONTAINER:
 		return
 		
-	var parent_node: NestedProperty
-	if parent_path.is_group_root():
-		parent_node = group.get_root()
-	else:
-		# Get parent node by path
-		parent_node = group.get_at_path(parent_path.path.sub)
-		
-	if parent_node and parent_node.type == NestedProperty.Type.CONTAINER:
-		# Add all container siblings including current container
-		for child in parent_node.children.values():
-			if child.type == NestedProperty.Type.CONTAINER:
-				var child_path = parent_path.append(child.name)
-				_node_list.add_item(child_path.full)
-				_add_item_with_tooltip(child_path, child)
+	# Add all container siblings including current container
+	for child in parent_node.children.values():
+		if child.type == PropertyNode.Type.CONTAINER:
+			var child_path = parent_path.append(child.name)
+			_node_list.add_item(child_path.full)
+			_add_item_with_tooltip(child_path, child)
+#endregion
 
 func set_current_path(value: Path = Path.new([])) -> void:
 		_current_path = value
 		if _path_label:
 			_path_label.text = value.full if value else "none"
-		if _node_label and value:
-			_node_label.text = "Group: %s" % value.get_group_name()
+		if _root_label and value:
+			_root_label.text = "Root: %s" % value.get_root_name()
 
 func get_current_path() -> Path:
 	return _current_path
@@ -183,7 +177,7 @@ func refresh_root_view() -> void:
 	_navigation_history.clear()
 	
 	# Get all root level property nodes
-	var root_nodes = _ant.get_group_names()  # Could be renamed to get_root_nodes() in future
+	var root_nodes = _ant.get_root_names()  # Could be renamed to get_root_nodes() in future
 	for node_name in root_nodes:
 		_node_list.add_item(node_name)
 		var node = _ant.get_property(Path.parse(node_name))
@@ -192,7 +186,7 @@ func refresh_root_view() -> void:
 			
 	# Update labels for root view
 	_path_label.text = ""
-	_node_label.text = "Node: root"
+	_root_label.text = "Node: root"
 	
 func refresh_view_for_path(path: Path) -> void:
 	if not _ant:
@@ -206,7 +200,7 @@ func refresh_view_for_path(path: Path) -> void:
 	if not group:
 		return
 
-	var node: NestedProperty
+	var node: PropertyNode
 	if path.is_group_root():
 		node = group.get_root()
 	else:
@@ -215,33 +209,34 @@ func refresh_view_for_path(path: Path) -> void:
 	if node:
 		_update_view_for_node(node, path)
 		
-func _update_view_for_node(node: NestedProperty, path: Path) -> void:
+#region View Management
+func _update_view_for_node(node: PropertyNode, path: Path) -> void:
 	_path_label.text = path.full
-	_node_label.text = "Group: %s" % path.get_group_name()
+	_root_label.text = "Root: %s" % path.get_root_name()
 	
-	if node.type == NestedProperty.Type.CONTAINER:
-		# Update both group list and property tree
+	if node.type == PropertyNode.Type.CONTAINER:
+		# Update both node list and property tree
 		_update_sibling_containers(node, path)
 		_update_property_tree(node)
 	else:
-		# For properties, just update property tree
+		# For values, just update property tree
 		_update_property_tree(node)
 
-func _update_property_tree(node: NestedProperty) -> void:
+func _update_property_tree(node: PropertyNode) -> void:
 	_properties_tree.clear()
 	var root = _properties_tree.create_item()
 	_properties_tree.set_hide_root(true)
 	
-	if node.type == NestedProperty.Type.CONTAINER:
+	if node.type == PropertyNode.Type.CONTAINER:
 		for child in node.children.values():
 			var item = _properties_tree.create_item(root)
 			item.set_text(0, child.name)
 			item.set_metadata(0, child)  # Store node reference for handling clicks
-			if child.type == NestedProperty.Type.PROPERTY:
+			if child.type == PropertyNode.Type.VALUE:
 				item.set_text(1, Property.type_to_string(child.value_type))
 				item.set_text(2, Property.format_value(child.get_value()))
 			else:  # Container
-				item.set_text(1, "Group")
+				item.set_text(1, "Root")
 #endregion
 
 #region Search and Filter
@@ -269,13 +264,13 @@ func filter_groups(search_text: String) -> void:
 ## Updates the path and optionally group labels
 ## @param path: The current path to display
 ## @param update_group: Whether to update the group label as well
-func _set_path_labels(path: Path, update_group: bool) -> void:
+func _set_path_labels(path: Path, update_root: bool) -> void:
 	# Set path label
 	_path_label.text = path.full
 	
 	# Update group label only if requested
-	if update_group:
-		_node_label.text = "Group: %s" % (path.full)
+	if update_root:
+		_root_label.text = "Root: %s" % (path.full)
 
 func _show_children_at_path(path: Path) -> void:
 	if not _ant or path.parts.is_empty():

@@ -186,15 +186,15 @@ func _init_property_groups() -> void:
 	_trace("Initializing property nodes...")
 	
 	var nodes = [
-		Energy.new(self),        # Energy management
-		Health.new(self),        # Health management
-		Speed.new(self),         # Movement and action rates
-		Strength.new(self),      # Base strength attributes
-		Storage.new(self),       # Item storage capacity
+		#Energy.new(self),        # Energy management
+		#Health.new(self),        # Health management
+		#Speed.new(self),         # Movement and action rates
+		#Strength.new(self),      # Base strength attributes
+		#Storage.new(self),       # Item storage capacity
 		Vision.new(self),        # Visual perception
-		Olfaction.new(self),     # Scent detection
-		Reach.new(self),         # Interaction range
-		Proprioception.new(self) # Position awareness
+		#Olfaction.new(self),     # Scent detection
+		#Reach.new(self),         # Interaction range
+		#Proprioception.new(self) # Position awareness
 	]
 
 	for node in nodes:
@@ -254,7 +254,7 @@ func get_root_names() -> Array[String]:
 	if not _property_access:
 		_error("Cannot get root names: property access system not initialized")
 		return []
-	return _property_access.get_group_names()
+	return _property_access.get_root_names()
 #endregion
 #endregion
 
