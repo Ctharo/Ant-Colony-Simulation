@@ -24,6 +24,7 @@ var value_type: Property.Type
 var getter: Callable
 var setter: Callable
 
+
 ## Dependencies that affect this node's value
 var dependencies: Array[Path]
 
