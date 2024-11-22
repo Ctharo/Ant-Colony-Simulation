@@ -28,6 +28,28 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 
 	_debug("Initialized for %s [Cache: %s]" % [owner.get_class(), "enabled" if use_caching else "disabled"])
 
+#region Node Validation
+## Check if a root node exists
+func has_root(root_name: String) -> bool:
+	return _root_nodes.has(root_name)
+
+## Check if a node exists at the given path
+func has_node(path: Path) -> bool:
+	if not path or path.is_root():
+		return false
+	return find_property_node(path) != null
+
+## Check if a node is a container type
+func is_container_node(path: Path) -> bool:
+	var node = find_property_node(path)
+	return node != null and node.type == PropertyNode.Type.CONTAINER
+
+## Check if a node is a value type
+func is_value_node(path: Path) -> bool:
+	var node = find_property_node(path)
+	return node != null and node.type == PropertyNode.Type.VALUE
+#endregion
+
 #region Node Management
 ## Registers a new property tree at the root level
 func register_node(root: PropertyNode) -> Result:
@@ -43,7 +65,7 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 
 	# For root registration
 	if not parent_path:
-		if _root_nodes.has(root.name):
+		if has_root(root.name):
 			return Result.new(
 				Result.ErrorType.DUPLICATE,
 				"Root node '%s' already registered" % root.name
@@ -54,19 +76,19 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 		return Result.new()
 
 	# For nested registration
-	var parent = find_property_node(parent_path)
-	if not parent:
+	if not has_node(parent_path):
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
 			"Parent path not found: %s" % parent_path
 		)
 
-	if parent.type != PropertyNode.Type.CONTAINER:
+	if not is_container_node(parent_path):
 		return Result.new(
 			Result.ErrorType.TYPE_MISMATCH,
 			"Parent path is not a container: %s" % parent_path
 		)
 
+	var parent = find_property_node(parent_path)
 	# Add all children of the root to the parent container
 	for child in root.children.values():
 		parent.add_child(child)
@@ -83,13 +105,13 @@ func remove_node_at_path(node_name: String, parent_path: Path) -> Result:
 	if not parent_path:
 		return remove_node(node_name)
 
-	var parent = find_property_node(parent_path)
-	if not parent or parent.type != PropertyNode.Type.CONTAINER:
+	if not has_node(parent_path) or not is_container_node(parent_path):
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
 			"Parent container not found: %s" % parent_path
 		)
 
+	var parent = find_property_node(parent_path)
 	var removed = false
 	for child in parent.children.values():
 		if child.name == node_name:
@@ -112,7 +134,7 @@ func remove_node_at_path(node_name: String, parent_path: Path) -> Result:
 
 ## Removes a property tree from the root level
 func remove_node(name: String) -> Result:
-	if not _root_nodes.has(name):
+	if not has_root(name):
 		return Result.new(
 			Result.ErrorType.NOT_FOUND,
 			"Root node '%s' not found" % name
@@ -136,13 +158,11 @@ func find_property_node(path: Path) -> PropertyNode:
 		_error("Cannot find node at root path")
 		return null
 
-	# Direct lookup for root level nodes
-	if path.is_root_node():
-		return get_root_node(path.get_root_name())
-
 	# Get root node first
-	var root = get_root_node(path.get_root_name())
+	var root: PropertyNode = get_root_node(path.get_root_name())
 	if not root:
+		if path.get_root_name() == "reach":
+			assert(false)
 		return null  # Error already logged by get_root_node
 
 	# Find nested node
@@ -157,21 +177,17 @@ func get_root_node(name: String) -> PropertyNode:
 
 ## Get all value nodes in a root
 func get_root_values(root_name: String) -> Array[PropertyNode]:
-	var root = get_root_node(root_name)
-	if not root:
+	if not has_root(root_name):
 		_error("Root node not found: %s" % root_name)
 		return []
-
-	return root.get_all_values()
+	return get_root_node(root_name).get_all_values()
 
 ## Get all containers under a root node
 func get_root_containers(root_name: String) -> Array[PropertyNode]:
-	var root = get_root_node(root_name)
-	if not root:
+	if not has_root(root_name):
 		_error("Root node not found: %s" % root_name)
 		return []
-
-	return root.get_all_containers()
+	return get_root_node(root_name).get_all_containers()
 
 ## Get all registered root names
 func get_root_names() -> Array[String]:
@@ -181,9 +197,9 @@ func get_root_names() -> Array[String]:
 
 ## Get children at a specific path
 func get_children_at_path(path: Path) -> Array[PropertyNode]:
-	var node = find_property_node(path)
-	if not node or node.type != PropertyNode.Type.CONTAINER:
+	if not has_node(path) or not is_container_node(path):
 		return []
+	var node = find_property_node(path)
 	return node.children.values()
 
 func _get_dependent_paths(path: Path) -> Array[String]:
@@ -195,7 +211,6 @@ func _get_dependent_paths(path: Path) -> Array[String]:
 				dependent_paths.append(value_node.path.full)
 
 	return dependent_paths
-
 #endregion
 
 #region Value Access
@@ -206,15 +221,15 @@ func get_property_value(path: Path) -> Variant:
 		_log_property_access(path, value, "READ[cached]")
 		return value
 
-	var node = find_property_node(path)
-	if not node:
+	if not has_node(path):
 		_error("Node not found: %s" % path.full)
 		return null
 
-	if node.type != PropertyNode.Type.VALUE:
+	if not is_value_node(path):
 		_error("Cannot get value from container node: %s" % path.full)
 		return null
 
+	var node = find_property_node(path)
 	var value = node.get_value()
 
 	if _cache:
@@ -225,18 +240,17 @@ func get_property_value(path: Path) -> Variant:
 	_log_property_access(path, value, "READ")
 	return value
 
-
 ## Set a property's value
 func set_property_value(path: Path, value: Variant) -> Result:
-	var node = find_property_node(path)
-	if not node:
+	if not has_node(path):
 		_error("Node not found: %s" % path.full)
 		return Result.new(Result.ErrorType.NOT_FOUND, "Property not found")
 
-	if node.type != PropertyNode.Type.VALUE:
+	if not is_value_node(path):
 		_error("Cannot set value for container node: %s" % path.full)
 		return Result.new(Result.ErrorType.TYPE_MISMATCH, "Not a value node")
 
+	var node = find_property_node(path)
 	var old_value = node.get_value()
 	var result = node.set_value(value)
 

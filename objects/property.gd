@@ -1,5 +1,7 @@
 class_name Property
 extends BaseRefCounted
+## Contains definitions and helper methods relating to [class PropertyNode]
+
 
 ## Supported property types
 enum Type {

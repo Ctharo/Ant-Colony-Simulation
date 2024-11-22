@@ -112,7 +112,7 @@ func find_node_by_string(path_string: String) -> PropertyNode:
 
 #region Tree Modification
 func add_child(child: PropertyNode) -> void:
-	if type != Type.CONTAINER:
+	if not is_container_node():
 		_error("Cannot add child to value node")
 		return
 
@@ -120,25 +120,24 @@ func add_child(child: PropertyNode) -> void:
 	children[child.name] = child
 
 func remove_child(child_name: String) -> void:
-	if children.has(child_name):
+	if has_child(child_name):
 		children[child_name].parent = null
 		children.erase(child_name)
 #endregion
-
 #region Value Access
 func get_value() -> Variant:
-	if type != Type.VALUE:
+	if not is_value_node():
 		_error("Cannot get value from container node")
 		return null
 
-	if not Property.is_valid_getter(getter):
+	if not has_valid_accessor():
 		_error("Invalid getter for property")
 		return null
 
 	return getter.call()
 
 func set_value(value: Variant) -> Result:
-	if type != Type.VALUE:
+	if not is_value_node():
 		return Result.new(
 			Result.ErrorType.TYPE_MISMATCH,
 			"Cannot set value on container node"
@@ -150,7 +149,7 @@ func set_value(value: Variant) -> Result:
 			"Invalid value type"
 		)
 
-	if not Property.is_valid_setter(setter):
+	if not has_valid_accessor(true):
 		return Result.new(
 			Result.ErrorType.INVALID_SETTER,
 			"Invalid setter for property"
@@ -183,6 +182,28 @@ func get_all_containers() -> Array[PropertyNode]:
 
 	return containers
 #endregion
+
+#region Node Validation
+## Check if this node has a child with the given name
+func has_child(child_name: String) -> bool:
+	return children.has(child_name)
+
+## Check if this is a value node
+func is_value_node() -> bool:
+	return type == Type.VALUE
+
+## Check if this is a container node
+func is_container_node() -> bool:
+	return type == Type.CONTAINER
+
+## Check if this node has valid getter/setter
+func has_valid_accessor(check_setter: bool = false) -> bool:
+	var has_valid = Property.is_valid_getter(getter)
+	if check_setter:
+		has_valid = has_valid and Property.is_valid_setter(setter)
+	return has_valid
+#endregion
+
 
 static func create_tree(entity: Node) -> PropertyNode.Builder:
 	return PropertyNode.Builder.new(entity)
