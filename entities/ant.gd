@@ -47,8 +47,6 @@ var task_update_timer: float = 0.0
 ## Property access system
 var _property_access: PropertyAccess :
 	get:
-		if not _property_access:
-			_init_property_access()
 		return _property_access
 
 #endregion
@@ -67,6 +65,7 @@ var _property_access: PropertyAccess :
 
 func _init() -> void:
 	log_from = "ant"
+	_init_property_access()
 	_init_property_groups()
 
 	var config_root = ProjectSettings.get_setting("ai/config_path", DEFAULT_CONFIG_ROOT)
@@ -177,7 +176,9 @@ func register_property_node(node: PropertyNode, at_path: Path = null) -> void:
 		return
 
 	_trace("Registering property node: %s" % node.name)
-
+	if not _property_access:
+		_error("Failed to register property node %s: property access not yet initialized" % node.name)
+		return
 	var result: Result = _property_access.register_node_at_path(node, at_path)
 	if not result.success():
 		_error("Failed to register property node %s: %s" % [node.name, result.error_message])

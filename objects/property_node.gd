@@ -124,6 +124,7 @@ func remove_child(child_name: String) -> void:
 		children[child_name].parent = null
 		children.erase(child_name)
 #endregion
+
 #region Value Access
 func get_value() -> Variant:
 	if not is_value_node():

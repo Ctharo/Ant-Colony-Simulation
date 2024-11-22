@@ -56,7 +56,7 @@ var _condition_configs: Dictionary
 func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
 	log_category = DebugLogger.Category.CONDITION
 	log_from = "condition_system"
-	_property_access = PropertyAccess.new(p_ant)
+	_property_access = p_ant._property_access
 	_condition_configs = p_condition_configs
 	register_required_properties()
 #endregion

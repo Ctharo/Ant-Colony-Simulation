@@ -26,7 +26,14 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 	log_category = DebugLogger.Category.PROPERTY
 	log_from = "property_access"
 
-	_debug("Initialized for %s [Cache: %s]" % [owner.get_class(), "enabled" if use_caching else "disabled"])
+	var type = ""
+	if owner is Ant:
+		type = "ant"
+	elif owner is Colony:
+		type = "colony"
+	else:
+		type = "Unknown type"
+	_debug("Initialized for %s [Cache: %s]" % [type, "enabled" if use_caching else "disabled"])
 
 #region Node Validation
 ## Check if a root node exists
