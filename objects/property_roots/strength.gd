@@ -5,9 +5,10 @@ extends PropertyNode
 #region Constants
 ## Factor used to calculate maximum carry weight from strength level
 const STRENGTH_FACTOR: float = 20.0
-
 ## Default starting strength level
 const DEFAULT_LEVEL := 10
+## Threshold percentage for overloaded status
+const OVERLOAD_THRESHOLD := 90.0
 #endregion
 
 #region Member Variables
@@ -15,27 +16,39 @@ const DEFAULT_LEVEL := 10
 var _level: int = DEFAULT_LEVEL
 #endregion
 
-func _init(p_entity: Node) -> void:
+func _init(_entity: Node) -> void:
 	# First create self as container
-	super._init("strength", Type.CONTAINER, p_entity)
+	super._init("strength", Type.CONTAINER, _entity)
 
-	# Then build and copy children
-	var tree = PropertyNode.create_tree(p_entity)\
-		.value("level", Property.Type.INT,
-			Callable(self, "_get_level"),
-			Callable(self, "_set_level"),
-			[],
-			"Base strength level of the entity")\
-		.container("derived", "Values derived from strength level")\
-			.value("carry_capacity", Property.Type.FLOAT,
-				Callable(self, "_get_carry_capacity"),
-				Callable(),
-				["strength.level"],
-				"Maximum weight that can be carried based on strength")\
+	# Create the tree with the container name matching self
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("strength", "Strength management")\
+			.container("base", "Base strength attributes")\
+				.value("level", Property.Type.INT,
+					Callable(self, "_get_level"),
+					Callable(self, "_set_level"),
+					[],
+					"Base strength level of the entity")\
+			.up()\
+			.container("derived", "Values derived from strength")\
+				.value("carry_factor", Property.Type.FLOAT,
+					Callable(self, "_get_carry_factor"),
+					Callable(),
+					["strength.base.level"],
+					"Base carrying capacity factor")\
+			.up()\
+			.container("status", "Status of strength")\
+				.value("overloaded", Property.Type.BOOL,
+					Callable(self, "_get_is_overloaded"),
+					Callable(),
+					["storage.capacity.percentage"],
+					"Whether entity is carrying too much weight")\
+			.up()\
 		.build()
 
-	# Copy children from built tree
-	for child in tree.children.values():
+	# Copy the container children from the built tree's root strength node
+	var built_strength = tree
+	for child in built_strength.children.values():
 		add_child(child)
 
 	_trace("Strength property tree initialized")
@@ -46,7 +59,7 @@ func _get_level() -> int:
 
 func _set_level(value: int) -> void:
 	if value <= 0:
-		_error("Attempted to set strength.level to non-positive value -> Action not allowed")
+		_error("Attempted to set strength.base.level to non-positive value -> Action not allowed")
 		return
 
 	var old_value = _level
@@ -55,8 +68,14 @@ func _set_level(value: int) -> void:
 	if old_value != _level:
 		_trace("Level updated: %d -> %d" % [old_value, _level])
 
-func _get_carry_capacity() -> float:
+func _get_carry_factor() -> float:
 	return float(_level) * STRENGTH_FACTOR
+
+func _get_is_overloaded() -> bool:
+	if not entity:
+		return false
+	var load_percentage = entity.get_property_value(Path.parse("storage.capacity.percentage"))
+	return load_percentage > OVERLOAD_THRESHOLD
 #endregion
 
 #region Public Methods

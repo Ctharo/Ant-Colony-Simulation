@@ -23,40 +23,43 @@ func _init(_entity: Node) -> void:
 	# First create self as container
 	super._init("health", Type.CONTAINER, _entity)
 
-	# Then build and copy children
+	# Create the tree with the container name matching self
 	var tree = PropertyNode.create_tree(_entity)\
-		.container("levels", "Health level information")\
-			.value("maximum", Property.Type.FLOAT,
-				Callable(self, "_get_max_level"),
-				Callable(self, "_set_max_level"),
-				[],
-				"Maximum health level")\
-			.value("current", Property.Type.FLOAT,
-				Callable(self, "_get_current_level"),
-				Callable(self, "_set_current_level"),
-				[],
-				"Current health level")\
-		.up()\
-		.container("status", "Health status information")\
-			.value("percentage", Property.Type.FLOAT,
-				Callable(self, "_get_percentage"),
-				Callable(),
-				["health.levels.current", "health.levels.maximum"],
-				"Current health level as a percentage of max health")\
-			.value("replenishable", Property.Type.FLOAT,
-				Callable(self, "_get_replenishable_amount"),
-				Callable(),
-				["health.levels.current", "health.levels.maximum"],
-				"Amount of health that can be restored")\
-			.value("is_full", Property.Type.BOOL,
-				Callable(self, "_get_is_full"),
-				Callable(),
-				["health.levels.current", "health.levels.maximum"],
-				"Whether health is at maximum level")\
+		.container("health", "Health management")\
+			.container("capacity", "Health capacity information")\
+				.value("max", Property.Type.FLOAT,
+					Callable(self, "_get_max_level"),
+					Callable(self, "_set_max_level"),
+					[],
+					"Maximum health level")\
+				.value("current", Property.Type.FLOAT,
+					Callable(self, "_get_current_level"),
+					Callable(self, "_set_current_level"),
+					[],
+					"Current health level")\
+				.value("percentage", Property.Type.FLOAT,
+					Callable(self, "_get_percentage"),
+					Callable(),
+					["health.capacity.current", "health.capacity.max"],
+					"Current health level as a percentage of max health")\
+			.up()\
+			.container("status", "Health status information")\
+				.value("replenishable", Property.Type.FLOAT,
+					Callable(self, "_get_replenishable_amount"),
+					Callable(),
+					["health.capacity.current", "health.capacity.max"],
+					"Amount of health that can be restored")\
+				.value("is_full", Property.Type.BOOL,
+					Callable(self, "_get_is_full"),
+					Callable(),
+					["health.capacity.current", "health.capacity.max"],
+					"Whether health is at maximum level")\
+			.up()\
 		.build()
 
-	# Copy children from built tree
-	for child in tree.children.values():
+	# Copy the container children from the built tree's root health node
+	var built_health = tree
+	for child in built_health.children.values():
 		add_child(child)
 
 	_trace("Health property tree initialized")
@@ -68,7 +71,7 @@ func _get_max_level() -> float:
 func _set_max_level(value: float) -> void:
 	if is_zero_approx(value):
 		_warn(
-			"Attempted to set health.levels.maximum to zero -> Action not allowed"
+			"Attempted to set health.capacity.max to zero -> Action not allowed"
 		)
 		return
 

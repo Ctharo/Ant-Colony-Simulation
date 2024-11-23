@@ -28,7 +28,7 @@ func _init(_entity: Node) -> void:
 			"Maximum distance the entity can reach to interact with objects")\
 		.up()\
 		.container("foods", "Properties related to food in reach range")\
-			.value("in_range", Property.Type.FOODS,
+			.value("list", Property.Type.FOODS,
 				Callable(self, "_get_foods_in_range"),
 				Callable(),
 				["reach.range.current"],

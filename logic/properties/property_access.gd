@@ -392,31 +392,31 @@ func _log_node_registration(node: PropertyNode, parent_path: Path = null) -> voi
 static func copy_from(source: PropertyAccess) -> PropertyAccess:
 	if not source:
 		return null
-		
+
 	var new_access = PropertyAccess.new(source._owner)
-	
+
 	# Copy root nodes
 	for node_name in source._root_nodes:
 		var node_copy = source._root_nodes[node_name]
 		new_access._root_nodes[node_name] = node_copy
-		
+
 	# Copy cache if it exists
 	if source._cache:
 		new_access._cache = source._cache
-		
+
 	return new_access
-	
+
 ## Merge properties from another PropertyAccess instance
 func merge_from(source: PropertyAccess) -> void:
 	if not source:
 		return
-		
+
 	# Merge root nodes
 	for node_name in source._root_nodes:
 		if not has_root(node_name):
 			_root_nodes[node_name] = source._root_nodes[node_name]
 			_invalidate_node_cache(node_name)
-			
+
 	# Merge cache if both instances have caching enabled
 	if _cache and source._cache:
 		# Implementation depends on your Cache class structure

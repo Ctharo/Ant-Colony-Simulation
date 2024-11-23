@@ -190,15 +190,15 @@ func _init_property_groups() -> void:
 	_trace("Initializing property nodes...")
 
 	var nodes = [
-		#Energy.new(self),        # Energy management
-		#Health.new(self),        # Health management
-		#Speed.new(self),         # Movement and action rates
-		#Strength.new(self),      # Base strength attributes
-		#Storage.new(self),       # Item storage capacity
-		#Vision.new(self),        # Visual perception
-		#Olfaction.new(self),     # Scent detection
+		Energy.new(self),        # Energy management
+		Health.new(self),        # Health management
+		Speed.new(self),         # Movement and action rates
+		Strength.new(self),      # Base strength attributes
+		Storage.new(self),       # Item storage capacity
+		Vision.new(self),        # Visual perception
+		Olfaction.new(self),     # Scent detection
 		Reach.new(self),         # Interaction range
-		#Proprioception.new(self) # Position awareness
+		Proprioception.new(self) # Position awareness
 	]
 	var successes: int = 0
 	var failures: int = 0

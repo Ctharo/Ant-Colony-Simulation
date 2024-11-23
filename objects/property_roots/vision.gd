@@ -97,7 +97,7 @@ func _get_foods_in_range_count() -> int:
 
 func _get_foods_in_range_mass() -> float:
 	var foods = _get_foods_in_range()
-	return foods.mass() if foods else 0.0
+	return foods.get_mass() if foods else 0.0
 #endregion
 
 #region Public Methods

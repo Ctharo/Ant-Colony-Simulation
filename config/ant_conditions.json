@@ -13,7 +13,7 @@
 	  "description": "Check if ant is carrying any food",
 	  "evaluation": {
 		"operator": "GREATER_THAN",
-		"property": "strength.capacity.current_load",
+		"property": "storage.capacity.current",
 		"type": "PropertyCheck",
 		"value": 0
 	  }
@@ -58,25 +58,25 @@
 	  "description": "Check if ant's energy is below threshold",
 	  "evaluation": {
 		"operator": "LESS_THAN",
-		"property": "energy.levels.current",
+		"property": "energy.capacity.percentage",
 		"type": "PropertyCheck",
-		"value_from": "energy.thresholds.low"
+		"value": 20
 	  }
 	},
 	"OverloadedWithFood": {
 	  "description": "Check if ant is carrying near maximum capacity",
 	  "evaluation": {
 		"operator": "GREATER_THAN_EQUAL",
-		"property": "strength.capacity.current_load",
+		"property": "storage.capacity.current",
 		"type": "PropertyCheck",
-		"value_from": "strength.capacity.maximum"
+		"value_from": "storage.capacity.max"
 	  }
 	},
 	"IsCarryingFood": {
 	  "description": "Whether the ant is currently carrying food",
 	  "evaluation": {
 		"operator": "GREATER_THAN",
-		"property": "strength.capacity.current_load",
+		"property": "storage.capacity.current",
 		"type": "PropertyCheck",
 		"value": 0
 	  }
@@ -103,7 +103,7 @@
 	  "description": "Whether energy is below critical threshold",
 	  "evaluation": {
 		"operator": "LESS_THAN",
-		"property": "energy.status.percentage",
+		"property": "energy.capacity.percentage",
 		"type": "PropertyCheck",
 		"value": 20.0
 	  }

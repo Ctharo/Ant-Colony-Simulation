@@ -10,13 +10,13 @@ func _init(initial_foods: Array[Food] = []):
 func add_food(mass_to_add: float) -> float:
 	var food: Food = Food.new(mass_to_add)
 	append(food)
-	return mass()
+	return get_mass()
 
 func mark_as_carried() -> void:
 	for food in elements:
 		food.carried = true
 
-func mass() -> float:
+func get_mass() -> float:
 	var _mass: float = 0.0
 	for food in self:
 		_mass += food.mass
