@@ -213,7 +213,7 @@ func _init_property_groups() -> void:
 			failures += 1
 			_error("Ant property %s failed to register" % node.name)
 
-	_trace("Property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
+	_trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
 
 ## Register colony-specific properties
 func _register_colony_properties() -> void:
