@@ -39,7 +39,7 @@ func _init() -> void:
 func add_ant(ant: Ant) -> Result:
 	if not ant:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
-		
+
 	ants.append(ant)
 	ant.set_colony(self)
 	return Result.new()
@@ -179,7 +179,7 @@ func _get_average_ant_energy() -> float:
 			total_energy += ant_energy
 	return total_energy / ants.size()
 #endregion
-	
+
 #region Logging Methods
 func _configure_logger() -> void:
 	var categories = [log_category] as Array[DebugLogger.Category]
