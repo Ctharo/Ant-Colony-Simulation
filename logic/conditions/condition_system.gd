@@ -141,7 +141,7 @@ func get_property_value(path: Path) -> Variant:
 ## Creates a condition instance from configuration
 static func create_condition(config: Dictionary) -> Condition:
 	if typeof(config) != TYPE_DICTIONARY:
-		push_error("Invalid condition config type: %s" % typeof(config))
+		DebugLogger.error(DebugLogger.Category.CONDITION, "Invalid condition config type: %s" % typeof(config), {"from": "condition_system"})
 		return null
 		
 	var condition = Condition.new()
