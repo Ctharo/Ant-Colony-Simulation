@@ -226,18 +226,14 @@ func _on_path_changed(new_path: Path) -> void:
 #region Public Interface
 ## Show properties for the given ant
 func create_ant_to_browse() -> void:
-	var ant: Ant = Ant.new()
-	var colony: Colony = Colony.new()
+	var colony: Colony = ColonyManager.spawn_colony()
+	var ant: Ant = AntManager.spawn_ant()
 	colony.add_ant(ant)
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
 	ant.foods.add_food(randf_range(0.0, 200.0))
 
-	add_child(ant)
-	add_child(colony)
-	ant.set_physics_process(false)
-	ant.set_process(false)
 	current_ant = ant
 	navigation_manager.set_property_access(ant)
 #endregion
