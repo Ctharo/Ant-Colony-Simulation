@@ -80,7 +80,6 @@ func _init() -> void:
 	if task_tree and task_tree.get_active_task():
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
-	add_to_group("ant")
 
 func _ready() -> void:
 	spawned.emit()
