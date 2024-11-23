@@ -23,6 +23,7 @@ class Builder:
 	var _ant: Ant
 	var _actions: Array[Action] = []
 	var _conditions: Array[ConditionSystem.Condition] = []
+	var _condition_system: ConditionSystem
 
 	func _init(priority: int = Behavior.Priority.MEDIUM) -> void:
 		log_category = DebugLogger.Category.BEHAVIOR
@@ -43,6 +44,12 @@ class Builder:
 	func with_actions(actions: Array[Action]) -> Builder:
 		_actions.append_array(actions)
 		return self
+
+	## Add a condition to the behavior
+	func with_condition_system(condition_system: ConditionSystem) -> Builder:
+		_condition_system = condition_system
+		return self
+
 
 	## Add a condition to the behavior
 	func with_condition(condition: ConditionSystem.Condition) -> Builder:
@@ -124,8 +131,9 @@ var _condition_system: ConditionSystem
 #endregion
 
 #region Initialization
-func _init(p_priority: int = Priority.MEDIUM) -> void:
+func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem = null) -> void:
 	priority = p_priority
+	_condition_system = condition_system
 	log_category = DebugLogger.Category.BEHAVIOR
 	log_from = "behavior"
 #endregion
@@ -152,6 +160,9 @@ func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 	if not is_instance_valid(p_ant):
 		_error("Cannot start behavior '%s' with invalid ant reference" % name)
 		return
+
+	if not p_condition_system and not conditions.is_empty():
+		_warn("Starting behavior '%s' with conditions but no condition system" % name)
 
 	_debug("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
 

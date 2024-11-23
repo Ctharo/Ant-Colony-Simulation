@@ -14,146 +14,75 @@ signal tree_updated
 ## Builder class for constructing the task tree
 class Builder:
 	extends BaseRefCounted
-
-	## Configuration file paths
-	const DEFAULT_CONDITIONS_PATH = "res://conditions.json"
-	const DEFAULT_BEHAVIORS_PATH = "res://behaviors.json"
-	const DEFAULT_TASKS_PATH = "res://tasks.json"
-
+	
 	var _ant: Ant
-	var _conditions_path: String = DEFAULT_CONDITIONS_PATH
-	var _behaviors_path: String = DEFAULT_BEHAVIORS_PATH
-	var _tasks_path: String = DEFAULT_TASKS_PATH
-	var _root_task_type: String = "Root"
-	var _root_priority: int = Task.Priority.MEDIUM
-	var _required_tasks: Array[String] = []
-
+	var _root_type: String = "Root"
+	var _tasks_path: String = "res://config/ant_tasks.json"
+	var _conditions_path: String = "res://config/ant_conditions.json"
+	
 	func _init(p_ant: Ant) -> void:
 		_ant = p_ant
-		log_from = "task_tree_builder"
-		log_category = DebugLogger.Category.TASK
-
-	## Set the root task type
-	func with_root_task(type: String, priority: int = Task.Priority.MEDIUM) -> Builder:
-		_root_task_type = type
-		_root_priority = priority
+		
+	func with_root_task(type: String) -> Builder:
+		_root_type = type
 		return self
-
-	## Add required task types to ensure they're loaded
-	func with_required_tasks(task_types: Array[String]) -> Builder:
-		_required_tasks = task_types
+		
+	func with_config_paths(tasks_path: String, conditions_path: String) -> Builder:
+		_tasks_path = tasks_path
+		_conditions_path = conditions_path
 		return self
-
-	## Set custom config file paths
-	func with_config_paths(tasks: String, behaviors: String, conditions: String) -> Builder:
-		_tasks_path = tasks
-		_behaviors_path = behaviors
-		_conditions_path = conditions
-		return self
-
-	## Build and return the configured task tree
+	
 	func build() -> TaskTree:
 		var tree := TaskTree.new()
 		tree.ant = _ant
-
-		# Initialize task configuration
-		tree.task_config = TaskConfig.new()
-		var load_result = tree.task_config.load_configs(
-			_tasks_path,
-			_behaviors_path,
-			_conditions_path
+		
+		# Load conditions first since tasks depend on them
+		var result = ConditionSystem.load_condition_configs(_conditions_path)
+		if result != OK:
+			push_error("Failed to load condition configs from: %s" % _conditions_path)
+			return tree
+		
+		# Load task configurations
+		result = Task.load_task_configs(_tasks_path)
+		if result != OK:
+			push_error("Failed to load task configs from: %s" % _tasks_path)
+			return tree
+			
+		# Create condition system
+		tree._condition_system = ConditionSystem.new(_ant)
+		
+		# Create task behaviors
+		var behaviors = Task.create_task_behaviors(
+			_root_type,
+			_ant,
+			tree._condition_system
 		)
-
-		if load_result != OK:
-			_error("Failed to load configs from: %s, %s, and/or %s" % [
-				_tasks_path, _behaviors_path, _conditions_path
-			])
+		
+		if behaviors.is_empty():
+			push_error("Failed to create behaviors for task: %s" % _root_type)
 			return tree
-
-		# Validate configurations
-		if not _validate_configs(tree.task_config):
-			_error("Configuration validation failed")
-			return tree
-
-		# Create root task
-		var root = tree.task_config.create_task(_root_task_type, _root_priority, _ant)
-		if not root:
-			_error("Failed to create root task of type: %s" % _root_task_type)
-			return tree
-
-		root.name = _root_task_type  # Ensure root is named
-		tree._condition_system = ConditionSystem.new(_ant, tree.task_config.condition_configs)
-		tree.root_task = root
-
-		# Verify the created hierarchy
-		if not _verify_task_hierarchy(root):
-			_error("Task hierarchy verification failed")
-			return tree
-
-		_info("Successfully built task tree")
+			
+		# Create the task itself
+		var task = Task.new(Task.Priority[Task._task_configs[_root_type].get("priority", "MEDIUM")], tree._condition_system)
+		task.name = _root_type
+		task.ant = _ant
+		
+		# Add task conditions
+		var task_config = Task._task_configs[_root_type]
+		if "conditions" in task_config:
+			for condition_data in task_config.conditions:
+				var condition = ConditionSystem.create_condition(condition_data)
+				task.add_condition(condition)
+		
+		# Add behaviors to task
+		for behavior in behaviors:
+			task.add_behavior(behavior)
+			
+		tree.root_task = task
+		_debug("Successfully built task tree with root task: %s" % _root_type)
+		
 		return tree
 
-	## Get the list of all task types that will be loaded
-	func get_task_types() -> Array[String]:
-		var types: Array[String] = []
-		types.append(_root_task_type)
-		types.append_array(_required_tasks)
-		return types
-
-	## Validate that all required tasks and their behaviors are configured
-	func _validate_configs(config: TaskConfig) -> bool:
-		# Check root task exists
-		if not _root_task_type in config.task_configs:
-			_error("Root task type '%s' not found in configuration" % _root_task_type)
-			return false
-
-		# Check required tasks exist
-		for task_type in _required_tasks:
-			if not task_type in config.task_configs:
-				_error("Required task type '%s' not found in configuration" % task_type)
-				return false
-
-		# Check that all behaviors referenced by tasks exist
-		for task_type in config.task_configs:
-			var task_config = config.task_configs[task_type]
-			if "behaviors" in task_config:
-				for behavior_data in task_config.behaviors:
-					var behavior_type = behavior_data.type
-					if not behavior_type in config.behavior_configs:
-						_error("Task '%s' references undefined behavior: %s" % [
-							task_type, behavior_type
-						])
-						return false
-
-		return true
-
-	## Verify the created task hierarchy
-	func _verify_task_hierarchy(task: Task) -> bool:
-		if not task:
-			return false
-
-		# Check that task has proper references
-		if not task.ant:
-			_error("Task '%s' missing ant reference" % task.name)
-			return false
-
-		# Verify behaviors
-		for behavior in task.behaviors:
-			if not behavior.ant:
-				_error("Behavior '%s' in task '%s' missing ant reference" % [
-					behavior.name, task.name
-				])
-				return false
-
-			# Verify behavior actions
-			for action in behavior.actions:
-				if not action.ant:
-					_error("Action in behavior '%s' of task '%s' missing ant reference" % [
-						behavior.name, task.name
-					])
-					return false
-
-		return true
 #endregion
 
 #region Properties
@@ -175,12 +104,8 @@ var ant: Ant:
 		if value != ant:
 			ant = value
 
-## Configuration manager for tasks and behaviors
-var task_config: TaskConfig
-
 ## Condition evaluation system
 var _condition_system: ConditionSystem
-
 
 ## Last known active task for change detection
 var _last_active_task: Task
@@ -384,7 +309,7 @@ func _print_condition_recursive(condition: ConditionSystem.Condition, indent: St
 				var value = eval.get("value", "N/A")
 				var value_from = eval.get("value_from", "")
 				var condition_desc = "%s %s" % [property_name, operator]
-				if value != "N/A":
+				if str(value) != "N/A":
 					condition_desc += " %s" % value
 				elif not value_from.is_empty():
 					condition_desc += " %s" % value_from
@@ -398,15 +323,15 @@ func _print_condition_recursive(condition: ConditionSystem.Condition, indent: St
 ## [param task] The task containing these behaviors
 func _log_behavior_transition(previous_behavior: Behavior, current_behavior: Behavior, task: Task) -> void:
 	var transition_info = "\n╔══ Behavior Transition\n"
-	transition_info += "║   Task: %s\n" % task.name
+	transition_info += "║   Task: %s\n" % task.name if task else "None"
 	transition_info += "║   From: %s\n" % (previous_behavior.name if previous_behavior else "None")
-	transition_info += "║   To: %s\n" % current_behavior.name
-	transition_info += "║   Priority: %d" % current_behavior.priority
+	transition_info += "║   To: %s\n" % (current_behavior.name if current_behavior else "None")
+	transition_info += "║   Priority: %d" % (current_behavior.priority if current_behavior else -1)
 
 	_info(transition_info)
 
 	# Print conditions with their complete evaluation chain
-	var conditions = current_behavior.get_conditions()
+	var conditions = current_behavior.get_conditions() if current_behavior else []
 	if not conditions.is_empty():
 		var conditions_info = "║\n║   Conditions:"
 		_debug(conditions_info)

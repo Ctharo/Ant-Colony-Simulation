@@ -71,11 +71,6 @@ func _init() -> void:
 	var config_root = ProjectSettings.get_setting("ai/config_path", DEFAULT_CONFIG_ROOT)
 	task_tree = TaskTree.create(self)\
 		.with_root_task("CollectFood")\
-		.with_config_paths(
-			config_root.path_join("ant_tasks.json"),
-			config_root.path_join("ant_behaviors.json"),
-			config_root.path_join("ant_conditions.json")
-		)\
 		.build()
 	if task_tree and task_tree.get_active_task():
 		task_tree.active_task_changed.connect(_on_active_task_changed)

@@ -105,6 +105,9 @@ var behaviors: Array[Behavior] = []:
 # Add condition system reference
 var _condition_system: ConditionSystem
 
+
+
+
 ## Array of conditions for this task
 var conditions: Array[ConditionSystem.Condition] = []:
 	set(value):
@@ -113,23 +116,58 @@ var conditions: Array[ConditionSystem.Condition] = []:
 ## Currently active behavior
 var active_behavior: Behavior:
 	set(value):
-		var old_behavior = active_behavior
+		if value == active_behavior:
+			return
 		active_behavior = value
-		if old_behavior != value:
-			if old_behavior:
-				old_behavior.interrupt()
-			if value and is_instance_valid(ant):
-				value.start(ant)
 
 ## Whether higher priority behaviors can interrupt lower priority ones
 var allow_interruption: bool = true
+
+## Dictionary of task configurations loaded from JSON
+static var _task_configs: Dictionary
+
+## Maps behavior types to their corresponding action types
+const BEHAVIOR_TO_ACTION = {
+	"WanderForFood": {
+		"type": Action.RandomMove,
+		"params": {
+			"move_duration": 2.0
+		}
+	},
+	"FollowFoodPheromones": {
+		"type": Action.FollowPheromone,
+		"params": {
+			"pheromone_type": "food"
+		}
+	},
+	"MoveToFood": {
+		"type": Action.Move,
+		"params": {
+			"rate_modifier": 1.0
+		}
+	},
+	"HarvestFood": {
+		"type": Action.Harvest,
+		"params": {
+			"harvest_rate_modifier": 1.0
+		}
+	},
+	"MoveToHome": {
+		"type": Action.Move,
+		"params": {
+			"rate_modifier": 1.0
+		}
+	}
+}
+
 #endregion
 
 #region Initialization
-func _init(p_priority: int = Priority.MEDIUM) -> void:
+func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem = null) -> void:
+	priority = p_priority	
+	_condition_system = condition_system
 	log_from = "task"
 	log_category = DebugLogger.Category.TASK
-	priority = p_priority
 #endregion
 
 #region Public Methods
@@ -326,7 +364,7 @@ func _find_next_valid_behavior(context: Dictionary) -> Behavior:
 	# Check behaviors in priority order
 	for _priority in priorities:
 		var behaviors_at_priority = priority_groups[_priority]
-		for behavior in behaviors_at_priority:
+		for behavior: Behavior in behaviors_at_priority:
 			_trace("\nChecking behavior: %s (Priority: %d)" % [behavior.name, behavior.priority])
 
 			if behavior.should_activate(context):
@@ -350,7 +388,7 @@ func _group_behaviors_by_priority(min_priority: int = -1) -> Dictionary:
 		priority_groups[behavior.priority].append(behavior)
 	return priority_groups
 
-## Switch to a new behavior
+## Switch to a new behavior - handles all the transition logic
 func _switch_behavior(new_behavior: Behavior) -> void:
 	var transition_info = "Switching behaviors:"
 	transition_info += "\n  From: %s (State: %s)" % [
@@ -364,7 +402,9 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 	if active_behavior:
 		active_behavior.interrupt()
 
+	# Use direct assignment to avoid recursion
 	active_behavior = new_behavior
+	# Start behavior with condition system
 	active_behavior.start(ant, _condition_system)
 
 	_debug(
@@ -373,7 +413,7 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 			Behavior.State.keys()[active_behavior.state]
 		]
 	)
-
+	
 ## Update ant references in all behaviors
 func _update_behavior_references() -> void:
 	if not is_instance_valid(ant):
@@ -393,3 +433,82 @@ func _all_behaviors_completed() -> bool:
 			return false
 	return true
 #endregion
+
+## Create an action from its type and configuration
+static func create_action(action_type: GDScript, params: Dictionary, ant: Ant) -> Action:
+	# Use the action's own static create method
+	var builder = action_type.create()
+	builder.with_ant(ant)
+	
+	# Add all params
+	for key in params:
+		builder.with_param(key, params[key])
+		
+	return builder.build()
+
+## Create a task's behaviors from task configuration
+static func create_task_behaviors(task_type: String, ant: Ant, condition_system: ConditionSystem) -> Array[Behavior]:
+	if not task_type in _task_configs:
+		push_error("Unknown task type: %s" % task_type)
+		return []
+		
+	var task_config = _task_configs[task_type]
+	var behaviors: Array[Behavior] = []
+	
+	# Add task behaviors
+	if "behaviors" in task_config:
+		for behavior_data in task_config.behaviors:
+			var behavior = create_behavior_from_config(behavior_data, ant, condition_system)
+			if behavior:
+				behaviors.append(behavior)
+	
+	return behaviors
+
+## Create a behavior from behavior configuration
+static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_system: ConditionSystem) -> Behavior:
+	var behavior_type = config.type
+	if not behavior_type in BEHAVIOR_TO_ACTION:
+		push_error("Unknown behavior type: %s" % behavior_type)
+		return null
+		
+	var behavior := Behavior.new(
+		Priority[config.get("priority", "MEDIUM")],
+		condition_system
+	)
+	
+	behavior.name = behavior_type
+	behavior.ant = ant
+	
+	# Add behavior conditions
+	if "conditions" in config:
+		for condition_data in config.conditions:
+			var condition = ConditionSystem.create_condition(condition_data)
+			behavior.add_condition(condition)
+	
+	# Create action using factory method
+	var action_config = BEHAVIOR_TO_ACTION[behavior_type]
+	var action_params = action_config.params.duplicate()
+	
+	# Merge with behavior-specific params
+	if "params" in config:
+		action_params.merge(config.params)
+		
+	behavior.add_action(
+		create_action(action_config.type, action_params, ant)
+	)
+	
+	return behavior
+
+## Load task configurations from JSON file
+static func load_task_configs(path: String) -> Error:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return ERR_FILE_NOT_FOUND
+		
+	var json := JSON.new()
+	var result := json.parse(file.get_as_text())
+	if result != OK:
+		return result
+		
+	_task_configs = json.data.tasks
+	return OK

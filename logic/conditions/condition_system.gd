@@ -48,22 +48,42 @@ var _condition_cache: Dictionary = {}
 ## Required properties for evaluation
 var _required_properties: Dictionary = {}
 
-## Condition configuration registry
-var _condition_configs: Dictionary
+## Static condition configuration registry
+static var _condition_configs: Dictionary
 #endregion
 
 #region Initialization
-func _init(p_ant: Ant, p_condition_configs: Dictionary) -> void:
+func _init(p_ant: Ant) -> void:
 	log_category = DebugLogger.Category.CONDITION
 	log_from = "condition_system"
 	_property_access = p_ant._property_access
-	_condition_configs = p_condition_configs
-	register_required_properties()
+	if not _condition_configs.is_empty():
+		register_required_properties()
+
+## Load condition configurations from JSON file
+static func load_condition_configs(path: String) -> Error:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if not file:
+		push_error("Failed to open conditions config: %s" % path)
+		return ERR_FILE_NOT_FOUND
+		
+	var json := JSON.new()
+	var result := json.parse(file.get_as_text())
+	if result != OK:
+		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
+		return result
+		
+	_condition_configs = json.data.conditions
+	return OK
 #endregion
 
 #region Public Methods
 ## Evaluates a condition based on its configuration
 func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
+	if condition == null:
+		_error("Attempted to evaluate null condition")
+		return false
+		
 	var cache_key = _get_condition_cache_key(condition, context)
 
 	if _condition_cache.has(cache_key):
@@ -77,7 +97,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 		evaluation_changed.emit(condition, result)
 
 	return result
-
+	
 ## Clears the condition evaluation cache
 func clear_cache() -> void:
 	_condition_cache.clear()
@@ -98,7 +118,6 @@ func get_property_value(path: Path) -> Variant:
 	var node: PropertyNode = _property_access.find_property_node(path)
 	if not node:
 		_error("Path may be incorrect, no node found at path %s" % path.full)
-		assert(false, "Confirm path in config (%s) exists" % path.full)
 		return null
 
 	var value = _property_access.get_property_value(path)
@@ -109,6 +128,33 @@ func get_property_value(path: Path) -> Variant:
 
 ## Creates a condition instance from configuration
 static func create_condition(config: Dictionary) -> Condition:
+	if typeof(config) == TYPE_DICTIONARY and config.has("type"):
+		var condition_type = config.type
+		
+		# Handle operator conditions directly
+		if condition_type == "Operator":
+			var condition = Condition.new()
+			condition.config = config
+			return condition
+			
+		# Handle named conditions from the registry
+		if condition_type in _condition_configs:
+			var base_config = _condition_configs[condition_type]
+			# Create a copy of the base config
+			var merged_config = base_config.duplicate(true)
+			# Override with any provided config values
+			for key in config:
+				if key != "type":
+					merged_config[key] = config[key]
+					
+			var condition = Condition.new()
+			condition.config = merged_config
+			return condition
+			
+		push_error("Unknown condition type: %s" % condition_type)
+		return null
+		
+	# Handle direct property checks or other condition formats
 	var condition = Condition.new()
 	condition.config = config
 	return condition
@@ -121,20 +167,7 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 	if config.get("type") == "Operator":
 		return _evaluate_operator_condition(config, context)
 
-	# Handle named conditions that reference configs
-	var condition_type = config.get("type")
-	if condition_type:
-		if condition_type in _condition_configs:
-			var full_config = _condition_configs[condition_type]
-			return _evaluate_property_check(
-				full_config.get("evaluation", full_config),
-				context
-			)
-		else:
-			_error("Unknown condition type: %s" % condition_type)
-			return false
-
-	# Handle direct property checks
+	# Handle property checks
 	if config.has("evaluation"):
 		return _evaluate_property_check(config.evaluation, context)
 	elif config.has("property"):
@@ -222,16 +255,24 @@ func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bo
 
 	return compare_func.call(value_a, value_b)
 
-## Registers all required properties from condition configs
+## Register properties from condition configuration
 func register_required_properties() -> void:
 	for condition_name in _condition_configs:
 		var config = _condition_configs[condition_name]
+		_register_config_properties(config)
+	_log_required_properties()
+
+## Register properties from a config recursively
+func _register_config_properties(config: Dictionary) -> void:
+	if config.get("type") == "Operator":
+		if config.has("operands"):
+			for operand in config.operands:
+				_register_config_properties(operand)
+	else:
 		if "evaluation" in config:
 			_register_properties_from_evaluation(config.evaluation)
 		elif config.has("property"):
 			_register_properties_from_evaluation(config)
-
-	_log_required_properties()
 
 ## Registers properties from evaluation configuration
 func _register_properties_from_evaluation(evaluation: Dictionary) -> void:
