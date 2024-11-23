@@ -1,4 +1,4 @@
-extends Node
+extends BaseNode
 
 
 func start_ants(enable: bool = true) -> Result:
@@ -6,6 +6,7 @@ func start_ants(enable: bool = true) -> Result:
 	for ant: Ant in ants:
 		ant.set_physics_process(enable)
 		ant.set_process(enable)
+	_debug("Ant processes started")
 	return Result.new()
 
 func spawn_ants(num: int = 1) -> Array[Ant]:
@@ -19,7 +20,7 @@ func spawn_ant() -> Ant:
 	add_child(ant)
 	ant.set_physics_process(false)
 	ant.set_process(false)
-	add_to_group("ant")
+	ant.add_to_group("ant")
 	return ant
 
 func get_all() -> Ants:
