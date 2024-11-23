@@ -50,6 +50,10 @@ class Builder:
 		action.params = params
 		return action
 
+func _init():
+	log_category = DebugLogger.Category.ACTION
+	log_from = "action"
+
 ## Core Action Methods
 func start(_ant: Ant) -> void:
 	ant = _ant
@@ -83,6 +87,11 @@ func is_ready() -> bool:
 
 ## Action Classes
 class Move extends Action:
+	
+	func _init():
+		super._init()
+		log_from = "action: move"
+		
 	static func create() -> Builder:
 		return Builder.new(Move)
 
@@ -100,11 +109,16 @@ class Move extends Action:
 	func is_completed() -> bool:
 		if not "target_position" in params:
 			return true
+		assert(false, "Is target_position ever in params?")
 		return ant.global_position.distance_to(params["target_position"]) < 1.0
 
 class Harvest extends Action:
 	var current_food_source: Food
-
+	
+	func _init():
+		super._init()
+		log_from = "action: harvest"
+		
 	static func create() -> Builder:
 		return Builder.new(Harvest)
 
@@ -131,6 +145,10 @@ class Harvest extends Action:
 		return not ant.can_carry_more() or current_food_source.is_depleted()
 
 class FollowPheromone extends Action:
+	func _init():
+		super._init()
+		log_from = "action: follow_pheromone"
+		
 	static func create() -> Builder:
 		return Builder.new(FollowPheromone)
 
@@ -139,8 +157,7 @@ class FollowPheromone extends Action:
 			_error("FollowPheromone action requires pheromone_type parameter")
 			return
 
-		var pheromone_direction = ant.get_strongest_pheromone_direction(params["pheromone_type"])
-		ant.move(pheromone_direction, delta)
+		_info("Ant now moving towards higher pheromone concentration")
 
 	func is_completed() -> bool:
 		return false
@@ -148,7 +165,11 @@ class FollowPheromone extends Action:
 class RandomMove extends Action:
 	var current_time: float = 0.0
 	var current_direction: Vector2 = Vector2.ZERO
-
+	
+	func _init():
+		super._init()
+		log_from = "action: random_move"
+		
 	static func create() -> Builder:
 		return Builder.new(RandomMove)
 
@@ -166,6 +187,11 @@ class RandomMove extends Action:
 		return false
 
 class Store extends Action:
+
+	func _init():
+		super._init()
+		log_from = "action: store"
+	
 	static func create() -> Builder:
 		return Builder.new(Store)
 
@@ -179,7 +205,11 @@ class Store extends Action:
 class Attack extends Action:
 	var current_target_entity: Node2D
 	var current_target_location: Vector2
-
+	
+	func _init():
+		super._init()
+		log_from = "action: attack"
+		
 	static func create() -> Builder:
 		return Builder.new(Attack)
 
@@ -217,6 +247,10 @@ class Attack extends Action:
 class EmitPheromone extends Action:
 	var current_time: float = 0.0
 
+	func _init():
+		super._init()
+		log_from = "action: emit_pheromone"
+
 	static func create() -> Builder:
 		return Builder.new(EmitPheromone)
 
@@ -239,6 +273,11 @@ class EmitPheromone extends Action:
 		return current_time >= params.get("emission_duration", 0.0)
 
 class Rest extends Action:
+	
+	func _init():
+		super._init()
+		log_from = "action: rest"
+		
 	static func create() -> Builder:
 		return Builder.new(Rest)
 
