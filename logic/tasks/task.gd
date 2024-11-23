@@ -128,6 +128,7 @@ var allow_interruption: bool = true
 #region Initialization
 func _init(p_priority: int = Priority.MEDIUM) -> void:
 	log_from = "task"
+	log_category = DebugLogger.Category.TASK
 	priority = p_priority
 #endregion
 

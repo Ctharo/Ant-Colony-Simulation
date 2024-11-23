@@ -12,7 +12,8 @@
 			  "operator_type": "or",
 			  "operands": [
 				{"type": "OverloadedWithFood"},
-				{"type": "LowEnergy"}
+				{"type": "LowEnergy"},
+				{"type": "LowHealth"}
 			  ]
 			}
 		  ]

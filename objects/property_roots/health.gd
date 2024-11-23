@@ -54,6 +54,11 @@ func _init(_entity: Node) -> void:
 					Callable(),
 					["health.capacity.current", "health.capacity.max"],
 					"Whether health is at maximum level")\
+				.value("is_low", Property.Type.BOOL,
+					Callable(self, "_get_is_low"),
+					Callable(),
+					["health.capacity.current", "health.capacity.max"],
+					"Whether health level is low")\
 			.up()\
 		.build()
 
@@ -106,6 +111,11 @@ func _get_replenishable_amount() -> float:
 
 func _get_is_full() -> bool:
 	return is_equal_approx(_current_level, _max_level)
+	
+func _get_is_low() -> bool:
+	if _max_level <= 0:
+		return true
+	return _current_level/_max_level * 100 < 20
 #endregion
 
 #region Public Methods

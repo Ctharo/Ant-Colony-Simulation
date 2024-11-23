@@ -82,8 +82,8 @@ class Builder:
 			return tree
 
 		root.name = _root_task_type  # Ensure root is named
-		tree.root_task = root
 		tree._condition_system = ConditionSystem.new(_ant, tree.task_config.condition_configs)
+		tree.root_task = root
 
 		# Verify the created hierarchy
 		if not _verify_task_hierarchy(root):
@@ -165,7 +165,7 @@ var root_task: Task:
 		if value != root_task:
 			root_task = value
 			if root_task and is_instance_valid(ant):
-				root_task.start(ant)
+				root_task.start(ant, _condition_system)
 
 ## The ant agent associated with this task tree
 var ant: Ant:

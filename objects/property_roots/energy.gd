@@ -59,6 +59,11 @@ func _init(_entity: Node) -> void:
 					Callable(),
 					["energy.capacity.current"],
 					"Whether energy is completely depleted")\
+				.value("is_low", Property.Type.BOOL,
+					Callable(self, "_get_is_low"),
+					Callable(),
+					["energy.capacity.current", "energy.capacity.max"],
+					"Whether energy level is low")\
 			.up()\
 		.build()
 
@@ -111,6 +116,11 @@ func _get_replenishable_amount() -> float:
 
 func _get_is_full() -> bool:
 	return is_equal_approx(_current_level, _max_level)
+
+func _get_is_low() -> bool:
+	if _max_level <= 0:
+		return true
+	return _current_level/_max_level * 100 < 20
 
 func _get_is_depleted() -> bool:
 	return is_zero_approx(_current_level)

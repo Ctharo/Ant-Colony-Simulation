@@ -39,43 +39,61 @@
 	"IsFoodPheromoneSensed": {
 	  "description": "Check if food pheromones are detected",
 	  "evaluation": {
-		"operator": "EQUALS",
-		"property": "olfaction.pheromones.food.status.is_detecting",
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.food.count",
 		"type": "PropertyCheck",
-		"value": true
+		"value": 0
 	  }
 	},
 	"IsHomePheromoneSensed": {
 	  "description": "Check if home pheromones are detected",
 	  "evaluation": {
-		"operator": "EQUALS",
-		"property": "olfaction.pheromones.home.status.is_detecting",
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.home.count",
 		"type": "PropertyCheck",
-		"value": true
+		"value": 0
 	  }
 	},
 	"IsAnyPheromoneSensed": {
 	  "description": "Check if any pheromones are detected",
 	  "evaluation": {
-		"operator": "EQUALS",
-		"property": "olfaction.pheromones.status.is_detecting",
+		"operator": "GREATER_THAN",
+		"property": "olfaction.pheromones.count",
 		"type": "PropertyCheck",
-		"value": true
+		"value": 0
 	  }
 	},
 	"LowEnergy": {
 	  "description": "Check if ant's energy is low but not depleted",
 	  "evaluation": {
-		"operator": "LESS_THAN",
-		"property": "energy.capacity.percentage",
+		"operator": "EQUALS",
+		"property": "energy.status.is_low",
 		"type": "PropertyCheck",
-		"value": 20
+		"value": true
+	  }
+	},
+	"LowHealth": {
+	  "description": "Check if ant's health is low but not depleted",
+	  "evaluation": {
+		"operator": "EQUALS",
+		"property": "health.status.is_low",
+		"type": "PropertyCheck",
+		"value": true
 	  }
 	},
 	"HasStorageSpace": {
 	  "description": "Check if ant has space to store more items",
 	  "evaluation": {
-		"operator": "NOT_EQUALS",
+		"operator": "EQUALS",
+		"property": "storage.status.is_full",
+		"type": "PropertyCheck",
+		"value": false
+	  }
+	},
+	"OverloadedWithFood": {
+	  "description": "Check if ant has no more space",
+	  "evaluation": {
+		"operator": "EQUALS",
 		"property": "storage.status.is_full",
 		"type": "PropertyCheck",
 		"value": true
@@ -92,9 +110,9 @@
 			"operator_type": "not",
 			"operands": [
 			  {
-				"type": "PropertyCheck",
-				"property": "strength.status.overloaded",
 				"operator": "EQUALS",
+				"property": "storage.status.is_full",
+				"type": "PropertyCheck",
 				"value": true
 			  }
 			]
