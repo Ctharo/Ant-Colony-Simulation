@@ -73,7 +73,19 @@ static func load_condition_configs(path: String) -> Error:
 		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
 		return result
 		
+	if not json.data.has("conditions"):
+		push_error("JSON file does not contain 'conditions' key")
+		return ERR_INVALID_DATA
+		
 	_condition_configs = json.data.conditions
+	return OK
+	
+static func load_condition_configs_from_dict(config: Dictionary) -> Error:
+	if not config.has("conditions"):
+		push_error("Config dictionary does not contain 'conditions' key")
+		return ERR_INVALID_DATA
+		
+	_condition_configs = config.conditions
 	return OK
 #endregion
 
@@ -128,34 +140,25 @@ func get_property_value(path: Path) -> Variant:
 
 ## Creates a condition instance from configuration
 static func create_condition(config: Dictionary) -> Condition:
-	if typeof(config) == TYPE_DICTIONARY and config.has("type"):
-		var condition_type = config.type
-		
-		# Handle operator conditions directly
-		if condition_type == "Operator":
-			var condition = Condition.new()
-			condition.config = config
-			return condition
-			
-		# Handle named conditions from the registry
-		if condition_type in _condition_configs:
-			var base_config = _condition_configs[condition_type]
-			# Create a copy of the base config
-			var merged_config = base_config.duplicate(true)
-			# Override with any provided config values
-			for key in config:
-				if key != "type":
-					merged_config[key] = config[key]
-					
-			var condition = Condition.new()
-			condition.config = merged_config
-			return condition
-			
-		push_error("Unknown condition type: %s" % condition_type)
+	if typeof(config) != TYPE_DICTIONARY:
+		push_error("Invalid condition config type: %s" % typeof(config))
 		return null
 		
-	# Handle direct property checks or other condition formats
 	var condition = Condition.new()
+	
+	# Handle named conditions from the registry
+	if config.has("type") and config.type in _condition_configs:
+		var base_config = _condition_configs[config.type]
+		# Create a copy of the base config
+		var merged_config = base_config.duplicate(true)
+		# Override with any provided config values
+		for key in config:
+			if key != "type":
+				merged_config[key] = config[key]
+		condition.config = merged_config
+		return condition
+	
+	# Handle operator conditions or direct property checks
 	condition.config = config
 	return condition
 #endregion
@@ -163,8 +166,10 @@ static func create_condition(config: Dictionary) -> Condition:
 #region Private Methods
 ## Evaluates condition configuration recursively
 func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
+	_debug("Evaluating condition config: %s" % config)
+	
 	# Handle operator conditions (AND, OR, NOT)
-	if config.get("type") == "Operator":
+	if config.has("type") and config.type == "Operator":
 		return _evaluate_operator_condition(config, context)
 
 	# Handle property checks
@@ -172,17 +177,24 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 		return _evaluate_property_check(config.evaluation, context)
 	elif config.has("property"):
 		return _evaluate_property_check(config, context)
-
-	assert(false, "Why are we getting here?") # BUG: 
+		
 	_error("Invalid condition format: %s" % config)
 	return false
 
 ## Evaluates operator conditions (AND, OR, NOT)
 func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bool:
+	if not config.has("operator_type"):
+		_error("Operator condition missing operator_type: %s" % config)
+		return false
+		
 	var operator_type = config.operator_type.to_lower()
 	var operands = config.get("operands", [])
 
-	_debug("\nEvaluating %s operator" % operator_type.to_upper())
+	if operands.is_empty():
+		_error("Operator condition has no operands: %s" % config)
+		return false
+
+	_debug("Evaluating %s operator with %d operands" % [operator_type.to_upper(), operands.size()])
 
 	match operator_type:
 		"and":
@@ -208,7 +220,7 @@ func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bo
 			return false
 
 ## Evaluates property check conditions
-func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> bool:
+func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
 	if not evaluation.has("property"):
 		_error("Property check missing 'property' field: %s" % evaluation)
 		return false
@@ -217,8 +229,8 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 	var operator = evaluation.get("operator", "EQUALS")
 
 	# Get first value
-	var value_a = _property_access.get_property_value(path)
-	if value_a == null:
+	var value_a = get_property_value(path)
+	if value_a == null and not operator in ["IS_EMPTY", "NOT_EMPTY"]:
 		_error("Problem retrieving property: %s" % path.full)
 		return false
 
@@ -228,7 +240,7 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 		value_b = evaluation.value
 	elif "value_from" in evaluation:
 		var compare_path = Path.parse(evaluation.value_from)
-		value_b = _property_access.get_property_value(compare_path)
+		value_b = get_property_value(compare_path)
 		if value_b == null:
 			_error("Problem retrieving comparison property: %s" % compare_path.full)
 			return false
@@ -240,6 +252,7 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 			_error("Invalid property check configuration: %s" % evaluation)
 			return false
 
+	_debug("Comparing values: %s %s %s" % [value_a, OPERATOR_MAP.get(operator, operator), value_b])
 	return _compare_values(value_a, value_b, operator)
 
 ## Compares two values using the specified operator

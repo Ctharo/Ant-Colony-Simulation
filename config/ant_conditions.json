@@ -100,37 +100,26 @@
 	  }
 	},
 	"CanMoveAndAct": {
-	  "description": "Check if ant is able to move and perform actions",
-	  "evaluation": {
-		"type": "Operator",
-		"operator_type": "and",
-		"operands": [
-		  {
-			"type": "Operator",
-			"operator_type": "not",
-			"operands": [
-			  {
-				"operator": "EQUALS",
-				"property": "storage.status.is_full",
-				"type": "PropertyCheck",
-				"value": true
-			  }
-			]
-		  },
-		  {
-			"type": "Operator",
-			"operator_type": "not",
-			"operands": [
-			  {
-				"type": "PropertyCheck",
-				"property": "energy.status.is_depleted",
-				"operator": "EQUALS",
-				"value": true
-			  }
-			]
-		  }
-		]
-	  }
+		"description": "Check if ant is able to move and perform actions",
+		"evaluation": {
+		  "type": "Operator",
+		  "operator_type": "or",
+		  "operands": [
+			{
+			  "type": "PropertyCheck",
+			  "property": "storage.status.is_full",
+			  "operator": "EQUALS",
+			  "value": false
+			},
+			{
+			  "type": "PropertyCheck",
+			  "property": "energy.status.is_depleted",
+			  "operator": "EQUALS",
+			  "value": false
+			}
+	  	]	
+	}
+	 
 	}
   }
 }
