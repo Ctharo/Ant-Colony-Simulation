@@ -173,6 +173,7 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 	elif config.has("property"):
 		return _evaluate_property_check(config, context)
 
+	assert(false, "Why are we getting here?") # BUG: 
 	_error("Invalid condition format: %s" % config)
 	return false
 
