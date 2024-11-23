@@ -12,8 +12,6 @@ var ants: Ants = Ants.new([])
 ## Property access system
 var _property_access: PropertyAccess:
 	get:
-		if not _property_access:
-			_init_property_access()
 		return _property_access
 #endregion
 
@@ -29,20 +27,22 @@ var _property_access: PropertyAccess:
 
 ## Array of additional categories this node can log to
 @export var additional_log_categories: Array[DebugLogger.Category] = []
+
 #endregion
 
 #region Initialization
 func _init() -> void:
 	log_from = "colony"
+	_init_property_access()
 	_init_property_nodes()
 
-func add_ant(_ant: Ant) -> Result:
-	if _ant is Ant and not _ant == null:
-		ants.append(_ant)
-		_ant.set_colony(self)
-		return Result.new()
-	else:
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "ant argument is unexpected type")
+func add_ant(ant: Ant) -> Result:
+	if not ant:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
+		
+	ants.append(ant)
+	ant.set_colony(self)
+	return Result.new()
 #endregion
 
 #region Property System
@@ -179,7 +179,7 @@ func _get_average_ant_energy() -> float:
 			total_energy += ant_energy
 	return total_energy / ants.size()
 #endregion
-
+	
 #region Logging Methods
 func _configure_logger() -> void:
 	var categories = [log_category] as Array[DebugLogger.Category]
