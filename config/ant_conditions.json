@@ -12,10 +12,10 @@
 	"IsCarryingFood": {
 	  "description": "Check if ant is carrying any food",
 	  "evaluation": {
-		"operator": "GREATER_THAN",
-		"property": "storage.capacity.current",
+		"operator": "EQUALS",
+		"property": "storage.status.is_carrying",
 		"type": "PropertyCheck",
-		"value": 0
+		"value": true
 	  }
 	},
 	"IsFoodInReach": {
@@ -24,7 +24,7 @@
 		"operator": "GREATER_THAN",
 		"property": "reach.foods.count",
 		"type": "PropertyCheck",
-		"value": 1
+		"value": 0
 	  }
 	},
 	"IsFoodInView": {
@@ -39,23 +39,32 @@
 	"IsFoodPheromoneSensed": {
 	  "description": "Check if food pheromones are detected",
 	  "evaluation": {
-		"operator": "GREATER_THAN",
-		"property": "olfaction.pheromones.food.count",
+		"operator": "EQUALS",
+		"property": "olfaction.pheromones.food.status.is_detecting",
 		"type": "PropertyCheck",
-		"value": 0
+		"value": true
 	  }
 	},
 	"IsHomePheromoneSensed": {
 	  "description": "Check if home pheromones are detected",
 	  "evaluation": {
-		"operator": "GREATER_THAN",
-		"property": "olfaction.pheromones.home.count",
+		"operator": "EQUALS",
+		"property": "olfaction.pheromones.home.status.is_detecting",
 		"type": "PropertyCheck",
-		"value": 0
+		"value": true
+	  }
+	},
+	"IsAnyPheromoneSensed": {
+	  "description": "Check if any pheromones are detected",
+	  "evaluation": {
+		"operator": "EQUALS",
+		"property": "olfaction.pheromones.status.is_detecting",
+		"type": "PropertyCheck",
+		"value": true
 	  }
 	},
 	"LowEnergy": {
-	  "description": "Check if ant's energy is below threshold",
+	  "description": "Check if ant's energy is low but not depleted",
 	  "evaluation": {
 		"operator": "LESS_THAN",
 		"property": "energy.capacity.percentage",
@@ -63,58 +72,46 @@
 		"value": 20
 	  }
 	},
-	"OverloadedWithFood": {
-	  "description": "Check if ant is carrying near maximum capacity",
+	"HasStorageSpace": {
+	  "description": "Check if ant has space to store more items",
 	  "evaluation": {
-		"operator": "GREATER_THAN_EQUAL",
-		"property": "storage.capacity.current",
-		"type": "PropertyCheck",
-		"value_from": "storage.capacity.max"
-	  }
-	},
-	"IsCarryingFood": {
-	  "description": "Whether the ant is currently carrying food",
-	  "evaluation": {
-		"operator": "GREATER_THAN",
-		"property": "storage.capacity.current",
-		"type": "PropertyCheck",
-		"value": 0
-	  }
-	},
-	"IsHomePheromoneSensed": {
-	  "description": "Whether any home pheromones are currently sensed",
-	  "evaluation": {
-		"operator": "GREATER_THAN",
-		"property": "olfaction.pheromones.home.count",
-		"type": "PropertyCheck",
-		"value": 0
-	  }
-	},
-	"IsFoodPheromoneSensed": {
-	  "description": "Whether any food pheromones are currently sensed",
-	  "evaluation": {
-		"operator": "GREATER_THAN",
-		"property": "olfaction.pheromones.food.count",
-		"type": "PropertyCheck",
-		"value": 0
-	  }
-	},
-	"IsEnergyCriticallyLow": {
-	  "description": "Whether energy is below critical threshold",
-	  "evaluation": {
-		"operator": "LESS_THAN",
-		"property": "energy.capacity.percentage",
-		"type": "PropertyCheck",
-		"value": 20.0
-	  }
-	},
-	"IsEnergyFull": {
-	  "description": "Whether energy is at maximum level",
-	  "evaluation": {
-		"operator": "EQUALS",
-		"property": "energy.status.is_full",
+		"operator": "NOT_EQUALS",
+		"property": "storage.status.is_full",
 		"type": "PropertyCheck",
 		"value": true
+	  }
+	},
+	"CanMoveAndAct": {
+	  "description": "Check if ant is able to move and perform actions",
+	  "evaluation": {
+		"type": "Operator",
+		"operator_type": "and",
+		"operands": [
+		  {
+			"type": "Operator",
+			"operator_type": "not",
+			"operands": [
+			  {
+				"type": "PropertyCheck",
+				"property": "strength.status.overloaded",
+				"operator": "EQUALS",
+				"value": true
+			  }
+			]
+		  },
+		  {
+			"type": "Operator",
+			"operator_type": "not",
+			"operands": [
+			  {
+				"type": "PropertyCheck",
+				"property": "energy.status.is_depleted",
+				"operator": "EQUALS",
+				"value": true
+			  }
+			]
+		  }
+		]
 	  }
 	}
   }

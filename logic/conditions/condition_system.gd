@@ -97,6 +97,8 @@ func get_property_value(path: Path) -> Variant:
 
 	var node: PropertyNode = _property_access.find_property_node(path)
 	if not node:
+		_error("Path may be incorrect, no node found at path %s" % path.full)
+		assert(false, "Confirm path in config (%s) exists" % path.full)
 		return null
 
 	var value = _property_access.get_property_value(path)

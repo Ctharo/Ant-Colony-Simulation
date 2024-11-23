@@ -168,8 +168,6 @@ func find_property_node(path: Path) -> PropertyNode:
 	# Get root node first
 	var root: PropertyNode = get_root_node(path.get_root_name())
 	if not root:
-		if path.get_root_name() == "reach":
-			assert(false)
 		return null  # Error already logged by get_root_node
 
 	# Find nested node

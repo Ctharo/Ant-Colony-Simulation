@@ -32,11 +32,11 @@ func _init(_entity: Node) -> void:
 					"Remaining storage capacity available")\
 			.up()\
 			.container("status", "Storage status information")\
-				.value("is_storing", Property.Type.BOOL,
-					Callable(self, "_is_storing"),
+				.value("is_carrying", Property.Type.BOOL,
+					Callable(self, "_is_carrying"),
 					Callable(),
 					["storage.capacity.current"],
-					"Whether the entity is currently storing anything")\
+					"Whether the entity is currently carrying anything")\
 				.value("is_full", Property.Type.BOOL,
 					Callable(self, "_is_full"),
 					Callable(),
@@ -72,7 +72,7 @@ func _get_percentage_full() -> float:
 func _get_mass_available() -> float:
 	return _get_max_capacity() - _get_current_capacity()
 
-func _is_storing() -> bool:
+func _is_carrying() -> bool:
 	return _get_current_capacity() > 0
 
 func _is_full() -> bool:
