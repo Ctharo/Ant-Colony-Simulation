@@ -166,8 +166,49 @@ func attack(current_target_entity: Ant, _delta: float) -> void:
 #region Property System
 ## Initialize the property access system
 func _init_property_access() -> void:
+	# Check if we already have a property access system
+	if _property_access:
+		_debug("Property access system already exists - preserving existing properties")
+		var existing = _property_access
+		
+		# Create new instance while preserving existing properties
+		_property_access = PropertyAccess.new(self)
+		_property_access.merge_from(existing)
+		
+		_debug("Property access system merged successfully")
+		return
+		
+	# Check if we should copy from a template
+	var template = _get_property_template()
+	if template:
+		_debug("Initializing property access from template")
+		_property_access = PropertyAccess.copy_from(template)
+		if _property_access:
+			_debug("Property access system copied from template")
+			return
+	
+	# Fall back to fresh initialization
+	_debug("Initializing new property access system")
 	_property_access = PropertyAccess.new(self)
-	_debug("Property access system initialized")
+
+## Get a template PropertyAccess if one exists
+func _get_property_template() -> PropertyAccess:
+	# Various ways to get a template:
+	# 1. From the colony #TODO not yet implemented
+	if _colony and _colony.has_method("get_ant_property_template"):
+		return _colony.get_ant_property_template()
+		
+	# 2. From a global template manager
+	#if PropertyTemplateManager.has_template("ant"):
+	#    return PropertyTemplateManager.get_template("ant")
+		
+	# 3. From another ant in the same colony
+	if _colony:
+		for ant in _colony.get_ants():
+			if ant != self and ant._property_access:
+				return ant._property_access
+	
+	return null
 
 ## Register a property node at the specified path
 func register_property_node(node: PropertyNode, at_path: Path = null) -> void:
