@@ -5,6 +5,7 @@ func _ready() -> void:
 	spawn_ants(1)
 	AntManager.start_ants()
 
+
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -26,15 +27,9 @@ func _change_scene(scene_name: String) -> void:
 		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)
 
 func spawn_ants(num_to_spawn: int = 1) -> void:
-	var i: int = 0
-	var colony: Colony = Colony.new()
+	var colony: Colony = ColonyManager.spawn_colony()
 	colony.global_position = get_viewport_rect().get_center()
-
-	while i < num_to_spawn:
-
+	for i in range(num_to_spawn):
 		# Create a new ant
 		var ant = AntManager.spawn_ant()
-		ant.set_colony(colony)
-		# Add the ant to the scene
-
-		i += 1
+		colony.add_ant(ant)
