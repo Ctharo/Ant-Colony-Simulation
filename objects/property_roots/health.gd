@@ -111,7 +111,7 @@ func _get_replenishable_amount() -> float:
 
 func _get_is_full() -> bool:
 	return is_equal_approx(_current_level, _max_level)
-	
+
 func _get_is_low() -> bool:
 	if _max_level <= 0:
 		return true

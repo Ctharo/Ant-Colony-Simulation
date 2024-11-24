@@ -164,7 +164,7 @@ const BEHAVIOR_TO_ACTION = {
 
 #region Initialization
 func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem = null) -> void:
-	priority = p_priority	
+	priority = p_priority
 	_condition_system = condition_system
 	log_from = "task"
 	log_category = DebugLogger.Category.TASK
@@ -413,7 +413,7 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 			Behavior.State.keys()[active_behavior.state]
 		]
 	)
-	
+
 ## Update ant references in all behaviors
 func _update_behavior_references() -> void:
 	if not is_instance_valid(ant):
@@ -439,11 +439,11 @@ static func create_action(action_type: GDScript, params: Dictionary, ant: Ant) -
 	# Use the action's own static create method
 	var builder = action_type.create()
 	builder.with_ant(ant)
-	
+
 	# Add all params
 	for key in params:
 		builder.with_param(key, params[key])
-		
+
 	return builder.build()
 
 ## Create a task's behaviors from task configuration
@@ -451,17 +451,17 @@ static func create_task_behaviors(task_type: String, ant: Ant, condition_system:
 	if not task_type in _task_configs:
 		push_error("Unknown task type: %s" % task_type)
 		return []
-		
+
 	var task_config = _task_configs[task_type]
 	var behaviors: Array[Behavior] = []
-	
+
 	# Add task behaviors
 	if "behaviors" in task_config:
 		for behavior_data in task_config.behaviors:
 			var behavior = create_behavior_from_config(behavior_data, ant, condition_system)
 			if behavior:
 				behaviors.append(behavior)
-	
+
 	return behaviors
 
 ## Create a behavior from behavior configuration
@@ -470,33 +470,33 @@ static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_
 	if not behavior_type in BEHAVIOR_TO_ACTION:
 		push_error("Unknown behavior type: %s" % behavior_type)
 		return null
-		
+
 	var behavior := Behavior.new(
 		Priority[config.get("priority", "MEDIUM")],
 		condition_system
 	)
-	
+
 	behavior.name = behavior_type
 	behavior.ant = ant
-	
+
 	# Add behavior conditions
 	if "conditions" in config:
 		for condition_data in config.conditions:
 			var condition = ConditionSystem.create_condition(condition_data)
 			behavior.add_condition(condition)
-	
+
 	# Create action using factory method
 	var action_config = BEHAVIOR_TO_ACTION[behavior_type]
 	var action_params = action_config.params.duplicate()
-	
+
 	# Merge with behavior-specific params
 	if "params" in config:
 		action_params.merge(config.params)
-		
+
 	behavior.add_action(
 		create_action(action_config.type, action_params, ant)
 	)
-	
+
 	return behavior
 
 ## Load task configurations from JSON file
@@ -504,11 +504,11 @@ static func load_task_configs(path: String) -> Error:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if not file:
 		return ERR_FILE_NOT_FOUND
-		
+
 	var json := JSON.new()
 	var result := json.parse(file.get_as_text())
 	if result != OK:
 		return result
-		
+
 	_task_configs = json.data.tasks
 	return OK
