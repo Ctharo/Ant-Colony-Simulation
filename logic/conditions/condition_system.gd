@@ -50,6 +50,20 @@ var _required_properties: Dictionary = {}
 
 ## Static condition configuration registry
 static var _condition_configs: Dictionary
+
+## Cache statistics
+var _cache_stats = {
+	"hits": 0,
+	"misses": 0,
+	"total_evaluations": 0,
+	"property_access_count": 0,
+	"condition_evaluation_times": {},  # condition_key -> [min_time, max_time, total_time, count]
+	"last_stats_reset": Time.get_unix_time_from_system()
+}
+
+## Evaluation context stack for nested conditions
+var _evaluation_stack: Array[String] = []
+
 #endregion
 
 #region Initialization
@@ -66,25 +80,25 @@ static func load_condition_configs(path: String) -> Error:
 	if not file:
 		push_error("Failed to open conditions config: %s" % path)
 		return ERR_FILE_NOT_FOUND
-		
+
 	var json := JSON.new()
 	var result := json.parse(file.get_as_text())
 	if result != OK:
 		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
 		return result
-		
+
 	if not json.data.has("conditions"):
 		push_error("JSON file does not contain 'conditions' key")
 		return ERR_INVALID_DATA
-		
+
 	_condition_configs = json.data.conditions
 	return OK
-	
+
 static func load_condition_configs_from_dict(config: Dictionary) -> Error:
 	if not config.has("conditions"):
 		push_error("Config dictionary does not contain 'conditions' key")
 		return ERR_INVALID_DATA
-		
+
 	_condition_configs = config.conditions
 	return OK
 #endregion
@@ -95,24 +109,45 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
 		_error("Attempted to evaluate null condition")
 		return false
-		
+
 	var cache_key = _get_condition_cache_key(condition, context)
+	var start_time = Time.get_ticks_usec()
+
+	_cache_stats.total_evaluations += 1
 
 	if _condition_cache.has(cache_key):
-		return _condition_cache[cache_key]
+		var result = _condition_cache[cache_key]
+		_cache_stats.hits += 1
+		_debug("Cache HIT: %s" % cache_key)
+		return result
+
+	_cache_stats.misses += 1
+	_debug("Cache MISS: %s" % cache_key)
 
 	var result := _evaluate_condition_config(condition.config, context)
 	_condition_cache[cache_key] = result
 
-	if result != condition.previous_result:
+	var evaluation_time = Time.get_ticks_usec() - start_time
+	_update_evaluation_stats(cache_key, evaluation_time)
+
+	var previous = condition.previous_result
+	if result != previous:
 		condition.previous_result = result
 		evaluation_changed.emit(condition, result)
+		_info("Condition changed: %s -> %s | %s" % [
+			previous,
+			result,
+			cache_key
+		])
 
 	return result
-	
+
 ## Clears the condition evaluation cache
 func clear_cache() -> void:
+	var cache_size = _condition_cache.size()
 	_condition_cache.clear()
+	_debug("Cleared condition cache (%d entries)" % cache_size)
+	reset_stats()
 
 ## Gets a list of all required property paths
 func get_required_properties() -> Array[String]:
@@ -134,18 +169,63 @@ func get_property_value(path: Path) -> Variant:
 
 	var value = _property_access.get_property_value(path)
 	if value != null:
-		_trace("Evaluated property '%s' = %s" % [path.full, str(value)])
+		_trace("Retrieved value for property '%s' = %s" % [path.full, str(value)])
 
 	return value
+## Print current cache statistics
+func print_cache_stats() -> void:
+	var total_evaluations = _cache_stats.hits + _cache_stats.misses
+	var hit_rate = 0.0 if total_evaluations == 0 else (_cache_stats.hits / float(total_evaluations)) * 100
+
+	var runtime = Time.get_unix_time_from_system() - _cache_stats.last_stats_reset
+	var evals_per_sec = 0.0 if runtime == 0 else _cache_stats.total_evaluations / runtime
+
+	var stats = "\nCondition System Statistics:"
+	stats += "\n─────────────────────────"
+	stats += "\nRuntime: %.2f seconds" % runtime
+	stats += "\nCache:"
+	stats += "\n  Hits: %d" % _cache_stats.hits
+	stats += "\n  Misses: %d" % _cache_stats.misses
+	stats += "\n  Hit Rate: %.1f%%" % hit_rate
+	stats += "\n  Current Cache Size: %d" % _condition_cache.size()
+	stats += "\nPerformance:"
+	stats += "\n  Total Evaluations: %d" % _cache_stats.total_evaluations
+	stats += "\n  Evaluations/sec: %.2f" % evals_per_sec
+	stats += "\n  Property Accesses: %d" % _cache_stats.property_access_count
+
+	if not _cache_stats.condition_evaluation_times.is_empty():
+		stats += "\nEvaluation Times (microseconds):"
+		for condition_key in _cache_stats.condition_evaluation_times:
+			var times = _cache_stats.condition_evaluation_times[condition_key]
+			stats += "\n  %s:" % condition_key
+			stats += "\n    Min: %.2f" % times[0]
+			stats += "\n    Max: %.2f" % times[1]
+			stats += "\n    Avg: %.2f" % (times[2] / times[3])
+			stats += "\n    Count: %d" % times[3]
+
+	_info(stats)
+
+## Reset cache statistics
+func reset_stats() -> void:
+	_cache_stats = {
+		"hits": 0,
+		"misses": 0,
+		"total_evaluations": 0,
+		"property_access_count": 0,
+		"condition_evaluation_times": {},
+		"last_stats_reset": Time.get_unix_time_from_system()
+	}
+	_debug("Reset cache statistics")
+
 
 ## Creates a condition instance from configuration
 static func create_condition(config: Dictionary) -> Condition:
 	if typeof(config) != TYPE_DICTIONARY:
 		DebugLogger.error(DebugLogger.Category.CONDITION, "Invalid condition config type: %s" % typeof(config), {"from": "condition_system"})
 		return null
-		
+
 	var condition = Condition.new()
-	
+
 	# Handle named conditions from the registry
 	if config.has("type") and config.type in _condition_configs:
 		var base_config = _condition_configs[config.type]
@@ -157,103 +237,215 @@ static func create_condition(config: Dictionary) -> Condition:
 				merged_config[key] = config[key]
 		condition.config = merged_config
 		return condition
-	
+
 	# Handle operator conditions or direct property checks
 	condition.config = config
 	return condition
 #endregion
 
 #region Private Methods
+## Format context chain for logging
+func _format_context_chain() -> String:
+	if _evaluation_stack.is_empty():
+		return ""
+
+	var formatted_parts = []
+	var depth = 0
+
+	for part in _evaluation_stack:
+		var prefix = "    ".repeat(depth)  # Increased indent for better readability
+
+		# Special formatting for different condition types
+		if part.begins_with("NOT operator"):
+			formatted_parts.append("%s↳ %s" % [prefix, part])
+		elif part.begins_with("AND operator") or part.begins_with("OR operator"):
+			formatted_parts.append("%s↳ %s" % [prefix, part])
+		elif part.begins_with("Named condition"):
+			formatted_parts.append("%s→ %s" % [prefix, part])
+		elif part.begins_with("Property check"):
+			formatted_parts.append("%s• %s" % [prefix, part])
+		else:
+			formatted_parts.append("%s  %s" % [prefix, part])
+
+		depth += 1
+
+	return "\nContext:\n%s" % "\n".join(formatted_parts)
+
+
+
+## Push condition to evaluation stack
+func _push_evaluation_context(description: String) -> void:
+	_evaluation_stack.append(description)
+	if _evaluation_stack.size() > 1:
+		var indent = "  ".repeat(_evaluation_stack.size() - 1)
+		_debug("%s→ Evaluating: %s" % [indent, description])
+
+## Pop condition from evaluation stack
+func _pop_evaluation_context() -> void:
+	if not _evaluation_stack.is_empty():
+		_evaluation_stack.pop_back()
+
+## Get current evaluation context
+func _get_current_context() -> String:
+	if _evaluation_stack.is_empty():
+		return ""
+	return " (in context: %s)" % " → ".join(_evaluation_stack)
+
+## Update evaluation statistics for a condition
+func _update_evaluation_stats(condition_key: String, evaluation_time: float) -> void:
+	if not condition_key in _cache_stats.condition_evaluation_times:
+		# [min_time, max_time, total_time, count]
+		_cache_stats.condition_evaluation_times[condition_key] = [
+			evaluation_time,  # min
+			evaluation_time,  # max
+			evaluation_time,  # total
+			1                # count
+		]
+		return
+
+	var stats = _cache_stats.condition_evaluation_times[condition_key]
+	stats[0] = min(stats[0], evaluation_time)  # Update min
+	stats[1] = max(stats[1], evaluation_time)  # Update max
+	stats[2] += evaluation_time                # Add to total
+	stats[3] += 1                             # Increment count
+
 ## Evaluates condition configuration recursively
 func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
-	_debug("Evaluating condition config: %s" % config)
-	
+	_debug("Evaluating condition config: %s%s" % [config, _get_current_context()])
+
 	# Handle operator conditions (AND, OR, NOT)
 	if config.has("type") and config.type == "Operator":
 		return _evaluate_operator_condition(config, context)
+
+	# Handle named conditions from registry
+	if config.has("type") and config.type in _condition_configs:
+		_push_evaluation_context("Named condition: %s" % config.type)
+		var base_config = _condition_configs[config.type]
+		var result = _evaluate_condition_config(base_config, context)
+		_pop_evaluation_context()
+		return result
 
 	# Handle property checks
 	if config.has("evaluation"):
 		return _evaluate_property_check(config.evaluation, context)
 	elif config.has("property"):
 		return _evaluate_property_check(config, context)
-		
-	_error("Invalid condition format: %s" % config)
+
+	_error("Invalid condition format: %s%s" % [config, _get_current_context()])
 	return false
 
-## Evaluates operator conditions (AND, OR, NOT)
-func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bool:
-	if not config.has("operator_type"):
-		_error("Operator condition missing operator_type: %s" % config)
-		return false
-		
-	var operator_type = config.operator_type.to_lower()
-	var operands = config.get("operands", [])
-
-	if operands.is_empty():
-		_error("Operator condition has no operands: %s" % config)
-		return false
-
-	_debug("Evaluating %s operator with %d operands" % [operator_type.to_upper(), operands.size()])
-
-	match operator_type:
-		"and":
-			for operand in operands:
-				if not _evaluate_condition_config(operand, context):
-					return false
-			return true
-
-		"or":
-			for operand in operands:
-				if _evaluate_condition_config(operand, context):
-					return true
-			return false
-
-		"not":
-			if operands.size() != 1:
-				_error("NOT operator requires exactly one operand")
-				return false
-			return not _evaluate_condition_config(operands[0], context)
-
-		_:
-			_error("Unknown operator type: %s" % operator_type)
-			return false
-
-## Evaluates property check conditions
+## Evaluates property check conditions with consolidated logging
 func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
 	if not evaluation.has("property"):
-		_error("Property check missing 'property' field: %s" % evaluation)
+		_error("Property check missing 'property' field")
 		return false
 
 	var path = Path.parse(evaluation.property)
 	var operator = evaluation.get("operator", "EQUALS")
+	var op_symbol = OPERATOR_MAP.get(operator, "==")
+
+	_push_evaluation_context("Property check: %s %s" % [path.full, operator])
 
 	# Get first value
-	var value_a = get_property_value(path)
+	var value_a = _property_access.get_property_value(path)
 	if value_a == null and not operator in ["IS_EMPTY", "NOT_EMPTY"]:
-		_error("Problem retrieving property: %s" % path.full)
+		_error("Failed to retrieve property: %s" % path.full)
+		_pop_evaluation_context()
 		return false
 
-	# Get comparison value if needed
-	var value_b: Variant
+	# Get comparison value
+	var value_b = null
 	if "value" in evaluation:
 		value_b = evaluation.value
 	elif "value_from" in evaluation:
 		var compare_path = Path.parse(evaluation.value_from)
-		value_b = get_property_value(compare_path)
+		value_b = _property_access.get_property_value(compare_path)
 		if value_b == null:
-			_error("Problem retrieving comparison property: %s" % compare_path.full)
+			_error("Failed to retrieve comparison property: %s" % compare_path.full)
+			_pop_evaluation_context()
 			return false
-	else:
-		# Special operators that don't need a second value
-		if operator in ["IS_EMPTY", "NOT_EMPTY"]:
-			value_b = null
-		else:
-			_error("Invalid property check configuration: %s" % evaluation)
-			return false
+	elif not operator in ["IS_EMPTY", "NOT_EMPTY"]:
+		_error("Invalid property check: missing comparison value")
+		_pop_evaluation_context()
+		return false
 
-	_debug("Comparing values: %s %s %s" % [value_a, OPERATOR_MAP.get(operator, operator), value_b])
-	return _compare_values(value_a, value_b, operator)
+	var result = _compare_values(value_a, value_b, operator)
+	_log_evaluation_block("Property Check", value_a, op_symbol, value_b, result)
+	_pop_evaluation_context()
+	return result
+
+## Evaluates operator conditions with consolidated logging
+func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bool:
+	if not config.has("operator_type"):
+		_error("Operator condition missing operator_type")
+		return false
+
+	var operator_type = config.operator_type.to_lower()
+	var operands = config.get("operands", [])
+
+	if operands.is_empty():
+		_error("Operator condition has no operands")
+		return false
+
+	_push_evaluation_context("%s operator with %d operands" % [operator_type.to_upper(), operands.size()])
+
+	var result := false
+	match operator_type:
+		"and":
+			result = _evaluate_and_operator(operands, context)
+		"or":
+			result = _evaluate_or_operator(operands, context)
+		"not":
+			result = _evaluate_not_operator(operands, context)
+		_:
+			_error("Unknown operator type: %s" % operator_type)
+
+	var message = "\n%s Operator Evaluation:" % operator_type.to_upper()
+	message += "\n    Result: %s" % result
+	message += _format_context_chain()
+	_debug(message)
+
+	_pop_evaluation_context()
+	return result
+
+## Helper function for AND operator evaluation
+func _evaluate_and_operator(operands: Array, context: Dictionary) -> bool:
+	for i in range(operands.size()):
+		_push_evaluation_context("Operand %d of %d" % [i + 1, operands.size()])
+		if not _evaluate_condition_config(operands[i], context):
+			_pop_evaluation_context()
+			return false
+		_pop_evaluation_context()
+	return true
+
+## Helper function for OR operator evaluation
+func _evaluate_or_operator(operands: Array, context: Dictionary) -> bool:
+	for i in range(operands.size()):
+		_push_evaluation_context("Operand %d of %d" % [i + 1, operands.size()])
+		if _evaluate_condition_config(operands[i], context):
+			_pop_evaluation_context()
+			return true
+		_pop_evaluation_context()
+	return false
+
+## Helper function for NOT operator evaluation
+func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
+	if operands.size() != 1:
+		_error("NOT operator requires exactly one operand")
+		return false
+
+	_push_evaluation_context("Evaluating condition to negate")
+	var original = _evaluate_condition_config(operands[0], context)
+	var result = not original
+
+	var message = "\nNOT Operator Evaluation:"
+	message += "\n    Original: %s" % original
+	message += "\n    Result:   %s" % result
+	message += _format_context_chain()
+	_debug(message)
+
+	_pop_evaluation_context()
+	return result
 
 ## Compares two values using the specified operator
 func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
@@ -310,15 +502,70 @@ func _register_property(property_path_str: String) -> void:
 
 ## Generates cache key for condition evaluation
 func _get_condition_cache_key(condition: Condition, context: Dictionary) -> String:
-	var condition_str = JSON.stringify(condition.config)
-	var context_values = []
+	var key_parts = []
 
+	# Add condition description if available
+	if condition.config.has("description"):
+		key_parts.append(condition.config.description)
+
+	# Add evaluation details
+	if condition.config.has("evaluation"):
+		var eval = condition.config.evaluation
+		if eval.has("property"):
+			var op_str = OPERATOR_MAP.get(eval.get("operator", "EQUALS"), "==")
+			var value_str = ""
+			if "value" in eval:
+				value_str = str(eval.value)
+			elif "value_from" in eval:
+				value_str = "from:" + eval.value_from
+			key_parts.append("%s %s %s" % [eval.property, op_str, value_str])
+
+	# Add context values for properties
+	var context_parts = []
 	for property in condition.get_required_properties():
 		var path := Path.parse(property)
 		if context.has(path.full):
-			context_values.append("%s=%s" % [path.full, context[path.full]])
+			context_parts.append("%s=%s" % [path.full, context[path.full]])
 
-	return "%s|%s" % [condition_str, "|".join(context_values)]
+	var key = " | ".join(key_parts)
+	if not context_parts.is_empty():
+		key += " [Context: %s]" % ", ".join(context_parts)
+
+	return key
+
+## Log condition evaluation with consolidated messages
+func _log_evaluation_block(operation: String, value_a: Variant, operator: String, value_b: Variant, result: bool) -> void:
+	var context = _format_context_chain()
+	var message = "\nCondition Evaluation:"
+	message += "\n    Operation: %s" % operation
+	message += "\n    Compare:   %s %s %s" % [str(value_a), operator, str(value_b)]
+	message += "\n    Result:    %s" % result
+	if not context.is_empty():
+		message += context
+	_debug(message)
+
+## Log cache operations with minimal noise
+func _log_cache_operation(hit: bool, key: String) -> void:
+	_debug("Cache %s: %s" % ["HIT" if hit else "MISS", key])
+
+## Log condition evaluation with formatted context
+func _log_condition_evaluation(message: String, level: String = "debug") -> void:
+	var context = _format_context_chain()
+	var log_message = message
+
+	if not context.is_empty():
+		log_message += context
+
+	match level:
+		"debug":
+			_debug(log_message)
+		"trace":
+			_trace(log_message)
+		"info":
+			_info(log_message)
+		"error":
+			_error(log_message)
+
 
 ## Logs registered required properties
 func _log_required_properties() -> void:
