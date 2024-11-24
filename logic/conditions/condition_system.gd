@@ -147,7 +147,6 @@ func clear_cache() -> void:
 	var cache_size = _condition_cache.size()
 	_condition_cache.clear()
 	_debug("Cleared condition cache (%d entries)" % cache_size)
-	reset_stats()
 
 ## Gets a list of all required property paths
 func get_required_properties() -> Array[String]:
