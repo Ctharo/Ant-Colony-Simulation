@@ -1,6 +1,6 @@
 ## A hierarchical tree structure for managing AI behavior tasks and their execution
 class_name TaskTree
-extends BaseNode
+extends BaseRefCounted
 
 #region Signals
 ## Signal emitted when the tree's active task changes
@@ -14,13 +14,14 @@ signal tree_updated
 ## Builder class for constructing the task tree
 class Builder:
 	extends BaseRefCounted
-
+	
 	var _ant: Ant
 	var _root_type: String = "Root"
 	var _tasks_path: String = "res://config/ant_tasks.json"
 	var _conditions_path: String = "res://config/ant_conditions.json"
 
 	func _init(p_ant: Ant) -> void:
+		log_category = DebugLogger.Category.TASK
 		_ant = p_ant
 
 	func with_root_task(type: String) -> Builder:
@@ -34,6 +35,8 @@ class Builder:
 
 	func build() -> TaskTree:
 		var tree := TaskTree.new()
+		if tree.log_category == DebugLogger.Category.PROGRAM:
+			assert(false)
 		tree.ant = _ant
 
 		# Load conditions first since tasks depend on them
@@ -111,10 +114,10 @@ var _condition_system: ConditionSystem
 var _last_active_task: Task
 #endregion
 
-func _ready() -> void:
+func _init() -> void:
 	log_from = "task_tree"
 	log_category = DebugLogger.Category.TASK
-
+	
 #region Public Methods
 ## Creates a new TaskTree instance with the specified ant agent
 ## [param _ant] The ant agent to associate with this task tree
@@ -170,7 +173,6 @@ func update(delta: float) -> void:
 ## [return] A dictionary containing the current context information
 func gather_context() -> Dictionary:
 	var context = {}
-
 	# Add required properties
 	for property in _condition_system.get_required_properties():
 		var path := Path.parse(property)

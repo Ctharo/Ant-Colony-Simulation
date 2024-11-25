@@ -1,11 +1,15 @@
 extends BaseNode
 
-
+func _init():
+	log_category = DebugLogger.Category.PROGRAM
+	log_from = "ant_manager"
+	
 func start_ants(enable: bool = true) -> Result:
 	var ants: Ants = get_all()
 	for ant: Ant in ants:
 		ant.set_physics_process(enable)
 		ant.set_process(enable)
+		ant._init_task_tree()
 	_debug("Ant processes started")
 	return Result.new()
 

@@ -97,13 +97,16 @@ var loading_label: Label
 #endregion
 
 #region Initialization
+
+func _init() -> void:
+	log_category = DebugLogger.Category.UI
+	additional_log_categories = [DebugLogger.Category.PROPERTY]
+	log_from = "property_browser"
+	
 ## Called when the node enters the scene tree
 func _ready() -> void:
 	# Init logging
-	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
-	log_category = DebugLogger.Category.UI
-	log_from = "property_browser"
-	additional_log_categories = [DebugLogger.Category.PROPERTY]
+	_set_logging_level(DebugLogger.LogLevel.TRACE)
 
 	_configure_window()
 	_initialize_ui_builder()
@@ -232,7 +235,7 @@ func create_ant_to_browse() -> void:
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
-	ant.foods.add_food(randf_range(0.0, 200.0))
+	ant.foods.add_food(ant.get_property_value(Path.parse("storage.capacity.max")))
 
 	current_ant = ant
 	navigation_manager.set_property_access(ant)
@@ -352,4 +355,10 @@ func _warn(message: String, category: DebugLogger.Category = log_category) -> vo
 
 func _error(message: String, category: DebugLogger.Category = log_category) -> void:
 	DebugLogger.error(category, message, {"from": log_from})
+	
+func _set_logging_category(category: DebugLogger.Category, enabled: bool = true) -> void:
+	DebugLogger.set_category_enabled(category, enabled, log_from)
+
+func _set_logging_level(level: DebugLogger.LogLevel) -> void:
+	DebugLogger.set_log_level(level, log_from)
 #endregion

@@ -1,5 +1,5 @@
 class_name DebugLogger
-extends RefCounted
+extends BaseRefCounted
 
 ## Log levels for different types of messages
 enum LogLevel {
@@ -51,14 +51,14 @@ static var enabled_categories := {
 	Category.TASK: false,
 	Category.ACTION: false,
 	Category.BEHAVIOR: false,
-	Category.CONDITION: true,
+	Category.CONDITION: false,
 	Category.PROPERTY: false,
 	Category.CONTEXT: false,
 	Category.ENTITY: false,
 	Category.TRANSITION: false,
 	Category.HIERARCHY: false,
 	Category.UI: false,
-	Category.PROGRAM: false,
+	Category.PROGRAM: true, # Should always be on?
 	Category.DATA: false
 }
 #endregion
@@ -86,7 +86,7 @@ const CATEGORY_NAMES := {
 	Category.HIERARCHY: "HIERARCHY",
 	Category.UI: "UI",
 	Category.DATA: "DATA",
-	Category.PROGRAM: "PROGRAM"
+	Category.PROGRAM: "PROGRAM" # Should always be on?
 }
 #endregion
 
@@ -99,22 +99,24 @@ static func configure_source(source: String, enabled: bool = true, categories: A
 	#])
 
 ## Enable or disable specific categories
-static func set_category_enabled(category: Category, enabled: bool = true) -> void:
+static func set_category_enabled(category: Category, enabled: bool = true, from: String = "") -> void:
 	enabled_categories[category] = enabled
 	info(Category.PROGRAM, "%s logging category %s" % [
-		"Enabled" if enabled else "Disabled",
-		CATEGORY_NAMES[category]
-	])
+				"Enabled" if enabled else "Disabled",
+				CATEGORY_NAMES[category]
+			],
+		{"from": from if from else "debug_logger"}
+	)
 
 ## Set the global log level
-static func set_log_level(level: LogLevel) -> void:
+static func set_log_level(level: LogLevel, from: String = "") -> void:
 	log_level = level
-	info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level])
+	info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], {"from": from if from else "debug_logger"})
 
 ## Enable or disable context print
-static func set_show_context(enabled: bool = true) -> void:
+static func set_show_context(enabled: bool = true, from: String = "") -> void:
 	show_context = enabled
-	info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"])
+	info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], {"from": from if from else "debug_logger"})
 #endregion
 
 #region Logging Implementation

@@ -63,18 +63,16 @@ var _property_access: PropertyAccess :
 ## Array of additional categories this node can log to
 @export var additional_log_categories: Array[DebugLogger.Category] = []
 
-func _init() -> void:
+func _init(init_as_active: bool = false) -> void:
 	log_from = "ant"
+	
 	_init_property_access()
 	_init_property_groups()
-
-	var config_root = ProjectSettings.get_setting("ai/config_path", DEFAULT_CONFIG_ROOT)
-	task_tree = TaskTree.create(self)\
-		.with_root_task("CollectFood")\
-		.build()
-	if task_tree and task_tree.get_active_task():
-		task_tree.active_task_changed.connect(_on_active_task_changed)
-		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
+	
+	# In case we don't want to start behavior immediately
+	if init_as_active:
+		_init_task_tree()
+	
 
 func _ready() -> void:
 	spawned.emit()
@@ -103,58 +101,22 @@ func _on_active_task_changed(_new_task: Task) -> void:
 #endregion
 
 #region Action Methods
-func take_damage(amount: float) -> void:
-	if amount <= 0:
-		return
-
-	var current_health = get_property_value(Path.parse("health.levels.current"))
-	damaged.emit()
-
-	# Update health through property system
-	_property_access.set_property_value(
-		Path.parse("health.levels.current"),
-		current_health - amount
-	)
-
-func emit_pheromone(type: String, concentration: float) -> void:
-	_info("Emitting pheromone of type %s and concentration %.2f" % [type, concentration])
-	#var new_pheromone = Pheromone.new(position, type, concentration, self)
-	# Add the pheromone to the world (implementation depends on your world management system)
-
-func perform_action(_action: Action) -> void:
+## Placeholder for actions
+func perform_action(_action: Action, args = []) -> void:
 	# Implement ant behavior here
+	var time_for_action: float = 1.0
+	var event_str: String = "Ant is performing action:"
+	event_str += " "
+	event_str += _action.name if _action else "N/A"
+	event_str += " "
+	event_str += "%.2f" % time_for_action
+	event_str += " "
+	event_str += "second" if time_for_action == 1.0 else "seconds"
+	event_str += " "
+	event_str += "with %s %s" % ["argument" if args.size() == 1 else "arguments", args]
+	_debug(event_str)
+	await get_tree().create_timer(1).timeout
 	action_completed.emit()
-
-func consume_food(amount: float) -> void:
-	var consumed = foods.consume(amount)
-	if consumed > 0:
-		# Replenish energy through property system
-		var current_energy = get_property_value(Path.parse("energy.levels.current"))
-		_property_access.set_property_value(
-			Path.parse("energy.levels.current"),
-			current_energy + consumed
-		)
-
-func move(direction: Vector2, delta: float) -> void:
-	var speed = get_property_value(Path.parse("speed.rates.movement"))
-	if not speed:
-		speed = 1.0
-	var vector = direction * speed * delta
-	_move_to(global_position + vector)
-
-func _move_to(location: Vector2) -> void:
-	#nav_agent.target_position = global_position + location
-	_info("Ant would be moving now to location %s" % location)
-
-func store_food(_colony: Colony, _time: float) -> float:
-	var storing_amount: float = foods.mass()
-	var total_stored = _colony.foods.add_food(storing_amount)
-	_info("Stored %.2f food -> colony total: %.2f food stored" % [storing_amount, total_stored])
-	foods.clear()
-	return storing_amount
-
-func attack(current_target_entity: Ant, _delta: float) -> void:
-	_info("Attack action called against %s" % current_target_entity.name)
 #endregion
 
 #region Property System
@@ -171,18 +133,17 @@ func register_property_node(node: PropertyNode, at_path: Path = null) -> Result:
 			"Node to register invalid"
 		)
 
-	_trace("Registering property node: %s" % node.name)
 	if not _property_access:
 		return Result.new(
 			Result.ErrorType.SYSTEM_ERROR,
-			"Failed to register property node %s: property access not yet initialized" % node.name
+			"Failed to register property node %s: property access not yet initialized" % [node.name]
 		)
 	return _property_access.register_node_at_path(node, at_path)
 
 
 ## Initialize all component property nodes
 func _init_property_groups() -> void:
-	_trace("Initializing property nodes...")
+	_trace("Initializing ant property nodes...")
 
 	var nodes = [
 		Energy.new(self),        # Energy management
@@ -217,27 +178,39 @@ func _register_colony_properties() -> void:
 
 	var node: PropertyNode = _colony.get_as_node()
 	if not node:
-		_error("Failed to get colony property node")
+		_error("Failed to get colony property node for ant property registration")
 		return
 
 	var result: Result = register_property_node(node)
 	if result.success():
-		_trace("Colony properties registered successfully")
+		_trace("Colony properties registered successfully to ant")
 	else:
-		_error("Colony properties not registered -> %s" % result.error_message)
+		_error("Colony properties not registered to ant -> %s" % result.error_message)
+
+func _init_task_tree() -> void:
+	_trace("Initializing ant task_tree")
+	task_tree = TaskTree.create(self)\
+		.with_root_task("CollectFood")\
+		.build()
+	if task_tree and task_tree.get_active_task():
+		_trace("Ant task_tree initialized successfully")
+		task_tree.active_task_changed.connect(_on_active_task_changed)
+		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
+	else:
+		_error("Ant task_tree failed to be initialized")
 
 #region Property Access Interface
 ## Get a property node by path
 func get_property(path: Path) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot get property: property access system not initialized")
+		_error("Cannot get ant property: ant property access system not initialized")
 		return null
 	return _property_access.get_property(path)
 
 ## Get a property value by path
 func get_property_value(path: Path) -> Variant:
 	if not _property_access:
-		_error("Cannot get property value: property access system not initialized")
+		_error("Cannot get ant property value: ant property access system not initialized")
 		return null
 	return _property_access.get_property_value(path)
 
@@ -246,14 +219,14 @@ func set_property_value(path: Path, value: Variant) -> Result:
 	if not _property_access:
 		return Result.new(
 			Result.ErrorType.SYSTEM_ERROR,
-			"Cannot set property value: property access system not initialized"
+			"Cannot set ant property value: ant property access system not initialized"
 		)
 	return _property_access.set_property_value(path, value)
 
 ## Find a property node by path
 func find_property_node(path: Path) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot find property node: property access system not initialized")
+		_error("Cannot find ant property node: ant property access system not initialized")
 		return null
 
 	if path.is_root():
@@ -273,28 +246,28 @@ func find_property_node(path: Path) -> PropertyNode:
 ## Get a root node by name
 func get_root_node(root_name: String) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot get root node: property access system not initialized")
+		_error("Cannot get ant property root: %s -> Ant property access system not initialized" % root_name)
 		return null
 	return _property_access.get_root_node(root_name)
 
 ## Get all value nodes in a root by root name
 func get_root_values(root_name: String) -> Array[PropertyNode]:
 	if not _property_access:
-		_error("Cannot get root values: property access system not initialized")
+		_error("Cannot get ant property root values: %s -> Ant property access system not initialized" % root_name)
 		return []
 	return _property_access.get_root_values(root_name)
 
 ## Get all registered root names
 func get_root_names() -> Array[String]:
 	if not _property_access:
-		_error("Cannot get root names: property access system not initialized")
+		_error("Cannot get ant property root names -> Ant property access system not initialized")
 		return []
 	return _property_access.get_root_names()
 
 ## Get all containers under a root node
 func get_root_containers(root_name: String) -> Array[PropertyNode]:
 	if not _property_access:
-		_error("Cannot get root containers: property access system not initialized")
+		_error("Cannot get ant property containers for root: %s -> Ant property access system not initialized" % root_name)
 		return []
 	return _property_access.get_root_containers(root_name)
 #endregion

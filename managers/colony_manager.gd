@@ -1,4 +1,8 @@
-extends Node
+extends BaseNode
+
+func _init() -> void:
+	log_category = DebugLogger.Category.PROGRAM
+	log_from = "colony_manager"
 
 func start_colonies(enable: bool = true) -> Result:
 	var colonies: Colonies = get_all()

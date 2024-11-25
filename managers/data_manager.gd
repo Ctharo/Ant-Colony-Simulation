@@ -9,10 +9,11 @@ var current_colony_data: Dictionary = {}
 var current_ant_data: Dictionary = {}
 
 
-
-func _ready():
+func _init() -> void:
 	log_category = DebugLogger.Category.DATA
 	log_from = "data_manager"
+	
+func _ready():
 	load_data()
 
 func save_data() -> void:

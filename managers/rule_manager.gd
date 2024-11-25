@@ -1,4 +1,4 @@
-extends Node
+extends BaseNode
 
 var data_manager: DataManager
 
@@ -21,6 +21,11 @@ const OPERATOR_MAP = {
 	">=": ComparisonOperator.GREATER_EQUAL,
 	"<=": ComparisonOperator.LESS_EQUAL
 }
+
+
+func _init() -> void:
+	log_category = DebugLogger.Category.PROGRAM
+	log_from = "rule_manager"
 
 func _ready() -> void:
 	data_manager = DataManager

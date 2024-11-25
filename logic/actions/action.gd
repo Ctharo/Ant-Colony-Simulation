@@ -104,7 +104,8 @@ class Move extends Action:
 		var movement_rate_modifier = params.get("rate_modifier", 1.0)
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate_modifier * ant.speed.movement_rate
-		ant.energy.deplete(delta * movement_rate_modifier * 0.1)
+		ant.perform_action(self, ["toward position %s" % target_position, "with velocity of %s" % ant.velocity.length()])
+
 
 	func is_completed() -> bool:
 		if not "target_position" in params:
@@ -266,7 +267,7 @@ class EmitPheromone extends Action:
 		var pheromone_type = params["pheromone_type"]
 		var pheromone_strength = params.get("pheromone_strength", 1.0)
 
-		ant.emit_pheromone(pheromone_type, pheromone_strength)
+		ant.perform_action(self, [pheromone_type, pheromone_strength])
 		current_time += delta
 
 	func is_completed() -> bool:

@@ -1,7 +1,14 @@
-extends Node2D
+extends BaseNode2D
+
+func _init() -> void:
+	log_from = "sandbox"
+	log_category = DebugLogger.Category.PROGRAM
 
 func _ready() -> void:
-	DebugLogger.set_log_level(DebugLogger.LogLevel.TRACE)
+	_set_logging_level(DebugLogger.LogLevel.TRACE)
+	_set_logging_category(DebugLogger.Category.ENTITY)
+	_set_logging_category(DebugLogger.Category.CONDITION, false)
+
 	spawn_ants(1)
 	AntManager.start_ants()
 	_staged_creation()
