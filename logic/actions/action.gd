@@ -87,10 +87,9 @@ func is_ready() -> bool:
 
 ## Action Classes
 class Move extends Action:
-	
 	func _init():
 		super._init()
-		log_from = "action: move"
+		log_from += ": move"
 		
 	static func create() -> Builder:
 		return Builder.new(Move)
@@ -106,11 +105,9 @@ class Move extends Action:
 		ant.velocity = direction * movement_rate_modifier * ant.speed.movement_rate
 		ant.perform_action(self, ["toward position %s" % target_position, "with velocity of %s" % ant.velocity.length()])
 
-
 	func is_completed() -> bool:
 		if not "target_position" in params:
 			return true
-		assert(false, "Is target_position ever in params?")
 		return ant.global_position.distance_to(params["target_position"]) < 1.0
 
 class Harvest extends Action:
@@ -118,7 +115,7 @@ class Harvest extends Action:
 	
 	func _init():
 		super._init()
-		log_from = "action: harvest"
+		log_from += ": harvest"
 		
 	static func create() -> Builder:
 		return Builder.new(Harvest)
@@ -131,12 +128,13 @@ class Harvest extends Action:
 		current_food_source = params["target_food"]
 		if current_food_source and not current_food_source.is_depleted():
 			var harvest_rate_modifier = params.get("harvest_rate_modifier", 1.0)
-			var amount_harvested = ant.harvest_food(
-				current_food_source,
-				delta * harvest_rate_modifier * ant.speed.harvesting_rate
-			)
-			if amount_harvested > 0 and params.get("debug_harvest", false):
-				_info("Harvested %f amount of food" % amount_harvested)
+			var harvest_rate = delta * harvest_rate_modifier * ant.speed.harvesting_rate
+			ant.perform_action(self, [
+				"harvesting from %s" % current_food_source.name,
+				"at rate %.2f/s" % harvest_rate,
+				"current capacity: %.2f/%.2f" % [ant.foods.mass(), ant.storage.capacity]
+			])
+			ant.harvest_food(current_food_source, harvest_rate)
 		else:
 			_error("No valid food source to harvest")
 
@@ -148,7 +146,7 @@ class Harvest extends Action:
 class FollowPheromone extends Action:
 	func _init():
 		super._init()
-		log_from = "action: follow_pheromone"
+		log_from += ": follow_pheromone"
 		
 	static func create() -> Builder:
 		return Builder.new(FollowPheromone)
@@ -157,8 +155,16 @@ class FollowPheromone extends Action:
 		if not "pheromone_type" in params:
 			_error("FollowPheromone action requires pheromone_type parameter")
 			return
-
-		_info("Ant now moving towards higher pheromone concentration")
+			
+		var pheromone_type = params["pheromone_type"]
+		var concentration = params.get("concentration", 0.0)
+		var direction = params.get("direction", Vector2.ZERO)
+		
+		ant.perform_action(self, [
+			"following %s pheromone" % pheromone_type,
+			"concentration: %.2f" % concentration,
+			"direction: %s" % direction
+		])
 
 	func is_completed() -> bool:
 		return false
@@ -169,7 +175,7 @@ class RandomMove extends Action:
 	
 	func _init():
 		super._init()
-		log_from = "action: random_move"
+		log_from += ": random_move"
 		
 	static func create() -> Builder:
 		return Builder.new(RandomMove)
@@ -182,23 +188,35 @@ class RandomMove extends Action:
 			current_time = 0
 			current_direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
 
+		ant.perform_action(self, [
+			"moving randomly",
+			"direction: %s" % current_direction,
+			"duration: %.1f/%.1f" % [current_time, move_duration]
+		])
 		ant.move(current_direction, delta)
 
 	func is_completed() -> bool:
 		return false
 
 class Store extends Action:
-
 	func _init():
 		super._init()
-		log_from = "action: store"
+		log_from += ": store"
 	
 	static func create() -> Builder:
 		return Builder.new(Store)
 
 	func _update_action(delta: float) -> void:
 		var store_rate_modifier = params.get("store_rate_modifier", 1.0)
-		ant.store_food(ant.colony, delta * store_rate_modifier * ant.speed.storing_rate)
+		var store_rate = delta * store_rate_modifier * ant.speed.storing_rate
+		var food_mass = ant.foods.mass()
+		
+		ant.perform_action(self, [
+			"storing food in colony",
+			"at rate %.2f/s" % store_rate,
+			"remaining to store: %.2f" % food_mass
+		])
+		ant.store_food(ant.colony, store_rate)
 
 	func is_completed() -> bool:
 		return ant.foods.is_empty()
@@ -209,7 +227,7 @@ class Attack extends Action:
 	
 	func _init():
 		super._init()
-		log_from = "action: attack"
+		log_from += ": attack"
 		
 	static func create() -> Builder:
 		return Builder.new(Attack)
@@ -228,14 +246,36 @@ class Attack extends Action:
 		var attack_range = attack_range_modifier * ant.reach.distance
 
 		if current_target_entity and is_instance_valid(current_target_entity):
-			if ant.global_position.distance_to(current_target_entity.global_position) <= attack_range:
+			var distance = ant.global_position.distance_to(current_target_entity.global_position)
+			if distance <= attack_range:
+				ant.perform_action(self, [
+					"attacking entity %s" % current_target_entity.name,
+					"at range %.1f" % distance,
+					"cooldown: %.1f" % current_cooldown
+				])
 				ant.attack(current_target_entity, delta)
 			else:
+				ant.perform_action(self, [
+					"moving to attack range of %s" % current_target_entity.name,
+					"distance: %.1f" % distance,
+					"attack range: %.1f" % attack_range
+				])
 				ant.move_to(current_target_location, delta)
 		elif current_target_location != Vector2.ZERO:
-			if ant.global_position.distance_to(current_target_location) <= attack_range:
+			var distance = ant.global_position.distance_to(current_target_location)
+			if distance <= attack_range:
+				ant.perform_action(self, [
+					"attacking location %s" % current_target_location,
+					"at range %.1f" % distance,
+					"cooldown: %.1f" % current_cooldown
+				])
 				ant.attack(current_target_entity, delta)
 			else:
+				ant.perform_action(self, [
+					"moving to attack location %s" % current_target_location,
+					"distance: %.1f" % distance,
+					"attack range: %.1f" % attack_range
+				])
 				ant.move_to(current_target_location, delta)
 
 		current_cooldown = params.get("attack_cooldown", 1.0)
@@ -250,7 +290,8 @@ class EmitPheromone extends Action:
 
 	func _init():
 		super._init()
-		log_from = "action: emit_pheromone"
+		log_from += ": emit_pheromone"
+
 
 	static func create() -> Builder:
 		return Builder.new(EmitPheromone)
@@ -266,25 +307,36 @@ class EmitPheromone extends Action:
 
 		var pheromone_type = params["pheromone_type"]
 		var pheromone_strength = params.get("pheromone_strength", 1.0)
-
-		ant.perform_action(self, [pheromone_type, pheromone_strength])
 		current_time += delta
+		
+		ant.perform_action(self, [
+			"emitting %s pheromone" % pheromone_type,
+			"strength: %.2f" % pheromone_strength,
+			"duration: %.1f/%.1f" % [current_time, params["emission_duration"]]
+		])
+		ant.emit_pheromone(pheromone_type, pheromone_strength)
 
 	func is_completed() -> bool:
 		return current_time >= params.get("emission_duration", 0.0)
 
 class Rest extends Action:
-	
 	func _init():
 		super._init()
-		log_from = "action: rest"
+		log_from += ": rest"
 		
 	static func create() -> Builder:
 		return Builder.new(Rest)
 
 	func _update_action(delta: float) -> void:
 		var energy_gain_rate = params.get("energy_gain_rate", 10.0)
-		ant.energy.replenish(energy_gain_rate * delta)
+		var energy_gain = energy_gain_rate * delta
+		
+		ant.perform_action(self, [
+			"resting to recover energy",
+			"gain rate: %.2f/s" % energy_gain_rate,
+			"current energy: %.1f/%.1f" % [ant.energy.current, ant.energy.maximum]
+		])
+		ant.energy.replenish(energy_gain)
 
 	func is_completed() -> bool:
 		return ant.energy.is_full()
