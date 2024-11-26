@@ -72,7 +72,7 @@ func _init(_entity: Node) -> void:
 	for child in built_energy.children.values():
 		add_child(child)
 
-	_trace("Energy property tree initialized")
+	logger.trace("Energy property tree initialized")
 
 #region Property Getters and Setters
 func _get_max_level() -> float:
@@ -80,7 +80,7 @@ func _get_max_level() -> float:
 
 func _set_max_level(value: float) -> void:
 	if is_zero_approx(value):
-		_warn(
+		logger.warn(
 			"Attempted to set energy.levels.maximum to zero -> Action not allowed"
 		)
 		return
@@ -92,7 +92,7 @@ func _set_max_level(value: float) -> void:
 	_max_level = value
 
 	if old_value != _max_level:
-		_trace("Maximum energy updated: %.2f -> %.2f" % [old_value, _max_level])
+		logger.trace("Maximum energy updated: %.2f -> %.2f" % [old_value, _max_level])
 
 func _get_current_level() -> float:
 	return _current_level
@@ -102,10 +102,10 @@ func _set_current_level(value: float) -> void:
 	_current_level = clamp(value, 0.0, _max_level)
 
 	if old_value != _current_level:
-		_trace("Current energy updated: %.2f -> %.2f" % [old_value, _current_level])
+		logger.trace("Current energy updated: %.2f -> %.2f" % [old_value, _current_level])
 
 		if is_zero_approx(_current_level):
-			_trace("Energy depleted!")
+			logger.trace("Energy depleted!")
 			depleted.emit()
 
 func _get_percentage() -> float:
@@ -134,7 +134,7 @@ func is_full() -> bool:
 ## Add energy points, not exceeding maximum
 func replenish(amount: float) -> void:
 	if amount < 0:
-		_error("Cannot replenish negative amount")
+		logger.error("Cannot replenish negative amount")
 		return
 
 	_set_current_level(_current_level + amount)
@@ -143,7 +143,7 @@ func replenish(amount: float) -> void:
 ## Returns true if had enough energy to consume
 func consume(amount: float) -> bool:
 	if amount < 0:
-		_error("Cannot consume negative amount")
+		logger.error("Cannot consume negative amount")
 		return false
 
 	if amount > _current_level:
@@ -155,11 +155,11 @@ func consume(amount: float) -> bool:
 ## Reset energy to maximum level
 func restore_full_energy() -> void:
 	_set_current_level(_max_level)
-	_trace("Energy restored to maximum")
+	logger.trace("Energy restored to maximum")
 
 ## Reset energy to default values
 func reset() -> void:
 	_max_level = DEFAULT_MAX_ENERGY
 	_current_level = DEFAULT_MAX_ENERGY
-	_trace("Energy reset to default: %.2f/%.2f" % [_current_level, _max_level])
+	logger.trace("Energy reset to default: %.2f/%.2f" % [_current_level, _max_level])
 #endregion

@@ -1,5 +1,5 @@
 class_name Task
-extends BaseRefCounted
+extends RefCounted
 
 #region Signals
 signal started
@@ -30,7 +30,6 @@ enum Priority {
 #region Builder
 ## Builder class for constructing tasks
 class Builder:
-	extends BaseRefCounted
 
 	var _task: Task
 	var _conditions: Array[ConditionSystem.Condition] = []
@@ -123,6 +122,8 @@ var active_behavior: Behavior:
 ## Whether higher priority behaviors can interrupt lower priority ones
 var allow_interruption: bool = true
 
+var logger: Logger
+
 ## Dictionary of task configurations loaded from JSON
 static var _task_configs: Dictionary
 
@@ -166,8 +167,8 @@ const BEHAVIOR_TO_ACTION = {
 func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem = null) -> void:
 	priority = p_priority
 	_condition_system = condition_system
-	log_from = "task"
-	log_category = DebugLogger.Category.TASK
+	logger = Logger.new("task", DebugLogger.Category.TASK)
+
 #endregion
 
 #region Public Methods
@@ -176,8 +177,8 @@ func update(delta: float, context: Dictionary) -> void:
 	if state != Task.State.ACTIVE:
 		return
 
-	_debug("\nUpdating Task: %s" % name)
-	_debug("Current active behavior: %s (State: %s)" % [
+	logger.debug("\nUpdating Task: %s" % name)
+	logger.debug("Current active behavior: %s (State: %s)" % [
 			active_behavior.name if active_behavior else "None",
 			Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
 		]
@@ -185,19 +186,19 @@ func update(delta: float, context: Dictionary) -> void:
 
 	# Check task conditions using the condition system
 	if not _check_conditions(context):
-		_info("Task conditions not met, interrupting: %s" % name)
+		logger.info("Task conditions not met, interrupting: %s" % name)
 		interrupt()
 		return
 
 	# First check if current behavior should continue
 	if active_behavior and active_behavior.should_activate(context):
-		_debug("Current behavior valid, checking for higher priority behaviors")
+		logger.debug("Current behavior valid, checking for higher priority behaviors")
 
 		var higher_priority_behavior = _check_higher_priority_behaviors(active_behavior.priority, context)
 		if higher_priority_behavior:
 			_switch_behavior(higher_priority_behavior)
 		else:
-			_debug("No higher priority behaviors to activate, continuing current behavior")
+			logger.debug("No higher priority behaviors to activate, continuing current behavior")
 			active_behavior.update(delta, context)
 		return
 
@@ -206,14 +207,14 @@ func update(delta: float, context: Dictionary) -> void:
 	if next_behavior:
 		_switch_behavior(next_behavior)
 	elif active_behavior:
-		_info("No valid behavior found, interrupting current behavior")
+		logger.info("No valid behavior found, interrupting current behavior")
 		active_behavior.interrupt()
 		active_behavior = null
 
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
 	if not is_instance_valid(behavior):
-		_error("Cannot add invalid behavior to task")
+		logger.error("Cannot add invalid behavior to task")
 		return
 
 	behaviors.append(behavior)
@@ -222,16 +223,16 @@ func add_behavior(behavior: Behavior) -> void:
 	if is_instance_valid(ant):
 		behavior.ant = ant
 
-	_debug("Added behavior '%s' to task '%s'" % [behavior.name, name])
+	logger.debug("Added behavior '%s' to task '%s'" % [behavior.name, name])
 
 ## Add a condition to this task
 func add_condition(condition: ConditionSystem.Condition) -> void:
 	if not is_instance_valid(condition):
-		_error("Cannot add invalid condition to task")
+		logger.error("Cannot add invalid condition to task")
 		return
 
 	conditions.append(condition)
-	_debug("Added condition to task '%s'" % name)
+	logger.debug("Added condition to task '%s'" % name)
 
 ## Start the task
 func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
@@ -239,14 +240,14 @@ func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 		return
 
 	if not is_instance_valid(p_ant):
-		_error("Cannot start task with invalid ant reference")
+		logger.error("Cannot start task with invalid ant reference")
 		return
 
 	ant = p_ant
 	_condition_system = p_condition_system
 	state = State.ACTIVE
 	started.emit()
-	_info("Started task: %s" % name)
+	logger.info("Started task: %s" % name)
 
 ## Interrupt the task
 func interrupt() -> void:
@@ -256,7 +257,7 @@ func interrupt() -> void:
 			active_behavior.interrupt()
 		active_behavior = null
 		interrupted.emit()
-		_info("Interrupted task: %s" % name)
+		logger.info("Interrupted task: %s" % name)
 
 ## Reset the task to its initial state
 func reset() -> void:
@@ -304,7 +305,7 @@ func _check_conditions(context: Dictionary) -> bool:
 		return true
 
 	if not _condition_system:
-		_error("No condition system available for task '%s'" % name)
+		logger.error("No condition system available for task '%s'" % name)
 		return false
 
 	for condition: ConditionSystem.Condition in conditions:
@@ -325,20 +326,20 @@ func _check_higher_priority_behaviors(current_priority: int, context: Dictionary
 	priorities.sort()
 	priorities.reverse()
 
-	_trace("\nChecking higher priority behaviors (current priority: %d)" % current_priority)
+	logger.trace("\nChecking higher priority behaviors (current priority: %d)" % current_priority)
 
 	# Check behaviors by priority level
 	for _priority in priorities:
-		_trace("Checking priority level: %d" % _priority)
+		logger.trace("Checking priority level: %d" % _priority)
 
 		var behaviors_at_priority = priority_groups[_priority]
 		var any_conditions_met = false
 
 		for behavior in behaviors_at_priority:
-			_trace("  Checking behavior: %s" % behavior.name)
+			logger.trace("  Checking behavior: %s" % behavior.name)
 
 			var should_activate = behavior.should_activate(context)
-			_trace("    Should activate: %s" % should_activate)
+			logger.trace("    Should activate: %s" % should_activate)
 
 			if should_activate:
 				return behavior
@@ -346,7 +347,7 @@ func _check_higher_priority_behaviors(current_priority: int, context: Dictionary
 			any_conditions_met = any_conditions_met or should_activate
 
 		if not any_conditions_met:
-			_trace("  No behaviors at priority %d could activate, stopping checks" % _priority)
+			logger.trace("  No behaviors at priority %d could activate, stopping checks" % _priority)
 			break
 
 	return null
@@ -365,13 +366,13 @@ func _find_next_valid_behavior(context: Dictionary) -> Behavior:
 	for _priority in priorities:
 		var behaviors_at_priority = priority_groups[_priority]
 		for behavior: Behavior in behaviors_at_priority:
-			_trace("\nChecking behavior: %s (Priority: %d)" % [behavior.name, behavior.priority])
+			logger.trace("\nChecking behavior: %s (Priority: %d)" % [behavior.name, behavior.priority])
 
 			if behavior.should_activate(context):
 				return behavior
 
 		if not behaviors_at_priority.is_empty():
-			_trace("No behaviors at priority %d could activate" % _priority)
+			logger.trace("No behaviors at priority %d could activate" % _priority)
 
 	return null
 
@@ -397,7 +398,7 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 	]
 	transition_info += "\n  To: %s" % new_behavior.name
 
-	_info(transition_info)
+	logger.info(transition_info)
 
 	if active_behavior:
 		active_behavior.interrupt()
@@ -407,7 +408,7 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 	# Start behavior with condition system
 	active_behavior.start(ant, _condition_system)
 
-	_debug(
+	logger.debug(
 		"After switch - New behavior: %s (State: %s)" % [
 			active_behavior.name,
 			Behavior.State.keys()[active_behavior.state]

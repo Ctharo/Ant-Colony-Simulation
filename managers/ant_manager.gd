@@ -1,8 +1,8 @@
-extends BaseNode
-
+extends Node
+var logger: Logger
 func _init():
-	log_category = DebugLogger.Category.PROGRAM
-	log_from = "ant_manager"
+	logger = Logger.new("ant_manager",DebugLogger.Category.PROGRAM)
+
 	
 func start_ants(enable: bool = true) -> Result:
 	var ants: Ants = get_all()
@@ -10,7 +10,7 @@ func start_ants(enable: bool = true) -> Result:
 		ant.set_physics_process(enable)
 		ant.set_process(enable)
 		ant._init_task_tree()
-	_debug("Ant processes started")
+	logger.debug("Ant processes started")
 	return Result.new()
 
 func spawn_ants(num: int = 1) -> Array[Ant]:

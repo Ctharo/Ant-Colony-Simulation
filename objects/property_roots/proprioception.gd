@@ -52,28 +52,28 @@ func _init(_entity: Node) -> void:
 	for child in built_proprioception.children.values():
 		add_child(child)
 
-	_trace("Proprioception property tree initialized")
+	logger.trace("Proprioception property tree initialized")
 
 #region Property Getters
 func _get_position() -> Vector2:
 	if not entity:
-		_error("Cannot get position: entity reference is null")
+		logger.error("Cannot get position: entity reference is null")
 		return Vector2.ZERO
 	return entity.global_position
 
 func _get_colony_position() -> Vector2:
 	if not entity:
-		_error("Cannot get colony position: entity reference is null")
+		logger.error("Cannot get colony position: entity reference is null")
 		return Vector2.ZERO
 	var colony_pos = entity.get_property_value(Path.parse("colony.position"))
 	if not colony_pos:
-		_trace("Could not get colony position")
+		logger.trace("Could not get colony position")
 		return Vector2.ZERO
 	return colony_pos
 
 func _get_distance_to_colony() -> float:
 	if not entity:
-		_error("Cannot get colony distance: entity reference is null")
+		logger.error("Cannot get colony distance: entity reference is null")
 		return 0.0
 	var colony_pos = _get_colony_position()
 	if colony_pos == Vector2.ZERO:
@@ -82,7 +82,7 @@ func _get_distance_to_colony() -> float:
 
 func _get_direction_to_colony() -> Vector2:
 	if not entity:
-		_error("Cannot get colony direction: entity reference is null")
+		logger.error("Cannot get colony direction: entity reference is null")
 		return Vector2.ZERO
 	var colony_pos = _get_colony_position()
 	if colony_pos == Vector2.ZERO:
@@ -100,14 +100,14 @@ func _has_moved() -> bool:
 ## Get direction from entity's current position to a specific location
 func get_direction_to(location: Vector2) -> Vector2:
 	if not entity:
-		_error("Cannot get direction: entity reference is null")
+		logger.error("Cannot get direction: entity reference is null")
 		return Vector2.ZERO
 	return _direction_to(location)
 
 ## Get distance from entity's current position to a specific location
 func get_distance_to(location: Vector2) -> float:
 	if not entity:
-		_error("Cannot get distance: entity reference is null")
+		logger.error("Cannot get distance: entity reference is null")
 		return 0.0
 	return _get_position().distance_to(location)
 #endregion

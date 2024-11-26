@@ -1,4 +1,4 @@
-extends BaseNode
+extends Node
 
 const SAVE_DIR = "user://saves/"
 const COLONY_SAVE_FILE = "colony_profiles.json"
@@ -8,10 +8,9 @@ const UUID = preload("res://addons/uuid/uuid.gd")
 var current_colony_data: Dictionary = {}
 var current_ant_data: Dictionary = {}
 
-
+var logger: Logger
 func _init() -> void:
-	log_category = DebugLogger.Category.DATA
-	log_from = "data_manager"
+	logger = Logger.new("data_manager", DebugLogger.Category.DATA) 
 	
 func _ready():
 	load_data()
@@ -30,7 +29,7 @@ func save_file(file_name: String, data: Dictionary) -> void:
 		file.store_string(JSON.stringify(data, "", false))
 		file.close()
 	else:
-		_error("Error: Could not save data to " + file_name)
+		logger.error("Error: Could not save data to " + file_name)
 
 func load_data() -> void:
 	current_colony_data = load_file(COLONY_SAVE_FILE, "res://default_colony_profiles.json")
@@ -46,7 +45,7 @@ func load_file(_save_file: String, default_file: String) -> Dictionary:
 			if json_result is Dictionary:
 				return json_result
 			else:
-				_error("Error: Malformed save data in " + _save_file)
+				logger.error("Error: Malformed save data in " + _save_file)
 
 	push_warning("No save file found for " + _save_file + ". Loading default data.")
 	var default_data = FileAccess.open(default_file, FileAccess.READ)
@@ -58,9 +57,9 @@ func load_file(_save_file: String, default_file: String) -> Dictionary:
 			save_file(_save_file, json_result)  # Save the default data
 			return json_result
 		else:
-			_error("Error: Malformed default data in " + default_file)
+			logger.error("Error: Malformed default data in " + default_file)
 	else:
-		_error("Error: Could not open default data file " + default_file)
+		logger.error("Error: Could not open default data file " + default_file)
 
 	return {}
 
@@ -72,7 +71,7 @@ func get_colony_names() -> Array:
 func get_colony_data(colony_name: String) -> Dictionary:
 	if colony_name in current_colony_data:
 		return current_colony_data[colony_name]
-	_warn("Colony not found: " + colony_name)
+	logger.warn("Colony not found: " + colony_name)
 	return {}
 
 func save_colony(colony_name: String, colony_data: Dictionary) -> void:
@@ -84,7 +83,7 @@ func delete_colony(colony_name: String) -> void:
 		current_colony_data.erase(colony_name)
 		save_data()
 	else:
-		_warn("Attempted to delete non-existent colony: " + colony_name)
+		logger.warn("Attempted to delete non-existent colony: " + colony_name)
 
 func create_new_colony(colony_name: String) -> void:
 	if colony_name not in current_colony_data:
@@ -94,7 +93,7 @@ func create_new_colony(colony_name: String) -> void:
 		}
 		save_data()
 	else:
-		_warn("Colony already exists: " + colony_name)
+		logger.warn("Colony already exists: " + colony_name)
 
 func colony_exists(colony_name: String) -> bool:
 	return colony_name in current_colony_data
@@ -128,7 +127,7 @@ func update_ant_profile(profile_id: String, updated_profile: Dictionary) -> void
 		current_ant_data[profile_id] = updated_profile
 		save_data()
 	else:
-		_warn("Attempted to update non-existent ant profile: " + profile_id)
+		logger.warn("Attempted to update non-existent ant profile: " + profile_id)
 
 func delete_ant_profile(profile_id: String) -> void:
 	if profile_id in current_ant_data:
@@ -138,7 +137,7 @@ func delete_ant_profile(profile_id: String) -> void:
 			colony["ant_profiles"].erase(profile_id)
 		save_data()
 	else:
-		_warn("Attempted to delete non-existent ant profile: " + profile_id)
+		logger.warn("Attempted to delete non-existent ant profile: " + profile_id)
 
 func ant_profile_exists(profile_id: String) -> bool:
 	return profile_id in current_ant_data
@@ -148,14 +147,14 @@ func update_ant_profile_stats(profile_id: String, updated_stats: Dictionary) -> 
 		current_ant_data[profile_id]["stats"] = updated_stats
 		save_data()
 	else:
-		_warn("Attempted to update stats for non-existent ant profile: " + profile_id)
+		logger.warn("Attempted to update stats for non-existent ant profile: " + profile_id)
 
 func update_ant_profile_behavior(profile_id: String, updated_behavior: Array) -> void:
 	if profile_id in current_ant_data:
 		current_ant_data[profile_id]["behavior_logic"] = updated_behavior
 		save_data()
 	else:
-		_warn("Attempted to update behavior for non-existent ant profile: " + profile_id)
+		logger.warn("Attempted to update behavior for non-existent ant profile: " + profile_id)
 
 # Colony-Ant profile relationship functions
 
@@ -167,7 +166,7 @@ func add_ant_profile_to_colony(colony_name: String, profile_id: String) -> void:
 			current_colony_data[colony_name]["ant_profiles"].append(profile_id)
 			save_data()
 	else:
-		_warn("Invalid colony name or profile ID")
+		logger.warn("Invalid colony name or profile ID")
 
 func remove_ant_profile_from_colony(colony_name: String, profile_id: String) -> void:
 	if colony_name in current_colony_data:
@@ -175,13 +174,13 @@ func remove_ant_profile_from_colony(colony_name: String, profile_id: String) -> 
 			current_colony_data[colony_name]["ant_profiles"].erase(profile_id)
 			save_data()
 	else:
-		_warn("Attempted to remove ant profile from non-existent colony: " + colony_name)
+		logger.warn("Attempted to remove ant profile from non-existent colony: " + colony_name)
 
 func get_ant_profiles_for_colony(colony_name: String) -> Array:
 	if colony_name in current_colony_data:
 		return current_colony_data[colony_name].get("ant_profiles", [])
 	else:
-		_warn("Attempted to get ant profiles for non-existent colony: " + colony_name)
+		logger.warn("Attempted to get ant profiles for non-existent colony: " + colony_name)
 		return []
 
 # Colony behavior functions
@@ -189,7 +188,7 @@ func get_ant_profiles_for_colony(colony_name: String) -> Array:
 func get_colony_behavior(colony_name: String) -> Array:
 	if colony_name in current_colony_data:
 		return current_colony_data[colony_name].get("colony_behavior", [])
-	_warn("Colony not found: " + colony_name)
+	logger.warn("Colony not found: " + colony_name)
 	return []
 
 func save_colony_behavior(colony_name: String, colony_behavior: Array) -> void:
@@ -214,10 +213,10 @@ func get_property_value(colony_name: String, property_path: String) -> Variant:
 			if index >= 0 and index < current_value.size():
 				current_value = current_value[index]
 			else:
-				_warn("Invalid array index in property path: " + property_path)
+				logger.warn("Invalid array index in property path: " + property_path)
 				return null
 		else:
-			_warn("Invalid property path: " + property_path)
+			logger.warn("Invalid property path: " + property_path)
 			return null
 
 	return current_value

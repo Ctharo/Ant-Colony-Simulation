@@ -49,23 +49,12 @@ var _property_access: PropertyAccess :
 	get:
 		return _property_access
 
+var logger: Logger
 #endregion
 
-## Default category for logging
-@export var log_category: DebugLogger.Category = DebugLogger.Category.ENTITY
-
-## Source identifier for logging
-@export var log_from: String :
-	set(value):
-		log_from = value
-		_configure_logger()
-
-## Array of additional categories this node can log to
-@export var additional_log_categories: Array[DebugLogger.Category] = []
 
 func _init(init_as_active: bool = false) -> void:
-	log_from = "ant"
-	
+	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 	_init_property_access()
 	_init_property_groups()
 	
@@ -114,7 +103,7 @@ func perform_action(_action: Action, args = []) -> void:
 	event_str += "second" if time_for_action == 1.0 else "seconds"
 	event_str += " "
 	event_str += "with %s %s" % ["argument" if args.size() == 1 else "arguments", args]
-	_debug(event_str)
+	logger.debug(event_str)
 	await get_tree().create_timer(1).timeout
 	action_completed.emit()
 #endregion
@@ -122,7 +111,7 @@ func perform_action(_action: Action, args = []) -> void:
 #region Property System
 ## Initialize the property access system
 func _init_property_access() -> void:
-	_debug("Initializing new property access system")
+	logger.debug("Initializing new property access system")
 	_property_access = PropertyAccess.new(self)
 
 ## Register a property node at the specified path
@@ -143,7 +132,7 @@ func register_property_node(node: PropertyNode, at_path: Path = null) -> Result:
 
 ## Initialize all component property nodes
 func _init_property_groups() -> void:
-	_trace("Initializing ant property nodes...")
+	logger.trace("Initializing ant property nodes...")
 
 	var nodes = [
 		Energy.new(self),        # Energy management
@@ -163,54 +152,54 @@ func _init_property_groups() -> void:
 		var result = register_property_node(node)
 		if result.success():
 			successes += 1
-			_trace("Ant property %s registered successfully" % node.name)
+			logger.trace("Ant property %s registered successfully" % node.name)
 		else:
 			failures += 1
-			_error("Ant property %s failed to register" % node.name)
+			logger.error("Ant property %s failed to register" % node.name)
 
-	_trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
+	logger.trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
 
 ## Register colony-specific properties
 func _register_colony_properties() -> void:
 	if not _colony:
-		_warn("Cannot register colony properties: no colony reference available")
+		logger.warn("Cannot register colony properties: no colony reference available")
 		return
 
 	var node: PropertyNode = _colony.get_as_node()
 	if not node:
-		_error("Failed to get colony property node for ant property registration")
+		logger.error("Failed to get colony property node for ant property registration")
 		return
 
 	var result: Result = register_property_node(node)
 	if result.success():
-		_trace("Colony properties registered successfully to ant")
+		logger.trace("Colony properties registered successfully to ant")
 	else:
-		_error("Colony properties not registered to ant -> %s" % result.error_message)
+		logger.error("Colony properties not registered to ant -> %s" % result.error_message)
 
 func _init_task_tree() -> void:
-	_trace("Initializing ant task_tree")
+	logger.trace("Initializing ant task_tree")
 	task_tree = TaskTree.create(self)\
 		.with_root_task("CollectFood")\
 		.build()
 	if task_tree and task_tree.get_active_task():
-		_trace("Ant task_tree initialized successfully")
+		logger.trace("Ant task_tree initialized successfully")
 		task_tree.active_task_changed.connect(_on_active_task_changed)
 		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
 	else:
-		_error("Ant task_tree failed to be initialized")
+		logger.error("Ant task_tree failed to be initialized")
 
 #region Property Access Interface
 ## Get a property node by path
 func get_property(path: Path) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot get ant property: ant property access system not initialized")
+		logger.error("Cannot get ant property: ant property access system not initialized")
 		return null
 	return _property_access.get_property(path)
 
 ## Get a property value by path
 func get_property_value(path: Path) -> Variant:
 	if not _property_access:
-		_error("Cannot get ant property value: ant property access system not initialized")
+		logger.error("Cannot get ant property value: ant property access system not initialized")
 		return null
 	return _property_access.get_property_value(path)
 
@@ -226,7 +215,7 @@ func set_property_value(path: Path, value: Variant) -> Result:
 ## Find a property node by path
 func find_property_node(path: Path) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot find ant property node: ant property access system not initialized")
+		logger.error("Cannot find ant property node: ant property access system not initialized")
 		return null
 
 	if path.is_root():
@@ -246,50 +235,28 @@ func find_property_node(path: Path) -> PropertyNode:
 ## Get a root node by name
 func get_root_node(root_name: String) -> PropertyNode:
 	if not _property_access:
-		_error("Cannot get ant property root: %s -> Ant property access system not initialized" % root_name)
+		logger.error("Cannot get ant property root: %s -> Ant property access system not initialized" % root_name)
 		return null
 	return _property_access.get_root_node(root_name)
 
 ## Get all value nodes in a root by root name
 func get_root_values(root_name: String) -> Array[PropertyNode]:
 	if not _property_access:
-		_error("Cannot get ant property root values: %s -> Ant property access system not initialized" % root_name)
+		logger.error("Cannot get ant property root values: %s -> Ant property access system not initialized" % root_name)
 		return []
 	return _property_access.get_root_values(root_name)
 
 ## Get all registered root names
 func get_root_names() -> Array[String]:
 	if not _property_access:
-		_error("Cannot get ant property root names -> Ant property access system not initialized")
+		logger.error("Cannot get ant property root names -> Ant property access system not initialized")
 		return []
 	return _property_access.get_root_names()
 
 ## Get all containers under a root node
 func get_root_containers(root_name: String) -> Array[PropertyNode]:
 	if not _property_access:
-		_error("Cannot get ant property containers for root: %s -> Ant property access system not initialized" % root_name)
+		logger.error("Cannot get ant property containers for root: %s -> Ant property access system not initialized" % root_name)
 		return []
 	return _property_access.get_root_containers(root_name)
-#endregion
-
-func _configure_logger() -> void:
-	var categories = [log_category] as Array[DebugLogger.Category]
-	categories.append_array(additional_log_categories)
-	DebugLogger.configure_source(log_from, true, categories)
-
-#region Logging Methods
-func _trace(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.trace(category, message, {"from": log_from})
-
-func _debug(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.debug(category, message, {"from": log_from})
-
-func _info(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.info(category, message, {"from": log_from})
-
-func _warn(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.warn(category, message, {"from": log_from})
-
-func _error(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.error(category, message, {"from": log_from})
 #endregion

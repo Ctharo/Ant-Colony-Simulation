@@ -1,5 +1,5 @@
 class_name Behavior
-extends BaseRefCounted
+extends RefCounted
 
 #region Signals
 signal started
@@ -16,7 +16,6 @@ enum Priority { LOWEST = 0, LOW = 25, MEDIUM = 50, HIGH = 75, HIGHEST = 100 }
 #region Builder
 ## Builder class for constructing behaviors
 class Builder:
-	extends BaseRefCounted
 
 	var _name: String = ""
 	var _priority: int
@@ -24,10 +23,10 @@ class Builder:
 	var _actions: Array[Action] = []
 	var _conditions: Array[ConditionSystem.Condition] = []
 	var _condition_system: ConditionSystem
+	var logger: Logger
 
 	func _init(priority: int = Behavior.Priority.MEDIUM) -> void:
-		log_category = DebugLogger.Category.BEHAVIOR
-		log_from = "behavior.builder"
+		logger = Logger.new("behavior.builder", DebugLogger.Category.BEHAVIOR)
 		_priority = priority
 
 	## Set a name for the behavior
@@ -128,28 +127,29 @@ var actions: Array[Action] = []:
 
 ## Reference to the condition evaluation system
 var _condition_system: ConditionSystem
+var logger: Logger
 #endregion
 
 #region Initialization
 func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem = null) -> void:
 	priority = p_priority
 	_condition_system = condition_system
-	log_category = DebugLogger.Category.BEHAVIOR
-	log_from = "behavior"
+	logger = Logger.new("behavior", DebugLogger.Category.BEHAVIOR)
+
 #endregion
 
 #region Public Methods
 ## Add a condition to this behavior
 func add_condition(condition: ConditionSystem.Condition) -> void:
 	conditions.append(condition)
-	_debug("Added condition to behavior '%s'" % name)
+	logger.warn("Added condition to behavior '%s'" % name)
 
 ## Add an action to this behavior
 func add_action(action: Action) -> void:
 	actions.append(action)
 	if is_instance_valid(ant):
 		action.ant = ant
-	_debug("Added action to behavior '%s': %s" % [name, action.get_script().resource_path.get_file()])
+	logger.warn("Added action to behavior '%s': %s" % [name, action.get_script().resource_path.get_file()])
 
 ## Get all conditions for this behavior
 func get_conditions() -> Array[ConditionSystem.Condition]:
@@ -158,31 +158,31 @@ func get_conditions() -> Array[ConditionSystem.Condition]:
 ## Start the behavior
 func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 	if not is_instance_valid(p_ant):
-		_error("Cannot start behavior '%s' with invalid ant reference" % name)
+		logger.error("Cannot start behavior '%s' with invalid ant reference" % name)
 		return
 
 	if not p_condition_system and not conditions.is_empty():
-		_warn("Starting behavior '%s' with conditions but no condition system" % name)
+		logger.warn("Starting behavior '%s' with conditions but no condition system" % name)
 
-	_debug("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
+	logger.warn("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
 
 	ant = p_ant
 	_condition_system = p_condition_system
 	state = State.ACTIVE
 
-	_trace("Behavior '%s' state set to: %s" % [name, State.keys()[state]])
+	logger.trace("Behavior '%s' state set to: %s" % [name, State.keys()[state]])
 	started.emit()
 
 	for action in actions:
 		action.start(ant)
-		_trace("Started action: %s" % action.get_script().resource_path.get_file())
+		logger.trace("Started action: %s" % action.get_script().resource_path.get_file())
 
 ## Check if the behavior should activate
 func should_activate(context: Dictionary) -> bool:
 	var conditions_met = _check_conditions(context)
 	var _should_activate = state != State.COMPLETED and conditions_met
 
-	_trace("Checking activation for '%s':\n" % name +
+	logger.trace("Checking activation for '%s':\n" % name +
 		"  Current state: %s\n" % State.keys()[state] +
 		"  Conditions met: %s\n" % conditions_met +
 		"  Should activate: %s" % _should_activate)
@@ -191,39 +191,39 @@ func should_activate(context: Dictionary) -> bool:
 
 ## Update the behavior
 func update(delta: float, context: Dictionary) -> void:
-	_trace("Updating behavior '%s' (State: %s)" % [name, State.keys()[state]])
+	logger.trace("Updating behavior '%s' (State: %s)" % [name, State.keys()[state]])
 
 	if state != State.ACTIVE:
 		return
 
 	if not _check_conditions(context):
-		_info("Conditions no longer met for '%s', interrupting" % name)
+		logger.info("Conditions no longer met for '%s', interrupting" % name)
 		interrupt()
 		return
 
 	_update_actions(delta)
-	_trace("After update - Behavior '%s' state: %s" % [name, State.keys()[state]])
+	logger.trace("After update - Behavior '%s' state: %s" % [name, State.keys()[state]])
 
 ## Interrupt the behavior
 func interrupt() -> void:
 	if state == State.ACTIVE:
 		state = State.INTERRUPTED
-		_info("Interrupting behavior '%s'" % name)
+		logger.info("Interrupting behavior '%s'" % name)
 
 		for action in actions:
 			action.interrupt()
-			_trace("Interrupted action: %s" % action.get_script().resource_path.get_file())
+			logger.trace("Interrupted action: %s" % action.get_script().resource_path.get_file())
 
 		interrupted.emit()
 
 ## Reset the behavior to its initial state
 func reset() -> void:
 	state = State.INACTIVE
-	_debug("Reset behavior '%s'" % name)
+	logger.warn("Reset behavior '%s'" % name)
 
 	for action in actions:
 		action.reset()
-		_trace("Reset action: %s" % action.get_script().resource_path.get_file())
+		logger.trace("Reset action: %s" % action.get_script().resource_path.get_file())
 #endregion
 
 #region Private Methods
@@ -233,7 +233,7 @@ func _check_conditions(context: Dictionary) -> bool:
 		return true
 
 	if not _condition_system:
-		_error("No condition system available for behavior '%s'" % name)
+		logger.error("No condition system available for behavior '%s'" % name)
 		return false
 
 	for condition in conditions:
@@ -253,7 +253,7 @@ func _update_actions(delta: float) -> void:
 	if all_completed and not actions.is_empty():
 		state = State.COMPLETED
 		completed.emit()
-		_info("Behavior '%s' completed (all actions finished)" % name)
+		logger.info("Behavior '%s' completed (all actions finished)" % name)
 
 ## Update ant references in actions when ant changes
 func _update_action_references() -> void:
@@ -262,7 +262,7 @@ func _update_action_references() -> void:
 
 	for action in actions:
 		action.ant = ant
-		_trace("Updated ant reference for action: %s" % action.get_script().resource_path.get_file())
+		logger.trace("Updated ant reference for action: %s" % action.get_script().resource_path.get_file())
 #endregion
 
 #region Debug Methods
@@ -276,7 +276,7 @@ func get_debug_info() -> Dictionary:
 		"actions": actions.size()
 	}
 
-	_debug("\nBehavior Debug Info for '%s':" % name +
+	logger.warn("\nBehavior Debug Info for '%s':" % name +
 		"\n  Priority: %d" % priority +
 		"\n  State: %s" % State.keys()[state] +
 		"\n  Conditions: %d" % conditions.size() +

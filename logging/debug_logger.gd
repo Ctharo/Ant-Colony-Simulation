@@ -1,5 +1,5 @@
 class_name DebugLogger
-extends BaseRefCounted
+extends RefCounted
 
 ## Log levels for different types of messages
 enum LogLevel {

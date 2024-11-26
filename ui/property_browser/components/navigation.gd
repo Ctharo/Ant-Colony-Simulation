@@ -1,10 +1,11 @@
 class_name PropertyBrowserNavigation
-extends BaseRefCounted
+extends RefCounted
 
 #region Signals
 signal path_changed(new_path: Path)
 #endregion
 
+var logger: Logger
 #region Member Variables
 ## Navigation history
 var _navigation_history: Array[Path] = [] :
@@ -28,8 +29,7 @@ var _property_access: PropertyAccess
 
 #region Initialization
 func _init(components: Dictionary) -> void:
-	log_category = DebugLogger.Category.UI
-	log_from = "property_browser_navigation"
+	logger = Logger.new("property_browser_navigation", DebugLogger.Category.UI)
 	_back_button = components.back_button
 	_path_label = components.path_label
 	_root_label = components.root_label
@@ -50,7 +50,7 @@ func navigate_back() -> void:
 		var from = _current_path
 		var previous = _navigation_history.pop_back()
 		set_current_path(previous)
-		_trace("Navigating back from %s to %s" % [from.full, previous.full])
+		logger.trace("Navigating back from %s to %s" % [from.full, previous.full])
 
 		# For any path (including root path nodes), select it in the root view
 		if previous.parts.size() <= 1:  # Root or root node

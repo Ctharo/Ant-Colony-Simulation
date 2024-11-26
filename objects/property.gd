@@ -1,5 +1,5 @@
 class_name Property
-extends BaseRefCounted
+extends RefCounted
 ## Contains definitions and helper methods relating to [class PropertyNode]
 
 

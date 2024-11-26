@@ -1,5 +1,5 @@
 class_name PropertyAccess
-extends BaseRefCounted
+extends RefCounted
 ## Central system for managing property trees and accessing properties
 
 #region Signals
@@ -17,14 +17,14 @@ var _cache: Cache
 var _owner: Object
 
 var _last_access_stats: Dictionary = {}  # path -> {timestamp, value, count}
+
+var logger: Logger
 #endregion
 
 func _init(owner: Object, use_caching: bool = true) -> void:
+	logger = Logger.new("property_access", DebugLogger.Category.PROPERTY)
 	_owner = owner
 	_cache = Cache.new() if use_caching else null
-
-	log_category = DebugLogger.Category.PROPERTY
-	log_from = "property_access"
 
 	var type = ""
 	if owner is Ant:
@@ -33,7 +33,7 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 		type = "colony"
 	else:
 		type = "Unknown type"
-	_debug("Initialized for %s [Cache: %s]" % [type, "enabled" if use_caching else "disabled"])
+	logger.debug("Initialized for %s [Cache: %s]" % [type, "enabled" if use_caching else "disabled"])
 
 #region Node Validation
 ## Check if a root node exists
@@ -79,7 +79,7 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 			)
 		_root_nodes[root.name] = root
 		_invalidate_node_cache(root.name)
-		_trace("Registered root node: %s" % root.name)
+		logger.trace("Registered root node: %s" % root.name)
 		return Result.new()
 
 	# For nested registration
@@ -101,7 +101,7 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 		parent.add_child(child)
 
 	_invalidate_cache(parent_path)
-	_trace("Registered nested node '%s' at path '%s'" % [
+	logger.trace("Registered nested node '%s' at path '%s'" % [
 		root.name,
 		parent_path
 	])
@@ -133,7 +133,7 @@ func remove_node_at_path(node_name: String, parent_path: Path) -> Result:
 		)
 
 	_invalidate_cache(parent_path)
-	_trace("Removed nested node '%s' from path '%s'" % [
+	logger.trace("Removed nested node '%s' from path '%s'" % [
 		node_name,
 		parent_path
 	])
@@ -150,7 +150,7 @@ func remove_node(name: String) -> Result:
 	_invalidate_node_cache(name)
 	_root_nodes.erase(name)
 
-	_trace("Removed root node: %s" % name)
+	logger.trace("Removed root node: %s" % name)
 	return Result.new()
 #endregion
 
@@ -158,11 +158,11 @@ func remove_node(name: String) -> Result:
 ## Find a property node by its path
 func find_property_node(path: Path) -> PropertyNode:
 	if not path:
-		_error("Path cannot be null")
+		logger.error("Path cannot be null")
 		return null
 
 	if path.is_root():
-		_error("Cannot find node at root path")
+		logger.error("Cannot find node at root path")
 		return null
 
 	# Get root node first
@@ -177,20 +177,20 @@ func find_property_node(path: Path) -> PropertyNode:
 func get_root_node(name: String) -> PropertyNode:
 	var node = _root_nodes.get(name)
 	if not node:
-		_error("Root node not found: %s" % name)
+		logger.error("Root node not found: %s" % name)
 	return node
 
 ## Get all value nodes in a root
 func get_root_values(root_name: String) -> Array[PropertyNode]:
 	if not has_root(root_name):
-		_error("Root node not found: %s" % root_name)
+		logger.error("Root node not found: %s" % root_name)
 		return []
 	return get_root_node(root_name).get_all_values()
 
 ## Get all containers under a root node
 func get_root_containers(root_name: String) -> Array[PropertyNode]:
 	if not has_root(root_name):
-		_error("Root node not found: %s" % root_name)
+		logger.error("Root node not found: %s" % root_name)
 		return []
 	return get_root_node(root_name).get_all_containers()
 
@@ -227,11 +227,11 @@ func get_property_value(path: Path) -> Variant:
 		return value
 
 	if not has_node(path):
-		_error("Node not found: %s" % path.full)
+		logger.error("Node not found: %s" % path.full)
 		return null
 
 	if not is_value_node(path):
-		_error("Cannot get value from container node: %s" % path.full)
+		logger.error("Cannot get value from container node: %s" % path.full)
 		return null
 
 	var node = find_property_node(path)
@@ -240,7 +240,7 @@ func get_property_value(path: Path) -> Variant:
 	if _cache:
 		var result = _cache.cache_value(path, value)
 		if result.is_error():
-			_warn("Cache failed for %s: %s" % [path.full, result.get_error()])
+			logger.warn("Cache failed for %s: %s" % [path.full, result.get_error()])
 
 	_log_property_access(path, value, "READ")
 	return value
@@ -248,11 +248,11 @@ func get_property_value(path: Path) -> Variant:
 ## Set a property's value
 func set_property_value(path: Path, value: Variant) -> Result:
 	if not has_node(path):
-		_error("Node not found: %s" % path.full)
+		logger.error("Node not found: %s" % path.full)
 		return Result.new(Result.ErrorType.NOT_FOUND, "Property not found")
 
 	if not is_value_node(path):
-		_error("Cannot set value for container node: %s" % path.full)
+		logger.error("Cannot set value for container node: %s" % path.full)
 		return Result.new(Result.ErrorType.TYPE_MISMATCH, "Not a value node")
 
 	var node = find_property_node(path)
@@ -265,7 +265,7 @@ func set_property_value(path: Path, value: Variant) -> Result:
 		property_changed.emit(path.full, old_value, value)
 		_log_property_access(path, value, "WRITE")
 	else:
-		_error("Failed to set value for %s: %s" % [path.full, result.get_error()])
+		logger.error("Failed to set value for %s: %s" % [path.full, result.get_error()])
 
 	return result
 #endregion
@@ -309,7 +309,7 @@ func _log_property_access(path: Path, value: Variant, operation: String) -> void
 		stats.count += 1
 		# Only log every 10th access
 		if stats.count % 10 == 0:
-			_trace("[%s] %s accessed %d times, value: %s" % [
+			logger.trace("[%s] %s accessed %d times, value: %s" % [
 				operation,
 				path.full,
 				stats.count,
@@ -318,13 +318,13 @@ func _log_property_access(path: Path, value: Variant, operation: String) -> void
 	else:
 		# New access pattern, log and reset stats
 		if stats.count > 1:
-			_trace("[%s] Final summary - %s accessed %d times with value: %s" % [
+			logger.trace("[%s] Final summary - %s accessed %d times with value: %s" % [
 				operation,
 				path.full,
 				stats.count,
 				Property.format_value(stats.value)
 			])
-		_trace("[%s] %s = %s" % [
+		logger.trace("[%s] %s = %s" % [
 			operation,
 			path.full,
 			Property.format_value(value)
@@ -342,7 +342,7 @@ func _log_property_change(path: Path, old_value: Variant, new_value: Variant) ->
 	if old_value == new_value:
 		return
 
-	_info("Property changed: %s\n" % path.full +
+	logger.info("Property changed: %s\n" % path.full +
 		"  From: %s\n" % Property.format_value(old_value) +
 		"  To:   %s" % Property.format_value(new_value)
 	)
@@ -351,7 +351,7 @@ func _log_property_change(path: Path, old_value: Variant, new_value: Variant) ->
 	if _cache:
 		var invalidated = _get_dependent_paths(path)
 		if not invalidated.is_empty():
-			_debug("Invalidated dependent properties:\n  - %s" % "\n  - ".join(invalidated))
+			logger.debug("Invalidated dependent properties:\n  - %s" % "\n  - ".join(invalidated))
 
 ## Log node registration with dependency tracking
 func _log_node_registration(node: PropertyNode, parent_path: Path = null) -> void:
@@ -382,7 +382,7 @@ func _log_node_registration(node: PropertyNode, parent_path: Path = null) -> voi
 					PropertyNode.Type.keys()[child.type]
 				]
 
-	_debug(registration_info)
+	logger.debug(registration_info)
 #endregion
 
 #region Initializing Data

@@ -15,24 +15,12 @@ var _property_access: PropertyAccess:
 		return _property_access
 #endregion
 
-#region Logging Configuration
-## Default category for logging
-@export var log_category: DebugLogger.Category = DebugLogger.Category.ENTITY
 
-## Source identifier for logging
-@export var log_from: String :
-	set(value):
-		log_from = value
-		_configure_logger()
-
-## Array of additional categories this node can log to
-@export var additional_log_categories: Array[DebugLogger.Category] = []
-
-#endregion
+var logger: Logger
 
 #region Initialization
 func _init() -> void:
-	log_from = "colony"
+	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
 	_init_property_access()
 	_init_property_nodes()
 
@@ -48,10 +36,10 @@ func add_ant(ant: Ant) -> Result:
 #region Property System
 func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
-	_trace("Property access system initialized")
+	logger.debug("Property access system initialized")
 
 func _init_property_nodes() -> void:
-	_debug("Initializing property nodes...")
+	logger.debug("Initializing property nodes...")
 
 	if not _property_access:
 		_init_property_access()
@@ -61,19 +49,19 @@ func _init_property_nodes() -> void:
 	]
 
 	for node in nodes:
-		_trace("Registering property node: %s" % node.name)
+		logger.debug("Registering property node: %s" % node.name)
 		var result = _property_access.register_node(node)
 		if not result.success():
-			_error("Failed to register property node %s: %s" % [
+			logger.error("Failed to register property node %s: %s" % [
 				node.name,
 				result.get_error()
 			])
 		else:
-			_debug("Successfully registered property node: %s" % node.name)
+			logger.debug("Successfully registered property node: %s" % node.name)
 
 	set_property_value("reach.range", 50.0)
 
-	_debug("Property node initialization complete")
+	logger.debug("Property node initialization complete")
 
 ## Get colony as a property node tree
 func get_as_node() -> PropertyNode:
@@ -139,14 +127,14 @@ func _get_radius() -> Variant:
 
 func _set_radius(value: float) -> void:
 	if value <= 0:
-		_error("Colony radius must be positive")
+		logger.error("Colony radius must be positive")
 		return
 
 	var old_value = radius
 	radius = value
 
 	if old_value != radius:
-		_trace("Colony radius updated: %.2f -> %.2f" % [old_value, radius])
+		logger.debug("Colony radius updated: %.2f -> %.2f" % [old_value, radius])
 
 func _get_area() -> float:
 	return PI * radius * radius
@@ -178,26 +166,4 @@ func _get_average_ant_energy() -> float:
 		if ant_energy:
 			total_energy += ant_energy
 	return total_energy / ants.size()
-#endregion
-
-#region Logging Methods
-func _configure_logger() -> void:
-	var categories = [log_category] as Array[DebugLogger.Category]
-	categories.append_array(additional_log_categories)
-	DebugLogger.configure_source(log_from, true, categories)
-
-func _trace(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.trace(category, message, {"from": log_from})
-
-func _debug(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.debug(category, message, {"from": log_from})
-
-func _info(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.info(category, message, {"from": log_from})
-
-func _warn(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.warn(category, message, {"from": log_from})
-
-func _error(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.error(category, message, {"from": log_from})
 #endregion

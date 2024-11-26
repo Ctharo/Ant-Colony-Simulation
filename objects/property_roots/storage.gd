@@ -50,7 +50,7 @@ func _init(_entity: Node) -> void:
 	for child in built_storage.children.values():
 		add_child(child)
 
-	_trace("Storage property tree initialized")
+	logger.trace("Storage property tree initialized")
 
 #region Property Getters and Setters
 func _get_max_capacity() -> float:
@@ -59,7 +59,7 @@ func _get_max_capacity() -> float:
 
 func _get_current_capacity() -> float:
 	if not entity:
-		_error("Cannot get stored mass: entity reference is null")
+		logger.error("Cannot get stored mass: entity reference is null")
 		return 0.0
 	return entity.foods.get_mass()
 
@@ -83,7 +83,7 @@ func _is_full() -> bool:
 ## Check if the entity can store additional weight
 func can_store(weight: float) -> bool:
 	if weight < 0:
-		_error("Cannot check negative weight")
+		logger.error("Cannot check negative weight")
 		return false
 	return weight <= _get_mass_available()
 #endregion

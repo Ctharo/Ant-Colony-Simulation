@@ -1,5 +1,5 @@
 class_name PropertyManager
-extends BaseRefCounted
+extends RefCounted
 
 ## Emitted when a property is activated
 signal property_activated(property_path: Path)
@@ -32,9 +32,11 @@ var properties_tree: Tree
 var description_label: Label
 #endregion
 
+var logger: Logger
+
 #region Initialization
 func _init(tree: Tree, desc_label: Label) -> void:
-	log_from = "property_browser_property_manager"
+	logger = Logger.new("property_browser_property_manager", DebugLogger.Category.UI)
 	properties_tree = tree
 	description_label = desc_label
 	_configure_tree_columns()

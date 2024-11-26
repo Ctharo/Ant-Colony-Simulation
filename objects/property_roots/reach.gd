@@ -49,7 +49,7 @@ func _init(_entity: Node) -> void:
 	for child in tree.children.values():
 		add_child(child)
 
-	_trace("Reach property tree initialized")
+	logger.trace("Reach property tree initialized")
 
 #region Property Getters and Setters
 func _get_range() -> float:
@@ -57,18 +57,18 @@ func _get_range() -> float:
 
 func _set_range(value: float) -> void:
 	if value <= 0:
-		_error("Attempted to set reach.range.current to non-positive value -> Action not allowed")
+		logger.error("Attempted to set reach.range.current to non-positive value -> Action not allowed")
 		return
 
 	var old_value = _range
 	_range = value
 
 	if old_value != _range:
-		_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
+		logger.trace("Range updated: %.2f -> %.2f" % [old_value, _range])
 
 func _get_foods_in_range() -> Foods:
 	if not entity:
-		_error("Cannot get foods in range: entity reference is null")
+		logger.error("Cannot get foods in range: entity reference is null")
 		return null
 	return Foods.in_range(entity.global_position, _range)
 
@@ -93,12 +93,12 @@ func _get_foods_in_range_mass() -> float:
 ## Reset reach distance to default value
 func reset() -> void:
 	_set_range(DEFAULT_RANGE)
-	_trace("Range reset to default: %.2f" % DEFAULT_RANGE)
+	logger.trace("Range reset to default: %.2f" % DEFAULT_RANGE)
 
 ## Check if a specific position is within reach
 func is_position_in_range(position: Vector2) -> bool:
 	if not entity:
-		_error("Cannot check position: entity reference is null")
+		logger.error("Cannot check position: entity reference is null")
 		return false
 	return entity.global_position.distance_to(position) <= _range
 #endregion

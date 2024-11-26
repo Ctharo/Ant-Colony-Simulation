@@ -1,6 +1,6 @@
 ## A hierarchical tree structure for managing AI behavior tasks and their execution
 class_name TaskTree
-extends BaseRefCounted
+extends RefCounted
 
 #region Signals
 ## Signal emitted when the tree's active task changes
@@ -13,15 +13,15 @@ signal tree_updated
 
 ## Builder class for constructing the task tree
 class Builder:
-	extends BaseRefCounted
 	
 	var _ant: Ant
 	var _root_type: String = "Root"
 	var _tasks_path: String = "res://config/ant_tasks.json"
 	var _conditions_path: String = "res://config/ant_conditions.json"
+	var logger: Logger
 
 	func _init(p_ant: Ant) -> void:
-		log_category = DebugLogger.Category.TASK
+		logger = Logger.new("task_tree_builder", DebugLogger.Category.TASK)
 		_ant = p_ant
 
 	func with_root_task(type: String) -> Builder:
@@ -35,20 +35,18 @@ class Builder:
 
 	func build() -> TaskTree:
 		var tree := TaskTree.new()
-		if tree.log_category == DebugLogger.Category.PROGRAM:
-			assert(false)
 		tree.ant = _ant
 
 		# Load conditions first since tasks depend on them
 		var result = ConditionSystem.load_condition_configs(_conditions_path)
 		if result != OK:
-			push_error("Failed to load condition configs from: %s" % _conditions_path)
+			logger.error("Failed to load condition configs from: %s" % _conditions_path)
 			return tree
 
 		# Load task configurations
 		result = Task.load_task_configs(_tasks_path)
 		if result != OK:
-			push_error("Failed to load task configs from: %s" % _tasks_path)
+			logger.error("Failed to load task configs from: %s" % _tasks_path)
 			return tree
 
 		# Create condition system
@@ -62,7 +60,7 @@ class Builder:
 		)
 
 		if behaviors.is_empty():
-			push_error("Failed to create behaviors for task: %s" % _root_type)
+			logger.error("Failed to create behaviors for task: %s" % _root_type)
 			return tree
 
 		# Create the task itself
@@ -82,7 +80,7 @@ class Builder:
 			task.add_behavior(behavior)
 
 		tree.root_task = task
-		_debug("Successfully built task tree with root task: %s" % _root_type)
+		logger.debug("Successfully built task tree with root task: %s" % _root_type)
 
 		return tree
 
@@ -112,11 +110,13 @@ var _condition_system: ConditionSystem
 
 ## Last known active task for change detection
 var _last_active_task: Task
+
+var logger: Logger
 #endregion
 
 func _init() -> void:
-	log_from = "task_tree"
-	log_category = DebugLogger.Category.TASK
+	logger = Logger.new("task_tree", DebugLogger.Category.TASK)
+
 	
 #region Public Methods
 ## Creates a new TaskTree instance with the specified ant agent
@@ -129,21 +129,21 @@ static func create(_ant: Ant) -> Builder:
 ## [param delta] The time elapsed since the last update
 func update(delta: float) -> void:
 	if not is_instance_valid(ant):
-		_error("Ant reference is invalid")
+		logger.error("Ant reference is invalid")
 		return
 
 	if not root_task:
-		_error("No root task set")
+		logger.error("No root task set")
 		return
 
-	_debug("=== Task Tree Update ===")
+	logger.debug("=== Task Tree Update ===")
 
 	_condition_system.clear_cache()
 
 	var context := gather_context()
 
 	if root_task.state != Task.State.ACTIVE:
-		_info("Starting root task: %s" % root_task.name)
+		logger.info("Starting root task: %s" % root_task.name)
 		root_task.start(ant)
 
 	var previous_active = get_active_task()
@@ -155,7 +155,7 @@ func update(delta: float) -> void:
 	var current_behavior = current_active.get_active_behavior() if current_active else null
 
 	if current_active != previous_active:
-		_info("Task Transition: %s -> %s" % [
+		logger.info("Task Transition: %s -> %s" % [
 			previous_active.name if previous_active else "None",
 			current_active.name if current_active else "None"
 		])
@@ -206,10 +206,10 @@ func print_task_hierarchy() -> void:
 		# Update the context one last time to ensure states are current
 		root_task.update(0.0, context)
 
-		_info("\nTask Tree Hierarchy:")
+		logger.info("\nTask Tree Hierarchy:")
 		_print_task_recursive(root_task, 0)
 	else:
-		_warn("No root task set")
+		logger.warn("No root task set")
 
 ## Prints the chain of active tasks for debugging purposes
 func print_active_task_chain() -> void:
@@ -219,7 +219,7 @@ func print_active_task_chain() -> void:
 		chain.append(active.name)
 		if active.get_active_behavior():
 			chain.append(active.get_active_behavior().name)
-		_info("Active task chain: -> ".join(chain))
+		logger.info("Active task chain: -> ".join(chain))
 #endregion
 
 #region Private Helper Methods
@@ -228,7 +228,7 @@ func print_active_task_chain() -> void:
 ## [param depth] The current depth in the hierarchy for indentation
 func _print_task_recursive(task: Task, depth: int) -> void:
 	if not is_instance_valid(task):
-		_error("Invalid task reference in hierarchy")
+		logger.error("Invalid task reference in hierarchy")
 		return
 
 	var indent = "  ".repeat(depth)
@@ -248,13 +248,13 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 	else:
 		task_info += "%s║   Current Active Behavior: None" % indent
 
-	_debug(task_info)
+	logger.debug(task_info)
 
 	# Print task conditions with context
 	var task_conditions = task.get_conditions()
 	if not task_conditions.is_empty():
 		var conditions_info = "%s║\n%s║   Conditions:" % [indent, indent]
-		_debug(conditions_info)
+		logger.debug(conditions_info)
 		for condition in task_conditions:
 			_print_condition_recursive(condition, indent + "║   ")
 
@@ -262,7 +262,7 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 	var behaviors = task.behaviors
 	if not behaviors.is_empty():
 		var behaviors_header = "%s║\n%s║   Behaviors:" % [indent, indent]
-		_debug(behaviors_header)
+		logger.debug(behaviors_header)
 
 		for behavior: Behavior in behaviors:
 			if not is_instance_valid(behavior):
@@ -270,7 +270,7 @@ func _print_task_recursive(task: Task, depth: int) -> void:
 
 			var is_active = (behavior == active_behavior)
 			var behavior_info = _format_behavior_info(behavior, indent, is_active)
-			_debug(behavior_info)
+			logger.debug(behavior_info)
 
 			# Print behavior conditions
 			if not behavior.get_conditions().is_empty():
@@ -295,12 +295,12 @@ func _print_condition_recursive(condition: ConditionSystem.Condition, indent: St
 	match condition_type:
 		"Operator":
 			var operator = condition_config.get("operator_type", "Unknown").to_upper()
-			_info("%s╟── Operator: %s%s" % [indent, operator, result_str])
+			logger.info("%s╟── Operator: %s%s" % [indent, operator, result_str])
 
 			if condition_config.has("operands"):
 				for i in range(condition_config.operands.size()):
 					var operand = condition_config.operands[i]
-					_info("%s║   └── Operand %d:" % [indent, i + 1])
+					logger.info("%s║   └── Operand %d:" % [indent, i + 1])
 					var sub_condition = ConditionSystem.create_condition(operand)
 					_print_condition_recursive(sub_condition, indent + "    ")
 		_:
@@ -315,9 +315,9 @@ func _print_condition_recursive(condition: ConditionSystem.Condition, indent: St
 					condition_desc += " %s" % value
 				elif not value_from.is_empty():
 					condition_desc += " %s" % value_from
-				_info("%s╟── PropertyCheck: %s%s" % [indent, condition_desc, result_str])
+				logger.info("%s╟── PropertyCheck: %s%s" % [indent, condition_desc, result_str])
 			else:
-				_info("%s╟── %s%s" % [indent, condition_type, result_str])
+				logger.info("%s╟── %s%s" % [indent, condition_type, result_str])
 
 ## Logs behavior transitions with detailed information
 ## [param previous_behavior] The previously active behavior
@@ -330,18 +330,18 @@ func _log_behavior_transition(previous_behavior: Behavior, current_behavior: Beh
 	transition_info += "║   To: %s\n" % (current_behavior.name if current_behavior else "None")
 	transition_info += "║   Priority: %d" % (current_behavior.priority if current_behavior else -1)
 
-	_info(transition_info)
+	logger.info(transition_info)
 
 	# Print conditions with their complete evaluation chain
 	var conditions = current_behavior.get_conditions() if current_behavior else []
 	if not conditions.is_empty():
 		var conditions_info = "║\n║   Conditions:"
-		_debug(conditions_info)
+		logger.debug(conditions_info)
 
 		for condition in conditions:
 			_print_condition_recursive(condition, "║   ")
 
-	_info("╚══")
+	logger.info("╚══")
 
 ## Formats behavior information for logging
 ## [param behavior] The behavior to format information for
@@ -360,7 +360,7 @@ func _format_behavior_info(behavior: Behavior, indent: String, is_active: bool) 
 ## [param indent] Current indentation string
 func _print_behavior_conditions(behavior: Behavior, indent: String) -> void:
 	var conditions_header = "%s║   │\n%s║   │   Conditions:" % [indent, indent]
-	_debug(conditions_header)
+	logger.debug(conditions_header)
 
 	for condition in behavior.get_conditions():
 		_print_condition_recursive(condition, indent + "║   │   ")
@@ -370,7 +370,7 @@ func _print_behavior_conditions(behavior: Behavior, indent: String) -> void:
 ## [param indent] Current indentation string
 func _print_behavior_actions(behavior: Behavior, indent: String) -> void:
 	var actions_header = "%s║   │\n%s║   │   Actions:" % [indent, indent]
-	_debug(actions_header)
+	logger.debug(actions_header)
 
 	for action in behavior.actions:
 		if is_instance_valid(action):
@@ -378,7 +378,7 @@ func _print_behavior_actions(behavior: Behavior, indent: String) -> void:
 				indent,
 				action.get_script().resource_path.get_file()
 			]
-			_debug(action_info)
+			logger.debug(action_info)
 
 ## Recursively finds the highest priority active task
 ## [param task] The task to start searching from

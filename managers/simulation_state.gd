@@ -1,4 +1,4 @@
-extends BaseNode
+extends Node
 
 signal food_updated(location, quantity)
 signal ant_moved(ant_id, new_position)
@@ -7,10 +7,6 @@ var ants: Dictionary = {}
 var food_sources: Dictionary = {}
 var pheromone_trails: Dictionary = {}
 var colonies: Dictionary = {}
-
-func _init() -> void:
-	log_category = DebugLogger.Category.PROGRAM
-	log_from = "simulation_manager"
 
 func get_ant_position(ant_id: String) -> Vector2:
 	return ants[ant_id].position

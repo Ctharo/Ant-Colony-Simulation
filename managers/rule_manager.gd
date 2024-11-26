@@ -1,7 +1,7 @@
-extends BaseNode
+extends Node
 
 var data_manager: DataManager
-
+var logger: Logger
 ## Enum for comparison operators
 enum ComparisonOperator {
 	EQUAL,
@@ -24,8 +24,8 @@ const OPERATOR_MAP = {
 
 
 func _init() -> void:
-	log_category = DebugLogger.Category.PROGRAM
-	log_from = "rule_manager"
+	logger = Logger.new("rule_manager", DebugLogger.Category.PROGRAM)
+
 
 func _ready() -> void:
 	data_manager = DataManager

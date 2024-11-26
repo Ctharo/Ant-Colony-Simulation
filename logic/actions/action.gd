@@ -1,5 +1,5 @@
 class_name Action
-extends BaseRefCounted
+extends RefCounted
 ## Interface between [class Behavior]s and [class Ant] action methods
 
 ## Signals
@@ -23,6 +23,8 @@ var current_cooldown: float = 0.0:
 var params: Dictionary = {}:
 	set(value):
 		params = value
+
+var logger: Logger
 
 ## Builder class for constructing actions
 class Builder:
@@ -51,8 +53,7 @@ class Builder:
 		return action
 
 func _init():
-	log_category = DebugLogger.Category.ACTION
-	log_from = "action"
+	logger = Logger.new("action", DebugLogger.Category.ACTION)
 
 ## Core Action Methods
 func start(_ant: Ant) -> void:
@@ -88,15 +89,14 @@ func is_ready() -> bool:
 ## Action Classes
 class Move extends Action:
 	func _init():
-		super._init()
-		log_from += ": move"
+		logger = Logger.new("Action: move", DebugLogger.Category.ACTION)
 		
 	static func create() -> Builder:
 		return Builder.new(Move)
 
 	func _update_action(delta: float) -> void:
 		if not "target_position" in params:
-			_error("Move action requires target_position")
+			logger.error("Move action requires target_position")
 			return
 
 		var target_position = params["target_position"]
@@ -114,15 +114,15 @@ class Harvest extends Action:
 	var current_food_source: Food
 	
 	func _init():
-		super._init()
-		log_from += ": harvest"
+		logger = Logger.new("Action: harvest", DebugLogger.Category.ACTION)
+
 		
 	static func create() -> Builder:
 		return Builder.new(Harvest)
 
 	func _update_action(delta: float) -> void:
 		if not "target_food" in params:
-			_error("Harvest action requires target_food parameter")
+			logger.error("Harvest action requires target_food parameter")
 			return
 
 		current_food_source = params["target_food"]
@@ -136,7 +136,7 @@ class Harvest extends Action:
 			])
 			ant.harvest_food(current_food_source, harvest_rate)
 		else:
-			_error("No valid food source to harvest")
+			logger.error("No valid food source to harvest")
 
 	func is_completed() -> bool:
 		if not current_food_source:
@@ -145,15 +145,15 @@ class Harvest extends Action:
 
 class FollowPheromone extends Action:
 	func _init():
-		super._init()
-		log_from += ": follow_pheromone"
+		logger = Logger.new("Action: follow_pheromone", DebugLogger.Category.ACTION)
+ 
 		
 	static func create() -> Builder:
 		return Builder.new(FollowPheromone)
 
 	func _update_action(delta: float) -> void:
 		if not "pheromone_type" in params:
-			_error("FollowPheromone action requires pheromone_type parameter")
+			logger.error("FollowPheromone action requires pheromone_type parameter")
 			return
 			
 		var pheromone_type = params["pheromone_type"]
@@ -174,8 +174,8 @@ class RandomMove extends Action:
 	var current_direction: Vector2 = Vector2.ZERO
 	
 	func _init():
-		super._init()
-		log_from += ": random_move"
+		logger = Logger.new("Action: random_move", DebugLogger.Category.ACTION)
+
 		
 	static func create() -> Builder:
 		return Builder.new(RandomMove)
@@ -200,8 +200,8 @@ class RandomMove extends Action:
 
 class Store extends Action:
 	func _init():
-		super._init()
-		log_from += ": store"
+		logger = Logger.new("Action: store", DebugLogger.Category.ACTION)
+
 	
 	static func create() -> Builder:
 		return Builder.new(Store)
@@ -226,15 +226,15 @@ class Attack extends Action:
 	var current_target_location: Vector2
 	
 	func _init():
-		super._init()
-		log_from += ": attack"
+		logger = Logger.new("Action: attack", DebugLogger.Category.ACTION)
+
 		
 	static func create() -> Builder:
 		return Builder.new(Attack)
 
 	func _update_action(delta: float) -> void:
 		if not ("target_entity" in params or "target_location" in params):
-			_error("Attack action requires either target_entity or target_location")
+			logger.error("Attack action requires either target_entity or target_location")
 			return
 
 		if not is_ready():
@@ -289,8 +289,8 @@ class EmitPheromone extends Action:
 	var current_time: float = 0.0
 
 	func _init():
-		super._init()
-		log_from += ": emit_pheromone"
+		logger = Logger.new("Action: emit_pheromone", DebugLogger.Category.ACTION)
+
 
 
 	static func create() -> Builder:
@@ -298,11 +298,11 @@ class EmitPheromone extends Action:
 
 	func _update_action(delta: float) -> void:
 		if not "pheromone_type" in params:
-			_error("EmitPheromone action requires pheromone_type parameter")
+			logger.error("EmitPheromone action requires pheromone_type parameter")
 			return
 
 		if not "emission_duration" in params:
-			_error("EmitPheromone action requires emission_duration parameter")
+			logger.error("EmitPheromone action requires emission_duration parameter")
 			return
 
 		var pheromone_type = params["pheromone_type"]
@@ -321,8 +321,8 @@ class EmitPheromone extends Action:
 
 class Rest extends Action:
 	func _init():
-		super._init()
-		log_from += ": rest"
+		logger = Logger.new("Action: rest", DebugLogger.Category.ACTION)
+
 		
 	static func create() -> Builder:
 		return Builder.new(Rest)

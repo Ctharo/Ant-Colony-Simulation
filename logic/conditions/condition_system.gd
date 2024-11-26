@@ -1,5 +1,5 @@
 class_name ConditionSystem
-extends BaseRefCounted
+extends RefCounted
 
 #region Signals
 ## Emitted when any condition evaluation changes
@@ -64,12 +64,13 @@ var _cache_stats = {
 ## Evaluation context stack for nested conditions
 var _evaluation_stack: Array[String] = []
 
+var logger: Logger
 #endregion
 
 #region Initialization
 func _init(p_ant: Ant) -> void:
-	log_category = DebugLogger.Category.CONDITION
-	log_from = "condition_system"
+	logger = Logger.new("condition_system", DebugLogger.Category.CONDITION)
+
 	_property_access = p_ant._property_access
 	if not _condition_configs.is_empty():
 		register_required_properties()
@@ -107,7 +108,7 @@ static func load_condition_configs_from_dict(config: Dictionary) -> Error:
 ## Evaluates a condition based on its configuration
 func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
-		_error("Attempted to evaluate null condition")
+		logger.error("Attempted to evaluate null condition")
 		return false
 
 	var cache_key = _get_condition_cache_key(condition, context)
@@ -118,11 +119,11 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if _condition_cache.has(cache_key):
 		var result = _condition_cache[cache_key]
 		_cache_stats.hits += 1
-		_debug("Cache HIT: %s" % cache_key)
+		logger.debug("Cache HIT: %s" % cache_key)
 		return result
 
 	_cache_stats.misses += 1
-	_debug("Cache MISS: %s" % cache_key)
+	logger.debug("Cache MISS: %s" % cache_key)
 
 	var result := _evaluate_condition_config(condition.config, context)
 	_condition_cache[cache_key] = result
@@ -134,7 +135,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if result != previous:
 		condition.previous_result = result
 		evaluation_changed.emit(condition, result)
-		_info("Condition changed: %s -> %s | %s" % [
+		logger.info("Condition changed: %s -> %s | %s" % [
 			previous,
 			result,
 			cache_key
@@ -146,7 +147,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 func clear_cache() -> void:
 	var cache_size = _condition_cache.size()
 	_condition_cache.clear()
-	_debug("Cleared condition cache (%d entries)" % cache_size)
+	logger.debug("Cleared condition cache (%d entries)" % cache_size)
 
 ## Gets a list of all required property paths
 func get_required_properties() -> Array[String]:
@@ -158,17 +159,17 @@ func get_required_properties() -> Array[String]:
 ## Gets context value for a property path
 func get_property_value(path: Path) -> Variant:
 	if not path.full in _required_properties:
-		_warn("Accessing unrequired property '%s'" % path.full)
+		logger.warn("Accessing unrequired property '%s'" % path.full)
 		return null
 
 	var node: PropertyNode = _property_access.find_property_node(path)
 	if not node:
-		_error("Path may be incorrect, no node found at path %s" % path.full)
+		logger.error("Path may be incorrect, no node found at path %s" % path.full)
 		return null
 
 	var value = _property_access.get_property_value(path)
 	if value != null:
-		_trace("Retrieved value for property '%s' = %s" % [path.full, str(value)])
+		logger.trace("Retrieved value for property '%s' = %s" % [path.full, str(value)])
 
 	return value
 ## Print current cache statistics
@@ -202,7 +203,7 @@ func print_cache_stats() -> void:
 			stats += "\n    Avg: %.2f" % (times[2] / times[3])
 			stats += "\n    Count: %d" % times[3]
 
-	_info(stats)
+	logger.info(stats)
 
 ## Reset cache statistics
 func reset_stats() -> void:
@@ -214,7 +215,7 @@ func reset_stats() -> void:
 		"condition_evaluation_times": {},
 		"last_stats_reset": Time.get_unix_time_from_system()
 	}
-	_debug("Reset cache statistics")
+	logger.debug("Reset cache statistics")
 
 
 ## Creates a condition instance from configuration
@@ -277,7 +278,7 @@ func _push_evaluation_context(description: String) -> void:
 	_evaluation_stack.append(description)
 	if _evaluation_stack.size() > 1:
 		var indent = "  ".repeat(_evaluation_stack.size() - 1)
-		_debug("%s→ Evaluating: %s" % [indent, description])
+		logger.debug("%s→ Evaluating: %s" % [indent, description])
 
 ## Pop condition from evaluation stack
 func _pop_evaluation_context() -> void:
@@ -310,7 +311,7 @@ func _update_evaluation_stats(condition_key: String, evaluation_time: float) -> 
 
 ## Evaluates condition configuration recursively
 func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
-	_debug("Evaluating condition config: %s%s" % [config, _get_current_context()])
+	logger.debug("Evaluating condition config: %s%s" % [config, _get_current_context()])
 
 	# Handle operator conditions (AND, OR, NOT)
 	if config.has("type") and config.type == "Operator":
@@ -330,13 +331,13 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 	elif config.has("property"):
 		return _evaluate_property_check(config, context)
 
-	_error("Invalid condition format: %s%s" % [config, _get_current_context()])
+	logger.error("Invalid condition format: %s%s" % [config, _get_current_context()])
 	return false
 
 ## Evaluates property check conditions with consolidated logging
 func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
 	if not evaluation.has("property"):
-		_error("Property check missing 'property' field")
+		logger.error("Property check missing 'property' field")
 		return false
 
 	var path = Path.parse(evaluation.property)
@@ -348,7 +349,7 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 	# Get first value
 	var value_a = _property_access.get_property_value(path)
 	if value_a == null and not operator in ["IS_EMPTY", "NOT_EMPTY"]:
-		_error("Failed to retrieve property: %s" % path.full)
+		logger.error("Failed to retrieve property: %s" % path.full)
 		_pop_evaluation_context()
 		return false
 
@@ -360,11 +361,11 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 		var compare_path = Path.parse(evaluation.value_from)
 		value_b = _property_access.get_property_value(compare_path)
 		if value_b == null:
-			_error("Failed to retrieve comparison property: %s" % compare_path.full)
+			logger.error("Failed to retrieve comparison property: %s" % compare_path.full)
 			_pop_evaluation_context()
 			return false
 	elif not operator in ["IS_EMPTY", "NOT_EMPTY"]:
-		_error("Invalid property check: missing comparison value")
+		logger.error("Invalid property check: missing comparison value")
 		_pop_evaluation_context()
 		return false
 
@@ -376,14 +377,14 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 ## Evaluates operator conditions with consolidated logging
 func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bool:
 	if not config.has("operator_type"):
-		_error("Operator condition missing operator_type")
+		logger.error("Operator condition missing operator_type")
 		return false
 
 	var operator_type = config.operator_type.to_lower()
 	var operands = config.get("operands", [])
 
 	if operands.is_empty():
-		_error("Operator condition has no operands")
+		logger.error("Operator condition has no operands")
 		return false
 
 	_push_evaluation_context("%s operator with %d operands" % [operator_type.to_upper(), operands.size()])
@@ -397,12 +398,12 @@ func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bo
 		"not":
 			result = _evaluate_not_operator(operands, context)
 		_:
-			_error("Unknown operator type: %s" % operator_type)
+			logger.error("Unknown operator type: %s" % operator_type)
 
 	var message = "\n%s Operator Evaluation:" % operator_type.to_upper()
 	message += "\n    Result: %s" % result
 	message += _format_context_chain()
-	_debug(message)
+	logger.debug(message)
 
 	_pop_evaluation_context()
 	return result
@@ -430,7 +431,7 @@ func _evaluate_or_operator(operands: Array, context: Dictionary) -> bool:
 ## Helper function for NOT operator evaluation
 func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
 	if operands.size() != 1:
-		_error("NOT operator requires exactly one operand")
+		logger.error("NOT operator requires exactly one operand")
 		return false
 
 	_push_evaluation_context("Evaluating condition to negate")
@@ -441,7 +442,7 @@ func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
 	message += "\n    Original: %s" % original
 	message += "\n    Result:   %s" % result
 	message += _format_context_chain()
-	_debug(message)
+	logger.debug(message)
 
 	_pop_evaluation_context()
 	return result
@@ -450,12 +451,12 @@ func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
 func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
 	var eval_operator = OPERATOR_MAP.get(operator)
 	if not eval_operator:
-		_error("Unknown operator: %s" % operator)
+		logger.error("Unknown operator: %s" % operator)
 		return false
 
 	var compare_func = COMPARISON_OPERATORS.get(eval_operator)
 	if not compare_func:
-		_error("Missing comparison function for operator: %s" % eval_operator)
+		logger.error("Missing comparison function for operator: %s" % eval_operator)
 		return false
 
 	return compare_func.call(value_a, value_b)
@@ -493,11 +494,11 @@ func _register_property(property_path_str: String) -> void:
 
 	var path := Path.parse(property_path_str)
 	if path.is_root():
-		_warn("Cannot register root path as required property")
+		logger.warn("Cannot register root path as required property")
 		return
 
 	_required_properties[path.full] = path
-	_trace("Registered required property: %s" % path.full)
+	logger.trace("Registered required property: %s" % path.full)
 
 ## Generates cache key for condition evaluation
 func _get_condition_cache_key(condition: Condition, context: Dictionary) -> String:
@@ -541,11 +542,11 @@ func _log_evaluation_block(operation: String, value_a: Variant, operator: String
 	message += "\n    Result:    %s" % result
 	if not context.is_empty():
 		message += context
-	_debug(message)
+	logger.debug(message)
 
 ## Log cache operations with minimal noise
 func _log_cache_operation(hit: bool, key: String) -> void:
-	_debug("Cache %s: %s" % ["HIT" if hit else "MISS", key])
+	logger.debug("Cache %s: %s" % ["HIT" if hit else "MISS", key])
 
 ## Log condition evaluation with formatted context
 func _log_condition_evaluation(message: String, level: String = "debug") -> void:
@@ -557,13 +558,13 @@ func _log_condition_evaluation(message: String, level: String = "debug") -> void
 
 	match level:
 		"debug":
-			_debug(log_message)
+			logger.debug(log_message)
 		"trace":
-			_trace(log_message)
+			logger.trace(log_message)
 		"info":
-			_info(log_message)
+			logger.info(log_message)
 		"error":
-			_error(log_message)
+			logger.error(log_message)
 
 
 ## Logs registered required properties
@@ -575,7 +576,7 @@ func _log_required_properties() -> void:
 	var formatted_list = ""
 	for prop in properties:
 		formatted_list += "\n  - " + str(prop)
-	_debug("Required properties:%s" % formatted_list)
+	logger.debug("Required properties:%s" % formatted_list)
 #endregion
 
 #region Static Helper Methods

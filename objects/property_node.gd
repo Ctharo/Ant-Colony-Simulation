@@ -1,5 +1,5 @@
 class_name PropertyNode
-extends BaseRefCounted
+extends RefCounted
 ## A node in the property tree that can be either a leaf (value) or branch (container)
 
 enum Type {
@@ -24,6 +24,7 @@ var value_type: Property.Type
 var getter: Callable
 var setter: Callable
 
+var logger: Logger
 
 ## Dependencies that affect this node's value
 var dependencies: Array[Path]
@@ -60,8 +61,7 @@ func _init(
 	dependencies = p_dependencies
 	description = p_description
 
-	log_category = DebugLogger.Category.PROPERTY
-	log_from = "property_node"
+	logger = Logger.new("property_node", DebugLogger.Category.PROPERTY)
 
 static func create(p_name: String, p_type: Type) -> PropertyNode:
 	return PropertyNode.new(p_name, p_type)
@@ -113,7 +113,7 @@ func find_node_by_string(path_string: String) -> PropertyNode:
 #region Tree Modification
 func add_child(child: PropertyNode) -> void:
 	if not is_container_node():
-		_error("Cannot add child to value node")
+		logger.error("Cannot add child to value node")
 		return
 
 	child.parent = self
@@ -128,11 +128,11 @@ func remove_child(child_name: String) -> void:
 #region Value Access
 func get_value() -> Variant:
 	if not is_value_node():
-		_error("Cannot get value from container node")
+		logger.error("Cannot get value from container node")
 		return null
 
 	if not has_valid_accessor():
-		_error("Invalid getter for property")
+		logger.error("Invalid getter for property")
 		return null
 
 	return getter.call()

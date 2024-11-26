@@ -1,8 +1,5 @@
-extends BaseNode
+extends Node
 
-func _init() -> void:
-	log_category = DebugLogger.Category.PROGRAM
-	log_from = "pheromone_manager"
 	
 func get_all() -> Pheromones:
 	var pheromones: Pheromones = Pheromones.new()

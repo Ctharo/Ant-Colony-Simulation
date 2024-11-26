@@ -86,7 +86,7 @@ func _init(_entity: Node) -> void:
 	for child in built_olfaction.children.values():
 		add_child(child)
 
-	_trace("Olfaction property tree initialized")
+	logger.trace("Olfaction property tree initialized")
 
 #region Property Getters and Setters
 func _get_range() -> float:
@@ -94,18 +94,18 @@ func _get_range() -> float:
 
 func _set_range(value: float) -> void:
 	if value <= 0:
-		_error("Attempted to set olfaction.base.range to non-positive value -> Action not allowed")
+		logger.error("Attempted to set olfaction.base.range to non-positive value -> Action not allowed")
 		return
 
 	var old_value = _range
 	_range = value
 
 	if old_value != _range:
-		_trace("Range updated: %.2f -> %.2f" % [old_value, _range])
+		logger.trace("Range updated: %.2f -> %.2f" % [old_value, _range])
 
 func _get_pheromones_in_range() -> Pheromones:
 	if not entity:
-		_error("Cannot get pheromones: entity reference is null")
+		logger.error("Cannot get pheromones: entity reference is null")
 		return null
 	return Pheromones.in_range(entity.global_position, _range)
 
@@ -115,7 +115,7 @@ func _get_pheromones_in_range_count() -> int:
 
 func _get_food_pheromones_in_range() -> Pheromones:
 	if not entity:
-		_error("Cannot get food pheromones: entity reference is null")
+		logger.error("Cannot get food pheromones: entity reference is null")
 		return null
 	return Pheromones.in_range(entity.global_position, _range, "food")
 
@@ -125,7 +125,7 @@ func _get_food_pheromones_in_range_count() -> int:
 
 func _get_home_pheromones_in_range() -> Pheromones:
 	if not entity:
-		_error("Cannot get home pheromones: entity reference is null")
+		logger.error("Cannot get home pheromones: entity reference is null")
 		return null
 	return Pheromones.in_range(entity.global_position, _range, "home")
 
@@ -147,12 +147,12 @@ func _is_detecting_home() -> bool:
 ## Check if a point is within olfactory range
 func is_within_range(point: Vector2) -> bool:
 	if not entity:
-		_error("Cannot check range: entity reference is null")
+		logger.error("Cannot check range: entity reference is null")
 		return false
 	return entity.global_position.distance_to(point) < _range
 
 ## Reset olfactory range to default value
 func reset() -> void:
 	_set_range(DEFAULT_RANGE)
-	_trace("Range reset to default: %.2f" % DEFAULT_RANGE)
+	logger.trace("Range reset to default: %.2f" % DEFAULT_RANGE)
 #endregion

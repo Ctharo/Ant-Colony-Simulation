@@ -67,7 +67,7 @@ func _init(_entity: Node) -> void:
 	for child in built_health.children.values():
 		add_child(child)
 
-	_trace("Health property tree initialized")
+	logger.trace("Health property tree initialized")
 
 #region Property Getters and Setters
 func _get_max_level() -> float:
@@ -75,7 +75,7 @@ func _get_max_level() -> float:
 
 func _set_max_level(value: float) -> void:
 	if is_zero_approx(value):
-		_warn(
+		logger.warn(
 			"Attempted to set health.capacity.max to zero -> Action not allowed"
 		)
 		return
@@ -87,7 +87,7 @@ func _set_max_level(value: float) -> void:
 	_max_level = value
 
 	if old_value != _max_level:
-		_trace("Maximum health updated: %.2f -> %.2f" % [old_value, _max_level])
+		logger.trace("Maximum health updated: %.2f -> %.2f" % [old_value, _max_level])
 
 func _get_current_level() -> float:
 	return _current_level
@@ -97,10 +97,10 @@ func _set_current_level(value: float) -> void:
 	_current_level = clamp(value, 0.0, _max_level)
 
 	if old_value != _current_level:
-		_trace("Current health updated: %.2f -> %.2f" % [old_value, _current_level])
+		logger.trace("Current health updated: %.2f -> %.2f" % [old_value, _current_level])
 
 		if is_zero_approx(_current_level):
-			_trace("Health depleted!")
+			logger.trace("Health depleted!")
 			depleted.emit()
 
 func _get_percentage() -> float:
@@ -126,7 +126,7 @@ func is_full() -> bool:
 ## Add health points, not exceeding maximum
 func heal(amount: float) -> void:
 	if amount < 0:
-		_error("Cannot heal negative amount")
+		logger.error("Cannot heal negative amount")
 		return
 
 	_set_current_level(_current_level + amount)
@@ -134,7 +134,7 @@ func heal(amount: float) -> void:
 ## Subtract health points, not going below zero
 func damage(amount: float) -> void:
 	if amount < 0:
-		_error("Cannot damage negative amount")
+		logger.error("Cannot damage negative amount")
 		return
 
 	_set_current_level(_current_level - amount)
@@ -142,11 +142,11 @@ func damage(amount: float) -> void:
 ## Reset health to maximum level
 func restore_full_health() -> void:
 	_set_current_level(_max_level)
-	_trace("Health restored to maximum")
+	logger.trace("Health restored to maximum")
 
 ## Reset health to default values
 func reset() -> void:
 	_max_level = DEFAULT_MAX_HEALTH
 	_current_level = DEFAULT_MAX_HEALTH
-	_trace("Health reset to default: %.2f/%.2f" % [_current_level, _max_level])
+	logger.trace("Health reset to default: %.2f/%.2f" % [_current_level, _max_level])
 #endregion

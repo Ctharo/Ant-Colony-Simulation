@@ -51,7 +51,7 @@ func _init(_entity: Node) -> void:
 	for child in built_strength.children.values():
 		add_child(child)
 
-	_trace("Strength property tree initialized")
+	logger.trace("Strength property tree initialized")
 
 #region Property Getters and Setters
 func _get_level() -> int:
@@ -59,14 +59,14 @@ func _get_level() -> int:
 
 func _set_level(value: int) -> void:
 	if value <= 0:
-		_error("Attempted to set strength.base.level to non-positive value -> Action not allowed")
+		logger.error("Attempted to set strength.base.level to non-positive value -> Action not allowed")
 		return
 
 	var old_value = _level
 	_level = value
 
 	if old_value != _level:
-		_trace("Level updated: %d -> %d" % [old_value, _level])
+		logger.trace("Level updated: %d -> %d" % [old_value, _level])
 
 func _get_carry_factor() -> float:
 	return float(_level) * STRENGTH_FACTOR
@@ -82,5 +82,5 @@ func _get_is_overloaded() -> bool:
 ## Reset strength level to default value
 func reset() -> void:
 	_set_level(DEFAULT_LEVEL)
-	_trace("Strength reset to default: %d" % DEFAULT_LEVEL)
+	logger.trace("Strength reset to default: %d" % DEFAULT_LEVEL)
 #endregion

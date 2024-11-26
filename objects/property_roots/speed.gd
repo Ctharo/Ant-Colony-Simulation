@@ -80,7 +80,7 @@ func _init(_entity: Node) -> void:
 	for child in built_speed.children.values():
 		add_child(child)
 
-	_trace("Speed property tree initialized")
+	logger.trace("Speed property tree initialized")
 
 #region Property Getters and Setters
 func _get_movement_rate() -> float:
@@ -88,7 +88,7 @@ func _get_movement_rate() -> float:
 
 func _set_movement_rate(rate: float) -> void:
 	if is_zero_approx(rate):
-		_warn(
+		logger.warn(
 			"Attempted to set speed.base.movement to zero -> Action not allowed"
 		)
 		return
@@ -97,35 +97,35 @@ func _set_movement_rate(rate: float) -> void:
 	_movement_rate = max(rate, 0.0)
 
 	if old_rate != _movement_rate:
-		_trace("Movement rate updated: %.2f -> %.2f" % [old_rate, _movement_rate])
+		logger.trace("Movement rate updated: %.2f -> %.2f" % [old_rate, _movement_rate])
 
 func _get_harvesting_rate() -> float:
 	return _harvesting_rate
 
 func _set_harvesting_rate(rate: float) -> void:
 	if is_zero_approx(rate):
-		_warn("Attempted to set speed.base.harvesting to zero -> Action not allowed")
+		logger.warn("Attempted to set speed.base.harvesting to zero -> Action not allowed")
 		return
 
 	var old_rate = _harvesting_rate
 	_harvesting_rate = max(rate, 0.0)
 
 	if old_rate != _harvesting_rate:
-		_trace("Harvesting rate updated: %.2f -> %.2f" % [old_rate, _harvesting_rate])
+		logger.trace("Harvesting rate updated: %.2f -> %.2f" % [old_rate, _harvesting_rate])
 
 func _get_storing_rate() -> float:
 	return _storing_rate
 
 func _set_storing_rate(rate: float) -> void:
 	if is_zero_approx(rate):
-		_warn("Attempted to set speed.base.storing to zero -> Action not allowed")
+		logger.warn("Attempted to set speed.base.storing to zero -> Action not allowed")
 		return
 
 	var old_rate = _storing_rate
 	_storing_rate = max(rate, 0.0)
 
 	if old_rate != _storing_rate:
-		_trace("Storing rate updated: %.2f -> %.2f" % [old_rate, _storing_rate])
+		logger.trace("Storing rate updated: %.2f -> %.2f" % [old_rate, _storing_rate])
 
 func _get_time_per_unit() -> float:
 	return 1.0 / _movement_rate if _movement_rate > 0 else INF
@@ -147,14 +147,14 @@ func _can_store() -> bool:
 ## Calculate time required to move a given distance
 func time_to_move(distance: float) -> float:
 	if distance < 0:
-		_error("Cannot calculate time for negative distance")
+		logger.error("Cannot calculate time for negative distance")
 		return INF
 	return distance / _movement_rate if _movement_rate > 0 else INF
 
 ## Calculate amount that can be harvested in a given time period
 func harvest_amount(time: float) -> float:
 	if time < 0:
-		_error("Cannot calculate harvest amount for negative time")
+		logger.error("Cannot calculate harvest amount for negative time")
 		return 0.0
 	return _harvesting_rate * time
 
@@ -163,5 +163,5 @@ func reset() -> void:
 	_set_movement_rate(DEFAULT_RATE)
 	_set_harvesting_rate(DEFAULT_RATE)
 	_set_storing_rate(DEFAULT_RATE)
-	_trace("All rates reset to default: %.2f" % DEFAULT_RATE)
+	logger.trace("All rates reset to default: %.2f" % DEFAULT_RATE)
 #endregion
