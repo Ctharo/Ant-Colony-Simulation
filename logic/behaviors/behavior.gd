@@ -164,7 +164,7 @@ func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 	if not p_condition_system and not conditions.is_empty():
 		logger.warn("Starting behavior '%s' with conditions but no condition system" % name)
 
-	logger.warn("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
+	logger.info("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
 
 	ant = p_ant
 	_condition_system = p_condition_system

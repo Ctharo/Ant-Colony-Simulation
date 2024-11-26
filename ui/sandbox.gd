@@ -7,6 +7,10 @@ func _init() -> void:
 func _ready() -> void:
 	logger.set_logging_level(DebugLogger.LogLevel.TRACE)
 	logger.set_logging_category(DebugLogger.Category.ENTITY)
+	logger.set_logging_category(DebugLogger.Category.ACTION)
+	logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
+
+
 	logger.set_logging_category(DebugLogger.Category.CONDITION, false)
 
 	spawn_ants(1)
