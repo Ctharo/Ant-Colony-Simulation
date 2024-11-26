@@ -93,18 +93,17 @@ func _on_active_task_changed(_new_task: Task) -> void:
 ## Placeholder for actions
 func perform_action(_action: Action, args: Dictionary = {}) -> void:
 	# Implement ant behavior here
-	var time_for_action: float = 0.5 # TODO: Should be gathered from args?
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
 	event_str += args.description if args else "N/A"
 	event_str += " "
-	event_str += "for %.2f" % time_for_action
+	event_str += "for %.2f" % _action.duration
 	event_str += " "
-	event_str += "second" if time_for_action == 1.0 else "seconds"
+	event_str += "second" if _action.duration == 1.0 else "seconds"
 	event_str += " "
 	event_str += "with %s %s" % ["argument" if args.size() == 1 else "arguments", args]
 	logger.debug(event_str)
-	await get_tree().create_timer(1).timeout
+	await get_tree().create_timer(_action.duration).timeout
 	action_completed.emit()
 #endregion
 
