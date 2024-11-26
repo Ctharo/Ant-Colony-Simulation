@@ -28,6 +28,8 @@ var name: String
 
 var logger: Logger
 
+var arguments: Dictionary = {}
+
 ## Builder class for constructing actions
 class Builder:
 	var action: Action
@@ -91,6 +93,9 @@ func is_ready() -> bool:
 ## Action Classes
 class Move extends Action:
 	func _init():
+		arguments = {
+			description = "moving toward a target"
+		}
 		name = "move"
 		logger = Logger.new("Action: move", DebugLogger.Category.ACTION)
 		
@@ -337,7 +342,6 @@ class EmitPheromone extends Action:
 class Rest extends Action:
 	func _init():
 		name = "rest"
-
 		logger = Logger.new("Action: rest", DebugLogger.Category.ACTION)
 
 		
