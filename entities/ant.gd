@@ -91,12 +91,12 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 #region Action Methods
 ## Placeholder for actions
-func perform_action(_action: Action, args = []) -> void:
+func perform_action(_action: Action, args: Dictionary = {}) -> void:
 	# Implement ant behavior here
 	var time_for_action: float = 0.5 # TODO: Should be gathered from args?
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
-	event_str += args[0] if args else "N/A"
+	event_str += args.description if args else "N/A"
 	event_str += " "
 	event_str += "for %.2f" % time_for_action
 	event_str += " "

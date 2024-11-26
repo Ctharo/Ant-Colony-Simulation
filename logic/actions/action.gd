@@ -93,11 +93,14 @@ func is_ready() -> bool:
 ## Action Classes
 class Move extends Action:
 	func _init():
-		arguments = {
-			description = "moving toward a target"
-		}
 		name = "move"
 		logger = Logger.new("Action: move", DebugLogger.Category.ACTION)
+		arguments = {
+			description = "moving toward a target",
+			target = "position %s",
+			velocity = "with velocity of %.2f",
+			direction = "in direction %s"
+		}
 		
 	static func create() -> Builder:
 		return Builder.new(Move)
@@ -111,7 +114,7 @@ class Move extends Action:
 		var movement_rate_modifier = params.get("rate_modifier", 1.0)
 		var direction = ant.global_position.direction_to(target_position)
 		ant.velocity = direction * movement_rate_modifier * ant.speed.movement_rate
-		ant.perform_action(self, ["toward position %s" % target_position, "with velocity of %s" % ant.velocity.length()])
+		ant.perform_action(self, arguments)
 
 	func is_completed() -> bool:
 		if not "target_position" in params:
@@ -125,7 +128,13 @@ class Harvest extends Action:
 		name = "harvest"
 
 		logger = Logger.new("Action: harvest", DebugLogger.Category.ACTION)
-
+		arguments = {
+			description = "harvesting resources",
+			source = "from %s",
+			rate = "at rate %.2f/s",
+			capacity = "storage: %.2f/%.2f",
+			remaining = "food remaining: %.2f"
+		}
 		
 	static func create() -> Builder:
 		return Builder.new(Harvest)
@@ -139,12 +148,7 @@ class Harvest extends Action:
 		if current_food_source and not current_food_source.is_depleted():
 			var harvest_rate_modifier = params.get("harvest_rate_modifier", 1.0)
 			var harvest_rate = delta * harvest_rate_modifier * ant.speed.harvesting_rate
-			ant.perform_action(self, [
-				"harvesting from %s" % current_food_source.name,
-				"at rate %.2f/s" % harvest_rate,
-				"current capacity: %.2f/%.2f" % [ant.foods.mass(), ant.storage.capacity]
-			])
-			ant.harvest_food(current_food_source, harvest_rate)
+			ant.perform_action(self, arguments)
 		else:
 			logger.error("No valid food source to harvest")
 
@@ -156,7 +160,13 @@ class Harvest extends Action:
 class FollowPheromone extends Action:
 	func _init():
 		name = "follow_pheromone"
-
+		arguments = {
+				description = "following pheromone trail",
+				type = "type: %s",
+				concentration = "concentration: %.2f",
+				direction = "direction: %s",
+				strength = "signal strength: %.2f"
+		}
 		logger = Logger.new("Action: follow_pheromone", DebugLogger.Category.ACTION)
  
 		
@@ -172,11 +182,7 @@ class FollowPheromone extends Action:
 		var concentration = params.get("concentration", 0.0)
 		var direction = params.get("direction", Vector2.ZERO)
 		
-		ant.perform_action(self, [
-			"following %s pheromone" % pheromone_type,
-			"concentration: %.2f" % concentration,
-			"direction: %s" % direction
-		])
+		ant.perform_action(self, arguments)
 
 	func is_completed() -> bool:
 		return false
@@ -187,7 +193,13 @@ class RandomMove extends Action:
 	
 	func _init():
 		name = "random_move"
-
+		arguments = {
+			description = "moving randomly",
+			direction = "direction: %s",
+			duration = "duration: %.1f/%.1f",
+			distance = "distance traveled: %.2f",
+			speed = "current speed: %.2f"
+		}
 		logger = Logger.new("Action: random_move", DebugLogger.Category.ACTION)
 
 		
@@ -202,12 +214,7 @@ class RandomMove extends Action:
 			current_time = 0
 			current_direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
 
-		ant.perform_action(self, [
-			"moving randomly",
-			"direction: %s" % current_direction,
-			"duration: %.1f/%.1f" % [current_time, move_duration]
-		])
-		ant.move(current_direction, delta)
+		ant.perform_action(self, arguments)
 
 	func is_completed() -> bool:
 		return false
@@ -215,7 +222,13 @@ class RandomMove extends Action:
 class Store extends Action:
 	func _init():
 		name = "store"
-
+		arguments = {
+			description = "storing resources in colony",
+			rate = "at rate %.2f/s",
+			remaining = "remaining to store: %.2f",
+			total_stored = "total stored: %.2f",
+			efficiency = "storage efficiency: %.2f%%"
+		}
 		logger = Logger.new("Action: store", DebugLogger.Category.ACTION)
 
 	
@@ -227,12 +240,7 @@ class Store extends Action:
 		var store_rate = delta * store_rate_modifier * ant.speed.storing_rate
 		var food_mass = ant.foods.mass()
 		
-		ant.perform_action(self, [
-			"storing food in colony",
-			"at rate %.2f/s" % store_rate,
-			"remaining to store: %.2f" % food_mass
-		])
-		ant.store_food(ant.colony, store_rate)
+		ant.perform_action(self, arguments)
 
 	func is_completed() -> bool:
 		return ant.foods.is_empty()
@@ -243,7 +251,15 @@ class Attack extends Action:
 	
 	func _init():
 		name = "attack"
-
+		arguments = {
+			description = "engaging in combat",
+			target = "target: %s",
+			distance = "at range %.1f",
+			cooldown = "cooldown: %.1f",
+			damage = "damage: %.1f",
+			attack_range = "attack range: %.1f",
+			status = "status: %s"  # For "moving to range" or "attacking"
+		}
 		logger = Logger.new("Action: attack", DebugLogger.Category.ACTION)
 
 		
@@ -265,37 +281,12 @@ class Attack extends Action:
 
 		if current_target_entity and is_instance_valid(current_target_entity):
 			var distance = ant.global_position.distance_to(current_target_entity.global_position)
-			if distance <= attack_range:
-				ant.perform_action(self, [
-					"attacking entity %s" % current_target_entity.name,
-					"at range %.1f" % distance,
-					"cooldown: %.1f" % current_cooldown
-				])
-				ant.attack(current_target_entity, delta)
-			else:
-				ant.perform_action(self, [
-					"moving to attack range of %s" % current_target_entity.name,
-					"distance: %.1f" % distance,
-					"attack range: %.1f" % attack_range
-				])
-				ant.move_to(current_target_location, delta)
+			ant.perform_action(self, arguments)
+			
 		elif current_target_location != Vector2.ZERO:
 			var distance = ant.global_position.distance_to(current_target_location)
 			if distance <= attack_range:
-				ant.perform_action(self, [
-					"attacking location %s" % current_target_location,
-					"at range %.1f" % distance,
-					"cooldown: %.1f" % current_cooldown
-				])
-				ant.attack(current_target_entity, delta)
-			else:
-				ant.perform_action(self, [
-					"moving to attack location %s" % current_target_location,
-					"distance: %.1f" % distance,
-					"attack range: %.1f" % attack_range
-				])
-				ant.move_to(current_target_location, delta)
-
+				ant.perform_action(self, arguments)
 		current_cooldown = params.get("attack_cooldown", 1.0)
 
 	func is_completed() -> bool:
@@ -308,7 +299,14 @@ class EmitPheromone extends Action:
 
 	func _init():
 		name = "emit_pheromone"
-
+		arguments = {
+			description = "emitting pheromone signal",
+			type = "type: %s",
+			strength = "strength: %.2f",
+			duration = "duration: %.1f/%.1f",
+			radius = "radius: %.2f",
+			concentration = "concentration: %.2f"
+		}
 		logger = Logger.new("Action: emit_pheromone", DebugLogger.Category.ACTION)
 
 
@@ -329,11 +327,7 @@ class EmitPheromone extends Action:
 		var pheromone_strength = params.get("pheromone_strength", 1.0)
 		current_time += delta
 		
-		ant.perform_action(self, [
-			"emitting %s pheromone" % pheromone_type,
-			"strength: %.2f" % pheromone_strength,
-			"duration: %.1f/%.1f" % [current_time, params["emission_duration"]]
-		])
+		ant.perform_action(self, arguments)
 		ant.emit_pheromone(pheromone_type, pheromone_strength)
 
 	func is_completed() -> bool:
@@ -343,7 +337,14 @@ class Rest extends Action:
 	func _init():
 		name = "rest"
 		logger = Logger.new("Action: rest", DebugLogger.Category.ACTION)
-
+		arguments = {
+			description = "resting to recover",
+			gain_rate = "energy gain: %.2f/s",
+			current = "current energy: %.1f",
+			maximum = "maximum energy: %.1f",
+			recovery = "recovery progress: %.1f%%",
+			duration = "rest duration: %.1f"
+		}
 		
 	static func create() -> Builder:
 		return Builder.new(Rest)
@@ -352,11 +353,7 @@ class Rest extends Action:
 		var energy_gain_rate = params.get("energy_gain_rate", 10.0)
 		var energy_gain = energy_gain_rate * delta
 		
-		ant.perform_action(self, [
-			"resting to recover energy",
-			"gain rate: %.2f/s" % energy_gain_rate,
-			"current energy: %.1f/%.1f" % [ant.energy.current, ant.energy.maximum]
-		])
+		ant.perform_action(self, arguments)
 		ant.energy.replenish(energy_gain)
 
 	func is_completed() -> bool:
