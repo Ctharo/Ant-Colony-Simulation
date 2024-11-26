@@ -142,14 +142,14 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 ## Add a condition to this behavior
 func add_condition(condition: ConditionSystem.Condition) -> void:
 	conditions.append(condition)
-	logger.warn("Added condition to behavior '%s'" % name)
+	logger.info("Added condition to behavior '%s'" % name)
 
 ## Add an action to this behavior
 func add_action(action: Action) -> void:
 	actions.append(action)
 	if is_instance_valid(ant):
 		action.ant = ant
-	logger.warn("Added action to behavior '%s': %s" % [name, action.get_script().resource_path.get_file()])
+	logger.info("Added action to behavior '%s': %s" % [name, action.get_script().resource_path.get_file()])
 
 ## Get all conditions for this behavior
 func get_conditions() -> Array[ConditionSystem.Condition]:
@@ -163,8 +163,8 @@ func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 
 	if not p_condition_system and not conditions.is_empty():
 		logger.warn("Starting behavior '%s' with conditions but no condition system" % name)
-
-	logger.info("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
+	else:
+		logger.info("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
 
 	ant = p_ant
 	_condition_system = p_condition_system
@@ -219,7 +219,7 @@ func interrupt() -> void:
 ## Reset the behavior to its initial state
 func reset() -> void:
 	state = State.INACTIVE
-	logger.warn("Reset behavior '%s'" % name)
+	logger.info("Reset behavior '%s'" % name)
 
 	for action in actions:
 		action.reset()
@@ -276,7 +276,7 @@ func get_debug_info() -> Dictionary:
 		"actions": actions.size()
 	}
 
-	logger.warn("\nBehavior Debug Info for '%s':" % name +
+	logger.debug("\nBehavior Debug Info for '%s':" % name +
 		"\n  Priority: %d" % priority +
 		"\n  State: %s" % State.keys()[state] +
 		"\n  Conditions: %d" % conditions.size() +
