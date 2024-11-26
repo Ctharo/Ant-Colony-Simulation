@@ -111,6 +111,8 @@ var _condition_system: ConditionSystem
 ## Last known active task for change detection
 var _last_active_task: Task
 
+var _context_provider: ContextProvider
+
 var logger: Logger
 #endregion
 
