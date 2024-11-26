@@ -1,7 +1,7 @@
 extends Node
 var logger: Logger
 func _init():
-	logger = Logger.new("ant_manager",DebugLogger.Category.PROGRAM)
+	logger = Logger.new("ant_manager", DebugLogger.Category.PROGRAM)
 
 	
 func start_ants(enable: bool = true) -> Result:
@@ -10,7 +10,7 @@ func start_ants(enable: bool = true) -> Result:
 		ant.set_physics_process(enable)
 		ant.set_process(enable)
 		ant._init_task_tree()
-	logger.debug("Ant processes started")
+	logger.info("Ant task tree and processes started")
 	return Result.new()
 
 func spawn_ants(num: int = 1) -> Array[Ant]:
