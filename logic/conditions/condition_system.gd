@@ -117,31 +117,31 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	_cache_stats.total_evaluations += 1
 
 	if _condition_cache.has(cache_key):
-		var result = _condition_cache[cache_key]
+		var cached_result = _condition_cache[cache_key]
 		_cache_stats.hits += 1
 		logger.debug("Cache HIT: %s" % cache_key)
-		return result
+		return cached_result
 
 	_cache_stats.misses += 1
 	logger.debug("Cache MISS: %s" % cache_key)
 
-	var result := _evaluate_condition_config(condition.config, context)
-	_condition_cache[cache_key] = result
+	var _result := _evaluate_condition_config(condition.config, context)
+	_condition_cache[cache_key] = _result
 
 	var evaluation_time = Time.get_ticks_usec() - start_time
 	_update_evaluation_stats(cache_key, evaluation_time)
 
 	var previous = condition.previous_result
-	if result != previous:
-		condition.previous_result = result
-		evaluation_changed.emit(condition, result)
+	if _result != previous:
+		condition.previous_result = _result
+		evaluation_changed.emit(condition, _result)
 		logger.info("Condition changed: %s -> %s | %s" % [
 			previous,
-			result,
+			_result,
 			cache_key
 		])
 
-	return result
+	return _result
 
 ## Clears the condition evaluation cache
 func clear_cache() -> void:
@@ -335,7 +335,7 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 	return false
 
 ## Evaluates property check conditions with consolidated logging
-func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
+func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> bool:
 	if not evaluation.has("property"):
 		logger.error("Property check missing 'property' field")
 		return false

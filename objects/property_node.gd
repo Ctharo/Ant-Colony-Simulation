@@ -92,19 +92,19 @@ func get_path() -> Path:
 
 	return Path.new(parts)
 
-func find_node(path: Path) -> PropertyNode:
+func find_node(_path: Path) -> PropertyNode:
 
-	if path.parts[0] != name:
+	if _path.parts[0] != name:
 		return null # Often due to path.get_subpath
 
-	if path.parts.size() == 1:
+	if _path.parts.size() == 1:
 		return self
 
-	var child_name = path.parts[1]
+	var child_name = _path.parts[1]
 	if not children.has(child_name):
 		return null
 
-	return children[child_name].find_node(Path.new(path.parts.slice(1)))
+	return children[child_name].find_node(Path.new(_path.parts.slice(1)))
 
 func find_node_by_string(path_string: String) -> PropertyNode:
 	return find_node(Path.parse(path_string))
@@ -206,16 +206,16 @@ func has_valid_accessor(check_setter: bool = false) -> bool:
 #endregion
 
 
-static func create_tree(entity: Node) -> PropertyNode.Builder:
-	return PropertyNode.Builder.new(entity)
+static func create_tree(_entity: Node) -> PropertyNode.Builder:
+	return PropertyNode.Builder.new(_entity)
 
 class Builder:
 	var _entity: Node
 	var _current: PropertyNode
 	var _root: PropertyNode
 
-	func _init(entity: Node):
-		_entity = entity
+	func _init(e: Node):
+		_entity = e
 
 	func container(name: String, description: String = "") -> PropertyNode.Builder:
 		var node = PropertyNode.new(

@@ -97,8 +97,8 @@ func find_property_node(path: String) -> PropertyNode:
 	return _property_access.find_property_node(Path.parse(path))
 
 ## Get a root node by name
-func get_root_node(name: String) -> PropertyNode:
-	return _property_access.get_root_node(name)
+func get_root_node(_name: String) -> PropertyNode:
+	return _property_access.get_root_node(_name)
 
 ## Get a property value by path
 func get_property_value(path: String) -> Variant:

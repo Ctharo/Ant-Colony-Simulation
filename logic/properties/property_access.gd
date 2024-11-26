@@ -222,9 +222,9 @@ func _get_dependent_paths(path: Path) -> Array[String]:
 ## Get a property's value with caching support
 func get_property_value(path: Path) -> Variant:
 	if _cache and _cache.has_valid_cache(path):
-		var value = _cache.get_cached(path)
-		_log_property_access(path, value, "READ[cached]")
-		return value
+		var _value = _cache.get_cached(path)
+		_log_property_access(path, _value, "READ[cached]")
+		return _value
 
 	if not has_node(path):
 		logger.error("Node not found: %s" % path.full)
