@@ -34,6 +34,7 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 	else:
 		type = "Unknown type"
 	logger.debug("Initialized for %s [Cache: %s]" % [type, "enabled" if use_caching else "disabled"])
+	
 ## Get a property's value directly without caching
 func get_property_value(path: Path) -> Variant:
 	if not has_node(path):
