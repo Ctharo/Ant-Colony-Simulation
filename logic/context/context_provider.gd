@@ -2,12 +2,44 @@ class_name ContextProvider
 extends RefCounted
 
 var logger: Logger
+var registry: Registry
+
 
 func _init() -> void:
 	logger = Logger.new("context_provider", DebugLogger.Category.CONTEXT)
+	registry = Registry.new()
+
+## Stores registered context values and manages their updates
+class Registry extends RefCounted:
+	var _values: Dictionary = {}
+	var _current_time: float = 0.0
+	var logger = Logger.new("context_registry", DebugLogger.Category.CONTEXT)
+	
+	func register_value(key: String, frequency: Context.UpdateFrequency, collector: Callable, can_interrupt: bool = false) -> void:
+		_values[key] = Value.new(key, frequency, collector, can_interrupt)
+		logger.debug("Registered context value: %s (frequency: %s, can_interrupt: %s)" % 
+			[key, Context.UpdateFrequency.keys()[frequency], can_interrupt])
+	
+	func update(delta: float) -> Array[String]:
+		_current_time += delta
+		var changed_interrupt_values: Array[String] = []
+		
+		for value in _values.values():
+			if value.should_update(_current_time):
+				if value.update(_current_time) and value.can_interrupt:
+					changed_interrupt_values.append(value.key)
+					logger.debug("Interrupt-capable context value changed: %s" % value.key)
+		
+		return changed_interrupt_values
+	
+	func get_context() -> Dictionary:
+		var context = {}
+		for key in _values:
+			context[key] = _values[key].current_value
+		return context
 
 ## Definition of a context value that needs to be collected
-class ContextValue extends RefCounted:
+class Value extends RefCounted:
 	var key: String
 	var frequency: Context.UpdateFrequency
 	var collector_func: Callable
@@ -30,32 +62,3 @@ class ContextValue extends RefCounted:
 		current_value = collector_func.call()
 		last_update_time = current_time
 		return can_interrupt and old_value != current_value
-
-## Stores registered context values and manages their updates
-class ContextRegistry extends RefCounted:
-	var _values: Dictionary = {}
-	var _current_time: float = 0.0
-	var logger = Logger.new("context_registry", DebugLogger.Category.CONTEXT)
-	
-	func register_value(key: String, frequency: Context.UpdateFrequency, collector: Callable, can_interrupt: bool = false) -> void:
-		_values[key] = ContextValue.new(key, frequency, collector, can_interrupt)
-		logger.debug("Registered context value: %s (frequency: %s, can_interrupt: %s)" % 
-			[key, Context.UpdateFrequency.keys()[frequency], can_interrupt])
-	
-	func update(delta: float) -> Array[String]:
-		_current_time += delta
-		var changed_interrupt_values: Array[String] = []
-		
-		for value in _values.values():
-			if value.should_update(_current_time):
-				if value.update(_current_time) and value.can_interrupt:
-					changed_interrupt_values.append(value.key)
-					logger.debug("Interrupt-capable context value changed: %s" % value.key)
-		
-		return changed_interrupt_values
-	
-	func get_context() -> Dictionary:
-		var context = {}
-		for key in _values:
-			context[key] = _values[key].current_value
-		return context
