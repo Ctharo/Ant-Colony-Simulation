@@ -24,6 +24,8 @@ var params: Dictionary = {}:
 	set(value):
 		params = value
 
+var name: String
+
 var logger: Logger
 
 ## Builder class for constructing actions
@@ -89,6 +91,7 @@ func is_ready() -> bool:
 ## Action Classes
 class Move extends Action:
 	func _init():
+		name = "move"
 		logger = Logger.new("Action: move", DebugLogger.Category.ACTION)
 		
 	static func create() -> Builder:
@@ -114,6 +117,8 @@ class Harvest extends Action:
 	var current_food_source: Food
 	
 	func _init():
+		name = "harvest"
+
 		logger = Logger.new("Action: harvest", DebugLogger.Category.ACTION)
 
 		
@@ -145,6 +150,8 @@ class Harvest extends Action:
 
 class FollowPheromone extends Action:
 	func _init():
+		name = "follow_pheromone"
+
 		logger = Logger.new("Action: follow_pheromone", DebugLogger.Category.ACTION)
  
 		
@@ -174,6 +181,8 @@ class RandomMove extends Action:
 	var current_direction: Vector2 = Vector2.ZERO
 	
 	func _init():
+		name = "random_move"
+
 		logger = Logger.new("Action: random_move", DebugLogger.Category.ACTION)
 
 		
@@ -200,6 +209,8 @@ class RandomMove extends Action:
 
 class Store extends Action:
 	func _init():
+		name = "store"
+
 		logger = Logger.new("Action: store", DebugLogger.Category.ACTION)
 
 	
@@ -226,6 +237,8 @@ class Attack extends Action:
 	var current_target_location: Vector2
 	
 	func _init():
+		name = "attack"
+
 		logger = Logger.new("Action: attack", DebugLogger.Category.ACTION)
 
 		
@@ -289,6 +302,8 @@ class EmitPheromone extends Action:
 	var current_time: float = 0.0
 
 	func _init():
+		name = "emit_pheromone"
+
 		logger = Logger.new("Action: emit_pheromone", DebugLogger.Category.ACTION)
 
 
@@ -321,6 +336,8 @@ class EmitPheromone extends Action:
 
 class Rest extends Action:
 	func _init():
+		name = "rest"
+
 		logger = Logger.new("Action: rest", DebugLogger.Category.ACTION)
 
 		

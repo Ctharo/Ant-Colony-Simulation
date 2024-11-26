@@ -68,7 +68,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	task_update_timer += delta
-	if task_update_timer >= 1.0:
+	if task_update_timer >= 0.5:
 		task_tree.update(delta)
 		task_update_timer = 0.0
 
@@ -93,12 +93,12 @@ func _on_active_task_changed(_new_task: Task) -> void:
 ## Placeholder for actions
 func perform_action(_action: Action, args = []) -> void:
 	# Implement ant behavior here
-	var time_for_action: float = 1.0
+	var time_for_action: float = 0.5 # TODO: Should be gathered from args?
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
-	event_str += _action.name if _action else "N/A"
+	event_str += args[0] if args else "N/A"
 	event_str += " "
-	event_str += "%.2f" % time_for_action
+	event_str += "for %.2f" % time_for_action
 	event_str += " "
 	event_str += "second" if time_for_action == 1.0 else "seconds"
 	event_str += " "
