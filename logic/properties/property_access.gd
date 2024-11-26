@@ -34,6 +34,38 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 	else:
 		type = "Unknown type"
 	logger.debug("Initialized for %s [Cache: %s]" % [type, "enabled" if use_caching else "disabled"])
+## Get a property's value directly without caching
+func get_property_value(path: Path) -> Variant:
+	if not has_node(path):
+		logger.error("Node not found: %s" % path.full)
+		return null
+	if not is_value_node(path):
+		logger.error("Cannot get value from container node: %s" % path.full)
+		return null
+	var node = find_property_node(path)
+	var value = node.get_value()
+	_log_property_access(path, value, "READ")
+	return value
+
+## Set a property's value
+func set_property_value(path: Path, value: Variant) -> Result:
+	if not has_node(path):
+		logger.error("Node not found: %s" % path.full)
+		return Result.new(Result.ErrorType.NOT_FOUND, "Property not found")
+	if not is_value_node(path):
+		logger.error("Cannot set value for container node: %s" % path.full)
+		return Result.new(Result.ErrorType.TYPE_MISMATCH, "Not a value node")
+	var node = find_property_node(path)
+	var old_value = node.get_value()
+	var result = node.set_value(value)
+	if result.success():
+		_log_property_change(path, old_value, value)
+		property_changed.emit(path.full, old_value, value)
+		_log_property_access(path, value, "WRITE")
+	else:
+		logger.error("Failed to set value for %s: %s" % [path.full, result.get_error()])
+	return result
+#endregion
 
 #region Node Validation
 ## Check if a root node exists
@@ -216,58 +248,6 @@ func _get_dependent_paths(path: Path) -> Array[String]:
 				dependent_paths.append(value_node.path.full)
 
 	return dependent_paths
-#endregion
-
-#region Value Access
-## Get a property's value with caching support
-func get_property_value(path: Path) -> Variant:
-	if _cache and _cache.has_valid_cache(path):
-		var _value = _cache.get_cached(path)
-		_log_property_access(path, _value, "READ[cached]")
-		return _value
-
-	if not has_node(path):
-		logger.error("Node not found: %s" % path.full)
-		return null
-
-	if not is_value_node(path):
-		logger.error("Cannot get value from container node: %s" % path.full)
-		return null
-
-	var node = find_property_node(path)
-	var value = node.get_value()
-
-	if _cache:
-		var result = _cache.cache_value(path, value)
-		if result.is_error():
-			logger.warn("Cache failed for %s: %s" % [path.full, result.get_error()])
-
-	_log_property_access(path, value, "READ")
-	return value
-
-## Set a property's value
-func set_property_value(path: Path, value: Variant) -> Result:
-	if not has_node(path):
-		logger.error("Node not found: %s" % path.full)
-		return Result.new(Result.ErrorType.NOT_FOUND, "Property not found")
-
-	if not is_value_node(path):
-		logger.error("Cannot set value for container node: %s" % path.full)
-		return Result.new(Result.ErrorType.TYPE_MISMATCH, "Not a value node")
-
-	var node = find_property_node(path)
-	var old_value = node.get_value()
-	var result = node.set_value(value)
-
-	if result.success():
-		_log_property_change(path, old_value, value)
-		_invalidate_cache(path)
-		property_changed.emit(path.full, old_value, value)
-		_log_property_access(path, value, "WRITE")
-	else:
-		logger.error("Failed to set value for %s: %s" % [path.full, result.get_error()])
-
-	return result
 #endregion
 
 #region Cache Management
