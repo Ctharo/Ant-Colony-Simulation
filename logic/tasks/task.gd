@@ -32,14 +32,14 @@ enum Priority {
 class Builder:
 
 	var _task: Task
-	var _conditions: Array[ConditionSystem.Condition] = []
+	var _conditions: Array[Condition] = []
 	var _behaviors: Array[Dictionary] = []
 
 	func _init(priority: Task.Priority = Task.Priority.MEDIUM) -> void:
 		_task = Task.new(priority)
 
 	## Add a condition to the task
-	func with_condition(condition: ConditionSystem.Condition) -> Builder:
+	func with_condition(condition: Condition) -> Builder:
 		_conditions.append(condition)
 		return self
 
@@ -105,10 +105,8 @@ var behaviors: Array[Behavior] = []:
 var _condition_system: ConditionSystem
 
 
-
-
 ## Array of conditions for this task
-var conditions: Array[ConditionSystem.Condition] = []:
+var conditions: Array[Condition] = []:
 	set(value):
 		conditions = value
 
@@ -222,7 +220,7 @@ func add_behavior(behavior: Behavior) -> void:
 	logger.trace("Added behavior '%s' to task '%s'" % [behavior.name, name])
 
 ## Add a condition to this task
-func add_condition(condition: ConditionSystem.Condition) -> void:
+func add_condition(condition: Condition) -> void:
 	if not is_instance_valid(condition):
 		logger.error("Cannot add invalid condition to task")
 		return
@@ -279,7 +277,7 @@ func get_active_behavior() -> Behavior:
 	return active_behavior
 
 ## Get all conditions for this task
-func get_conditions() -> Array[ConditionSystem.Condition]:
+func get_conditions() -> Array[Condition]:
 	return conditions
 
 ## Get debug information about the task
@@ -304,7 +302,7 @@ func _check_conditions(context: Dictionary) -> bool:
 		logger.error("No condition system available for task '%s'" % name)
 		return false
 
-	for condition: ConditionSystem.Condition in conditions:
+	for condition: Condition in conditions:
 		if not is_instance_valid(condition):
 			continue
 
@@ -446,17 +444,17 @@ static func create_task_behaviors(task_type: String, ant: Ant, condition_system:
 	if not task_type in _task_configs:
 		push_error("Unknown task type: %s" % task_type)
 		return []
-
+		
 	var task_config = _task_configs[task_type]
 	var behaviors: Array[Behavior] = []
-
+	
 	# Add task behaviors
 	if "behaviors" in task_config:
 		for behavior_data in task_config.behaviors:
 			var behavior = create_behavior_from_config(behavior_data, ant, condition_system)
 			if behavior:
 				behaviors.append(behavior)
-
+				
 	return behaviors
 
 ## Create a behavior from behavior configuration
@@ -465,34 +463,30 @@ static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_
 	if not behavior_type in BEHAVIOR_TO_ACTION:
 		push_error("Unknown behavior type: %s" % behavior_type)
 		return null
-
-	var behavior := Behavior.new(
-		Priority[config.get("priority", "MEDIUM")],
-		condition_system
-	)
-
-	behavior.name = behavior_type
-	behavior.ant = ant
-
+		
+	# Start building the behavior
+	var builder = (Behavior.builder(Priority[config.get("priority", "MEDIUM")])
+		.with_name(behavior_type)
+		.with_ant(ant)
+		.with_condition_system(condition_system))
+	
 	# Add behavior conditions
 	if "conditions" in config:
 		for condition_data in config.conditions:
-			var condition = ConditionSystem.create_condition(condition_data)
-			behavior.add_condition(condition)
-
+			builder.with_condition(ConditionSystem.create_condition(condition_data))
+	
 	# Create action using factory method
 	var action_config = BEHAVIOR_TO_ACTION[behavior_type]
 	var action_params = action_config.params.duplicate()
-
+	
 	# Merge with behavior-specific params
 	if "params" in config:
 		action_params.merge(config.params)
-
-	behavior.add_action(
-		create_action(action_config.type, action_params, ant)
-	)
-
-	return behavior
+	
+	# Add the action to the behavior
+	builder.with_action(create_action(action_config.type, action_params, ant))
+	
+	return builder.build()
 
 ## Load task configurations from JSON file
 static func load_task_configs(path: String) -> Error:
