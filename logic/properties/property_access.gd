@@ -10,9 +10,6 @@ signal property_changed(path: String, old_value: Variant, new_value: Variant)
 ## Root level property container nodes
 var _root_nodes: Dictionary = {}  # name -> PropertyNode
 
-## Caching system for property values
-var _cache: Cache # DEPRECIATED TODO: Remove all references
-
 ## Owner entity for context
 var _owner: Object
 
@@ -24,7 +21,6 @@ var logger: Logger
 func _init(owner: Object, use_caching: bool = true) -> void:
 	logger = Logger.new("property_access", DebugLogger.Category.PROPERTY)
 	_owner = owner
-	_cache = Cache.new() if use_caching else null
 
 	var type = ""
 	if owner is Ant:
@@ -300,12 +296,6 @@ func _log_property_change(path: Path, old_value: Variant, new_value: Variant) ->
 		"  To:   %s" % Property.format_value(new_value)
 	)
 
-	# Log any cache invalidations
-	if _cache:
-		var invalidated = _get_dependent_paths(path)
-		if not invalidated.is_empty():
-			logger.debug("Invalidated dependent properties:\n  - %s" % "\n  - ".join(invalidated))
-
 ## Log node registration with dependency tracking
 func _log_node_registration(node: PropertyNode, parent_path: Path = null) -> void:
 	var registration_info = "\nRegistered"
@@ -351,10 +341,6 @@ static func copy_from(source: PropertyAccess) -> PropertyAccess:
 		var node_copy = source._root_nodes[node_name]
 		new_access._root_nodes[node_name] = node_copy
 
-	# Copy cache if it exists
-	if source._cache:
-		new_access._cache = source._cache
-
 	return new_access
 
 ## Merge properties from another PropertyAccess instance
@@ -367,8 +353,4 @@ func merge_from(source: PropertyAccess) -> void:
 		if not has_root(node_name):
 			_root_nodes[node_name] = source._root_nodes[node_name]
 
-	# Merge cache if both instances have caching enabled
-	if _cache and source._cache:
-		# Implementation depends on your Cache class structure
-		_cache.merge_from(source._cache)
 #endregion
