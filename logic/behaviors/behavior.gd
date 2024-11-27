@@ -16,12 +16,11 @@ enum Priority { LOWEST = 0, LOW = 25, MEDIUM = 50, HIGH = 75, HIGHEST = 100 }
 #region Builder
 ## Builder class for constructing behaviors
 class Builder:
-
 	var _name: String = ""
 	var _priority: int
 	var _ant: Ant
-	var _actions: Array[Action] = []
-	var _conditions: Array[ConditionSystem.Condition] = []
+	var _action: Action
+	var _conditions: Array[Condition] = []
 	var _condition_system: ConditionSystem
 	var logger: Logger
 
@@ -34,14 +33,9 @@ class Builder:
 		_name = name
 		return self
 
-	## Add an action to the behavior
+	## Set the action for the behavior
 	func with_action(action: Action) -> Builder:
-		_actions.append(action)
-		return self
-
-	## Add multiple actions to the behavior
-	func with_actions(actions: Array[Action]) -> Builder:
-		_actions.append_array(actions)
+		_action = action
 		return self
 
 	## Add a condition to the behavior
@@ -49,14 +43,13 @@ class Builder:
 		_condition_system = condition_system
 		return self
 
-
 	## Add a condition to the behavior
-	func with_condition(condition: ConditionSystem.Condition) -> Builder:
+	func with_condition(condition: Condition) -> Builder:
 		_conditions.append(condition)
 		return self
 
 	## Add multiple conditions to the behavior
-	func with_conditions(conditions: Array[ConditionSystem.Condition]) -> Builder:
+	func with_conditions(conditions: Array[Condition]) -> Builder:
 		_conditions.append_array(conditions)
 		return self
 
@@ -80,13 +73,14 @@ class Builder:
 		if _ant:
 			behavior.ant = _ant
 
+		if _action:
+			behavior.set_action(_action)
+			
+		if _condition_system:
+			behavior._condition_system = _condition_system
+
 		for condition in _conditions:
 			behavior.add_condition(condition)
-
-		for action in _actions:
-			if _ant and not action.ant:
-				action.ant = _ant
-			behavior.add_action(action)
 
 		return behavior
 
@@ -113,19 +107,17 @@ var priority: int = Priority.MEDIUM:
 var ant: Ant:
 	set(value):
 		ant = value
-		_update_action_references()
+		if action:
+			action.ant = value
 
-var conditions: Array[ConditionSystem.Condition] = []:
+## The single action this behavior manages
+var action: Action:
 	set(value):
-		conditions = value
-
-var actions: Array[Action] = []:
-	set(value):
-		actions = value
+		action = value
 		if is_instance_valid(ant):
-			_update_action_references()
+			action.ant = ant
 
-## Reference to the condition evaluation system
+var conditions: Array[Condition] = []
 var _condition_system: ConditionSystem
 var logger: Logger
 #endregion
@@ -135,49 +127,36 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 	priority = p_priority
 	_condition_system = condition_system
 	logger = Logger.new("behavior", DebugLogger.Category.BEHAVIOR)
-
 #endregion
 
 #region Public Methods
-## Add a condition to this behavior
-func add_condition(condition: ConditionSystem.Condition) -> void:
+func add_condition(condition: Condition) -> void:
 	conditions.append(condition)
-	logger.info("Added condition to behavior '%s'" % name)
+	logger.info("Added condition to behavior '%s': %s" % [name, condition.config])
 
-## Add an action to this behavior
-func add_action(action: Action) -> void:
-	actions.append(action)
+func set_action(p_action: Action) -> void:
+	action = p_action
 	if is_instance_valid(ant):
 		action.ant = ant
-	logger.info("Added action to behavior '%s': %s" % [name, action.get_script().resource_path.get_file()])
+	logger.info("Set action for behavior '%s': %s" % [name, action.name])
 
-## Get all conditions for this behavior
-func get_conditions() -> Array[ConditionSystem.Condition]:
-	return conditions
-
-## Start the behavior
 func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 	if not is_instance_valid(p_ant):
 		logger.error("Cannot start behavior '%s' with invalid ant reference" % name)
 		return
 
-	if not p_condition_system and not conditions.is_empty():
-		logger.warn("Starting behavior '%s' with conditions but no condition system" % name)
-	else:
-		logger.info("Starting behavior '%s' (Current state: %s)" % [name, State.keys()[state]])
+	if not action:
+		logger.error("Cannot start behavior '%s' with no action set" % name)
+		return
 
 	ant = p_ant
 	_condition_system = p_condition_system
 	state = State.ACTIVE
 
-	logger.trace("Behavior '%s' state set to: %s" % [name, State.keys()[state]])
+	logger.info("Starting behavior '%s' (Action: %s)" % [name, action.name])
+	action.start(ant)
 	started.emit()
 
-	for action in actions:
-		action.start(ant)
-		logger.trace("Started action: %s" % action.get_script().resource_path.get_file())
-
-## Check if the behavior should activate
 func should_activate(context: Dictionary) -> bool:
 	var conditions_met = _check_conditions(context)
 	var _should_activate = state != State.COMPLETED and conditions_met
@@ -189,10 +168,7 @@ func should_activate(context: Dictionary) -> bool:
 
 	return _should_activate
 
-## Update the behavior
 func update(delta: float, context: Dictionary) -> void:
-	logger.trace("Updating behavior '%s' (State: %s)" % [name, State.keys()[state]])
-
 	if state != State.ACTIVE:
 		return
 
@@ -201,33 +177,27 @@ func update(delta: float, context: Dictionary) -> void:
 		interrupt()
 		return
 
-	_update_actions(delta)
-	logger.trace("After update - Behavior '%s' state: %s" % [name, State.keys()[state]])
+	action.update(delta)
+	
+	if action.is_completed():
+		state = State.COMPLETED
+		completed.emit()
+		logger.info("Behavior '%s' completed (action finished)" % name)
 
-## Interrupt the behavior
 func interrupt() -> void:
 	if state == State.ACTIVE:
 		state = State.INTERRUPTED
 		logger.info("Interrupting behavior '%s'" % name)
-
-		for action in actions:
-			action.interrupt()
-			logger.trace("Interrupted action: %s" % action.get_script().resource_path.get_file())
-
+		action.interrupt()
 		interrupted.emit()
 
-## Reset the behavior to its initial state
 func reset() -> void:
 	state = State.INACTIVE
+	action.reset()
 	logger.info("Reset behavior '%s'" % name)
-
-	for action in actions:
-		action.reset()
-		logger.trace("Reset action: %s" % action.get_script().resource_path.get_file())
 #endregion
 
 #region Private Methods
-## Check if all conditions are met using the context
 func _check_conditions(context: Dictionary) -> bool:
 	if conditions.is_empty():
 		return true
@@ -240,29 +210,6 @@ func _check_conditions(context: Dictionary) -> bool:
 		if not _condition_system.evaluate_condition(condition, context):
 			return false
 	return true
-
-## Update all actions
-func _update_actions(delta: float) -> void:
-	var all_completed := true
-
-	for action in actions:
-		if not action.is_completed():
-			action.update(delta)
-			all_completed = false
-
-	if all_completed and not actions.is_empty():
-		state = State.COMPLETED
-		completed.emit()
-		logger.info("Behavior '%s' completed (all actions finished)" % name)
-
-## Update ant references in actions when ant changes
-func _update_action_references() -> void:
-	if not is_instance_valid(ant):
-		return
-
-	for action in actions:
-		action.ant = ant
-		logger.trace("Updated ant reference for action: %s" % action.get_script().resource_path.get_file())
 #endregion
 
 #region Debug Methods
@@ -273,14 +220,14 @@ func get_debug_info() -> Dictionary:
 		"priority": priority,
 		"state": State.keys()[state],
 		"conditions": conditions.size(),
-		"actions": actions.size()
+		"action": action.name if action else "None"
 	}
 
 	logger.debug("\nBehavior Debug Info for '%s':" % name +
 		"\n  Priority: %d" % priority +
 		"\n  State: %s" % State.keys()[state] +
-		"\n  Conditions: %d" % conditions.size() +
-		"\n  Actions: %d" % actions.size())
+		"\n  Action: %s" % (action.name if action else "None") +
+		"\n  Conditions: %d" % conditions.size())
 
 	return info
 #endregion
