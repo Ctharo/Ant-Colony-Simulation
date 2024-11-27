@@ -18,7 +18,7 @@ var _last_access_stats: Dictionary = {}  # path -> {timestamp, value, count}
 var logger: Logger
 #endregion
 
-func _init(owner: Object, use_caching: bool = true) -> void:
+func _init(owner: Object) -> void:
 	logger = Logger.new("property_access", DebugLogger.Category.PROPERTY)
 	_owner = owner
 
@@ -29,7 +29,7 @@ func _init(owner: Object, use_caching: bool = true) -> void:
 		type = "colony"
 	else:
 		type = "Unknown type"
-	logger.debug("Initialized for %s [Cache: %s]" % [type, "enabled" if use_caching else "disabled"])
+	logger.debug("Initialized for %s")
 	
 ## Get a property's value directly without caching
 func get_property_value(path: Path) -> Variant:
