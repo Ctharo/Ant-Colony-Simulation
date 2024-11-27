@@ -39,8 +39,6 @@ var COMPARISON_OPERATORS = {
 #endregion
 
 #region Properties
-## Property access manager
-var _property_access: PropertyAccess
 
 ## Cache for condition results
 var _condition_cache: Dictionary = {}
@@ -71,7 +69,6 @@ var logger: Logger
 func _init(p_ant: Ant) -> void:
 	logger = Logger.new("condition_system", DebugLogger.Category.CONDITION)
 
-	_property_access = p_ant._property_access
 	if not _condition_configs.is_empty():
 		register_required_properties()
 
@@ -162,12 +159,7 @@ func get_property_value(path: Path) -> Variant:
 		logger.warn("Accessing unrequired property '%s'" % path.full)
 		return null
 
-	var node: PropertyNode = _property_access.find_property_node(path)
-	if not node:
-		logger.error("Path may be incorrect, no node found at path %s" % path.full)
-		return null
-
-	var value = _property_access.get_property_value(path)
+	var value = get_property_value(path)
 	if value != null:
 		logger.trace("Retrieved value for property '%s' = %s" % [path.full, str(value)])
 
@@ -335,7 +327,7 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 	return false
 
 ## Evaluates property check conditions with consolidated logging
-func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> bool:
+func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
 	if not evaluation.has("property"):
 		logger.error("Property check missing 'property' field")
 		return false
@@ -347,7 +339,7 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 	_push_evaluation_context("Property check: %s %s" % [path.full, operator])
 
 	# Get first value
-	var value_a = _property_access.get_property_value(path)
+	var value_a = context.get(path)
 	if value_a == null and not operator in ["IS_EMPTY", "NOT_EMPTY"]:
 		logger.error("Failed to retrieve property: %s" % path.full)
 		_pop_evaluation_context()
@@ -359,7 +351,7 @@ func _evaluate_property_check(evaluation: Dictionary, _context: Dictionary) -> b
 		value_b = evaluation.value
 	elif "value_from" in evaluation:
 		var compare_path = Path.parse(evaluation.value_from)
-		value_b = _property_access.get_property_value(compare_path)
+		value_b = context.get(compare_path)
 		if value_b == null:
 			logger.error("Failed to retrieve comparison property: %s" % compare_path.full)
 			_pop_evaluation_context()
