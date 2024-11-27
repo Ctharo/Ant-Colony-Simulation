@@ -32,6 +32,9 @@ var logger: Logger
 
 var arguments: Dictionary = {}
 
+## Whether the action is currently executing
+var _is_executing: bool = false
+
 ## Builder class for constructing actions
 class Builder:
 	var action: Action
@@ -70,21 +73,30 @@ func _init():
 func start(_ant: Ant) -> void:
 	ant = _ant
 	current_cooldown = cooldown
+	_is_executing = true
+	
+	# Connect to ant's action completion signal
+	if not ant.action_completed.is_connected(_on_ant_action_completed):
+		ant.action_completed.connect(_on_ant_action_completed)
+	
 	started.emit()
 
 func update(delta: float) -> void:
 	if current_cooldown > 0:
 		current_cooldown -= delta
-	_update_action(delta)
+	if _is_executing and current_cooldown <= 0:
+		_update_action(delta)
 
 func _update_action(_delta: float) -> void:
 	pass
 
 func is_completed() -> bool:
-	return true
+	return not _is_executing
 
 func cancel() -> void:
-	pass
+	_is_executing = false
+	if ant and ant.action_completed.is_connected(_on_ant_action_completed):
+		ant.action_completed.disconnect(_on_ant_action_completed)
 
 func interrupt() -> void:
 	cancel()
@@ -93,9 +105,20 @@ func interrupt() -> void:
 
 func reset() -> void:
 	current_cooldown = 0.0
+	_is_executing = false
+	if ant and ant.action_completed.is_connected(_on_ant_action_completed):
+		ant.action_completed.disconnect(_on_ant_action_completed)
 
 func is_ready() -> bool:
 	return current_cooldown <= 0
+
+## Called when the ant completes the action
+func _on_ant_action_completed() -> void:
+	_is_executing = false
+	completed.emit()
+	# Disconnect from signal to prevent multiple completions
+	if ant and ant.action_completed.is_connected(_on_ant_action_completed):
+		ant.action_completed.disconnect(_on_ant_action_completed)
 
 ## Action Classes
 class Move extends Action:
@@ -116,9 +139,6 @@ class Move extends Action:
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
 
-	func is_completed() -> bool:
-		return true
-
 class Harvest extends Action:
 	func _init():
 		name = "harvest"
@@ -138,8 +158,6 @@ class Harvest extends Action:
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
 
-	func is_completed() -> bool:
-		return true
 		
 class FollowPheromone extends Action:
 	func _init():
@@ -160,8 +178,6 @@ class FollowPheromone extends Action:
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
 
-	func is_completed() -> bool:
-		return true
 
 class RandomMove extends Action:
 	func _init():
@@ -181,9 +197,6 @@ class RandomMove extends Action:
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
 
-	func is_completed() -> bool:
-		return true
-
 class Store extends Action:
 	func _init():
 		name = "store"
@@ -202,9 +215,6 @@ class Store extends Action:
 
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
-
-	func is_completed() -> bool:
-		return ant.foods.is_empty()
 
 class Attack extends Action:
 	func _init():
@@ -226,8 +236,6 @@ class Attack extends Action:
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
 
-	func is_completed() -> bool:
-		return true
 
 class EmitPheromone extends Action:
 	func _init():
@@ -248,8 +256,6 @@ class EmitPheromone extends Action:
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
 
-	func is_completed() -> bool:
-		return true
 
 class Rest extends Action:
 	func _init():
@@ -268,6 +274,3 @@ class Rest extends Action:
 
 	func _update_action(delta: float) -> void:
 		ant.perform_action(self, arguments)
-
-	func is_completed() -> bool:
-		return true
