@@ -9,6 +9,8 @@ func _ready() -> void:
 	logger.set_logging_category(DebugLogger.Category.CONTEXT)
 	logger.set_logging_category(DebugLogger.Category.TASK)
 	logger.set_logging_category(DebugLogger.Category.PROPERTY)
+	logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
+
 
 	spawn_ants(1)
 	AntManager.start_ants()
@@ -40,6 +42,7 @@ func spawn_ants(num_to_spawn: int = 1) -> void:
 	for i in range(num_to_spawn):
 		# Create a new ant
 		var ant = AntManager.spawn_ant()
+		ant.foods.add_food(ant.get_property_value(Path.parse("storage.capacity.max")))
 		colony.add_ant(ant)
 
 ## Create components in stages to avoid freezing
