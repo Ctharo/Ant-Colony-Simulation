@@ -4,7 +4,6 @@ extends RefCounted
 var logger: Logger
 var registry: Registry
 
-
 func _init() -> void:
 	logger = Logger.new("context_provider", DebugLogger.Category.CONTEXT)
 	registry = Registry.new()
