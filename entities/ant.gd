@@ -67,10 +67,8 @@ func _ready() -> void:
 	spawned.emit()
 
 func _process(delta: float) -> void:
-	task_update_timer += delta
-	if task_update_timer >= 0.5:
-		task_tree.update(delta)
-		task_update_timer = 0.0
+	task_tree.update(delta)
+
 
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
