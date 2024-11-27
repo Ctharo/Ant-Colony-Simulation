@@ -192,13 +192,13 @@ func update(delta: float, context: Dictionary) -> void:
 
 	# First check if current behavior should continue
 	if active_behavior and active_behavior.should_activate(context):
-		logger.debug("Current behavior valid, checking for higher priority behaviors")
+		logger.trace("Current behavior valid, checking for higher priority behaviors")
 
 		var higher_priority_behavior = _check_higher_priority_behaviors(active_behavior.priority, context)
 		if higher_priority_behavior:
 			_switch_behavior(higher_priority_behavior)
 		else:
-			logger.debug("No higher priority behaviors to activate, continuing current behavior")
+			logger.trace("No higher priority behaviors to activate, continuing current behavior")
 			active_behavior.update(delta, context)
 		return
 
@@ -219,7 +219,7 @@ func add_behavior(behavior: Behavior) -> void:
 	if is_instance_valid(ant):
 		behavior.ant = ant
 
-	logger.debug("Added behavior '%s' to task '%s'" % [behavior.name, name])
+	logger.trace("Added behavior '%s' to task '%s'" % [behavior.name, name])
 
 ## Add a condition to this task
 func add_condition(condition: ConditionSystem.Condition) -> void:
@@ -228,7 +228,7 @@ func add_condition(condition: ConditionSystem.Condition) -> void:
 		return
 
 	conditions.append(condition)
-	logger.debug("Added condition to task '%s'" % name)
+	logger.trace("Added condition to task '%s'" % name)
 
 ## Start the task
 func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
@@ -388,12 +388,10 @@ func _group_behaviors_by_priority(min_priority: int = -1) -> Dictionary:
 ## Switch to a new behavior - handles all the transition logic
 func _switch_behavior(new_behavior: Behavior) -> void:
 	var transition_info = "Switching behaviors:"
-	transition_info += "\n  From: %s (State: %s)" % [
+	transition_info += " %s -> %s" % [
 		active_behavior.name if active_behavior else "None",
-		Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
+		new_behavior.name if new_behavior else "None"
 	]
-	transition_info += "\n  To: %s" % new_behavior.name
-
 	logger.info(transition_info)
 
 	if active_behavior:
@@ -404,7 +402,7 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 	# Start behavior with condition system
 	active_behavior.start(ant, _condition_system)
 
-	logger.debug(
+	logger.trace(
 		"After switch - New behavior: %s (State: %s)" % [
 			active_behavior.name,
 			Behavior.State.keys()[active_behavior.state]
