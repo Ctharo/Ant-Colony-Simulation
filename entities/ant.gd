@@ -41,6 +41,8 @@ var task_tree: TaskTree
 ## The navigation agent for this ant
 var nav_agent: NavigationAgent2D
 
+var target_position: Vector2
+
 ## Task update timer
 var task_update_timer: float = 0.0
 
@@ -89,20 +91,32 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 #region Action Methods
 ## Placeholder for actions
-func perform_action(_action: Action, args: Dictionary = {}) -> void:
-	# Implement ant behavior here
+func perform_action(action: Action, args: Dictionary = {}) -> void:
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
 	event_str += args.description if args else "N/A"
-	event_str += " "
-	event_str += "for %.2f" % _action.duration
-	event_str += " "
-	event_str += "second" if _action.duration == 1.0 else "seconds"
-	event_str += " "
-	event_str += "with %s %s" % ["argument" if args.size() == 1 else "arguments", args]
-	logger.debug(event_str)
-	await get_tree().create_timer(_action.duration).timeout
-	action_completed.emit()
+	
+	match action.name:
+		"store":
+			if foods.is_empty():
+				action_completed.emit()
+			else:
+				await get_tree().create_timer(action.duration).timeout
+		"move": 
+			if get_property_value(Path.parse("proprioception.status.at_target")):
+				action_completed.emit()
+			else:
+				await get_tree().create_timer(action.duration).timeout
+		"harvest":
+			if get_property_value(Path.parse("storage.status.is_full")):
+				action_completed.emit()
+			else:
+				await get_tree().create_timer(action.duration).timeout
+				pass
+		_:
+			# Default duration-based completion
+			await get_tree().create_timer(action.duration).timeout
+			action_completed.emit()
 #endregion
 
 #region Property System

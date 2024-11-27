@@ -34,6 +34,11 @@ func _init(_entity: Node) -> void:
 					"Distance from entity to colony in units")\
 			.up()\
 			.container("status", "Position status information")\
+				.value("at_target", Property.Type.BOOL,
+					Callable(self, "_is_at_target"),
+					Callable(),
+					["proprioception.base.position", "proprioception.target.position"],
+					"Whether the entity is at the target location")\
 				.value("at_colony", Property.Type.BOOL,
 					Callable(self, "_is_at_colony"),
 					Callable(),
@@ -88,6 +93,9 @@ func _get_direction_to_colony() -> Vector2:
 	if colony_pos == Vector2.ZERO:
 		return Vector2.ZERO
 	return _direction_to(colony_pos)
+
+func _is_at_target() -> bool:
+	return entity.global_position.distance_to(entity.target_position)
 
 func _is_at_colony() -> bool:
 	return is_zero_approx(_get_distance_to_colony())

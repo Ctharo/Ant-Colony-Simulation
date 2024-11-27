@@ -121,7 +121,6 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 
 	_cache_stats.misses += 1
 	logger.debug("Cache MISS: %s" % cache_key)
-
 	var _result := _evaluate_condition_config(condition.config, context)
 	_condition_cache[cache_key] = _result
 
@@ -305,7 +304,6 @@ func _update_evaluation_stats(condition_key: String, evaluation_time: float) -> 
 ## Evaluates condition configuration recursively
 func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
 	logger.debug("Evaluating condition config: %s%s" % [config, _get_current_context()])
-
 	# Handle operator conditions (AND, OR, NOT)
 	if config.has("type") and config.type == "Operator":
 		return _evaluate_operator_condition(config, context)
@@ -333,16 +331,14 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 		logger.error("Property check missing 'property' field")
 		return false
 
-	var path = Path.parse(evaluation.property)
 	var operator = evaluation.get("operator", "EQUALS")
 	var op_symbol = OPERATOR_MAP.get(operator, "==")
-
-	_push_evaluation_context("Property check: %s %s" % [path.full, operator])
+	_push_evaluation_context("Property check: %s %s" % [evaluation.property, operator])
 
 	# Get first value
-	var value_a = context.get(path)
+	var value_a = context.get(evaluation.property)
 	if value_a == null and not operator in ["IS_EMPTY", "NOT_EMPTY"]:
-		logger.error("Failed to retrieve property: %s" % path.full)
+		logger.error("Failed to retrieve property: %s" % evaluation.property)
 		_pop_evaluation_context()
 		return false
 
@@ -351,10 +347,9 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 	if "value" in evaluation:
 		value_b = evaluation.value
 	elif "value_from" in evaluation:
-		var compare_path = Path.parse(evaluation.value_from)
-		value_b = context.get(compare_path)
+		value_b = context.get(evaluation.value_from)
 		if value_b == null:
-			logger.error("Failed to retrieve comparison property: %s" % compare_path.full)
+			logger.error("Failed to retrieve comparison property: %s" % evaluation.value_from)
 			_pop_evaluation_context()
 			return false
 	elif not operator in ["IS_EMPTY", "NOT_EMPTY"]:

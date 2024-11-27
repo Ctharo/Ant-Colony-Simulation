@@ -20,7 +20,7 @@ var root_task: Task:
 		if value != root_task:
 			root_task = value
 			if root_task and is_instance_valid(ant):
-				root_task.start(ant, _condition_system)
+				root_task.start(ant)
 
 ## The ant agent associated with this task tree
 var ant: Ant:
