@@ -215,7 +215,7 @@ func update(delta: float, context: Dictionary) -> void:
 				if next_behavior:
 					_switch_behavior(next_behavior)
 				else:
-					assert(false)
+					assert(false, "No behavior found, should loop") #TODO: Can we make a way to detect if behaviors loop forever/failsafe default?
 		elif active_behavior.should_activate(context):
 			# Normal update flow for active behavior
 			var higher_priority_behavior = _check_higher_priority_behaviors(active_behavior.priority, context)
