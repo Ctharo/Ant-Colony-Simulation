@@ -28,8 +28,8 @@ ColonyManager="*res://managers/colony_manager.gd"
 
 [display]
 
-window/size/viewport_width=1600
-window/size/viewport_height=900
+window/size/viewport_width=1200
+window/size/viewport_height=625
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
