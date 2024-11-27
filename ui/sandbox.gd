@@ -5,8 +5,10 @@ func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
 
 func _ready() -> void:
-	logger.set_logging_level(DebugLogger.LogLevel.TRACE)
+	logger.set_logging_level(DebugLogger.LogLevel.DEBUG)
 	logger.set_logging_category(DebugLogger.Category.CONTEXT)
+	logger.set_logging_category(DebugLogger.Category.TASK)
+	logger.set_logging_category(DebugLogger.Category.PROPERTY)
 
 	spawn_ants(1)
 	AntManager.start_ants()
