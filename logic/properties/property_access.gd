@@ -11,7 +11,7 @@ signal property_changed(path: String, old_value: Variant, new_value: Variant)
 var _root_nodes: Dictionary = {}  # name -> PropertyNode
 
 ## Caching system for property values
-var _cache: Cache
+var _cache: Cache # DEPRECIATED TODO: Remove all references
 
 ## Owner entity for context
 var _owner: Object
@@ -111,7 +111,6 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 				"Root node '%s' already registered" % root.name
 			)
 		_root_nodes[root.name] = root
-		_invalidate_node_cache(root.name)
 		logger.trace("Registered root node: %s" % root.name)
 		return Result.new()
 
@@ -133,7 +132,6 @@ func register_node_at_path(root: PropertyNode, parent_path: Path) -> Result:
 	for child in root.children.values():
 		parent.add_child(child)
 
-	_invalidate_cache(parent_path)
 	logger.trace("Registered nested node '%s' at path '%s'" % [
 		root.name,
 		parent_path
@@ -165,7 +163,6 @@ func remove_node_at_path(node_name: String, parent_path: Path) -> Result:
 			"Node '%s' not found at path '%s'" % [node_name, parent_path]
 		)
 
-	_invalidate_cache(parent_path)
 	logger.trace("Removed nested node '%s' from path '%s'" % [
 		node_name,
 		parent_path
@@ -180,7 +177,6 @@ func remove_node(name: String) -> Result:
 			"Root node '%s' not found" % name
 		)
 
-	_invalidate_node_cache(name)
 	_root_nodes.erase(name)
 
 	logger.trace("Removed root node: %s" % name)
@@ -251,30 +247,6 @@ func _get_dependent_paths(path: Path) -> Array[String]:
 	return dependent_paths
 #endregion
 
-#region Cache Management
-## Invalidate cache for a specific property
-func _invalidate_cache(path: Path) -> void:
-	if _cache:
-		_cache.invalidate(path)
-		# Invalidate any properties that depend on this one
-		for root in _root_nodes.values():
-			for value_node in root.get_all_values():
-				if value_node.dependencies.has(path):
-					_cache.invalidate(value_node.path)
-
-## Invalidate cache for all properties in a root node
-func _invalidate_node_cache(node_name: String) -> void:
-	if not _cache:
-		return
-
-	var root = get_root_node(node_name)
-	if not root:
-		return
-
-	for value_node in root.get_all_values():
-		_invalidate_cache(value_node.path)
-#endregion
-
 #region Logging Helpers
 ## Log property access with smart throttling and aggregation
 func _log_property_access(path: Path, value: Variant, operation: String) -> void:
@@ -323,7 +295,7 @@ func _log_property_change(path: Path, old_value: Variant, new_value: Variant) ->
 	if old_value == new_value:
 		return
 
-	logger.info("Property changed: %s\n" % path.full +
+	logger.trace("Property changed: %s\n" % path.full +
 		"  From: %s\n" % Property.format_value(old_value) +
 		"  To:   %s" % Property.format_value(new_value)
 	)
@@ -394,7 +366,6 @@ func merge_from(source: PropertyAccess) -> void:
 	for node_name in source._root_nodes:
 		if not has_root(node_name):
 			_root_nodes[node_name] = source._root_nodes[node_name]
-			_invalidate_node_cache(node_name)
 
 	# Merge cache if both instances have caching enabled
 	if _cache and source._cache:
