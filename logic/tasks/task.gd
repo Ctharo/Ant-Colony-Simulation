@@ -175,10 +175,10 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 ## Update the task and its behaviors
 func update(delta: float, context: Dictionary) -> void:
 	if state != Task.State.ACTIVE:
-		return
+		return 
 
-	logger.debug("\nUpdating Task: %s" % name)
-	logger.debug("Current active behavior: %s (State: %s)" % [
+	logger.trace("\nUpdating Task: %s" % name)
+	logger.trace("Current active behavior: %s (State: %s)" % [
 			active_behavior.name if active_behavior else "None",
 			Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
 		]
@@ -206,10 +206,6 @@ func update(delta: float, context: Dictionary) -> void:
 	var next_behavior = _find_next_valid_behavior(context)
 	if next_behavior:
 		_switch_behavior(next_behavior)
-	elif active_behavior:
-		logger.info("No valid behavior found, interrupting current behavior")
-		active_behavior.interrupt()
-		active_behavior = null
 
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
