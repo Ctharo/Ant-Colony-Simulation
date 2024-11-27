@@ -164,6 +164,7 @@ func get_property_value(path: Path) -> Variant:
 		logger.trace("Retrieved value for property '%s' = %s" % [path.full, str(value)])
 
 	return value
+	
 ## Print current cache statistics
 func print_cache_stats() -> void:
 	var total_evaluations = _cache_stats.hits + _cache_stats.misses
