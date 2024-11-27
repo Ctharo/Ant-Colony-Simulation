@@ -249,7 +249,7 @@ class Builder:
 			task.add_behavior(behavior)
 
 		tree.root_task = task
-		logger.debug("Successfully built task tree with root task: %s" % _root_type)
+		logger.info("Successfully built task tree with root task: %s" % _root_type)
 
 		return tree
 
