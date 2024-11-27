@@ -36,7 +36,7 @@ var _condition_system: ConditionSystem
 ## Last known active task for change detection
 var _last_active_task: Task
 
-var _context_provider: ContextProvider
+var _context_registry: ContextRegistry
 
 var logger: Logger
 #endregion
@@ -54,7 +54,7 @@ func _setup_context_providers() -> void:
 		var frequency = _get_property_frequency(path)
 		var can_interrupt = _can_property_interrupt(path)
 		
-		_context_provider.registry.register_value(
+		_context_registry.register_value(
 			path.full,
 			frequency,
 			func(): return ant.get_property_value(path),
@@ -82,7 +82,7 @@ func update(delta: float) -> bool:
 
 	_condition_system.clear_cache()
 
-	_context_provider.update(delta)
+	_context_registry.update(delta)
 	var context := gather_context()
 
 	if root_task.state != Task.State.ACTIVE:
@@ -122,7 +122,7 @@ func _can_property_interrupt(_path: Path) -> bool:
 ## Gathers context information used by tasks and behaviors for decision making
 ## [return] A dictionary containing the current context information
 func gather_context() -> Dictionary:
-	return _context_provider.get_context()
+	return _context_registry.get_context()
 
 ## Resets the task tree to its initial state
 func reset() -> void:
@@ -137,7 +137,7 @@ func get_active_task() -> Task:
 	return _get_active_task_recursive(root_task)
 
 ## Evaluate a condition with the current context
-func evaluate_condition(condition: ConditionSystem.Condition) -> bool:
+func evaluate_condition(condition: Condition) -> bool:
 	var context = gather_context()
 	return _condition_system.evaluate_condition(condition, context)
 
@@ -218,7 +218,7 @@ class Builder:
 		tree._condition_system = ConditionSystem.new(_ant)
 		
 		# Create context provider
-		tree._context_provider = ContextProvider.new()
+		tree._context_registry = ContextRegistry.new()
 		tree._setup_context_providers()
 		
 		# Create task behaviors
