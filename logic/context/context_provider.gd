@@ -9,6 +9,12 @@ func _init() -> void:
 	logger = Logger.new("context_provider", DebugLogger.Category.CONTEXT)
 	registry = Registry.new()
 
+func update(delta: float) -> void:
+	registry.update(delta)
+
+func get_context() -> Dictionary:
+	return registry.get_context()
+
 ## Stores registered context values and manages their updates
 class Registry extends RefCounted:
 	var _values: Dictionary = {}
