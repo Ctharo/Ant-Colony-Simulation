@@ -29,7 +29,7 @@ func _init(owner: Object) -> void:
 		type = "colony"
 	else:
 		type = "Unknown type"
-	logger.debug("Initialized for %s")
+	logger.debug("Initialized for %s" % type)
 	
 ## Get a property's value directly without caching
 func get_property_value(path: Path) -> Variant:
