@@ -174,7 +174,6 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 #endregion
 
 #region Public Methods
-## Update the task and its behaviors
 func update(delta: float, context: Dictionary) -> void:
 	logger.trace(str(context))
 	if not _condition_system:
@@ -190,44 +189,44 @@ func update(delta: float, context: Dictionary) -> void:
 		Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
 	])
 
-	# Check task conditions using the condition system
-	if not _check_conditions(context):
+	# Check task-level conditions
+	var all_conditions_met = true
+	for condition in conditions:
+		if not is_instance_valid(condition) or not _condition_system.evaluate_condition(condition, context):
+			all_conditions_met = false
+			break
+			
+	if not all_conditions_met:
 		logger.info("Task conditions not met, interrupting: %s" % name)
 		interrupt()
 		return
 
-	# First check if current behavior should continue
+	# Handle behavior updates
 	if active_behavior:
 		if active_behavior.state == Behavior.State.COMPLETED:
 			if active_behavior.should_activate(context):
-				# Check if any higher priority behaviors are now valid
-				var higher_priority_behavior = _check_higher_priority_behaviors(active_behavior.priority, context)
+				var higher_priority_behavior = find_next_valid_behavior(context, active_behavior.priority)
 				if higher_priority_behavior:
 					_switch_behavior(higher_priority_behavior)
 				else:
-					# Restart the current behavior as it's still the best choice
 					logger.info("Restarting completed behavior '%s' as it's still optimal" % active_behavior.name)
 					active_behavior.reset()
 					active_behavior.start(ant, _condition_system)
 			else:
-				# Look for next valid behavior
-				var next_behavior = _find_next_valid_behavior(context)
+				var next_behavior = find_next_valid_behavior(context)
 				if next_behavior:
 					_switch_behavior(next_behavior)
 				else:
-					assert(false, "No behavior found, should loop") #TODO: Can we make a way to detect if behaviors loop forever/failsafe default?
-					# Loop could be two primary behaviors - moving away from colony and moving toward colony
+					assert(false, "No behavior found, should loop")
 		elif active_behavior.should_activate(context):
-			# Normal update flow for active behavior
-			var higher_priority_behavior = _check_higher_priority_behaviors(active_behavior.priority, context)
+			var higher_priority_behavior = find_next_valid_behavior(context, active_behavior.priority)
 			if higher_priority_behavior:
 				_switch_behavior(higher_priority_behavior)
 			else:
 				logger.trace("No higher priority behaviors to activate, continuing current behavior")
 				active_behavior.update(delta, context)
 		else:
-			# Current behavior no longer valid
-			var next_behavior = _find_next_valid_behavior(context)
+			var next_behavior = find_next_valid_behavior(context)
 			if next_behavior:
 				_switch_behavior(next_behavior)
 			else:
@@ -235,11 +234,10 @@ func update(delta: float, context: Dictionary) -> void:
 				active_behavior.interrupt()
 				active_behavior = null
 	else:
-		# No active behavior, find one to start
-		var next_behavior = _find_next_valid_behavior(context)
+		var next_behavior = find_next_valid_behavior(context)
 		if next_behavior:
 			_switch_behavior(next_behavior)
-
+			
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
 	if not is_instance_valid(behavior):
@@ -327,80 +325,68 @@ func get_debug_info() -> Dictionary:
 #endregion
 
 #region Private Methods
-## Check if all conditions are met
-func _check_conditions(context: Dictionary) -> bool:
-	if conditions.is_empty():
-		return true
-
+## Evaluates behaviors based on priority and conditions to find the next valid behavior
+## Returns: The next valid behavior that should be activated, or null if none are found
+## Parameters:
+##   context: Dictionary - The context data for evaluating conditions
+##   current_priority: int = -1 - Optional priority threshold to only check higher priorities
+func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -> Behavior:
+	# Early exit if no condition system is available
 	if not _condition_system:
-		logger.error("No condition system available for task '%s'" % name)
-		return false
-
-	for condition: Condition in conditions:
-		if not is_instance_valid(condition):
-			continue
-
-		if not _condition_system.evaluate_condition(condition, context):
-			return false
-	return true
-
-## Check only behaviors with higher priority than the current one
-func _check_higher_priority_behaviors(current_priority: int, context: Dictionary) -> Behavior:
-	# Group behaviors by priority
-	var priority_groups = _group_behaviors_by_priority(current_priority)
-
-	# Sort priorities in descending order
-	var priorities = priority_groups.keys()
-	priorities.sort()
-	priorities.reverse()
-
-	logger.trace("\nChecking higher priority behaviors (current priority: %d)" % current_priority)
-
-	# Check behaviors by priority level
-	for _priority in priorities:
-		logger.trace("Checking priority level: %d" % _priority)
-
-		var behaviors_at_priority = priority_groups[_priority]
-		var any_conditions_met = false
-
-		for behavior in behaviors_at_priority:
-			logger.trace("  Checking behavior: %s" % behavior.name)
-
-			var should_activate = behavior.should_activate(context)
-			logger.trace("    Should activate: %s" % should_activate)
-
-			if should_activate:
-				return behavior
-
-			any_conditions_met = any_conditions_met or should_activate
-
-		if not any_conditions_met:
-			logger.trace("  No behaviors at priority %d could activate, stopping checks" % _priority)
-			break
-
-	return null
-
-## Find the next valid behavior
-func _find_next_valid_behavior(context: Dictionary) -> Behavior:
+		logger.error("No condition system available for behavior evaluation")
+		return null
+		
 	# Group behaviors by priority
 	var priority_groups = _group_behaviors_by_priority()
-
+	if priority_groups.is_empty():
+		return null
+		
 	# Sort priorities in descending order
 	var priorities = priority_groups.keys()
 	priorities.sort()
 	priorities.reverse()
-
-	# Check behaviors in priority order
-	for _priority in priorities:
-		var behaviors_at_priority = priority_groups[_priority]
-		for behavior: Behavior in behaviors_at_priority:
-			logger.trace("Checking behavior: %s (Priority: %d)" % [behavior.name, behavior.priority])
-			if behavior.should_activate(context):
+	
+	logger.trace("\nChecking behaviors (current priority: %d)" % current_priority)
+	
+	# Check behaviors by priority level
+	for priority in priorities:
+		# Skip priorities lower than or equal to current_priority if specified
+		if current_priority >= 0 and priority <= current_priority:
+			logger.trace("Stopping at priority %d (current: %d)" % [priority, current_priority])
+			break
+			
+		logger.trace("Checking priority level: %d" % priority)
+		var behaviors_at_priority = priority_groups[priority]
+		var any_conditions_met = false
+		
+		for behavior in behaviors_at_priority:
+			if not is_instance_valid(behavior):
+				continue
+				
+			logger.trace("  Checking behavior: %s" % behavior.name)
+			
+			# Check if behavior meets all conditions
+			var conditions_met = true
+			for condition in behavior.conditions:
+				if not is_instance_valid(condition):
+					continue
+				if not _condition_system.evaluate_condition(condition, context):
+					conditions_met = false
+					break
+					
+			if conditions_met:
+				logger.trace("    Behavior %s is valid" % behavior.name)
 				return behavior
-
-		if not behaviors_at_priority.is_empty():
-			logger.trace("No behaviors at priority %d could activate" % _priority)
-
+				
+			any_conditions_met = any_conditions_met or conditions_met
+			
+		# If no conditions were met at this priority level, we can stop checking
+		# as lower priorities won't be able to activate
+		if not any_conditions_met:
+			logger.trace("  No behaviors at priority %d could activate, stopping checks" % priority)
+			break
+			
+	logger.trace("No valid behaviors found")
 	return null
 
 ## Helper function to group behaviors by priority
@@ -494,7 +480,7 @@ static func create_task_behaviors(task_type: String, ant: Ant, condition_system:
 static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_system: ConditionSystem) -> Behavior:
 	var behavior_type = config.type
 	if not behavior_type in BEHAVIOR_TO_ACTION:
-		push_error("Unknown behavior type: %s" % behavior_type)
+		DebugLogger.error(DebugLogger.Category.BEHAVIOR, "Unknown behavior type: %s" % behavior_type, {"from": "task"})
 		return null
 		
 	# Start building the behavior
