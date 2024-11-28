@@ -200,43 +200,64 @@ func _get_current_context() -> String:
 	return " (in context: %s)" % " → ".join(_evaluation_stack)
 
 func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
+	if config.has("type"):
+		match config.type:
+			"Operator":
+				return _evaluate_operator(config, context)
+			_:  # Named condition
+				return _evaluate_named_condition(config, context)
+	else:
+		return _evaluate_property_check(config, context)
+
+func _evaluate_named_condition(config: Dictionary, context: Dictionary) -> bool:
 	var condition_name = config.get("type", "Anonymous")
 	var evaluation = config.get("evaluation", {})
-	var used_properties = []
 	
-	if evaluation.has("property"):
-		used_properties.append(evaluation.property)
-	if evaluation.has("value_from"):
-		used_properties.append(evaluation.value_from)
+	logger.info("\nEvaluating Named Condition: %s" % condition_name)
+	if evaluation.has("description"):
+		logger.debug("  Description: %s" % evaluation.description)
 		
-	logger.info("Evaluating condition: %s" % condition_name)
-	logger.debug("Context properties used: %s" % str(used_properties))
-	
-	if used_properties:
-		for prop in used_properties:
+	var properties = _get_used_properties(evaluation)
+	if not properties.is_empty():
+		logger.debug("  Properties checked:")
+		for prop in properties:
 			var value = context.get(prop, null)
-			logger.debug("  %s = %s" % [prop, str(value)])
+			logger.debug("    %s = %s" % [prop, str(value)])
 	
-	var result = _evaluate_condition_config_internal(config, context)
-	logger.info("Condition %s result: %s" % [condition_name, result])
+	var result = false
+	if config.type in _condition_configs:
+		var base_config = _condition_configs[config.type]
+		_push_evaluation_context("Named condition: %s" % config.type)
+		result = _evaluate_condition_config(base_config, context)
+		_pop_evaluation_context()
+	else:
+		result = _evaluate_property_check(config, context)
+		
+	logger.info("  Result: %s" % result)
 	return result
 
-func _evaluate_condition_config_internal(config: Dictionary, context: Dictionary) -> bool:
-	if config.has("type") and config.type == "Operator":
-		return _evaluate_operator_condition(config, context)
-	elif config.has("type") and config.type in _condition_configs:
-		_push_evaluation_context("Named condition: %s" % config.type) 
-		var base_config = _condition_configs[config.type]
-		var result = _evaluate_condition_config_internal(base_config, context)
-		_pop_evaluation_context()
-		return result
-	elif config.has("evaluation"):
-		return _evaluate_property_check(config.evaluation, context)
-	elif config.has("property"):
-		return _evaluate_property_check(config, context)
-		
-	logger.error("Invalid condition format")
-	return false
+func _evaluate_operator(config: Dictionary, context: Dictionary) -> bool:
+	var operator_type = config.operator_type.to_upper()
+	var operands = config.get("operands", [])
+	
+	logger.info("\nEvaluating Operator: %s" % operator_type)
+	logger.debug("  Operand count: %d" % operands.size())
+	
+	_push_evaluation_context("%s operator" % operator_type)
+	var result
+	match operator_type:
+		"AND":
+			result = _evaluate_and_operator(operands, context)
+		"OR": 
+			result = _evaluate_or_operator(operands, context) 
+		"NOT": 
+			result = _evaluate_not_operator(operands, context)
+		_:
+			logger.error("Unknown operator: %s" % operator_type)
+			result = false
+	_pop_evaluation_context()
+	logger.info("  Result: %s" % result)
+	return result
 
 ## Evaluates property check conditions with consolidated logging
 func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bool:
@@ -275,39 +296,13 @@ func _evaluate_property_check(evaluation: Dictionary, context: Dictionary) -> bo
 	_pop_evaluation_context()
 	return result
 
-## Evaluates operator conditions with consolidated logging
-func _evaluate_operator_condition(config: Dictionary, context: Dictionary) -> bool:
-	if not config.has("operator_type"):
-		logger.error("Operator condition missing operator_type")
-		return false
-
-	var operator_type = config.operator_type.to_lower()
-	var operands = config.get("operands", [])
-
-	if operands.is_empty():
-		logger.error("Operator condition has no operands")
-		return false
-
-	_push_evaluation_context("%s operator with %d operands" % [operator_type.to_upper(), operands.size()])
-
-	var result := false
-	match operator_type:
-		"and":
-			result = _evaluate_and_operator(operands, context)
-		"or":
-			result = _evaluate_or_operator(operands, context)
-		"not":
-			result = _evaluate_not_operator(operands, context)
-		_:
-			logger.error("Unknown operator type: %s" % operator_type)
-
-	var message = "\n%s Operator Evaluation:" % operator_type.to_upper()
-	message += "\n    Result: %s" % result
-	message += _format_context_chain()
-	logger.debug(message)
-
-	_pop_evaluation_context()
-	return result
+func _get_used_properties(config: Dictionary) -> Array:
+	var properties = []
+	if config.has("property"):
+		properties.append(config.property)
+	if config.has("value_from"):
+		properties.append(config.value_from) 
+	return properties
 
 ## Helper function for AND operator evaluation
 func _evaluate_and_operator(operands: Array, context: Dictionary) -> bool:
