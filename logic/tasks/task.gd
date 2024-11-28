@@ -175,7 +175,6 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 
 #region Public Methods
 func update(delta: float, context: Dictionary) -> void:
-	logger.trace(str(context))
 	if not _condition_system:
 		logger.error("Missing condition system, cannot update task")
 		return
@@ -183,7 +182,7 @@ func update(delta: float, context: Dictionary) -> void:
 	if state != Task.State.ACTIVE:
 		return 
 
-	logger.trace("\nUpdating Task: %s" % name)
+	logger.trace("Updating Task: %s" % name)
 	logger.trace("Current active behavior: %s (State: %s)" % [
 		active_behavior.name if active_behavior else "None",
 		Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
