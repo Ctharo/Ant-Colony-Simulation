@@ -40,24 +40,11 @@ var COMPARISON_OPERATORS = {
 
 #region Properties
 
-## Cache for condition results
-var _condition_cache: Dictionary = {}
-
 ## Required properties for evaluation
 var _required_properties: Dictionary = {}
 
 ## Static condition configuration registry
 static var _condition_configs: Dictionary
-
-## Cache statistics
-var _cache_stats = {
-	"hits": 0,
-	"misses": 0,
-	"total_evaluations": 0,
-	"property_access_count": 0,
-	"condition_evaluation_times": {},  # condition_key -> [min_time, max_time, total_time, count]
-	"last_stats_reset": Time.get_unix_time_from_system()
-}
 
 ## Evaluation context stack for nested conditions
 var _evaluation_stack: Array[String] = []
@@ -68,7 +55,6 @@ var logger: Logger
 #region Initialization
 func _init(p_ant: Ant) -> void:
 	logger = Logger.new("condition_system", DebugLogger.Category.CONDITION)
-
 	if not _condition_configs.is_empty():
 		register_required_properties()
 
@@ -108,42 +94,18 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 		logger.error("Attempted to evaluate null condition")
 		return false
 
-	var cache_key = _get_condition_cache_key(condition, context)
-	var start_time = Time.get_ticks_usec()
-
-	_cache_stats.total_evaluations += 1
-
-	if _condition_cache.has(cache_key):
-		var cached_result = _condition_cache[cache_key]
-		_cache_stats.hits += 1
-		logger.debug("Cache HIT: %s" % cache_key)
-		return cached_result
-
-	_cache_stats.misses += 1
-	logger.debug("Cache MISS: %s" % cache_key)
 	var _result := _evaluate_condition_config(condition.config, context)
-	_condition_cache[cache_key] = _result
-
-	var evaluation_time = Time.get_ticks_usec() - start_time
-	_update_evaluation_stats(cache_key, evaluation_time)
-
 	var previous = condition.previous_result
+	
 	if _result != previous:
 		condition.previous_result = _result
 		evaluation_changed.emit(condition, _result)
 		logger.info("Condition changed: %s -> %s | %s" % [
 			previous,
-			_result,
-			cache_key
+			_result
 		])
 
 	return _result
-
-## Clears the condition evaluation cache
-func clear_cache() -> void:
-	var cache_size = _condition_cache.size()
-	_condition_cache.clear()
-	logger.debug("Cleared condition cache (%d entries)" % cache_size)
 
 ## Gets a list of all required property paths
 func get_required_properties() -> Array[String]:
@@ -164,52 +126,6 @@ func get_property_value(path: Path) -> Variant:
 
 	return value
 	
-## Print current cache statistics
-func print_cache_stats() -> void:
-	var total_evaluations = _cache_stats.hits + _cache_stats.misses
-	var hit_rate = 0.0 if total_evaluations == 0 else (_cache_stats.hits / float(total_evaluations)) * 100
-
-	var runtime = Time.get_unix_time_from_system() - _cache_stats.last_stats_reset
-	var evals_per_sec = 0.0 if runtime == 0 else _cache_stats.total_evaluations / runtime
-
-	var stats = "\nCondition System Statistics:"
-	stats += "\n─────────────────────────"
-	stats += "\nRuntime: %.2f seconds" % runtime
-	stats += "\nCache:"
-	stats += "\n  Hits: %d" % _cache_stats.hits
-	stats += "\n  Misses: %d" % _cache_stats.misses
-	stats += "\n  Hit Rate: %.1f%%" % hit_rate
-	stats += "\n  Current Cache Size: %d" % _condition_cache.size()
-	stats += "\nPerformance:"
-	stats += "\n  Total Evaluations: %d" % _cache_stats.total_evaluations
-	stats += "\n  Evaluations/sec: %.2f" % evals_per_sec
-	stats += "\n  Property Accesses: %d" % _cache_stats.property_access_count
-
-	if not _cache_stats.condition_evaluation_times.is_empty():
-		stats += "\nEvaluation Times (microseconds):"
-		for condition_key in _cache_stats.condition_evaluation_times:
-			var times = _cache_stats.condition_evaluation_times[condition_key]
-			stats += "\n  %s:" % condition_key
-			stats += "\n    Min: %.2f" % times[0]
-			stats += "\n    Max: %.2f" % times[1]
-			stats += "\n    Avg: %.2f" % (times[2] / times[3])
-			stats += "\n    Count: %d" % times[3]
-
-	logger.info(stats)
-
-## Reset cache statistics
-func reset_stats() -> void:
-	_cache_stats = {
-		"hits": 0,
-		"misses": 0,
-		"total_evaluations": 0,
-		"property_access_count": 0,
-		"condition_evaluation_times": {},
-		"last_stats_reset": Time.get_unix_time_from_system()
-	}
-	logger.debug("Reset cache statistics")
-
-
 ## Creates a condition instance from configuration
 static func create_condition(config: Dictionary) -> Condition:
 	if typeof(config) != TYPE_DICTIONARY:
@@ -283,46 +199,43 @@ func _get_current_context() -> String:
 		return ""
 	return " (in context: %s)" % " → ".join(_evaluation_stack)
 
-## Update evaluation statistics for a condition
-func _update_evaluation_stats(condition_key: String, evaluation_time: float) -> void:
-	if not condition_key in _cache_stats.condition_evaluation_times:
-		# [min_time, max_time, total_time, count]
-		_cache_stats.condition_evaluation_times[condition_key] = [
-			evaluation_time,  # min
-			evaluation_time,  # max
-			evaluation_time,  # total
-			1                # count
-		]
-		return
-
-	var stats = _cache_stats.condition_evaluation_times[condition_key]
-	stats[0] = min(stats[0], evaluation_time)  # Update min
-	stats[1] = max(stats[1], evaluation_time)  # Update max
-	stats[2] += evaluation_time                # Add to total
-	stats[3] += 1                             # Increment count
-
-## Evaluates condition configuration recursively
 func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
-	logger.debug("Evaluating condition config: %s%s" % [config, _get_current_context()])
-	# Handle operator conditions (AND, OR, NOT)
+	var condition_name = config.get("type", "Anonymous")
+	var evaluation = config.get("evaluation", {})
+	var used_properties = []
+	
+	if evaluation.has("property"):
+		used_properties.append(evaluation.property)
+	if evaluation.has("value_from"):
+		used_properties.append(evaluation.value_from)
+		
+	logger.info("Evaluating condition: %s" % condition_name)
+	logger.debug("Context properties used: %s" % str(used_properties))
+	
+	if used_properties:
+		for prop in used_properties:
+			var value = context.get(prop, null)
+			logger.debug("  %s = %s" % [prop, str(value)])
+	
+	var result = _evaluate_condition_config_internal(config, context)
+	logger.info("Condition %s result: %s" % [condition_name, result])
+	return result
+
+func _evaluate_condition_config_internal(config: Dictionary, context: Dictionary) -> bool:
 	if config.has("type") and config.type == "Operator":
 		return _evaluate_operator_condition(config, context)
-
-	# Handle named conditions from registry
-	if config.has("type") and config.type in _condition_configs:
-		_push_evaluation_context("Named condition: %s" % config.type)
+	elif config.has("type") and config.type in _condition_configs:
+		_push_evaluation_context("Named condition: %s" % config.type) 
 		var base_config = _condition_configs[config.type]
-		var result = _evaluate_condition_config(base_config, context)
+		var result = _evaluate_condition_config_internal(base_config, context)
 		_pop_evaluation_context()
 		return result
-
-	# Handle property checks
-	if config.has("evaluation"):
+	elif config.has("evaluation"):
 		return _evaluate_property_check(config.evaluation, context)
 	elif config.has("property"):
 		return _evaluate_property_check(config, context)
-
-	logger.error("Invalid condition format: %s%s" % [config, _get_current_context()])
+		
+	logger.error("Invalid condition format")
 	return false
 
 ## Evaluates property check conditions with consolidated logging
@@ -531,10 +444,6 @@ func _log_evaluation_block(operation: String, value_a: Variant, operator: String
 	if not context.is_empty():
 		message += context
 	logger.debug(message)
-
-## Log cache operations with minimal noise
-func _log_cache_operation(hit: bool, key: String) -> void:
-	logger.debug("Cache %s: %s" % ["HIT" if hit else "MISS", key])
 
 ## Log condition evaluation with formatted context
 func _log_condition_evaluation(message: String, level: String = "debug") -> void:
