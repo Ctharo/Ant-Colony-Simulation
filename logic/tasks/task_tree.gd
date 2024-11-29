@@ -80,8 +80,6 @@ func update(delta: float) -> bool:
 		logger.error("No root task set")
 		return false
 
-	_condition_system.clear_cache()
-
 	_context_registry.update(delta)
 	var context := gather_context()
 
