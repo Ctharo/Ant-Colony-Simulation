@@ -179,8 +179,6 @@ class Builder:
 	
 	var _ant: Ant
 	var _root_type: String = "Root"
-	var _tasks_path: String = "res://config/ant_tasks.json"
-	var _conditions_path: String = "res://config/ant_conditions.json"
 	var logger: Logger
 
 	func _init(p_ant: Ant) -> void:
@@ -191,23 +189,20 @@ class Builder:
 		_root_type = type
 		return self
 
-	func with_config_paths(tasks_path: String, conditions_path: String) -> Builder:
-		_tasks_path = tasks_path
-		_conditions_path = conditions_path
-		return self
+
 
 	func build() -> TaskTree:
 		var tree := TaskTree.new()
 		tree.ant = _ant
 
 		# Load conditions first since tasks depend on them
-		var result = ConditionSystem.load_condition_configs(_conditions_path)
+		var result = ConditionSystem.load_condition_configs()
 		if result != OK:
 			logger.error("Failed to load condition configs from: %s" % _conditions_path)
 			return tree
 
 		# Load task configurations
-		result = Task.load_task_configs(_tasks_path)
+		result = AntConfigs.load_task_configs()
 		if result != OK:
 			logger.error("Failed to load task configs from: %s" % _tasks_path)
 			return tree

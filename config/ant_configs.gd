@@ -15,11 +15,15 @@ static var _action_classes: Dictionary = {
 static var _task_configs: Dictionary
 
 ## Dictionary of behavior configurations loaded from JSON
-static var _behavior_configs: Dictionary = {}
+static var _behavior_configs: Dictionary
+
+## Dictionary of condition configurations loaded from JSON
+static var _condition_configs: Dictionary
 
 func _init() -> void:
 	load_task_configs()
 	load_behavior_configs()
+	load_condition_configs()
 
 ## Load task configurations from JSON file
 static func load_task_configs() -> Error:
@@ -50,6 +54,24 @@ func load_behavior_configs() -> void:
 		
 	_behavior_configs = json.data.behaviors
 
+static func load_condition_configs() -> Error:
+	var file := FileAccess.open("res://config/ant_conditions.json", FileAccess.READ)
+	if not file:
+		push_error("Failed to open conditions config")
+		return ERR_FILE_NOT_FOUND
+
+	var json := JSON.new()
+	var result := json.parse(file.get_as_text())
+	if result != OK:
+		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
+		return result
+
+	if not json.data.has("conditions"):
+		push_error("JSON file does not contain 'conditions' key")
+		return ERR_INVALID_DATA
+
+	_condition_configs = json.data.conditions
+	return OK
 
 static func get_action_config(behavior_name: String) -> Dictionary:
 	if not behavior_name in _behavior_configs:
@@ -75,7 +97,6 @@ static func create_action_from_config(config: Dictionary, ant: Ant) -> Action:
 			builder.with_param(key, config.params[key])
 			
 	return builder.build()
-
 
 ## Create a task's behaviors from task configuration
 static func create_task_behaviors(task_type: String, ant: Ant, condition_system: ConditionSystem) -> Array[Behavior]:
@@ -125,3 +146,20 @@ static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_
 	
 	return builder.build()
 	
+static func create_condition(config: Dictionary) -> Condition:
+	if typeof(config) != TYPE_DICTIONARY:
+		push_error("Invalid condition config type: %s" % typeof(config))
+		return null
+
+	var condition = Condition.new()
+	
+	if config.has("type") and config.type in _condition_configs:
+		var merged_config = _condition_configs[config.type].duplicate(true)
+		for key in config:
+			if key != "type":
+				merged_config[key] = config[key]
+		condition.config = merged_config
+	else:
+		condition.config = config
+	
+	return condition

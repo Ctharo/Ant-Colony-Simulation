@@ -30,7 +30,6 @@ var COMPARISON_OPERATORS = {
 
 #region Properties
 var _required_properties: Dictionary = {}
-static var _condition_configs: Dictionary
 var _evaluation_stack: Array[String] = []
 var logger: Logger
 #endregion
@@ -38,34 +37,7 @@ var logger: Logger
 #region Initialization
 func _init(p_ant: Ant) -> void:
 	logger = Logger.new("condition_system", DebugLogger.Category.CONDITION)
-	if not _condition_configs.is_empty():
-		register_required_properties()
-
-static func load_condition_configs(path: String) -> Error:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		push_error("Failed to open conditions config: %s" % path)
-		return ERR_FILE_NOT_FOUND
-
-	var json := JSON.new()
-	var result := json.parse(file.get_as_text())
-	if result != OK:
-		push_error("Failed to parse conditions JSON: %s" % json.get_error_message())
-		return result
-
-	if not json.data.has("conditions"):
-		push_error("JSON file does not contain 'conditions' key")
-		return ERR_INVALID_DATA
-
-	_condition_configs = json.data.conditions
-	return OK
-
-static func load_condition_configs_from_dict(config: Dictionary) -> Error:
-	if not config.has("conditions"):
-		push_error("Config dictionary does not contain 'conditions' key")
-		return ERR_INVALID_DATA
-	_condition_configs = config.conditions
-	return OK
+	register_required_properties()
 #endregion
 
 #region Public Methods
@@ -86,24 +58,6 @@ func get_property_value(path: Path) -> Variant:
 	if value != null:
 		logger.trace("Property '%s' = %s" % [path.full, str(value)])
 	return value
-
-static func create_condition(config: Dictionary) -> Condition:
-	if typeof(config) != TYPE_DICTIONARY:
-		push_error("Invalid condition config type: %s" % typeof(config))
-		return null
-
-	var condition = Condition.new()
-	
-	if config.has("type") and config.type in _condition_configs:
-		var merged_config = _condition_configs[config.type].duplicate(true)
-		for key in config:
-			if key != "type":
-				merged_config[key] = config[key]
-		condition.config = merged_config
-	else:
-		condition.config = config
-	
-	return condition
 	
 func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
@@ -325,7 +279,7 @@ func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bo
 #region Property Management
 func register_required_properties() -> void:
 	for condition_name in _condition_configs:
-		var config = _condition_configs[condition_name]
+		var config = AntConfigs._condition_configs[condition_name]
 		_register_config_properties(config)
 	_log_required_properties()
 
