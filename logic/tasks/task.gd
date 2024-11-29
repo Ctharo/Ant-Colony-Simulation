@@ -157,10 +157,9 @@ func update(delta: float, context: Dictionary) -> void:
 	# Check task-level conditions
 	var all_conditions_met = true
 	for condition in conditions:
-		if not is_instance_valid(condition) or not _condition_system.evaluate_condition(condition, context):
+		if not is_instance_valid(condition) or not evaluate_condition(condition, context):
 			all_conditions_met = false
 			break
-			
 	if not all_conditions_met:
 		logger.info("Task conditions not met, interrupting: %s" % name)
 		interrupt()
@@ -335,7 +334,7 @@ func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -
 			for condition in behavior.conditions:
 				if not is_instance_valid(condition):
 					continue
-				if not _condition_system.evaluate_condition(condition, context):
+				if not evaluate_condition(condition, context):
 					conditions_met = false
 					break
 					
@@ -353,6 +352,11 @@ func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -
 			
 	logger.trace("No valid behaviors found")
 	return null
+
+func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
+	var result = _condition_system.evaluate_condition(condition, context)
+	logger.info("Evaluated condition %s -> %s" % [condition.name, result])
+	return result
 
 ## Helper function to group behaviors by priority
 func _group_behaviors_by_priority(min_priority: int = -1) -> Dictionary:
