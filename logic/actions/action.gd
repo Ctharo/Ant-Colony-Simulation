@@ -65,7 +65,7 @@ class Builder:
 	func build() -> Action:
 		action.params = params
 		return action
-
+		
 func _init():
 	logger = Logger.new("action", DebugLogger.Category.ACTION)
 

@@ -2,7 +2,7 @@
   "behaviors": {
 	"MoveToFood": {
 	  "action": {
-		"type": "Move",
+		"base_action": "Move",
 		"params": {
 		  "target_type": "food"
 		}
@@ -10,7 +10,7 @@
 	},
 	"MoveToHome": {
 	  "action": {
-		"type": "Move",
+		"base_action": "Move",
 		"params": {
 		  "target_type": "colony"
 		}
@@ -18,7 +18,7 @@
 	},
 	"HarvestFood": {
 	  "action": {
-		"type": "Harvest",
+		"base_action": "Harvest",
 		"params": {
 		  "harvest_rate": 1,
 		}
@@ -26,7 +26,7 @@
 	},
 	"StoreFood": {
 	  "action": {
-		"type": "Store",
+		"base_action": "Store",
 		"params": {
 		  "store_rate": 1
 		}
@@ -34,7 +34,7 @@
 	},
 	"Rest": {
 	  "action": {
-		"type": "Rest",
+		"base_action": "Rest",
 		"params": {
 		  "rest_duration": 3.0
 	  	}
@@ -42,7 +42,7 @@
 	},
 	"FollowHomePheromones": {
 	  "action": {
-		"type": "FollowPheromone",
+		"base_action": "FollowPheromone",
 		"params": {
 		  "pheromone": "home",
 		  "attraction_strength": 1.0
@@ -51,7 +51,7 @@
 	  },
 	  "FollowFoodPheromones": {
 		"action": {
-		  "type": "FollowPheromone",
+		  "base_action": "FollowPheromone",
 		  "params": {
 			"pheromone": "food",
 			"attraction_strength": 1.0
@@ -60,7 +60,7 @@
 	},
 	"WanderForFood": {
 	  "action": {
-		"type": "RandomMove",
+		"base_action": "RandomMove",
 		"params": {
 		  "wander_radius": 100,
 		  "direction_change_time": 2.0

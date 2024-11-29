@@ -11,8 +11,14 @@
 			  "type": "Operator",
 			  "operator_type": "or",
 			  "operands": [
-				{"type": "LowEnergy"},
-				{"type": "LowHealth"}
+				{
+				  "type": "Custom",
+				  "name": "LowEnergy"
+				},
+				{
+				  "type": "Custom",
+				  "name": "LowHealth"
+				}
 			  ]
 			}
 		  ]
@@ -20,43 +26,58 @@
 	  ],
 	  "behaviors": [
 		{
-		  "type": "WanderForFood",
+		  "name": "WanderForFood",
 		  "priority": "LOWEST",
 		  "conditions": []
 		},
 		{
-		  "type": "FollowFoodPheromones",
+		  "name": "FollowFoodPheromones",
 		  "priority": "LOW",
 		  "conditions": [
-			{"type": "IsFoodPheromoneSensed"}
+			{
+			  "type": "Custom",
+			  "name": "IsFoodPheromoneSensed"
+			}
 		  ]
 		},
 		{
-		  "type": "MoveToFood",
+		  "name": "MoveToFood",
 		  "priority": "HIGH",
 		  "conditions": [
-			{"type": "IsFoodInView"}
+			{
+			  "type": "Custom",
+			  "name": "IsFoodInView"
+			}
 		  ]
 		},
 		{
-		  "type": "HarvestFood",
+		  "name": "HarvestFood",
 		  "priority": "HIGHEST",
 		  "conditions": [
-			{"type": "IsFoodInReach"},
+			{
+			  "type": "Custom",
+			  "name": "IsFoodInReach"
+			},
 			{
 			  "type": "Operator",
 			  "operator_type": "not",
 			  "operands": [
-				{"type": "OverloadedWithFood"}
+				{
+				  "type": "Custom",
+				  "name": "OverloadedWithFood"
+				}
 			  ]
 			}
 		  ]
 		},
 		{
-		  "type": "MoveToHome",
+		  "name": "MoveToHome",
 		  "priority": "HIGHEST",
 		  "conditions": [
-			{"type": "OverloadedWithFood"}
+			{
+			  "type": "Custom",
+			  "name": "OverloadedWithFood"
+			}
 		  ]
 		}
 	  ]

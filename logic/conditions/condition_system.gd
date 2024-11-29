@@ -69,20 +69,7 @@ static func load_condition_configs_from_dict(config: Dictionary) -> Error:
 #endregion
 
 #region Public Methods
-func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
-	if condition == null:
-		logger.error("Attempted to evaluate null condition")
-		return false
 
-	var result := _evaluate_condition_config(condition.config, context)
-	var previous = condition.previous_result
-	
-	if result != previous:
-		condition.previous_result = result
-		evaluation_changed.emit(condition, result)
-		_log_evaluation_change(previous, result, condition.config)
-
-	return result
 
 func get_required_properties() -> Array[String]:
 	var a: Array[String] = []
@@ -117,6 +104,21 @@ static func create_condition(config: Dictionary) -> Condition:
 		condition.config = config
 	
 	return condition
+	
+func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
+	if condition == null:
+		logger.error("Attempted to evaluate null condition")
+		return false
+
+	var result := _evaluate_condition_config(condition.config, context)
+	var previous = condition.previous_result
+	
+	if result != previous:
+		condition.previous_result = result
+		evaluation_changed.emit(condition, result)
+		_log_evaluation_change(previous, result, condition.config)
+
+	return result
 #endregion
 
 #region Evaluation Methods
@@ -125,22 +127,21 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 	_log_evaluation_chain(config, context)
 	
 	var result = false
-	if config.has("type"):
-		var base_config = _condition_configs.get(config.type)
-		if base_config:
-			base_config["type"] = config.get("type")
-			result = _evaluate_named_condition(base_config, context)
-		elif config.type == "Operator":
+	match config.get("type"):
+		"Custom": # Named condition
+			result = _evaluate_named_condition(config, context)
+		"Operator": # Operator
 			result = _evaluate_operator(config, context)
-	else:
-		result = _evaluate_property_check(config, context)
-	
+		"PropertyCheck":
+			result = _evaluate_property_check(config, context)
+		_: # Property check
+			logger.error("Unhandled config: %s" % config)
 	_log_result(result)
 	_pop_evaluation_context()
 	return result
 
 func _evaluate_named_condition(config: Dictionary, context: Dictionary) -> bool:
-	var condition_name = config.get("type", "Anonymous")
+	var condition_name = config.get("name", "Anonymous")
 	_push_evaluation_context("Named condition: %s" % condition_name)
 	
 	_log_evaluation_chain(config, context)
@@ -367,10 +368,8 @@ func _log_required_properties() -> void:
 func _push_evaluation_context(description: String) -> void:
 	_evaluation_stack.append(description)
 	
-
 func _pop_evaluation_context() -> void:
-	if not _evaluation_stack.is_empty():
-		_evaluation_stack.pop_back()
+	_evaluation_stack.pop_back()
 
 func _get_current_context() -> String:
 	return "" if _evaluation_stack.is_empty() else " (in: %s)" % " → ".join(_evaluation_stack)
