@@ -63,7 +63,9 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
 		logger.error("Attempted to evaluate null condition")
 		return false
-
+	
+	logger.info("Evaluating condition: %s" % condition.name)
+	
 	var result := _evaluate_condition_config(condition.config, context)
 	var previous = condition.previous_result
 	
@@ -76,10 +78,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 #endregion
 
 #region Evaluation Methods
-func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
-	_push_evaluation_context("condition")
-	_log_evaluation_chain(config, context)
-	
+func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:	
 	var result = false
 	match config.get("type"):
 		"Custom": # Named condition
@@ -90,29 +89,18 @@ func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool
 			result = _evaluate_property_check(config, context)
 		_: # Property check
 			logger.error("Unhandled config: %s" % config)
-	_log_result(result)
-	_pop_evaluation_context()
 	return result
 
 func _evaluate_named_condition(config: Dictionary, context: Dictionary) -> bool:
-	var condition_name = config.get("name", "Anonymous")
-	_push_evaluation_context("Named condition: %s" % condition_name)
-	
-	_log_evaluation_chain(config, context)
-	var result = _evaluate_property_check({"evaluation": config.evaluation}, context)
-	_log_result(result)
-	
-	_pop_evaluation_context()
+	var condition_name = config.get("name", "N/A")
+	var condition_config: Dictionary = AntConfigs.get_condition_config(condition_name)
+	var result = _evaluate_property_check(condition_config, context)
 	return result
 
 func _evaluate_operator(config: Dictionary, context: Dictionary) -> bool:
 	var operator_type = config.operator_type.to_upper()
 	var operands = config.get("operands", [])
-	
-	_push_evaluation_context("%s operator" % operator_type)
-	_log_evaluation_chain(config, context)
-	
-	var result 
+	var result = false
 	match operator_type:
 		"AND":
 			result = _evaluate_and_operator(operands, context)
@@ -122,10 +110,6 @@ func _evaluate_operator(config: Dictionary, context: Dictionary) -> bool:
 			result = _evaluate_not_operator(operands, context)
 		_:
 			logger.error("Unknown operator: %s" % operator_type)
-			return false
-	
-	_log_result(result, operator_type)
-	_pop_evaluation_context()
 	return result
 
 func _evaluate_property_check(config: Dictionary, context: Dictionary) -> bool:
@@ -133,46 +117,31 @@ func _evaluate_property_check(config: Dictionary, context: Dictionary) -> bool:
 	if evaluation.is_empty() or not evaluation.has("property"):
 		logger.error("Invalid property check configuration")
 		return false
-		
-	_push_evaluation_context("Property check: %s" % evaluation.property)
-	_log_evaluation_chain(config, context)
 	
 	var operator = evaluation.get("operator", "EQUALS")
 	var value_a = context.get(evaluation.property)
 	var value_b = evaluation.get("value", context.get(evaluation.get("value_from", "")))
 	
 	var result = _compare_values(value_a, value_b, operator)
-	_log_result(result)
-	
-	_pop_evaluation_context()
 	return result
 
 func _evaluate_and_operator(operands: Array, context: Dictionary) -> bool:
 	for i in range(operands.size()):
-		_push_evaluation_context("AND operand %d/%d" % [i + 1, operands.size()])
 		if not _evaluate_condition_config(operands[i], context):
-			_pop_evaluation_context()
 			return false
-		_pop_evaluation_context()
 	return true
 
 func _evaluate_or_operator(operands: Array, context: Dictionary) -> bool:
 	for i in range(operands.size()):
-		_push_evaluation_context("OR operand %d/%d" % [i + 1, operands.size()])
 		if _evaluate_condition_config(operands[i], context):
-			_pop_evaluation_context()
 			return true
-		_pop_evaluation_context()
 	return false
 
 func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
 	if operands.size() != 1:
 		logger.error("NOT operator requires exactly one operand")
 		return false
-
-	_push_evaluation_context("NOT operand")
 	var result = not _evaluate_condition_config(operands[0], context)
-	_pop_evaluation_context()
 	return result
 #endregion
 

@@ -78,6 +78,12 @@ static func get_action_config(behavior_name: String) -> Dictionary:
 		return {}
 	return _behavior_configs[behavior_name].action
 
+static func get_condition_config(conditon_name: String) -> Dictionary:
+	if not conditon_name in _condition_configs:
+		push_error("Unknown condition: %s" % conditon_name)
+		return {}
+	return _condition_configs[conditon_name]
+
 static func create_action_from_config(config: Dictionary, ant: Ant) -> Action:
 	var action_name = config.get("base_action")
 	if not action_name in _action_classes:
@@ -152,13 +158,15 @@ static func create_condition(config: Dictionary) -> Condition:
 
 	var condition = Condition.new()
 	
-	if config.has("type") and config.type in _condition_configs:
-		var merged_config = _condition_configs[config.type].duplicate(true)
+	if config.type == "Custom" and config.name in _condition_configs:
+		condition.name = config.name
+		var merged_config = _condition_configs[config.name].duplicate(true)
 		for key in config:
-			if key != "type":
-				merged_config[key] = config[key]
+			merged_config[key] = config[key]
 		condition.config = merged_config
-	else:
+	elif config.type == "Operator":
+		condition.name = "Operator: %s" % config.operator_type
 		condition.config = config
-	
+	else:
+		assert(false, "Unknown condition type")
 	return condition
