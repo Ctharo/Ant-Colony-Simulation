@@ -6,9 +6,9 @@ func _init() -> void:
 
 func _ready() -> void:
 	logger.set_logging_level(DebugLogger.LogLevel.TRACE)
-	#logger.set_logging_category(DebugLogger.Category.TASK)
+	logger.set_logging_category(DebugLogger.Category.TASK)
 	#logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
-	logger.set_logging_category(DebugLogger.Category.CONDITION)
+	#logger.set_logging_category(DebugLogger.Category.CONDITION)
 
 
 

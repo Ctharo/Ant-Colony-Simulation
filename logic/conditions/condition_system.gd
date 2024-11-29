@@ -63,17 +63,13 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
 		logger.error("Attempted to evaluate null condition")
 		return false
-	
-	logger.info("Evaluating condition: %s" % condition.name)
-	
 	var result := _evaluate_condition_config(condition.config, context)
 	var previous = condition.previous_result
 	
 	if result != previous:
 		condition.previous_result = result
 		evaluation_changed.emit(condition, result)
-		_log_evaluation_change(previous, result, condition.config)
-
+		
 	return result
 #endregion
 
