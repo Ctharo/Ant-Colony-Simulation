@@ -176,15 +176,16 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 #region Public Methods
 ## Update the task and its behaviors
 func update(delta: float, context: Dictionary) -> void:
-	logger.trace(str(context))
+	logger.trace("Updating Task: %s" % name)
+
 	if not _condition_system:
 		logger.error("Missing condition system, cannot update task")
 		return
 		
 	if state != Task.State.ACTIVE:
+		logger.warn("Task %s marked as inactive, cannot update task" % name)
 		return 
 
-	logger.trace("\nUpdating Task: %s" % name)
 	logger.trace("Current active behavior: %s (State: %s)" % [
 		active_behavior.name if active_behavior else "None",
 		Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
@@ -223,7 +224,7 @@ func update(delta: float, context: Dictionary) -> void:
 			if higher_priority_behavior:
 				_switch_behavior(higher_priority_behavior)
 			else:
-				logger.trace("No higher priority behaviors to activate, continuing current behavior")
+				logger.trace("Continuing current behavior")
 				active_behavior.update(delta, context)
 		else:
 			# Current behavior no longer valid
@@ -334,6 +335,7 @@ func _check_conditions(context: Dictionary) -> bool:
 
 	if not _condition_system:
 		logger.error("No condition system available for task '%s'" % name)
+		assert(false, "Should always have a condition system")
 		return false
 
 	for condition: Condition in conditions:
@@ -353,31 +355,32 @@ func _check_higher_priority_behaviors(current_priority: int, context: Dictionary
 	var priorities = priority_groups.keys()
 	priorities.sort()
 	priorities.reverse()
-
-	logger.trace("\nChecking higher priority behaviors (current priority: %d)" % current_priority)
+	var msg: String = "\nChecking higher priority behaviors (current priority: %d)" % current_priority
 
 	# Check behaviors by priority level
 	for _priority in priorities:
-		logger.trace("Checking priority level: %d" % _priority)
+		msg += "\n	Checking priority level: %d" % _priority
 
 		var behaviors_at_priority = priority_groups[_priority]
 		var any_conditions_met = false
 
 		for behavior in behaviors_at_priority:
-			logger.trace("  Checking behavior: %s" % behavior.name)
+			msg += "\n		Checking behavior: %s" % behavior.name
 
 			var should_activate = behavior.should_activate(context)
-			logger.trace("    Should activate: %s" % should_activate)
+			msg += "\n			Should activate: %s" % should_activate
 
 			if should_activate:
+				logger.trace(msg)
 				return behavior
 
 			any_conditions_met = any_conditions_met or should_activate
 
 		if not any_conditions_met:
-			logger.trace("  No behaviors at priority %d could activate, stopping checks" % _priority)
+			msg += "\n	No behaviors at priority %d could activate, stopping checks" % _priority
 			break
-
+	msg += "\nNo higher priority behaviors could activate"
+	logger.trace(msg)
 	return null
 
 ## Find the next valid behavior
@@ -397,10 +400,7 @@ func _find_next_valid_behavior(context: Dictionary) -> Behavior:
 			logger.trace("Checking behavior: %s (Priority: %d)" % [behavior.name, behavior.priority])
 			if behavior.should_activate(context):
 				return behavior
-
-		if not behaviors_at_priority.is_empty():
-			logger.trace("No behaviors at priority %d could activate" % _priority)
-
+		logger.trace("No behaviors at priority %d could activate" % _priority)
 	return null
 
 ## Helper function to group behaviors by priority
