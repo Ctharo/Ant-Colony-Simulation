@@ -1,5 +1,4 @@
-class_name AntConfigs
-extends RefCounted
+extends Node
 
 ## Dictionary mapping action names to their GDScript classes
 static var _action_classes: Dictionary = {
@@ -40,7 +39,7 @@ static func load_task_configs() -> Error:
 	return OK
 
 
-func load_behavior_configs() -> void:
+static func load_behavior_configs() -> void:
 	var file = FileAccess.open("res://config/ant_behaviors.json", FileAccess.READ)
 	if not file:
 		push_error("Failed to open behaviors config")
@@ -129,7 +128,7 @@ static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_
 	# Add behavior conditions
 	if "conditions" in config:
 		for condition_data in config.conditions:
-			builder.with_condition(ConditionSystem.create_condition(condition_data))
+			builder.with_condition(AntConfigs.create_condition(condition_data))
 	
 	# Get action config and create action
 	var action_config = AntConfigs.get_action_config(behavior_name)

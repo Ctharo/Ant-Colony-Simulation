@@ -278,7 +278,7 @@ func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bo
 
 #region Property Management
 func register_required_properties() -> void:
-	for condition_name in _condition_configs:
+	for condition_name in AntConfigs._condition_configs:
 		var config = AntConfigs._condition_configs[condition_name]
 		_register_config_properties(config)
 	_log_required_properties()

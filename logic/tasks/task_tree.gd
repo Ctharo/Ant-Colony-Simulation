@@ -194,18 +194,10 @@ class Builder:
 	func build() -> TaskTree:
 		var tree := TaskTree.new()
 		tree.ant = _ant
-
-		# Load conditions first since tasks depend on them
-		var result = ConditionSystem.load_condition_configs()
-		if result != OK:
-			logger.error("Failed to load condition configs from: %s" % _conditions_path)
-			return tree
-
-		# Load task configurations
-		result = AntConfigs.load_task_configs()
-		if result != OK:
-			logger.error("Failed to load task configs from: %s" % _tasks_path)
-			return tree
+		
+		assert(AntConfigs._behavior_configs)
+		assert(AntConfigs._task_configs)
+		assert(AntConfigs._condition_configs)
 
 		# Create condition system
 		tree._condition_system = ConditionSystem.new(_ant)
@@ -215,7 +207,7 @@ class Builder:
 		tree._setup_context_providers()
 		
 		# Create task behaviors
-		var behaviors = Task.create_task_behaviors(
+		var behaviors = AntConfigs.create_task_behaviors(
 			_root_type,
 			_ant,
 			tree._condition_system
@@ -226,15 +218,15 @@ class Builder:
 			return tree
 
 		# Create the task itself
-		var task = Task.new(Task.Priority[Task._task_configs[_root_type].get("priority", "MEDIUM")], tree._condition_system)
+		var task = Task.new(Task.Priority[AntConfigs._task_configs[_root_type].get("priority", "MEDIUM")], tree._condition_system)
 		task.name = _root_type
 		task.ant = _ant
 
 		# Add task conditions
-		var task_config = Task._task_configs[_root_type]
+		var task_config = AntConfigs._task_configs[_root_type]
 		if "conditions" in task_config:
 			for condition_data in task_config.conditions:
-				var condition = ConditionSystem.create_condition(condition_data)
+				var condition = AntConfigs.create_condition(condition_data)
 				task.add_condition(condition)
 
 		# Add behaviors to task
