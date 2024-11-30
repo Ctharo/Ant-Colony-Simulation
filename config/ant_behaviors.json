@@ -48,24 +48,24 @@
 		  "attraction_strength": 1.0
 		  }
 		}
-	  },
-	  "FollowFoodPheromones": {
-		"action": {
-		  "base_action": "FollowPheromone",
+	 },
+	 "FollowFoodPheromones": {
+	   "action": {
+		 "base_action": "FollowPheromone",
 		  "params": {
 			"pheromone": "food",
 			"attraction_strength": 1.0
-		}
-	  }
-	},
-	"WanderForFood": {
-	  "action": {
-		"base_action": "RandomMove",
-		"params": {
-		  "wander_radius": 100,
-		  "direction_change_time": 2.0
-		}
-	  }
-	}
-  }
-}
+		 }
+	   }
+	 },
+	 "WanderForFood": {
+	   "action": {
+		 "base_action": "RandomMove",
+		 "params": {
+		   "wander_radius": 100,
+		   "direction_change_time": 2.0
+		 }
+	   }
+	 }
+   }
+ }
