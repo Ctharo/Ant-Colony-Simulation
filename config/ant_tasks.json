@@ -37,7 +37,9 @@
 				  "type": "Custom",
 				  "name": "OverloadedWithFood"
 				}
-			]
+			  ]
+			}
+		  ]
 		},
 		{
 		  "name": "FollowFoodPheromones",
@@ -94,20 +96,16 @@
 		  "priority": "HIGHEST",
 		  "conditions": [
 			{
-		  
 			  "type": "Custom",
 			  "name": "OverloadedWithFood"
-			
 			},
 			{
-		  
 			  "type": "Custom",
 			  "name": "InHome"
-			
-			},
-			]
+			}
+		  ]
 		}
-	}
+	  ]
 	}
   }
 }
