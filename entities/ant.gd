@@ -112,7 +112,7 @@ func perform_action(action: Action, args: Dictionary = {}) -> void:
 				action_completed.emit()
 			else:
 				await get_tree().create_timer(action.duration).timeout
-				pass
+				
 		_:
 			# Default duration-based completion
 			await get_tree().create_timer(action.duration).timeout
