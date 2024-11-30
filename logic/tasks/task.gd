@@ -359,6 +359,26 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	return result
 
 ## Helper function to group behaviors by priority
+func format_condition(condition: Dictionary) -> String:
+	match condition["type"]:
+		"Operator":
+			var operator_type = condition["operator_type"]
+			var operands = condition["operands"]
+			var formatted_operands = operands.map(func(op): return format_condition(op))
+			
+			# Formatting operators with human-readable logic
+			match operator_type:
+				"not":
+					return "not (" + formatted_operands[0] + ")"
+				"and":
+					return "(" + " and ".join(formatted_operands) + ")"
+				"or":
+					return "(" + " or ".join(formatted_operands) + ")"
+		"Custom":
+			return condition["name"]
+	
+	return "Unknown Condition"
+
 func _group_behaviors_by_priority(min_priority: int = -1) -> Dictionary:
 	var priority_groups: Dictionary = {}
 	for behavior in behaviors:
