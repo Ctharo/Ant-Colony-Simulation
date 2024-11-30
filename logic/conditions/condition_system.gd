@@ -41,23 +41,11 @@ func _init(p_ant: Ant) -> void:
 #endregion
 
 #region Public Methods
-
-
 func get_required_properties() -> Array[String]:
 	var a: Array[String] = []
 	for key in _required_properties.keys():
 		a.append(key as String)
 	return a
-
-func get_property_value(path: Path) -> Variant:
-	if not path.full in _required_properties:
-		logger.warn("Accessing unrequired property '%s'" % path.full)
-		return null
-
-	var value = get_property_value(path)
-	if value != null:
-		logger.trace("Property '%s' = %s" % [path.full, str(value)])
-	return value
 	
 func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
@@ -65,11 +53,9 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 		return false
 	var result := _evaluate_condition_config(condition.config, context)
 	var previous = condition.previous_result
-	
 	if result != previous:
 		condition.previous_result = result
 		evaluation_changed.emit(condition, result)
-		
 	return result
 #endregion
 
@@ -141,73 +127,8 @@ func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
 	return result
 #endregion
 
-#region Logging Methods
-func _log_evaluation_chain(config: Dictionary, context: Dictionary) -> void:
-	var depth = _evaluation_stack.size()
-	var indent = "  ".repeat(depth)
-	var eval_info = _get_evaluation_info(config, context)
-	
-	logger.debug("%s%s %s%s" % [
-		indent,
-		_get_stack_symbol(eval_info.type),
-		eval_info.name,
-		"\n%s   Compare: %s" % [indent, eval_info.comparison] if eval_info.has("comparison") else ""
-	])
-	
-func _get_evaluation_info(config: Dictionary, context: Dictionary) -> Dictionary:
-	var info = {"type": "generic"}
-	
-	if config.has("type"):
-		match config.type:
-			"Operator":
-				info.type = "operator"
-				info.name = config.operator_type.to_upper()
-			_:
-				info.type = "named"
-				info.name = config.get("description", "Unnamed Condition")
-	
-	var eval = config.get("evaluation", {})
-	if eval.has("property"):
-		info.type = "property"
-		info.name = "Check %s" % eval.property
-		var value_a = context.get(eval.property)
-		var value_b = eval.get("value", context.get(eval.get("value_from", "")))
-		var op = OPERATOR_MAP.get(eval.get("operator", "EQUALS"), "==")
-		info.comparison = "%s %s %s" % [str(value_a), op, str(value_b)]
-	
-	return info
-	
-func _get_evaluation_type(config: Dictionary) -> String:
-	if config.has("type"):
-		match config.type:
-			"Operator": return "%s" % config.get("operator_type", "").to_upper()
-			_: return config.get("description", "Unnamed Condition")
-	return "Check %s" % config.get("evaluation", {}).get("property", "unknown")
-
-func _get_stack_symbol(type: String) -> String:
-	return {
-		"operator": {"NOT": "!", "AND": "&", "OR": "|"}.get(type, "|"),
-		"named": "►",
-		"property": "•"
-	}.get(type, "○")
-
-func _log_result(result: bool, extra_info: String = "") -> void:
-	var indent = "  ".repeat(_evaluation_stack.size())
-	logger.debug("%s└─ Result: %s%s" % [
-		indent, 
-		result,
-		" (%s)" % extra_info if extra_info else ""
-	])
-
-
-func _log_evaluation_change(previous: bool, current: bool, config: Dictionary) -> void:
-	var desc = config.get("description", "unnamed")
-	logger.info("Condition '%s' changed: %s -> %s" % [desc, previous, current])
-
-#endregion
-
 #region Helper Methods
-static func _is_empty(value: Variant) -> bool:
+func _is_empty(value: Variant) -> bool:
 	if value == null: return true
 	match typeof(value):
 		TYPE_ARRAY: return (value as Array).is_empty()
@@ -215,17 +136,17 @@ static func _is_empty(value: Variant) -> bool:
 		TYPE_STRING: return (value as String).is_empty()
 		_: return false
 
-static func _are_comparable(a: Variant, b: Variant) -> bool:
-	var type_a = typeof(a)
-	var type_b = typeof(b)
-	return type_a == type_b or (type_a in [TYPE_INT, TYPE_FLOAT] and type_b in [TYPE_INT, TYPE_FLOAT])
-
-static func _contains_value(container: Variant, value: Variant) -> bool:
+func _contains_value(container: Variant, value: Variant) -> bool:
 	match typeof(container):
 		TYPE_STRING: return (container as String).contains(str(value))
 		TYPE_ARRAY: return (container as Array).has(value)
 		TYPE_DICTIONARY: return (container as Dictionary).has(value)
 		_: return false
+
+func _are_comparable(a: Variant, b: Variant) -> bool:
+	var type_a = typeof(a)
+	var type_b = typeof(b)
+	return type_a == type_b or (type_a in [TYPE_INT, TYPE_FLOAT] and type_b in [TYPE_INT, TYPE_FLOAT])
 
 func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bool:
 	var eval_operator = OPERATOR_MAP.get(operator)
@@ -277,11 +198,12 @@ func _register_property(property_path_str: String) -> void:
 	logger.trace("Registered property: %s" % path.full)
 
 func _log_required_properties() -> void:
-		var properties = _required_properties.keys()
-		if properties.is_empty():
-			return
+	var properties = _required_properties.keys()
+	if properties.is_empty():
+		return
 
-		logger.debug("Required properties:\n  - %s" % "\n  - ".join(properties))
+	logger.debug("Required properties:\n  - %s" % "\n  - ".join(properties))
+#endregion
 
 #region Stack Management
 func _push_evaluation_context(description: String) -> void:
@@ -293,28 +215,4 @@ func _pop_evaluation_context() -> void:
 func _get_current_context() -> String:
 	return "" if _evaluation_stack.is_empty() else " (in: %s)" % " → ".join(_evaluation_stack)
 
-func _get_condition_cache_key(condition: Condition, context: Dictionary) -> String:
-	var parts = []
-	
-	if condition.config.has("description"):
-		parts.append(condition.config.description)
-		
-	if condition.config.has("evaluation"):
-		var eval = condition.config.evaluation
-		if eval.has("property"):
-			var op_str = OPERATOR_MAP.get(eval.get("operator", "EQUALS"), "==")
-			var value_str = eval.get("value", "from:" + eval.get("value_from", ""))
-			parts.append("%s %s %s" % [eval.property, op_str, value_str])
-			
-	var context_values = []
-	for property in condition.get_required_properties():
-		var path := Path.parse(property)
-		if context.has(path.full):
-			context_values.append("%s=%s" % [path.full, context[path.full]])
-			
-	var key = " | ".join(parts)
-	if not context_values.is_empty():
-		key += " [Context: %s]" % ", ".join(context_values)
-		
-	return key
 #endregion
