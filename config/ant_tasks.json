@@ -97,11 +97,11 @@
 		  "conditions": [
 			{
 			  "type": "Custom",
-			  "name": "OverloadedWithFood"
+			  "name": "IsCarryingFood"
 			},
 			{
 			  "type": "Custom",
-			  "name": "InHome"
+			  "name": "AtHome"
 			}
 		  ]
 		}
