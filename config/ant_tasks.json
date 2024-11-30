@@ -28,7 +28,16 @@
 		{
 		  "name": "WanderForFood",
 		  "priority": "LOWEST",
-		  "conditions": []
+		  "conditions": [
+			{
+			  "type": "Operator",
+			  "operator_type": "not",
+			  "operands": [
+				{
+				  "type": "Custom",
+				  "name": "OverloadedWithFood"
+				}
+			]
 		},
 		{
 		  "name": "FollowFoodPheromones",
@@ -79,8 +88,26 @@
 			  "name": "OverloadedWithFood"
 			}
 		  ]
+		},
+		{
+		  "name": "StoreFood",
+		  "priority": "HIGHEST",
+		  "conditions": [
+			{
+		  
+			  "type": "Custom",
+			  "name": "OverloadedWithFood"
+			
+			},
+			{
+		  
+			  "type": "Custom",
+			  "name": "InHome"
+			
+			},
+			]
 		}
-	  ]
+	}
 	}
   }
 }
