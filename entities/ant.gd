@@ -39,7 +39,7 @@ var foods: Foods :
 var task_tree: TaskTree
 
 ## The navigation agent for this ant
-var nav_agent: NavigationAgent2D
+@onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 
 var target_position: Vector2
 
@@ -63,10 +63,18 @@ func _init(init_as_active: bool = false) -> void:
 	# In case we don't want to start behavior immediately
 	if init_as_active:
 		_init_task_tree()
-	
+		
+
 
 func _ready() -> void:
 	spawned.emit()
+	# Setup navigation
+	nav_agent.path_desired_distance = 4.0
+	nav_agent.target_desired_distance = 4.0
+	
+func _physics_process(delta: float) -> void:
+	if velocity:
+		move_and_slide()
 
 func _process(delta: float) -> void:
 	task_tree.update(delta)

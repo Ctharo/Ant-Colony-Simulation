@@ -13,7 +13,7 @@ var cooldown: float = 0.0:
 	set(value):
 		cooldown = value
 
-var duration: float = 1.0
+var duration: float
 
 var current_cooldown: float = 0.0:
 	set(value):
@@ -30,6 +30,8 @@ var description: String
 
 var logger: Logger
 var _is_executing: bool = false
+var _elapsed_time: float = 0.0
+
 
 #region Builder
 class Builder:
@@ -158,6 +160,14 @@ func update(delta: float) -> void:
 
 func _update_action(_delta: float) -> void:
 	pass
+	
+func _complete() -> void:
+	if not _is_executing:
+		return
+		
+	_is_executing = false
+	_elapsed_time = 0.0
+	completed.emit()
 
 func is_completed() -> bool:
 	return not _is_executing
@@ -189,6 +199,14 @@ func _on_ant_action_completed() -> void:
 
 #region Action Classes
 class Move extends Action:
+	## How far ahead to set intermediate nav targets
+	const LOOK_AHEAD_DISTANCE = 50.0
+	## How close we need to be to consider reaching intermediate target
+	const INTERMEDIATE_TARGET_THRESHOLD = 5.0
+	
+	var _ultimate_target: Vector2
+	var _current_intermediate_target: Vector2
+	
 	func _init():
 		super()
 		base_name = "move"
@@ -196,10 +214,58 @@ class Move extends Action:
 
 	static func create() -> Builder:
 		return Builder.new(Move)
-
+		
+	func _on_start() -> void:
+		if not ant:
+			_complete()
+			return
+			
+		_ultimate_target = ant.get_property_value("proprioception.base.target_position")
+		if not _ultimate_target:
+			logger.error("No target position set for move action")
+			_complete()
+			return
+			
+		_set_next_intermediate_target()
+		
 	func _update_action(delta: float) -> void:
-		ant.perform_action(self, params)
-
+		if not ant or not ant.nav_agent:
+			_complete()
+			return
+			
+		# Check if we've reached current intermediate target
+		if ant.global_position.distance_to(_current_intermediate_target) <= INTERMEDIATE_TARGET_THRESHOLD:
+			# If we're also at ultimate target, complete the action
+			if ant.global_position.distance_to(_ultimate_target) <= INTERMEDIATE_TARGET_THRESHOLD:
+				ant.set_property_value("proprioception.status.at_target", true)
+				_complete()
+				return
+			# Otherwise set next intermediate target
+			_set_next_intermediate_target()
+		
+		# Update velocity based on navigation
+		var next_path_position: Vector2 = ant.nav_agent.get_next_path_position()
+		var direction = ant.global_position.direction_to(next_path_position)
+		ant.velocity = direction * ant.get_property_value("speed.base.value")
+		
+	func _set_next_intermediate_target() -> void:
+		if not ant or not ant.nav_agent:
+			return
+			
+		# Get direction to ultimate target
+		var direction = ant.global_position.direction_to(_ultimate_target)
+		
+		# If we're close to ultimate target, use it directly
+		if ant.global_position.distance_to(_ultimate_target) <= LOOK_AHEAD_DISTANCE:
+			_current_intermediate_target = _ultimate_target
+		else:
+			# Otherwise set intermediate target LOOK_AHEAD_DISTANCE units ahead
+			_current_intermediate_target = ant.global_position + direction * LOOK_AHEAD_DISTANCE
+		
+		# Update navigation agent target
+		ant.nav_agent.target_position = _current_intermediate_target
+		logger.trace("Set new intermediate target: %s" % _current_intermediate_target)
+		
 class Harvest extends Action:
 	func _init():
 		super()
