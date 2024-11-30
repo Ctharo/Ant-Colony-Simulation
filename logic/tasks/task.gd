@@ -153,7 +153,8 @@ func update(delta: float, context: Dictionary) -> void:
 		active_behavior.name if active_behavior else "None",
 		Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
 	])
-
+	if active_behavior and active_behavior.action and active_behavior.action._is_executing:
+		return
 	# Check task-level conditions
 	var all_conditions_met = true
 	for condition in conditions:
@@ -201,7 +202,8 @@ func update(delta: float, context: Dictionary) -> void:
 		var next_behavior = find_next_valid_behavior(context)
 		if next_behavior:
 			_switch_behavior(next_behavior)
-			
+	if active_behavior:
+		active_behavior.update(delta, context)
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
 	if not is_instance_valid(behavior):
