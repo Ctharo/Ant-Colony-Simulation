@@ -235,7 +235,7 @@ func create_ant_to_browse() -> void:
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
-	ant.foods.add_food(ant.get_property_value(Path.parse("storage.capacity.max")))
+	ant.foods.add_food(ant.get_property_value("storage.capacity.max"))
 
 	current_ant = ant
 	navigation_manager.set_property_access(ant)

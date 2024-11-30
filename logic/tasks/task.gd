@@ -153,12 +153,12 @@ func update(delta: float, context: Dictionary) -> void:
 		active_behavior.name if active_behavior else "None",
 		Behavior.State.keys()[active_behavior.state] if active_behavior else "N/A"
 	])
-	if active_behavior and active_behavior.action and active_behavior.action._is_executing:
-		return
+	if active_behavior:
+		active_behavior.update(delta, context)
 	# Check task-level conditions
 	var all_conditions_met = true
 	for condition in conditions:
-		if not is_instance_valid(condition) or not evaluate_condition(condition, context):
+		if not is_instance_valid(condition) or not _evaluate_condition(condition, context):
 			all_conditions_met = false
 			break
 	if not all_conditions_met:
@@ -202,8 +202,8 @@ func update(delta: float, context: Dictionary) -> void:
 		var next_behavior = find_next_valid_behavior(context)
 		if next_behavior:
 			_switch_behavior(next_behavior)
-	if active_behavior:
-		active_behavior.update(delta, context)
+
+		
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
 	if not is_instance_valid(behavior):
@@ -312,61 +312,48 @@ func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -
 	priorities.sort()
 	priorities.reverse()
 	
-	logger.trace("\nChecking behaviors (current priority: %d)" % current_priority)
+	logger.trace("Checking behaviors based on priority")
 	
 	# Check behaviors by priority level
 	for priority in priorities:
 		# Skip priorities lower than or equal to current_priority if specified
 		if current_priority >= 0 and priority <= current_priority:
-			logger.trace("Stopping at priority %d (current: %d)" % [priority, current_priority])
+			logger.trace("Stopping at priority %d" % priority)
 			break
 			
-		logger.trace("Checking priority level: %d" % priority)
 		var behaviors_at_priority = priority_groups[priority]
-		var any_conditions_met = false
-		
-		for behavior in behaviors_at_priority:
+		if behaviors_at_priority.is_empty():
+			continue
+		var behavior_count: int = behaviors_at_priority.size()
+		var str: String = "behavior" if behavior_count == 1 else "behaviors"
+		logger.trace("Checking %s %s at priority level %d" % [behavior_count, str, priority])		
+		for behavior: Behavior in behaviors_at_priority:
 			if not is_instance_valid(behavior):
 				continue
-				
-			logger.trace("  Checking behavior: %s" % behavior.name)
-			
-			# Check if behavior meets all conditions
-			var conditions_met = true
-			for condition in behavior.conditions:
-				if not is_instance_valid(condition):
-					continue
-				if not evaluate_condition(condition, context):
-					conditions_met = false
-					break
-					
-			if conditions_met:
-				logger.trace("    Behavior %s is valid" % behavior.name)
+			logger.trace("Determining if behavior '%s' should activate" % behavior.name)
+			var result: bool = behavior.should_activate(context)
+			logger.debug("Determined if behavior '%s' should activate -> %s" % [behavior.name, result])
+			if result:
 				return behavior
-				
-			any_conditions_met = any_conditions_met or conditions_met
-			
-		# If no conditions were met at this priority level, we can stop checking
-		# as lower priorities won't be able to activate
-		if not any_conditions_met:
-			logger.trace("  No behaviors at priority %d could activate, stopping checks" % priority)
-			break
-			
-	logger.trace("No valid behaviors found")
+		logger.trace("No behaviors at priority %d could activate, stopping checks" % priority)			
+	if not active_behavior.should_activate(context):
+		logger.debug("No valid behaviors found")
+	else:
+		logger.debug("No better behaviors found")
 	return null
 
-func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
+func _evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	var result = _condition_system.evaluate_condition(condition, context)
-	logger.info("Evaluated condition %s -> %s" % [condition.name, result])
+	logger.debug("Evaluated condition for task '%s': %s -> %s" % [name, _format_condition(condition.config), result])
 	return result
 
 ## Helper function to group behaviors by priority
-func format_condition(condition: Dictionary) -> String:
+func _format_condition(condition: Dictionary) -> String:
 	match condition["type"]:
 		"Operator":
 			var operator_type = condition["operator_type"]
 			var operands = condition["operands"]
-			var formatted_operands = operands.map(func(op): return format_condition(op))
+			var formatted_operands = operands.map(func(op): return _format_condition(op))
 			
 			# Formatting operators with human-readable logic
 			match operator_type:

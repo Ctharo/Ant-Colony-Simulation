@@ -54,7 +54,7 @@ func _init(_entity: Node) -> void:
 
 #region Property Getters and Setters
 func _get_max_capacity() -> float:
-	var strength_level = entity.get_property_value(Path.parse("strength.base.level"))
+	var strength_level = entity.get_property_value("strength.base.level")
 	return strength_level * 10.0 if strength_level else 0.0
 
 func _get_current_capacity() -> float:

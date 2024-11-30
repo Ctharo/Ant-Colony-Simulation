@@ -91,30 +91,55 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 #region Action Methods
 ## Placeholder for actions
-func perform_action(action: Action, args: Dictionary = {}) -> void:
+func perform_action(action: Action, args: Array = []) -> void:
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
-	event_str += args.description if args else "N/A"
+	event_str += action.description if action.description else "N/A"
+	logger.trace(event_str)
 	
-	match action.name:
+	match action.base_name:
 		"store":
 			if foods.is_empty():
 				action_completed.emit()
 			else:
 				await get_tree().create_timer(action.duration).timeout
-		"move": 
-			if get_property_value(Path.parse("proprioception.status.at_target")):
-				action_completed.emit()
-			else:
-				await get_tree().create_timer(action.duration).timeout
-		"harvest":
-			if get_property_value(Path.parse("storage.status.is_full")):
-				action_completed.emit()
-			else:
-				await get_tree().create_timer(action.duration).timeout
+				foods.clear()
 				
+		"move": 
+			if get_property_value("proprioception.status.at_target"):
+				action_completed.emit()
+			else:
+				await get_tree().create_timer(action.duration).timeout
+				var target_position: Vector2 = get_property_value("proprioception.base.target_position")
+				if target_position and global_position != target_position:
+					global_position = target_position
+					logger.debug("Ant moved to position: %s" % target_position)
+				
+		"harvest":
+			if get_property_value("storage.status.is_full"):
+				action_completed.emit()
+			else:
+				await get_tree().create_timer(action.duration).timeout
+				# TODO: Add actual harvesting logic here
+				foods.add_food(get_property_value("storage.capacity.max"))
+				
+		"follow_pheromone":
+			await get_tree().create_timer(action.duration).timeout
+			# TODO: Add pheromone following logic here
+			action_completed.emit()
+			
+		"random_move":
+			await get_tree().create_timer(action.duration).timeout
+			# Movement handled by action params setting target position
+			action_completed.emit()
+			
+		"rest":
+			await get_tree().create_timer(action.duration).timeout
+			# TODO: Add rest/energy recovery logic here
+			action_completed.emit()
+			
 		_:
-			# Default duration-based completion
+			logger.warn("Unknown action type: %s" % action.base_name)
 			await get_tree().create_timer(action.duration).timeout
 			action_completed.emit()
 #endregion
@@ -208,20 +233,20 @@ func get_property(path: Path) -> PropertyNode:
 	return _property_access.get_property(path)
 
 ## Get a property value by path
-func get_property_value(path: Path) -> Variant:
+func get_property_value(path_string: String) -> Variant:
 	if not _property_access:
 		logger.error("Cannot get ant property value: ant property access system not initialized")
 		return null
-	return _property_access.get_property_value(path)
+	return _property_access.get_property_value(Path.parse(path_string))
 
 ## Set a property value by path string
-func set_property_value(path: Path, value: Variant) -> Result:
+func set_property_value(path_string: String, value: Variant) -> Result:
 	if not _property_access:
 		return Result.new(
 			Result.ErrorType.SYSTEM_ERROR,
 			"Cannot set ant property value: ant property access system not initialized"
 		)
-	return _property_access.set_property_value(path, value)
+	return _property_access.set_property_value(Path.parse(path_string), value)
 
 ## Find a property node by path
 func find_property_node(path: Path) -> PropertyNode:

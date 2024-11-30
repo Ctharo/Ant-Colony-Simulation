@@ -42,6 +42,18 @@ func _init(_entity: Node) -> void:
 				Callable(),
 				["vision.range.current"],
 				"Food items within vision range")\
+			.container("nearest", "Nearest food item to entity")\
+				.value("object", Property.Type.FOOD,
+					Callable(self, "_get_nearest_food"),
+					Callable(),
+					["vision.foods.list"],
+					"Nearest visible food item")\
+				.value("position", Property.Type.VECTOR2,
+					Callable(self, "_get_nearest_food_position"),
+					Callable(),
+					["vision.foods.nearest.object"],
+					"Nearest visible food item position")\
+			.up()\
 			.value("count", Property.Type.INT,
 				Callable(self, "_get_foods_in_range_count"),
 				Callable(),
@@ -91,6 +103,19 @@ func _get_foods_in_range() -> Foods:
 		return null
 	return Foods.in_range(entity.global_position, _range, true)
 
+func _get_nearest_food() -> Food:
+	if not entity:
+		logger.error("Cannot get nearest food in range: entity reference is null")
+		return null
+	return Foods.nearest_food(entity.global_position, _range, true)
+
+func _get_nearest_food_position() -> Vector2:
+	if not entity:
+		logger.error("Cannot get nearest food position: entity reference is null")
+		return Vector2.ZERO
+	var food: Food = _get_nearest_food()
+	return food.global_position if food else Vector2.ZERO
+	
 func _get_foods_in_range_count() -> int:
 	var foods = _get_foods_in_range()
 	return foods.size() if foods else 0

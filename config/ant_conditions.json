@@ -3,10 +3,19 @@
 	"AtHome": {
 	  "description": "Check if ant within boundary of colony radius",
 	  "evaluation": {
-		"operator": "LESS_THAN",
-		"property": "proprioception.colony.distance",
+		"operator": "EQUALS",
+		"property": "proprioception.status.at_colony",
 		"type": "PropertyCheck",
-		"value_from": "colony.radius"
+		"value": true
+	  }
+	},
+	"AtTarget": {
+	  "description": "Check if ant at target location",
+	  "evaluation": {
+		"operator": "EQUALS",
+		"property": "proprioception.status.at_target",
+		"type": "PropertyCheck",
+		"value": true
 	  }
 	},
 	"IsCarryingFood": {

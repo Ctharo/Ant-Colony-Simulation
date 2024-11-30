@@ -10,6 +10,7 @@ func _init(initial_foods: Array[Food] = []):
 func add_food(mass_to_add: float) -> float:
 	var food: Food = Food.new(mass_to_add)
 	append(food)
+	print("Food added")
 	return get_mass()
 
 func mark_as_carried() -> void:
@@ -49,6 +50,16 @@ static func in_range(location: Vector2, _range: float, available_foods: bool = f
 			else:
 				continue
 	return f
+
+static func nearest_food(location: Vector2, _range: float, available_foods: bool = false) -> Food:
+	var nearest: Food
+	var distance: float = INF
+	for food: Food in Foods.in_range(location, _range, available_foods):
+		var d: float = food.global_position.distance_to(location)
+		if d < distance:
+			nearest = food
+			distance = d
+	return nearest
 
 static func all() -> Foods:
 	return FoodManager.get_all()

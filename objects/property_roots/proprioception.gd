@@ -15,6 +15,11 @@ func _init(_entity: Node) -> void:
 					Callable(),
 					[],
 					"Current global position of the entity")\
+				.value("target_position", Property.Type.VECTOR2,
+					Callable(self, "_get_target_position"),
+					Callable(self, "_set_target_position"),
+					[],
+					"Current target position for movement")\
 			.up()\
 			.container("colony", "Information about position relative to colony")\
 				.value("position", Property.Type.VECTOR2,
@@ -37,7 +42,7 @@ func _init(_entity: Node) -> void:
 				.value("at_target", Property.Type.BOOL,
 					Callable(self, "_is_at_target"),
 					Callable(),
-					["proprioception.base.position", "proprioception.target.position"],
+					["proprioception.base.position", "proprioception.base.target_position"],
 					"Whether the entity is at the target location")\
 				.value("at_colony", Property.Type.BOOL,
 					Callable(self, "_is_at_colony"),
@@ -70,11 +75,23 @@ func _get_colony_position() -> Vector2:
 	if not entity:
 		logger.error("Cannot get colony position: entity reference is null")
 		return Vector2.ZERO
-	var colony_pos = entity.get_property_value(Path.parse("colony.position"))
+	var colony_pos = entity.get_property_value("colony.position")
 	if not colony_pos:
 		logger.trace("Could not get colony position")
 		return Vector2.ZERO
 	return colony_pos
+
+func _get_target_position() -> Vector2:
+	if not entity:
+		logger.error("Cannot get target position: entity reference is null")
+		return Vector2.ZERO
+	return entity.target_position
+	
+func _set_target_position(target_position: Vector2) -> void:
+	if not entity:
+		logger.error("Cannot set target position: entity reference is null")
+		return
+	entity.target_position = target_position
 
 func _get_distance_to_colony() -> float:
 	if not entity:
@@ -95,7 +112,11 @@ func _get_direction_to_colony() -> Vector2:
 	return _direction_to(colony_pos)
 
 func _is_at_target() -> bool:
-	return entity.global_position.distance_to(entity.target_position)
+	var current_pos: Vector2 = entity.get_property_value("proprioception.base.position")
+	var target_pos: Vector2 = entity.get_property_value("proprioception.base.target_position")
+	if not current_pos:
+		return false
+	return current_pos.distance_to(target_pos) < 10 # TODO: Magic number
 
 func _is_at_colony() -> bool:
 	return is_zero_approx(_get_distance_to_colony())

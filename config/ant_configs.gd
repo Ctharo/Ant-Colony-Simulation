@@ -93,13 +93,16 @@ static func create_action_from_config(config: Dictionary, ant: Ant) -> Action:
 	var action_class = _action_classes[action_name]
 	var builder = action_class.create()
 	
-	# Apply configuration
-	builder.with_ant(ant)
+	# Apply basic configuration
+	builder.with_ant(ant)\
+		.with_name(action_name)\
+		.with_description(config.get("description", ""))\
+		.with_duration(2.0)
+		
 	
-	# Add params if they exist
+	# Add params array if it exists
 	if "params" in config:
-		for key in config.params:
-			builder.with_param(key, config.params[key])
+		builder.with_params(config.params)
 			
 	return builder.build()
 

@@ -7,7 +7,9 @@ func _init() -> void:
 func _ready() -> void:
 	logger.set_logging_level(DebugLogger.LogLevel.TRACE)
 	logger.set_logging_category(DebugLogger.Category.TASK)
-	#logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
+	#logger.set_logging_category(DebugLogger.Category.ACTION)
+
+	logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
 	#logger.set_logging_category(DebugLogger.Category.CONDITION)
 
 	spawn_ants(1)
@@ -40,8 +42,9 @@ func spawn_ants(num_to_spawn: int = 1) -> void:
 	for i in range(num_to_spawn):
 		# Create a new ant
 		var ant = AntManager.spawn_ant()
-		ant.foods.add_food(ant.get_property_value(Path.parse("storage.capacity.max")))
 		colony.add_ant(ant)
+
+
 
 ## Create components in stages to avoid freezing
 func _staged_creation() -> void:

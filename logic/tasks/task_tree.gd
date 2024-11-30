@@ -39,6 +39,8 @@ var _last_active_task: Task
 var _context_registry: ContextRegistry
 
 var logger: Logger
+
+var update_timer: float = 0.0
 #endregion
 
 func _init() -> void:
@@ -57,7 +59,7 @@ func _setup_context_providers() -> void:
 		_context_registry.register_value(
 			path.full,
 			frequency,
-			func(): return ant.get_property_value(path),
+			func(): return ant.get_property_value(path.full),
 			can_interrupt
 		)
 	
@@ -71,6 +73,9 @@ static func create(_ant: Ant) -> Builder:
 ## Updates the task tree's state and propagates updates to child tasks
 ## [param delta] The time elapsed since the last update
 func update(delta: float) -> bool:
+	update_timer += delta
+	if update_timer < 1.0:
+		return false
 	logger.trace("Updating task tree")
 	if not is_instance_valid(ant):
 		logger.error("Ant reference is invalid")
@@ -80,7 +85,7 @@ func update(delta: float) -> bool:
 		logger.error("No root task set")
 		return false
 
-	_context_registry.update(delta)
+	_context_registry.update(update_timer)
 	var context := gather_context()
 
 	if root_task.state != Task.State.ACTIVE:
@@ -90,7 +95,7 @@ func update(delta: float) -> bool:
 	var previous_active = get_active_task()
 	var previous_behavior = previous_active.get_active_behavior() if previous_active else null
 
-	root_task.update(delta, context)
+	root_task.update(update_timer, context)
 
 	var current_active = get_active_task()
 	var current_behavior = current_active.get_active_behavior() if current_active else null
@@ -104,9 +109,9 @@ func update(delta: float) -> bool:
 	if current_active != _last_active_task:
 		_last_active_task = current_active
 		active_task_changed.emit(current_active)
-
+		
+	update_timer = 0.0
 	tree_updated.emit()
-	
 	return true
 
 # TODO: Not working
@@ -188,8 +193,6 @@ class Builder:
 	func with_root_task(type: String) -> Builder:
 		_root_type = type
 		return self
-
-
 
 	func build() -> TaskTree:
 		var tree := TaskTree.new()

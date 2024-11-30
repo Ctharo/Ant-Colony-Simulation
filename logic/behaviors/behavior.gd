@@ -129,16 +129,17 @@ func _init(p_priority: int = Priority.MEDIUM, condition_system: ConditionSystem 
 	logger = Logger.new("behavior", DebugLogger.Category.BEHAVIOR)
 #endregion
 
+
 #region Public Methods
 func add_condition(condition: Condition) -> void:
 	conditions.append(condition)
-	logger.info("Added condition to behavior '%s': %s" % [name, condition.config])
+	logger.trace("Added condition to behavior '%s': %s" % [name, condition.config])
 
 func set_action(p_action: Action) -> void:
 	action = p_action
 	if is_instance_valid(ant):
 		action.ant = ant
-	logger.info("Set action for behavior '%s': %s" % [name, action.name])
+	logger.trace("Set action for behavior '%s': %s" % [name, action.name])
 
 func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 	if not is_instance_valid(p_ant):
@@ -158,22 +159,14 @@ func start(p_ant: Ant, p_condition_system: ConditionSystem = null) -> void:
 	started.emit()
 
 func should_activate(context: Dictionary) -> bool:
-	var conditions_met = _check_conditions(context)
-	var _should_activate = state != State.COMPLETED and conditions_met
-
-	logger.trace("Checking activation for '%s':\n" % name +
-		"  Current state: %s\n" % State.keys()[state] +
-		"  Conditions met: %s\n" % conditions_met +
-		"  Should activate: %s" % _should_activate)
-
-	return _should_activate
+	return _check_conditions(context)
 
 func update(delta: float, context: Dictionary) -> void:
 	if state != State.ACTIVE:
 		return
 
 	if not _check_conditions(context):
-		logger.info("Conditions no longer met for '%s', interrupting" % name)
+		logger.trace("Conditions no longer met for '%s', interrupting" % name)
 		interrupt()
 		return
 
@@ -182,7 +175,7 @@ func update(delta: float, context: Dictionary) -> void:
 	if action.is_completed():
 		state = State.COMPLETED
 		completed.emit()
-		logger.info("Behavior '%s' completed (action finished)" % name)
+		logger.trace("Behavior '%s' completed (action finished)" % name)
 
 func interrupt() -> void:
 	if state == State.ACTIVE:
@@ -194,7 +187,9 @@ func interrupt() -> void:
 func reset() -> void:
 	state = State.INACTIVE
 	action.reset()
-	logger.info("Reset behavior '%s'" % name)
+	logger.trace("Reset behavior '%s'" % name)
+	
+
 #endregion
 
 #region Private Methods
@@ -207,9 +202,36 @@ func _check_conditions(context: Dictionary) -> bool:
 		return false
 
 	for condition in conditions:
-		if not _condition_system.evaluate_condition(condition, context):
+		if not _evaluate_condition(condition, context):
 			return false
 	return true
+	
+func _evaluate_condition(condition: Condition, context: Dictionary) -> bool:
+	var result = _condition_system.evaluate_condition(condition, context)
+	logger.info("Evaluated condition for behavior '%s': %s -> %s" % [name, _format_condition(condition.config), result])
+	return result
+
+
+## Helper function to group behaviors by priority
+func _format_condition(condition: Dictionary) -> String:
+	match condition["type"]:
+		"Operator":
+			var operator_type = condition["operator_type"]
+			var operands = condition["operands"]
+			var formatted_operands = operands.map(func(op): return _format_condition(op))
+			
+			# Formatting operators with human-readable logic
+			match operator_type:
+				"not":
+					return "not (" + formatted_operands[0] + ")"
+				"and":
+					return "(" + " and ".join(formatted_operands) + ")"
+				"or":
+					return "(" + " or ".join(formatted_operands) + ")"
+		"Custom":
+			return condition["name"]
+	
+	return "Unknown Condition"
 #endregion
 
 #region Debug Methods
