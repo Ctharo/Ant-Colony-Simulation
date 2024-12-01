@@ -204,9 +204,10 @@ class Builder:
 		var tree := TaskTree.new()
 		tree.ant = _ant
 
-		assert(AntConfigs.behavior_configs)
-		assert(AntConfigs.task_configs)
-		assert(AntConfigs.condition_configs)
+		# Verify configs are loaded
+		assert(AntConfigs.behavior_configs, "Behavior configs not loaded")
+		assert(AntConfigs.task_configs, "Task configs not loaded")
+		assert(AntConfigs.condition_configs, "Condition configs not loaded")
 
 		# Create condition system
 		tree._condition_system = ConditionSystem.new(_ant)
@@ -215,32 +216,18 @@ class Builder:
 		tree._context_registry = ContextRegistry.new()
 		tree._setup_context_providers()
 
-		# Create task behaviors
-		var behaviors = AntConfigs.create_task_behaviors(
-			_root_type,
+		var task_config: TaskConfig = AntConfigs.get_task_config(_root_type)
+
+		# Create the task from config
+		var task = AntConfigs.create_task_from_config(
+			task_config,
 			_ant,
 			tree._condition_system
 		)
 
-		if behaviors.is_empty():
-			logger.error("Failed to create behaviors for task: %s" % _root_type)
+		if not task:
+			logger.error("Failed to create task: %s" % _root_type)
 			return tree
-
-		# Create the task itself
-		var task = Task.new(Task.Priority[AntConfigs._task_configs[_root_type].get("priority", "MEDIUM")], tree._condition_system)
-		task.name = _root_type
-		task.ant = _ant
-
-		# Add task conditions
-		var task_config = AntConfigs._task_configs[_root_type]
-		if "conditions" in task_config:
-			for condition_data in task_config.conditions:
-				var condition = AntConfigs.create_condition(condition_data)
-				task.add_condition(condition)
-
-		# Add behaviors to task
-		for behavior in behaviors:
-			task.add_behavior(behavior)
 
 		tree.root_task = task
 		logger.info("Successfully built task tree with root task: %s" % _root_type)

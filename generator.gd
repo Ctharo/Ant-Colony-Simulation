@@ -1,150 +1,238 @@
 @tool
 extends EditorScript
 
-const TASKS_DIR := "res://resources/tasks"
-const TASKS_LIST_PATH := "res://resources/ant_tasks.tres"
+const ConfigBase = preload("res://config/config_base.gd")
+const PropertyCheckConfig = preload("res://config/property_check_config.gd")
+const OperatorConfig = preload("res://config/operator_config.gd")
+const CustomConditionConfig = preload("res://config/custom_condition_config.gd")
 
-const TASKS := {
-	"CollectFood": {
-		"priority": "MEDIUM",
-		"conditions": [
-			{
-				"type": "Operator",
-				"operator_type": "not",
-				"operands": [
-					{
-						"type": "Operator",
-						"operator_type": "or",
-						"operands": [
-							{
-								"type": "Custom",
-								"name": "LowEnergy"
-							},
-							{
-								"type": "Custom",
-								"name": "LowHealth"
-							}
-						]
-					}
-				]
-			}
-		],
-		"behaviors": [
-			{
-				"name": "WanderForFood",
-				"priority": "LOWEST"
-			},
-			{
-				"name": "FollowFoodPheromones",
-				"priority": "LOW"
-			},
-			{
-				"name": "MoveToFood",
-				"priority": "HIGH"
-			},
-			{
-				"name": "HarvestFood",
-				"priority": "HIGHEST"
-			},
-			{
-				"name": "MoveToHome",
-				"priority": "HIGHEST"
-			},
-			{
-				"name": "StoreFood",
-				"priority": "HIGHEST"
-			}
-		]
+
+var conditions = {
+	"AtHome": {
+		"description": "Check if ant within boundary of colony radius",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "proprioception.status.at_colony",
+			"type": "PropertyCheck",
+			"value": true
+		}
+	},
+	"AtTarget": {
+		"description": "Check if ant at target location",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "proprioception.status.at_target",
+			"type": "PropertyCheck",
+			"value": true
+		}
+	},
+	"IsCarryingFood": {
+		"description": "Check if ant is carrying any food",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "storage.status.is_carrying",
+			"type": "PropertyCheck",
+			"value": true
+		}
+	},
+	"IsFoodInReach": {
+		"description": "Check if food is reachable by ant",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "GREATER_THAN",
+			"property": "reach.foods.count",
+			"type": "PropertyCheck",
+			"value": 0
+		}
+	},
+	"IsFoodInView": {
+		"description": "Check if food is visible to ant",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "GREATER_THAN",
+			"property": "vision.foods.count",
+			"type": "PropertyCheck",
+			"value": 0
+		}
+	},
+	"IsFoodPheromoneSensed": {
+		"description": "Check if food pheromones are detected",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "GREATER_THAN",
+			"property": "olfaction.pheromones.food.count",
+			"type": "PropertyCheck",
+			"value": 0
+		}
+	},
+	"IsHomePheromoneSensed": {
+		"description": "Check if home pheromones are detected",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "GREATER_THAN",
+			"property": "olfaction.pheromones.home.count",
+			"type": "PropertyCheck",
+			"value": 0
+		}
+	},
+	"IsAnyPheromoneSensed": {
+		"description": "Check if any pheromones are detected",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "GREATER_THAN",
+			"property": "olfaction.pheromones.count",
+			"type": "PropertyCheck",
+			"value": 0
+		}
+	},
+	"LowEnergy": {
+		"description": "Check if ant's energy is low but not depleted",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "energy.status.is_low",
+			"type": "PropertyCheck",
+			"value": true
+		}
+	},
+	"LowHealth": {
+		"description": "Check if ant's health is low but not depleted",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "health.status.is_low",
+			"type": "PropertyCheck",
+			"value": true
+		}
+	},
+	"HasStorageSpace": {
+		"description": "Check if ant has space to store more items",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "storage.status.is_full",
+			"type": "PropertyCheck",
+			"value": false
+		}
+	},
+	"OverloadedWithFood": {
+		"description": "Check if ant has no more space",
+		"type": "PropertyCheck",
+		"evaluation": {
+			"operator": "EQUALS",
+			"property": "storage.status.is_full",
+			"type": "PropertyCheck",
+			"value": true
+		}
+	},
+	"CanMoveAndAct": {
+		"description": "Check if ant is able to move and perform actions",
+		"type": "Operator",
+		"evaluation": {
+			"type": "Operator",
+			"operator_type": "or",
+			"operands": [
+				{
+					"type": "PropertyCheck",
+					"property": "storage.status.is_full",
+					"operator": "EQUALS",
+					"value": false
+				},
+				{
+					"type": "PropertyCheck",
+					"property": "energy.status.is_depleted",
+					"operator": "EQUALS",
+					"value": false
+				}
+			]
+		}
 	}
 }
-
 func _run() -> void:
-	if not _setup_directory():
-		return
+	# Create conditions directory if it doesn't exist
+	DirAccess.make_dir_absolute("res://resources/conditions")
+	convert_conditions_to_resources()
 
-	if not create_task_configs():
-		push_error("Failed to create task configurations")
-		return
 
-	print("Successfully created and saved all task configurations")
+## Converts a dictionary of conditions into ResourceConfigs and saves them
+## [param conditions] Dictionary of condition configurations to convert
+func convert_conditions_to_resources() -> void:
+	# Create the conditions directory if it doesn't exist
+	var dir = DirAccess.open("res://resources")
+	if !dir.dir_exists("conditions"):
+		dir.make_dir("conditions")
 
-func _setup_directory() -> bool:
-	var dir := DirAccess.open("res://")
-	if not dir:
-		push_error("Failed to access res:// directory")
-		return false
+	for condition_name in conditions:
+		var condition_data = conditions[condition_name]
+		var config: ConfigBase
 
-	if not dir.dir_exists(TASKS_DIR):
-		var err := dir.make_dir_recursive(TASKS_DIR)
-		if err != OK:
-			push_error("Failed to create tasks directory")
-			return false
+		# Convert the evaluation data into the appropriate resource type
+		match condition_data.type:
+			"PropertyCheck":
+				config = _create_property_check(condition_data.evaluation)
+			"Operator":
+				config = _create_operator_check(condition_data.evaluation)
+			"Custom":
+				config = _create_custom_condition(condition_name, condition_data)
+			_:
+				push_error("Unknown condition type: %s" % condition_data.type)
+				continue
 
-	return true
+		# Save the resource
+		if config:
+			var path = "res://resources/conditions/%s.tres" % condition_name.to_snake_case()
+			var error = ResourceSaver.save(config, path)
+			if error != OK:
+				push_error("Failed to save condition resource: %s (Error: %d)" % [path, error])
 
-func create_task_configs() -> bool:
-	var task_list := TaskConfigList.new()
+## Creates a PropertyCheckConfig resource from dictionary data
+## [param data] Dictionary containing property check configuration
+func _create_property_check(data: Dictionary) -> PropertyCheckConfig:
+	var config = PropertyCheckConfig.new()
+	config.property = Path.parse(data.property)
+	config.operator = data.operator
 
-	for task_name in TASKS:
-		var task_config := _create_single_task(task_name)
-		if not task_config:
-			push_error("Failed to create task config for: %s" % task_name)
-			continue
+	if data.value is String and "." in data.value: # In path.full format
+		config.value = Path.parse(data.value)
+	else:
+		config.value = data.value
+	return config
 
-		var path := _save_task_config(task_config, task_name)
-		if path.is_empty():
-			continue
+## Creates an OperatorConfig resource from dictionary data
+## [param data] Dictionary containing operator configuration
+func _create_operator_check(data: Dictionary) -> OperatorConfig:
+	var config = OperatorConfig.new()
+	config.operator_type = data.operator_type
 
-		task_list._paths[task_name] = path
-		print("Added task path: %s -> %s" % [task_name, path])
+	# Convert each operand recursively
+	for operand in data.operands:
+		var operand_config: ConfigBase
 
-	return _save_task_list(task_list)
+		match operand.type:
+			"PropertyCheck":
+				operand_config = _create_property_check(operand)
+			"Operator":
+				operand_config = _create_operator_check(operand)
+			_:
+				push_error("Unknown operand type: %s" % operand.type)
+				continue
 
-func _create_single_task(task_name: String) -> TaskConfig:
-	if not TASKS.has(task_name):
-		push_error("Task %s not found in definitions" % task_name)
-		return null
+		if operand_config:
+			config.operands.append(operand_config)
 
-	var task_data: Dictionary = TASKS[task_name]
-	var task := TaskConfig.new()
-	task.priority = task_data.priority
-	task.conditions = task_data.conditions
-	task.behaviors = task_data.behaviors
+	return config
 
-	return task
+## Creates a CustomConditionConfig resource from dictionary data
+## [param condition_name] Name of the custom condition
+## [param data] Dictionary containing custom condition configuration
+func _create_custom_condition(condition_name: String, data: Dictionary) -> CustomConditionConfig:
+	var config = CustomConditionConfig.new()
+	config.condition_name = condition_name
 
-func _save_task_config(task: TaskConfig, task_name: String) -> String:
-	var path := "%s/%s.tres" % [TASKS_DIR, task_name.to_snake_case()]
+	if data.has("evaluation"):
+		config.evaluation = _create_property_check(data.evaluation)
 
-	var err := ResourceSaver.save(task, path)
-	if err != OK:
-		push_error("Failed to save task: %s (Error: %d)" % [task_name, err])
-		return ""
-
-	print("Saved task: %s" % path)
-	return path
-
-func _save_task_list(task_list: TaskConfigList) -> bool:
-	if task_list._paths.is_empty():
-		push_error("No task paths to save!")
-		return false
-
-	print("Saving task list with paths: ", task_list._paths)
-
-	var err := ResourceSaver.save(task_list, TASKS_LIST_PATH)
-	if err != OK:
-		push_error("Failed to save task list (Error: %d)" % err)
-		return false
-
-	# Verify the save
-	var loaded_list = load(TASKS_LIST_PATH) as TaskConfigList
-	if not loaded_list:
-		push_error("Failed to verify saved task list!")
-		return false
-
-	if loaded_list._paths.is_empty():
-		push_error("Verified task list has empty paths!")
-		return false
-
-	print("Successfully saved and verified task list at: %s" % TASKS_LIST_PATH)
-	return true
+	return config

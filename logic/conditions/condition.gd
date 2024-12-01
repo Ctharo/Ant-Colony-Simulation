@@ -6,7 +6,7 @@ signal evaluation_changed(is_met: bool)
 
 ## Properties
 var name: String
-var config: Dictionary = {}
+var config: ConfigBase
 var previous_result: bool = false
 var _required_properties: Array[Path] = []
 

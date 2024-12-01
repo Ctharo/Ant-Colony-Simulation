@@ -23,7 +23,6 @@ var condition_paths: Dictionary = {} :
 ## Cache of loaded condition instances
 var conditions: Dictionary = {}
 
-
 ## Loads all conditions from their saved paths
 func load_conditions() -> void:
 	conditions.clear()

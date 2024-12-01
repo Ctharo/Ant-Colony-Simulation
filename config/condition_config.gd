@@ -1,7 +1,6 @@
 class_name ConditionConfig
-extends Resource
+extends ConfigBase
 
 @export var name: String
 @export var description: String = ""
-@export var type: String = "PropertyCheck"
 @export var evaluation: Dictionary

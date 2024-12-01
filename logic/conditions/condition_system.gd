@@ -51,6 +51,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
 		logger.error("Attempted to evaluate null condition")
 		return false
+
 	var result := _evaluate_condition_config(condition.config, context)
 	var previous = condition.previous_result
 	if result != previous:
@@ -60,72 +61,53 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 #endregion
 
 #region Evaluation Methods
-func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
-	var result = false
-	match config.get("type"):
-		"Custom": # Named condition
-			# Get the base condition config from resources
-			var condition_config = AntConfigs.get_condition_config(config.name)
-			if condition_config.is_empty():
-				logger.error("No configuration found for condition: %s" % config.name)
-				return false
-			result = _evaluate_property_check(condition_config, context)
+func _evaluate_condition_config(config: ConfigBase, context: Dictionary) -> bool:
+	match config.type:
+		"Custom":
+			var custom_config := config as CustomConditionConfig
+			return _evaluate_property_check(custom_config.evaluation, context)
 		"Operator":
-			result = _evaluate_operator(config, context)
+			var operator_config := config as OperatorConfig
+			return _evaluate_operator(operator_config, context)
 		"PropertyCheck":
-			result = _evaluate_property_check(config, context)
+			var property_config := config as PropertyCheckConfig
+			return _evaluate_property_check(property_config, context)
 		_:
-			logger.error("Unknown condition type in config: %s" % config)
-	return result
+			logger.error("Unknown condition type: %s" % config.type)
+			return false
 
-func _evaluate_named_condition(config: Dictionary, context: Dictionary) -> bool:
-	var condition_name = config.get("name", "N/A")
-	var condition_config: Dictionary = AntConfigs.get_condition_config(condition_name)
-	var result = _evaluate_property_check(condition_config, context)
-	return result
-
-func _evaluate_operator(config: Dictionary, context: Dictionary) -> bool:
-	var operator_type = config.operator_type.to_upper()
-	var operands = config.get("operands", [])
-	var result = false
-	match operator_type:
+func _evaluate_operator(config: OperatorConfig, context: Dictionary) -> bool:
+	match config.operator_type.to_upper():
 		"AND":
-			result = _evaluate_and_operator(operands, context)
+			return _evaluate_and_operator(config.operands, context)
 		"OR":
-			result = _evaluate_or_operator(operands, context)
+			return _evaluate_or_operator(config.operands, context)
 		"NOT":
-			result = _evaluate_not_operator(operands, context)
+			return _evaluate_not_operator(config.operands, context)
 		_:
-			logger.error("Unknown operator: %s" % operator_type)
+			logger.error("Unknown operator: %s" % config.operator_type)
+			return false
+
+func _evaluate_property_check(config: PropertyCheckConfig, context: Dictionary) -> bool:
+	var value_a = context.get(config.property)
+	var value_b = config.value if not config.value_from.is_empty() else context.get(config.value_from)
+
+	var result = _compare_values(value_a, value_b, config.operator)
 	return result
 
-func _evaluate_property_check(config: Dictionary, context: Dictionary) -> bool:
-	# Handle both direct property checks and those inside evaluation block
-	var check_config = config.get("evaluation", config)
-	if not check_config.has("property"):
-		logger.error("Invalid property check configuration")
-		return false
-
-	var operator = check_config.get("operator", "EQUALS")
-	var value_a = context.get(check_config.property)
-	var value_b = check_config.get("value", context.get(check_config.get("value_from", "")))
-
-	var result = _compare_values(value_a, value_b, operator)
-	return result
-
-func _evaluate_and_operator(operands: Array, context: Dictionary) -> bool:
-	for i in range(operands.size()):
-		if not _evaluate_condition_config(operands[i], context):
+func _evaluate_and_operator(operands: Array[ConfigBase], context: Dictionary) -> bool:
+	for operand in operands:
+		if not _evaluate_condition_config(operand, context):
 			return false
 	return true
 
-func _evaluate_or_operator(operands: Array, context: Dictionary) -> bool:
-	for i in range(operands.size()):
-		if _evaluate_condition_config(operands[i], context):
+func _evaluate_or_operator(operands: Array[ConfigBase], context: Dictionary) -> bool:
+	for operand in operands:
+		if _evaluate_condition_config(operand, context):
 			return true
 	return false
 
-func _evaluate_not_operator(operands: Array, context: Dictionary) -> bool:
+func _evaluate_not_operator(operands: Array[ConfigBase], context: Dictionary) -> bool:
 	if operands.size() != 1:
 		logger.error("NOT operator requires exactly one operand")
 		return false
@@ -173,8 +155,9 @@ func register_required_properties() -> void:
 	# Iterate through conditions in resource
 	var conditions = AntConfigs.condition_configs.conditions
 	for condition_name in conditions:
-		var config = AntConfigs.get_condition_config(condition_name)
-		_register_config_properties(config)
+		var config := AntConfigs.get_condition_config(condition_name)
+		if config:
+			_register_config_properties(config.evaluation)
 	_log_required_properties()
 
 func _register_config_properties(config: Dictionary) -> void:
@@ -182,10 +165,10 @@ func _register_config_properties(config: Dictionary) -> void:
 		for operand in config.get("operands", []):
 			_register_config_properties(operand)
 	else:
-		if "evaluation" in config:
-			_register_properties_from_evaluation(config.evaluation)
-		elif config.has("property"):
+		if config.has("property"):
 			_register_properties_from_evaluation(config)
+		elif "evaluation" in config:
+			_register_properties_from_evaluation(config.evaluation)
 
 func _register_properties_from_evaluation(evaluation: Dictionary) -> void:
 	if evaluation.has("property"):
