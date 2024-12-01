@@ -76,9 +76,6 @@ func _physics_process(delta: float) -> void:
 	if velocity:
 		move_and_slide()
 
-func _process(delta: float) -> void:
-	task_tree.update(delta)
-
 
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
@@ -225,6 +222,7 @@ func _init_task_tree() -> void:
 	task_tree = TaskTree.create(self)\
 		.with_root_task("CollectFood")\
 		.build()
+	add_child(task_tree, true)
 	if task_tree and task_tree.get_active_task():
 		logger.trace("Ant task_tree initialized successfully")
 		task_tree.active_task_changed.connect(_on_active_task_changed)

@@ -1,6 +1,6 @@
 ## A hierarchical tree structure for managing AI behavior tasks and their execution
 class_name TaskTree
-extends RefCounted
+extends Node
 
 #region Signals
 ## Signal emitted when the tree's active task changes
@@ -45,7 +45,13 @@ var update_timer: float = 0.0
 
 func _init() -> void:
 	logger = Logger.new("task_tree", DebugLogger.Category.TASK)
-	
+
+func _process(delta: float) -> void:
+	update_timer += delta
+	if update_timer >= 1.0:
+		update_timer = 0.0
+		update(delta)
+
 func _setup_context_providers() -> void:
 	# Register context providers based on condition system requirements
 	for property in _condition_system.get_required_properties():
