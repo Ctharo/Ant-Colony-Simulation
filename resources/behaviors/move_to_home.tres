@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="BehaviorConfig" load_steps=4 format=3 uid="uid://cf8araqrwd26x"]
+
+[ext_resource type="Script" path="res://config/action_config.gd" id="1_3r0p3"]
+[ext_resource type="Script" path="res://config/behavior_config.gd" id="2_ypbml"]
+
+[sub_resource type="Resource" id="Resource_1t8a0"]
+script = ExtResource("1_3r0p3")
+base_action = "Move"
+params = {
+"target_position": {
+"property": "proprioception.base.target_position",
+"property_value": "colony.position",
+"type": "target_position"
+}
+}
+description = "Moving towards colony"
+
+[resource]
+script = ExtResource("2_ypbml")
+name = "MoveToHome"
+priority = "HIGH"
+action = SubResource("Resource_1t8a0")
+conditions = Array[Dictionary]([])

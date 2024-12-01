@@ -1,5 +1,7 @@
 class_name BehaviorConfig
 extends Resource
 
-## The action configuration for this behavior
+@export var name: String
+@export var priority: String = "MEDIUM"
 @export var action: ActionConfig
+@export var conditions: Array[Dictionary] = []

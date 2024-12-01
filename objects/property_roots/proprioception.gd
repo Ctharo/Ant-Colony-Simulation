@@ -86,7 +86,7 @@ func _get_target_position() -> Vector2:
 		logger.error("Cannot get target position: entity reference is null")
 		return Vector2.ZERO
 	return entity.target_position
-	
+
 func _set_target_position(target_position: Vector2) -> void:
 	if not entity:
 		logger.error("Cannot set target position: entity reference is null")

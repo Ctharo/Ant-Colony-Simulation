@@ -75,7 +75,7 @@ class Builder:
 
 		if _action:
 			behavior.set_action(_action)
-			
+
 		if _condition_system:
 			behavior._condition_system = _condition_system
 
@@ -171,7 +171,7 @@ func update(delta: float, context: Dictionary) -> void:
 		return
 
 	action.update(delta)
-	
+
 	if action.is_completed():
 		state = State.COMPLETED
 		completed.emit()
@@ -188,7 +188,7 @@ func reset() -> void:
 	state = State.INACTIVE
 	action.reset()
 	logger.trace("Reset behavior '%s'" % name)
-	
+
 
 #endregion
 
@@ -205,7 +205,7 @@ func _check_conditions(context: Dictionary) -> bool:
 		if not _evaluate_condition(condition, context):
 			return false
 	return true
-	
+
 func _evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	var result = _condition_system.evaluate_condition(condition, context)
 	logger.info("Evaluated condition for behavior '%s': %s -> %s" % [name, _format_condition(condition.config), result])
@@ -219,7 +219,7 @@ func _format_condition(condition: Dictionary) -> String:
 			var operator_type = condition["operator_type"]
 			var operands = condition["operands"]
 			var formatted_operands = operands.map(func(op): return _format_condition(op))
-			
+
 			# Formatting operators with human-readable logic
 			match operator_type:
 				"not":
@@ -230,7 +230,7 @@ func _format_condition(condition: Dictionary) -> String:
 					return "(" + " or ".join(formatted_operands) + ")"
 		"Custom":
 			return condition["name"]
-	
+
 	return "Unknown Condition"
 #endregion
 

@@ -30,7 +30,7 @@ func _init(owner: Object) -> void:
 	else:
 		type = "Unknown type"
 	logger.debug("Initialized for %s" % type)
-	
+
 ## Get a property's value directly without caching
 func get_property_value(path: Path) -> Variant:
 	if not has_node(path):

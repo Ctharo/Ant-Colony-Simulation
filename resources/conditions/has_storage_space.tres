@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConditionConfig" load_steps=2 format=3 uid="uid://btbeodunga4j4"]
+
+[ext_resource type="Script" path="res://config/condition_config.gd" id="1_ns1tf"]
+
+[resource]
+script = ExtResource("1_ns1tf")
+name = "HasStorageSpace"
+description = "Check if ant has space to store more items"
+type = "PropertyCheck"
+evaluation = {
+"operator": "EQUALS",
+"property": "storage.status.is_full",
+"type": "PropertyCheck",
+"value": false
+}

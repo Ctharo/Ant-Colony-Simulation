@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConditionConfig" load_steps=2 format=3 uid="uid://d20g5ps727beg"]
+
+[ext_resource type="Script" path="res://config/condition_config.gd" id="1_fldfo"]
+
+[resource]
+script = ExtResource("1_fldfo")
+name = "IsAnyPheromoneSensed"
+description = "Check if any pheromones are detected"
+type = "PropertyCheck"
+evaluation = {
+"operator": "GREATER_THAN",
+"property": "olfaction.pheromones.count",
+"type": "PropertyCheck",
+"value": 0
+}

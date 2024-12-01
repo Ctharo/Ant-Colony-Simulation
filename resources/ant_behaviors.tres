@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="BehaviorConfigList" load_steps=2 format=3 uid="uid://ynl71ofrcvrb"]
+
+[ext_resource type="Script" path="res://config/behavior_config_list.gd" id="1_la4ft"]
+
+[resource]
+script = ExtResource("1_la4ft")
+_paths = {
+"FollowFoodPheromones": "res://resources/behaviors/follow_food_pheromones.tres",
+"FollowHomePheromones": "res://resources/behaviors/follow_home_pheromones.tres",
+"HarvestFood": "res://resources/behaviors/harvest_food.tres",
+"MoveToFood": "res://resources/behaviors/move_to_food.tres",
+"MoveToHome": "res://resources/behaviors/move_to_home.tres",
+"Rest": "res://resources/behaviors/move_to_home.tres",
+"StoreFood": "res://resources/behaviors/store_food.tres",
+"WanderForFood": "res://resources/behaviors/wander_for_food.tres"
+}
+metadata/behavior_paths_dict = {}

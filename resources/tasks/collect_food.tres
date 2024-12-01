@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="TaskConfig" load_steps=2 format=3 uid="uid://cnmreg6d0sepv"]
+
+[ext_resource type="Script" path="res://config/task_config.gd" id="1_f2ifl"]
+
+[resource]
+script = ExtResource("1_f2ifl")
+priority = "MEDIUM"
+conditions = [{
+"operands": [{
+"operands": [{
+"name": "LowEnergy",
+"type": "Custom"
+}, {
+"name": "LowHealth",
+"type": "Custom"
+}],
+"operator_type": "or",
+"type": "Operator"
+}],
+"operator_type": "not",
+"type": "Operator"
+}]
+behaviors = [{
+"name": "WanderForFood",
+"priority": "LOWEST"
+}, {
+"name": "FollowFoodPheromones",
+"priority": "LOW"
+}, {
+"name": "MoveToFood",
+"priority": "HIGH"
+}, {
+"name": "HarvestFood",
+"priority": "HIGHEST"
+}, {
+"name": "MoveToHome",
+"priority": "HIGHEST"
+}, {
+"name": "StoreFood",
+"priority": "HIGHEST"
+}]

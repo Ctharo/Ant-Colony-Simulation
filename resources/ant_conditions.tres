@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ConditionConfigList" load_steps=2 format=3 uid="uid://dtq70taujm4fv"]
+
+[ext_resource type="Script" path="res://config/condition_config_list.gd" id="2_d4q62"]
+
+[resource]
+script = ExtResource("2_d4q62")
+condition_paths = {
+"AtHome": "res://resources/conditions/at_home.tres",
+"AtTarget": "res://resources/conditions/at_target.tres",
+"CanMoveAndAct": "res://resources/conditions/can_move_and_act.tres",
+"HasStorageSpace": "res://resources/conditions/has_storage_space.tres",
+"IsAnyPheromoneSensed": "res://resources/conditions/is_any_pheromone_sensed.tres",
+"IsCarryingFood": "res://resources/conditions/is_carrying_food.tres",
+"IsFoodInReach": "res://resources/conditions/is_food_in_reach.tres",
+"IsFoodInView": "res://resources/conditions/is_food_in_view.tres",
+"IsFoodPheromoneSensed": "res://resources/conditions/is_food_pheromone_sensed.tres",
+"IsHomePheromoneSensed": "res://resources/conditions/is_home_pheromone_sensed.tres",
+"LowEnergy": "res://resources/conditions/low_energy.tres",
+"LowHealth": "res://resources/conditions/low_health.tres",
+"OverloadedWithFood": "res://resources/conditions/overloaded_with_food.tres"
+}
