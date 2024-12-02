@@ -143,10 +143,10 @@ func update(delta: float, context: Dictionary) -> void:
 	if not _condition_system:
 		logger.error("Missing condition system, cannot update task")
 		return
-
+		
 	if state != Task.State.ACTIVE:
 		logger.warn("Task %s marked as inactive, cannot update task" % name)
-		return
+		return 
 
 	logger.trace("Updating Task: %s" % name)
 	logger.trace("Current active behavior: %s (State: %s)" % [
@@ -203,7 +203,7 @@ func update(delta: float, context: Dictionary) -> void:
 		if next_behavior:
 			_switch_behavior(next_behavior)
 
-
+		
 ## Add a behavior to this task
 func add_behavior(behavior: Behavior) -> void:
 	if not is_instance_valid(behavior):
@@ -301,32 +301,32 @@ func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -
 	if not _condition_system:
 		logger.error("No condition system available for behavior evaluation")
 		return null
-
+		
 	# Group behaviors by priority
 	var priority_groups = _group_behaviors_by_priority()
 	if priority_groups.is_empty():
 		return null
-
+		
 	# Sort priorities in descending order
 	var priorities = priority_groups.keys()
 	priorities.sort()
 	priorities.reverse()
-
+	
 	logger.trace("Checking behaviors based on priority")
-
+	
 	# Check behaviors by priority level
 	for priority in priorities:
 		# Skip priorities lower than or equal to current_priority if specified
 		if current_priority >= 0 and priority <= current_priority:
 			logger.trace("Stopping at priority %d" % priority)
 			break
-
+			
 		var behaviors_at_priority = priority_groups[priority]
 		if behaviors_at_priority.is_empty():
 			continue
 		var behavior_count: int = behaviors_at_priority.size()
 		var str: String = "behavior" if behavior_count == 1 else "behaviors"
-		logger.trace("Checking %s %s at priority level %d" % [behavior_count, str, priority])
+		logger.trace("Checking %s %s at priority level %d" % [behavior_count, str, priority])		
 		for behavior: Behavior in behaviors_at_priority:
 			if not is_instance_valid(behavior):
 				continue
@@ -335,7 +335,7 @@ func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -
 			logger.debug("Determined if behavior '%s' should activate -> %s" % [behavior.name, result])
 			if result:
 				return behavior
-		logger.trace("No behaviors at priority %d could activate, stopping checks" % priority)
+		logger.trace("No behaviors at priority %d could activate, stopping checks" % priority)			
 	if not active_behavior.should_activate(context):
 		logger.debug("No valid behaviors found")
 	else:
@@ -354,7 +354,7 @@ func _format_condition(condition: Dictionary) -> String:
 			var operator_type = condition["operator_type"]
 			var operands = condition["operands"]
 			var formatted_operands = operands.map(func(op): return _format_condition(op))
-
+			
 			# Formatting operators with human-readable logic
 			match operator_type:
 				"not":
@@ -365,7 +365,7 @@ func _format_condition(condition: Dictionary) -> String:
 					return "(" + " or ".join(formatted_operands) + ")"
 		"Custom":
 			return condition["name"]
-
+	
 	return "Unknown Condition"
 
 func _group_behaviors_by_priority(min_priority: int = -1) -> Dictionary:

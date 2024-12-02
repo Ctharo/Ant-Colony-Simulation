@@ -59,11 +59,11 @@ func _init(init_as_active: bool = false) -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 	_init_property_access()
 	_init_property_groups()
-
+	
 	# In case we don't want to start behavior immediately
 	if init_as_active:
 		_init_task_tree()
-
+		
 
 
 func _ready() -> void:
@@ -71,7 +71,7 @@ func _ready() -> void:
 	# Setup navigation
 	nav_agent.path_desired_distance = 4.0
 	nav_agent.target_desired_distance = 4.0
-
+	
 func _physics_process(delta: float) -> void:
 	if velocity:
 		move_and_slide()
@@ -96,12 +96,12 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 #region Action Methods
 ## Placeholder for actions
-func perform_action(action: Action, args: Dictionary = {}) -> void:
+func perform_action(action: Action, args: Array = []) -> void:
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
 	event_str += action.description if action.description else "N/A"
 	logger.trace(event_str)
-
+	
 	match action.base_name:
 		"store":
 			if foods.is_empty():
@@ -109,8 +109,8 @@ func perform_action(action: Action, args: Dictionary = {}) -> void:
 			else:
 				await get_tree().create_timer(action.duration).timeout
 				foods.clear()
-
-		"move":
+				
+		"move": 
 			if get_property_value("proprioception.status.at_target"):
 				action_completed.emit()
 			else:
@@ -119,7 +119,7 @@ func perform_action(action: Action, args: Dictionary = {}) -> void:
 				if target_position and global_position != target_position:
 					global_position = target_position
 					logger.debug("Ant moved to position: %s" % target_position)
-
+				
 		"harvest":
 			if get_property_value("storage.status.is_full"):
 				action_completed.emit()
@@ -127,22 +127,22 @@ func perform_action(action: Action, args: Dictionary = {}) -> void:
 				await get_tree().create_timer(action.duration).timeout
 				# TODO: Add actual harvesting logic here
 				foods.add_food(get_property_value("storage.capacity.max"))
-
+				
 		"follow_pheromone":
 			await get_tree().create_timer(action.duration).timeout
 			# TODO: Add pheromone following logic here
 			action_completed.emit()
-
+			
 		"random_move":
 			await get_tree().create_timer(action.duration).timeout
 			# Movement handled by action params setting target position
 			action_completed.emit()
-
+			
 		"rest":
 			await get_tree().create_timer(action.duration).timeout
 			# TODO: Add rest/energy recovery logic here
 			action_completed.emit()
-
+			
 		_:
 			logger.warn("Unknown action type: %s" % action.base_name)
 			await get_tree().create_timer(action.duration).timeout

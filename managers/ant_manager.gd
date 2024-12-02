@@ -3,7 +3,7 @@ var logger: Logger
 func _init():
 	logger = Logger.new("ant_manager", DebugLogger.Category.PROGRAM)
 
-
+	
 func start_ants(enable: bool = true) -> Result:
 	var ants: Ants = get_all()
 	for ant: Ant in ants:

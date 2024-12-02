@@ -56,19 +56,19 @@ func _setup_context_providers() -> void:
 	# Register context providers based on condition system requirements
 	for property in _condition_system.get_required_properties():
 		var path: Path = Path.parse(property)
-
+		
 		# Determine update frequency based on property type
 		# This could be configured via property metadata or condition requirements
 		var frequency = _get_property_frequency(path)
 		var can_interrupt = _can_property_interrupt(path)
-
+		
 		_context_registry.register_value(
 			path.full,
 			frequency,
 			func(): return ant.get_property_value(path.full),
 			can_interrupt
 		)
-
+	
 #region Public Methods
 ## Creates a new TaskTree instance with the specified ant agent
 ## [param _ant] The ant agent to associate with this task tree
@@ -115,7 +115,7 @@ func update(delta: float) -> bool:
 	if current_active != _last_active_task:
 		_last_active_task = current_active
 		active_task_changed.emit(current_active)
-
+		
 	update_timer = 0.0
 	tree_updated.emit()
 	return true
@@ -187,7 +187,7 @@ func _get_active_task_recursive(task: Task) -> Task:
 #region Builder
 ## Builder class for constructing the task tree
 class Builder:
-
+	
 	var _ant: Ant
 	var _root_type: String = "Root"
 	var logger: Logger
@@ -203,18 +203,18 @@ class Builder:
 	func build() -> TaskTree:
 		var tree := TaskTree.new()
 		tree.ant = _ant
-
-		assert(AntConfigs.behavior_configs)
-		assert(AntConfigs.task_configs)
-		assert(AntConfigs.condition_configs)
+		
+		assert(AntConfigs._behavior_configs)
+		assert(AntConfigs._task_configs)
+		assert(AntConfigs._condition_configs)
 
 		# Create condition system
 		tree._condition_system = ConditionSystem.new(_ant)
-
+		
 		# Create context provider
 		tree._context_registry = ContextRegistry.new()
 		tree._setup_context_providers()
-
+		
 		# Create task behaviors
 		var behaviors = AntConfigs.create_task_behaviors(
 			_root_type,

@@ -115,7 +115,7 @@ func _get_nearest_food_position() -> Vector2:
 		return Vector2.ZERO
 	var food: Food = _get_nearest_food()
 	return food.global_position if food else Vector2.ZERO
-
+	
 func _get_foods_in_range_count() -> int:
 	var foods = _get_foods_in_range()
 	return foods.size() if foods else 0

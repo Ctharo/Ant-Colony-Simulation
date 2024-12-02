@@ -46,7 +46,7 @@ func get_required_properties() -> Array[String]:
 	for key in _required_properties.keys():
 		a.append(key as String)
 	return a
-
+	
 func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	if condition == null:
 		logger.error("Attempted to evaluate null condition")
@@ -60,22 +60,17 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 #endregion
 
 #region Evaluation Methods
-func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:
+func _evaluate_condition_config(config: Dictionary, context: Dictionary) -> bool:	
 	var result = false
 	match config.get("type"):
 		"Custom": # Named condition
-			# Get the base condition config from resources
-			var condition_config = AntConfigs.get_condition_config(config.name)
-			if condition_config.is_empty():
-				logger.error("No configuration found for condition: %s" % config.name)
-				return false
-			result = _evaluate_property_check(condition_config, context)
-		"Operator":
+			result = _evaluate_named_condition(config, context)
+		"Operator": # Operator
 			result = _evaluate_operator(config, context)
 		"PropertyCheck":
 			result = _evaluate_property_check(config, context)
-		_:
-			logger.error("Unknown condition type in config: %s" % config)
+		_: # Property check
+			logger.error("Unhandled config: %s" % config)
 	return result
 
 func _evaluate_named_condition(config: Dictionary, context: Dictionary) -> bool:
@@ -91,25 +86,24 @@ func _evaluate_operator(config: Dictionary, context: Dictionary) -> bool:
 	match operator_type:
 		"AND":
 			result = _evaluate_and_operator(operands, context)
-		"OR":
+		"OR": 
 			result = _evaluate_or_operator(operands, context)
-		"NOT":
+		"NOT": 
 			result = _evaluate_not_operator(operands, context)
 		_:
 			logger.error("Unknown operator: %s" % operator_type)
 	return result
 
 func _evaluate_property_check(config: Dictionary, context: Dictionary) -> bool:
-	# Handle both direct property checks and those inside evaluation block
-	var check_config = config.get("evaluation", config)
-	if not check_config.has("property"):
+	var evaluation = config.get("evaluation", {})
+	if evaluation.is_empty() or not evaluation.has("property"):
 		logger.error("Invalid property check configuration")
 		return false
-
-	var operator = check_config.get("operator", "EQUALS")
-	var value_a = context.get(check_config.property)
-	var value_b = check_config.get("value", context.get(check_config.get("value_from", "")))
-
+	
+	var operator = evaluation.get("operator", "EQUALS")
+	var value_a = context.get(evaluation.property)
+	var value_b = evaluation.get("value", context.get(evaluation.get("value_from", "")))
+	
 	var result = _compare_values(value_a, value_b, operator)
 	return result
 
@@ -170,10 +164,8 @@ func _compare_values(value_a: Variant, value_b: Variant, operator: String) -> bo
 
 #region Property Management
 func register_required_properties() -> void:
-	# Iterate through conditions in resource
-	var conditions = AntConfigs.condition_configs.conditions
-	for condition_name in conditions:
-		var config = AntConfigs.get_condition_config(condition_name)
+	for condition_name in AntConfigs._condition_configs:
+		var config = AntConfigs._condition_configs[condition_name]
 		_register_config_properties(config)
 	_log_required_properties()
 
@@ -216,7 +208,7 @@ func _log_required_properties() -> void:
 #region Stack Management
 func _push_evaluation_context(description: String) -> void:
 	_evaluation_stack.append(description)
-
+	
 func _pop_evaluation_context() -> void:
 	_evaluation_stack.pop_back()
 
