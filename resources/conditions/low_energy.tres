@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ConditionConfig" load_steps=2 format=3 uid="uid://c1umu4ex8d3b8"]
+
+[ext_resource type="Script" path="res://config/condition_config.gd" id="1_lqiw3"]
+
+[resource]
+script = ExtResource("1_lqiw3")
+name = "LowEnergy"
+description = "Check if ant's energy is low but not depleted"
+type = "PropertyCheck"
+evaluation = {
+"operator": "EQUALS",
+"property": "energy.status.is_low",
+"type": "PropertyCheck",
+"value": true
+}

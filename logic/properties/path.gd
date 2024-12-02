@@ -1,20 +1,13 @@
 class_name Path
-extends Resource
-
-@export var path: String :
-	set(value):
-		path = value
-		if path != full:
-			for part in path.split("."):
-				parts.append(part as String)
-
-
-## The complete path string
-@export var full: String : get = get_full_path
+extends RefCounted
 
 ## The parts of the path from root to leaf
 var parts: Array[String]
 
+## The complete path string
+var full: String : get = get_full_path
+
+## The sub-path after the root
 var sub: Path : get = get_subpath
 
 ## Static path separator

@@ -12,6 +12,7 @@ static var _action_classes: Dictionary = {
 
 ## Resource containing task configurations
 static var task_configs: TaskConfigList
+
 ## Resource containing behavior configurations
 static var behavior_configs: BehaviorConfigList
 ## Resource containing condition configurations
@@ -23,24 +24,15 @@ func _ready() -> void:
 static func load_configs() -> void:
 	if not task_configs:
 		task_configs = load("res://resources/ant_tasks.tres") as TaskConfigList
-		if task_configs:
-			task_configs.load_tasks()
-		else:
-			push_error("Failed to load task configs")
+		task_configs.load_tasks()
 
 	if not behavior_configs:
 		behavior_configs = load("res://resources/ant_behaviors.tres") as BehaviorConfigList
-		if behavior_configs:
-			behavior_configs.load_behaviors()
-		else:
-			push_error("Failed to load behavior configs")
+		behavior_configs.load_behaviors()
 
 	if not condition_configs:
 		condition_configs = load("res://resources/ant_conditions.tres") as ConditionConfigList
-		if condition_configs:
-			condition_configs.load_conditions()
-		else:
-			push_error("Failed to load condition configs")
+		condition_configs.load_conditions()
 
 static func get_action_config(behavior_name: String) -> ActionConfig:
 	if not behavior_name in behavior_configs.behaviors:
@@ -48,48 +40,11 @@ static func get_action_config(behavior_name: String) -> ActionConfig:
 		return null
 	return behavior_configs.behaviors[behavior_name].action
 
-static func get_behavior_config(behavior_name: String) -> BehaviorConfig:
-	if not behavior_name in behavior_configs.behaviors:
-		push_error("Unknown behavior: %s" % behavior_name)
-		return null
-	return behavior_configs.behaviors[behavior_name]
-
-static func get_condition_config(condition_name: String) -> ConditionConfig:
+static func get_condition_config(condition_name: String) -> Dictionary:
 	if not condition_name in condition_configs.conditions:
 		push_error("Unknown condition: %s" % condition_name)
-		return null
-	return condition_configs.conditions[condition_name]
-
-static func get_task_config(task_name: String) -> TaskConfig:
-	if not task_name in task_configs.tasks:
-		push_error("Unknown task: %s" % task_name)
-		return null
-	return task_configs.tasks[task_name]
-
-static func create_task_from_config(config: TaskConfig, ant: Ant, condition_system: ConditionSystem) -> Task:
-	# Create the task with proper priority
-	var task = Task.new(Task.Priority[config.priority], condition_system)
-	task.name = config.name
-	task.ant = ant
-
-	# Add task conditions
-	for condition_name in config.conditions:
-		var condition_config: ConditionConfig = AntConfigs.get_condition_config(condition_name)
-		if condition_config:
-			var condition = create_condition_from_config(condition_config)
-			if condition:
-				task.add_condition(condition)
-			else:
-				push_error("Failed to create condition for task: %s with config: %s" % [config.name, condition_name])
-		else:
-			push_error("Failed to get condition config for: %s" % condition_name)
-
-	# Create and add behaviors
-	var behaviors = create_task_behaviors(config.name, ant, condition_system)
-	for behavior in behaviors:
-		task.add_behavior(behavior)
-
-	return task
+		return {}
+	return condition_configs.conditions[condition_name].evaluation
 
 static func create_action_from_config(config: ActionConfig, ant: Ant) -> Action:
 	if not config.base_action in _action_classes:
@@ -113,63 +68,71 @@ static func create_action_from_config(config: ActionConfig, ant: Ant) -> Action:
 
 ## Create a task's behaviors from task configuration
 static func create_task_behaviors(task_type: String, ant: Ant, condition_system: ConditionSystem) -> Array[Behavior]:
-	var task_config = get_task_config(task_type)
-
-	if not task_config:
+	if not AntConfigs.task_configs.tasks.get(task_type):
 		push_error("Unknown task type: %s" % task_type)
 		return []
 
+	var task_config = AntConfigs.task_configs.tasks[task_type]
 	var behaviors: Array[Behavior] = []
 
 	# Add task behaviors
 	for behavior_data in task_config.behaviors:
-		var behavior_config: BehaviorConfig = get_behavior_config(behavior_data)
-		var behavior = create_behavior_from_config(behavior_config, ant, condition_system)
+		var behavior = create_behavior_from_config(behavior_data, ant, condition_system)
 		if behavior:
 			behaviors.append(behavior)
 
 	return behaviors
 
 ## Create a behavior from behavior configuration
-static func create_behavior_from_config(config: BehaviorConfig, ant: Ant, condition_system: ConditionSystem) -> Behavior:
+static func create_behavior_from_config(config: Dictionary, ant: Ant, condition_system: ConditionSystem) -> Behavior:
+	var behavior_name = config.name
+
 	# Start building the behavior
-	var builder = (Behavior.builder(Task.Priority[config.priority])
-		.with_name(config.name)
+	var builder = (Behavior.builder(Task.Priority[config.get("priority", "MEDIUM")])
+		.with_name(behavior_name)
 		.with_ant(ant)
 		.with_condition_system(condition_system))
 
-	var action = create_action_from_config(config.action, ant)
+	# Add behavior conditions
+	if "conditions" in config:
+		for condition_data in config.conditions:
+			builder.with_condition(create_condition(condition_data))
+
+	# Get action config and create action
+	var action_config = get_action_config(behavior_name)
+	if not action_config:
+		push_error("No action configuration found for behavior %s" % behavior_name)
+		return null
+
+	var action = create_action_from_config(action_config, ant)
 	if not action:
-		push_error("Failed to create action for behavior %s" % config.name)
+		push_error("Failed to create action for behavior %s" % behavior_name)
 		return null
 
 	builder.with_action(action)
 
 	return builder.build()
 
-static func create_condition_from_config(config: ConditionConfig) -> Condition:
+static func create_condition(config: Dictionary) -> Condition:
+	if typeof(config) != TYPE_DICTIONARY:
+		push_error("Invalid condition config type: %s" % typeof(config))
+		return null
+
 	var condition = Condition.new()
-	condition.name = config.name
 
-	var custom_config := CustomConditionConfig.new()
-	custom_config.condition_name = config.name
+	if config.type == "Custom" and config.name in condition_configs.conditions:
+		condition.name = config.name
+		# Get base evaluation from condition config
+		var merged_config = condition_configs.conditions[config.name].evaluation.duplicate()
+		# Merge with any overrides from the config
+		for key in config:
+			merged_config[key] = config[key]
+		condition.config = merged_config
+	elif config.type == "Operator":
+		condition.name = "Operator: %s" % config.operator_type
+		condition.config = config
+	else:
+		push_error("Unknown condition type")
+		return null
 
-	var property_config := PropertyCheckConfig.new()
-	property_config.property = config.evaluation.property
-	property_config.operator = config.evaluation.operator
-	property_config.value = config.evaluation.value
-	property_config.value_from = config.evaluation.value_from
-
-	custom_config.evaluation = property_config
-	condition.config = custom_config
-	return condition
-
-static func create_operator_condition(operator_type: String, operands: Array) -> Condition:
-	var condition = Condition.new()
-	condition.name = "Operator: %s" % operator_type
-
-	var config := OperatorConfig.new()
-	config.operator_type = operator_type
-	config.operands = operands
-	condition.config = config
 	return condition

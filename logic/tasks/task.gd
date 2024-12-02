@@ -347,15 +347,16 @@ func _evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	logger.debug("Evaluated condition for task '%s': %s -> %s" % [name, _format_condition(condition.config), result])
 	return result
 
-## Helper function to format conditions for debug output
-func _format_condition(config: ConfigBase) -> String:
-	match config.type:
+## Helper function to group behaviors by priority
+func _format_condition(condition: Dictionary) -> String:
+	match condition["type"]:
 		"Operator":
-			var operator_config := config as OperatorConfig
-			var formatted_operands = operator_config.operands.map(func(op): return _format_condition(op))
+			var operator_type = condition["operator_type"]
+			var operands = condition["operands"]
+			var formatted_operands = operands.map(func(op): return _format_condition(op))
 
 			# Formatting operators with human-readable logic
-			match operator_config.operator_type:
+			match operator_type:
 				"not":
 					return "not (" + formatted_operands[0] + ")"
 				"and":
@@ -363,15 +364,7 @@ func _format_condition(config: ConfigBase) -> String:
 				"or":
 					return "(" + " or ".join(formatted_operands) + ")"
 		"Custom":
-			var custom_config := config as CustomConditionConfig
-			return custom_config.condition_name
-		"PropertyCheck":
-			var property_config := config as PropertyCheckConfig
-			return "(%s %s %s)" % [
-				property_config.property,
-				property_config.operator.to_lower(),
-				property_config.value if property_config.value_from.is_empty() else property_config.value_from
-			]
+			return condition["name"]
 
 	return "Unknown Condition"
 

@@ -63,26 +63,8 @@ func _init(
 
 	logger = Logger.new("property_node", DebugLogger.Category.PROPERTY)
 
-## Create a property node from a resource configuration
-static func from_resource(resource: PropertyResource, entity: Node) -> PropertyNode:
-	var node := PropertyNode.new(
-		resource.path.full,
-		resource.type,
-		entity,
-		resource.value_type,
-		resource.create_getter(entity),
-		resource.create_setter(entity),
-		resource.dependencies,
-		resource.description
-	)
-
-	# Recursively create child nodes from child resources
-	if resource.type == Type.CONTAINER:
-		for child_resource in resource.children.values():
-			var child_node := from_resource(child_resource, entity)
-			node.add_child(child_node)
-
-	return node
+static func create(p_name: String, p_type: Type) -> PropertyNode:
+	return PropertyNode.new(p_name, p_type)
 
 func copy_from(other: PropertyNode) -> void:
 	name = other.name
@@ -111,6 +93,7 @@ func get_path() -> Path:
 	return Path.new(parts)
 
 func find_node(_path: Path) -> PropertyNode:
+
 	if _path.parts[0] != name:
 		return null # Often due to path.get_subpath
 
@@ -220,4 +203,76 @@ func has_valid_accessor(check_setter: bool = false) -> bool:
 	if check_setter:
 		has_valid = has_valid and Property.is_valid_setter(setter)
 	return has_valid
+#endregion
+
+
+static func create_tree(_entity: Node) -> PropertyNode.Builder:
+	return PropertyNode.Builder.new(_entity)
+
+class Builder:
+	var _entity: Node
+	var _current: PropertyNode
+	var _root: PropertyNode
+
+	func _init(e: Node):
+		_entity = e
+
+	func container(name: String, description: String = "") -> PropertyNode.Builder:
+		var node = PropertyNode.new(
+			name,
+			Type.CONTAINER,
+			_entity,
+			Property.Type.UNKNOWN,
+			Callable(),
+			Callable(),
+			[],
+			description
+		)
+
+		if not _root:
+			_root = node
+			_current = node
+		else:
+			_current.add_child(node)
+			_current = node
+
+		return self
+
+	func value(
+		name: String,
+		type: Property.Type,
+		getter: Callable,
+		setter: Callable = Callable(),
+		dependencies: Array[String] = [],
+		description: String = ""
+	) -> PropertyNode.Builder:
+		# Ensure we have a valid container to add values to
+		if not _current:
+			# Create an implicit root container if none exists
+			container("root", "Implicit root container")
+
+		var path_dependencies: Array[Path] = []
+		for dep in dependencies:
+			path_dependencies.append(Path.parse(dep))
+
+		var node = PropertyNode.new(
+			name,
+			Type.VALUE,
+			_entity,
+			type,
+			getter,
+			setter,
+			path_dependencies,
+			description
+		)
+		_current.add_child(node)
+		return self
+
+	func up() -> PropertyNode.Builder:
+		if _current.parent:
+			_current = _current.parent
+		return self
+
+	func build() -> PropertyNode:
+		return _root
 #endregion

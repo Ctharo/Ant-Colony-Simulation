@@ -2,20 +2,65 @@ class_name Proprioception
 extends PropertyNode
 ## The component responsible for sense of direction and position
 
-@export var config: ProprioceptionResource
-
 func _init(_entity: Node) -> void:
 	# First create self as container
 	super._init("proprioception", Type.CONTAINER, _entity)
 
-	if not config:
-		config = ProprioceptionResource.new()
+	# Create the tree with the container name matching self
+	var tree = PropertyNode.create_tree(_entity)\
+		.container("proprioception", "Proprioception management")\
+			.container("base", "Base position information")\
+				.value("position", Property.Type.VECTOR2,
+					Callable(self, "_get_position"),
+					Callable(),
+					[],
+					"Current global position of the entity")\
+				.value("target_position", Property.Type.VECTOR2,
+					Callable(self, "_get_target_position"),
+					Callable(self, "_set_target_position"),
+					[],
+					"Current target position for movement")\
+			.up()\
+			.container("colony", "Information about position relative to colony")\
+				.value("position", Property.Type.VECTOR2,
+					Callable(self, "_get_colony_position"),
+					Callable(),
+					["colony.position"],
+					"Global position of the colony")\
+				.value("direction", Property.Type.VECTOR2,
+					Callable(self, "_get_direction_to_colony"),
+					Callable(),
+					["proprioception.base.position", "proprioception.colony.position"],
+					"Normalized vector pointing towards colony")\
+				.value("distance", Property.Type.FLOAT,
+					Callable(self, "_get_distance_to_colony"),
+					Callable(),
+					["proprioception.base.position", "proprioception.colony.position"],
+					"Distance from entity to colony in units")\
+			.up()\
+			.container("status", "Position status information")\
+				.value("at_target", Property.Type.BOOL,
+					Callable(self, "_is_at_target"),
+					Callable(),
+					["proprioception.base.position", "proprioception.base.target_position"],
+					"Whether the entity is at the target location")\
+				.value("at_colony", Property.Type.BOOL,
+					Callable(self, "_is_at_colony"),
+					Callable(),
+					["proprioception.colony.distance"],
+					"Whether the entity is at the colony")\
+				.value("has_moved", Property.Type.BOOL,
+					Callable(self, "_has_moved"),
+					Callable(),
+					["proprioception.base.position"],
+					"Whether the entity has moved from its starting position")\
+			.up()\
+		.build()
 
-	# Create the complete property tree from the resource
-	var node := PropertyNode.from_resource(config, _entity)
-
-	# Copy the configured tree into this instance
-	copy_from(node)
+	# Copy the container children from the built tree
+	var built_proprioception = tree
+	for child in built_proprioception.children.values():
+		add_child(child)
 
 	logger.trace("Proprioception property tree initialized")
 

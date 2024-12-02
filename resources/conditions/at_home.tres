@@ -1,22 +1,15 @@
-[gd_resource type="Resource" script_class="CustomConditionConfig" load_steps=6 format=3 uid="uid://cdr6rhwin6tei"]
+[gd_resource type="Resource" script_class="ConditionConfig" load_steps=2 format=3 uid="uid://c8nkyn5usn87r"]
 
-[ext_resource type="Script" path="res://config/custom_condition_config.gd" id="1_j6po5"]
-[ext_resource type="Script" path="res://logic/properties/path.gd" id="1_p7vmf"]
-[ext_resource type="Script" path="res://config/property_check_config.gd" id="2_78qnv"]
-
-[sub_resource type="Resource" id="Resource_8bccx"]
-script = ExtResource("1_p7vmf")
-path = "proprioception.status.at_colony"
-full = ""
-
-[sub_resource type="Resource" id="Resource_1o0fh"]
-script = ExtResource("2_78qnv")
-property = SubResource("Resource_8bccx")
-operator = "EQUALS"
-description = ""
+[ext_resource type="Script" path="res://config/condition_config.gd" id="1_vn3bv"]
 
 [resource]
-script = ExtResource("1_j6po5")
-condition_name = "AtHome"
-evaluation = SubResource("Resource_1o0fh")
-description = ""
+script = ExtResource("1_vn3bv")
+name = "AtHome"
+description = "Check if ant within boundary of colony radius"
+type = "PropertyCheck"
+evaluation = {
+"operator": "EQUALS",
+"property": "proprioception.status.at_colony",
+"type": "PropertyCheck",
+"value": true
+}

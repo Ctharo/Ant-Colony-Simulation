@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ConditionConfig" load_steps=2 format=3 uid="uid://bdec7rn4fkyl6"]
+
+[ext_resource type="Script" path="res://config/condition_config.gd" id="1_2gi43"]
+
+[resource]
+script = ExtResource("1_2gi43")
+name = "CanMoveAndAct"
+description = "Check if ant is able to move and perform actions"
+type = "Operator"
+evaluation = {
+"operands": [{
+"operator": "EQUALS",
+"property": "storage.status.is_full",
+"type": "PropertyCheck",
+"value": false
+}, {
+"operator": "EQUALS",
+"property": "energy.status.is_depleted",
+"type": "PropertyCheck",
+"value": false
+}],
+"operator_type": "or",
+"type": "Operator"
+}

@@ -1,10 +1,9 @@
 class_name TaskConfig
 extends Resource
 
-@export var name: String
 @export var priority: String = "MEDIUM"
-@export var conditions: Array[ConfigBase]
-@export var behaviors: Array[BehaviorConfig]
+@export var conditions: Array
+@export var behaviors: Array
 
 func _get_property_list() -> Array:
 	return [
