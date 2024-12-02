@@ -1,5 +1,5 @@
 class_name PropertyCheckConfig
-extends ConfigBase
+extends ConditionConfig
 
 @export var property: Path
 @export var operator: String = "EQUALS"

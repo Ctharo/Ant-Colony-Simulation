@@ -1,5 +1,5 @@
 class_name CustomConditionConfig
-extends ConfigBase
+extends ConditionConfig
 
 @export var condition_name: String
 @export var evaluation: PropertyCheckConfig

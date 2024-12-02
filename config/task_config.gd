@@ -3,7 +3,7 @@ extends Resource
 
 @export var name: String
 @export var priority: String = "MEDIUM"
-@export var conditions: Array[ConfigBase]
+@export var conditions: Array[ConditionConfig]
 @export var behaviors: Array[BehaviorConfig]
 
 func _get_property_list() -> Array:

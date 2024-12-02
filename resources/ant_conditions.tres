@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="ConditionConfigList" load_steps=2 format=3 uid="uid://dtq70taujm4fv"]
 
-[ext_resource type="Script" path="res://config/condition_config_list.gd" id="2_d4q62"]
+[ext_resource type="Script" path="res://config/conditions/condition_config_list.gd" id="2_d4q62"]
+
 
 [resource]
 script = ExtResource("2_d4q62")

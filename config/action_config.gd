@@ -5,5 +5,5 @@ extends Resource
 @export var base_action: String
 ## Parameters specific to this action configuration
 @export var params: Dictionary
-
-@export var description: String
+## Description of the action
+@export_multiline var description: String

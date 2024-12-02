@@ -1,8 +1,8 @@
 class_name OperatorConfig
-extends ConfigBase
+extends ConditionConfig
 
 @export var operator_type: String
-@export var operands: Array[ConfigBase]
+@export var operands: Array[ConditionConfig]
 
 func _init() -> void:
 	type = "Operator"
