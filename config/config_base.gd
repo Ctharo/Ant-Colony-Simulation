@@ -1,6 +1,6 @@
-class_name ConditionConfig
+class_name ConfigBase
 extends Resource
 
 ## Type of the condition (Custom, Operator, PropertyCheck)
 var type: String
-@export_multiline var description: String
+@export var description: String

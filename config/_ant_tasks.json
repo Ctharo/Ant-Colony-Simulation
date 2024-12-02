@@ -1,0 +1,121 @@
+{
+  "tasks": {
+	"CollectFood": {
+	  "priority": "MEDIUM",
+	  "conditions": [
+		{
+		  "type": "Operator",
+		  "operator_type": "not",
+		  "operands": [
+			{
+			  "type": "Operator",
+			  "operator_type": "or",
+			  "operands": [
+				{
+				  "type": "Custom",
+				  "name": "LowEnergy"
+				},
+				{
+				  "type": "Custom",
+				  "name": "LowHealth"
+				}
+			  ]
+			}
+		  ]
+		}
+	  ],
+	  "behaviors": [
+		{
+		  "name": "WanderForFood",
+		  "priority": "LOWEST",
+		  "conditions": [
+			{
+			  "type": "Operator",
+			  "operator_type": "not",
+			  "operands": [
+				{
+				  "type": "Custom",
+				  "name": "OverloadedWithFood"
+				}
+			  ]
+			}
+		  ]
+		},
+		{
+		  "name": "FollowFoodPheromones",
+		  "priority": "LOW",
+		  "conditions": [
+			{
+			  "type": "Custom",
+			  "name": "IsFoodPheromoneSensed"
+			}
+		  ]
+		},
+		{
+		  "name": "MoveToFood",
+		  "priority": "HIGH",
+		  "conditions": [
+			{
+			  "type": "Custom",
+			  "name": "IsFoodInView"
+			}
+		  ]
+		},
+		{
+		  "name": "HarvestFood",
+		  "priority": "HIGHEST",
+		  "conditions": [
+			{
+			  "type": "Custom",
+			  "name": "IsFoodInReach"
+			},
+			{
+			  "type": "Operator",
+			  "operator_type": "not",
+			  "operands": [
+				{
+				  "type": "Custom",
+				  "name": "OverloadedWithFood"
+				}
+			  ]
+			}
+		  ]
+		},
+		{
+		  "name": "MoveToHome",
+		  "priority": "HIGHEST",
+		  "conditions": [
+			{
+			  "type": "Custom",
+			  "name": "OverloadedWithFood"
+			},
+			{
+			  "type": "Operator",
+			  "operator_type": "not",
+			  "operands": [
+				{
+				  "type": "Custom",
+				  "name": "AtHome"
+				}
+			  ]
+			}
+		  ]
+		},
+		{
+		  "name": "StoreFood",
+		  "priority": "HIGHEST",
+		  "conditions": [
+			{
+			  "type": "Custom",
+			  "name": "IsCarryingFood"
+			},
+			{
+			  "type": "Custom",
+			  "name": "AtHome"
+			}
+		  ]
+		}
+	  ]
+	}
+  }
+}

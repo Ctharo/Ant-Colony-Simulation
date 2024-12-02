@@ -1,0 +1,90 @@
+{
+  "behaviors": {
+	"MoveToFood": {
+	  "action": {
+		"description": "Moving towards food",
+		"base_action": "Move",
+		"params": [{
+		  "type": "target_position",
+		  "property": "proprioception.base.target_position",
+		  "property_value": "vision.foods.nearest.position"
+		}]
+	  }
+	},
+	"MoveToHome": {
+	  "action": {
+		"description": "Moving towards colony",
+		"base_action": "Move",
+		"params": [{
+		  "type": "target_position",
+		  "property": "proprioception.base.target_position",
+		  "property_value": "colony.position"
+		}]
+	  }
+	},
+	"HarvestFood": {
+	  "action": {
+		"description": "Harvesting food",
+		"base_action": "Harvest",
+		"params": [{
+		  "type": "rate",
+		  "property": "speed.base.harvesting",
+		  "property_value": 1
+		}]
+	  }
+	},
+	"StoreFood": {
+	  "action": {
+		"description": "Storing food",
+		"base_action": "Store",
+		"params": [{
+		  "type": "rate",
+		  "property": "speed.base.storing",
+		  "property_value": 1
+		}]
+	  }
+	},
+	"Rest": {
+	  "action": {
+		"description": "Resting",
+		"base_action": "Rest",
+		"params": [{
+		  "type": "none"
+		}]
+	  }
+	},
+	"FollowHomePheromones": {
+	  "action": {
+		"description": "Following home pheromones",
+		"base_action": "FollowPheromone",
+		"params": [{
+		  "type": "pheromone",
+		  "property": "pheromone",
+		  "property_value": "home"
+		}]
+	  }
+	},
+	"FollowFoodPheromones": {
+	  "action": {
+		"description": "Following food pheromones",
+		"base_action": "FollowPheromone",
+		"params": [{
+		  "type": "pheromone",
+		  "property": "pheromone",
+		  "property_value": "food"
+		}]
+	  }
+	},
+	"WanderForFood": {
+	  "action": {
+		"description": "Wandering to find food",
+		"base_action": "RandomMove",
+		"params": [{
+		  "type": "target_position",
+		  "property": "proprioception.base.target_position",
+		  "property_value": "random"
+		}]
+	  }
+	}
+  }
+}
