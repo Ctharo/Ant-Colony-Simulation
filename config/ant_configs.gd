@@ -1,6 +1,5 @@
 extends Node
 
-
 ## Dictionary mapping action names to their GDScript classes
 static var _action_classes: Dictionary = {
 	"Move": Action.Move,
@@ -11,26 +10,14 @@ static var _action_classes: Dictionary = {
 	"RandomMove":  Action.RandomMove,
 }
 
-## Resource containing task configurations
-@export var task_configs: Resource
-
-## Resource containing behavior configurations 
-@export var behavior_configs: Resource
-
-## Resource containing condition configurations
-@export var condition_configs: Resource
-
 ## Dictionary of task configurations loaded from JSON
-static var _task_configs: Dictionary #DEPRECIATED
+static var _task_configs: Dictionary
 
 ## Dictionary of behavior configurations loaded from JSON
-static var _behavior_configs: Dictionary #DEPRECIATED
+static var _behavior_configs: Dictionary
 
 ## Dictionary of condition configurations loaded from JSON
-static var _condition_configs: Dictionary #DEPRECIATED
-
-
-
+static var _condition_configs: Dictionary
 
 func _init() -> void:
 	load_task_configs()
