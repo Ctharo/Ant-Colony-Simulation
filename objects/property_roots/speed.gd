@@ -15,71 +15,24 @@ var _harvesting_rate: float = DEFAULT_RATE
 
 ## Rate at which the entity can store resources (units/second)
 var _storing_rate: float = DEFAULT_RATE
+
+@export var config: SpeedResource
 #endregion
 
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("speed", Type.CONTAINER, _entity)
-
-	# Create the tree with the container name matching self
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("speed", "Speed management")\
-			.container("base", "Base speed rates")\
-				.value("rate", Property.Type.FLOAT,
-					Callable(self, "_get_movement_rate"),
-					Callable(self, "_set_movement_rate"),
-					[],
-					"Rate at which the entity can move (units/second)")\
-				.value("harvesting", Property.Type.FLOAT,
-					Callable(self, "_get_harvesting_rate"),
-					Callable(self, "_set_harvesting_rate"),
-					[],
-					"Rate at which the entity can harvest resources (units/second)")\
-				.value("storing", Property.Type.FLOAT,
-					Callable(self, "_get_storing_rate"),
-					Callable(self, "_set_storing_rate"),
-					[],
-					"Rate at which the entity can store resources (units/second)")\
-			.up()\
-			.container("derived", "Values derived from base speeds")\
-				.container("movement", "Movement-related calculations")\
-					.value("time_per_unit", Property.Type.FLOAT,
-						Callable(self, "_get_time_per_unit"),
-						Callable(),
-						["speed.base.movement"],
-						"Time required to move one unit of distance")\
-				.up()\
-				.container("harvesting", "Harvesting-related calculations")\
-					.value("per_second", Property.Type.FLOAT,
-						Callable(self, "_get_harvest_per_second"),
-						Callable(),
-						["speed.base.harvesting"],
-						"Amount that can be harvested in one second")\
-			.up()\
-			.container("status", "Speed status information")\
-				.value("can_move", Property.Type.BOOL,
-					Callable(self, "_can_move"),
-					Callable(),
-					["speed.base.movement"],
-					"Whether the entity is able to move")\
-				.value("can_harvest", Property.Type.BOOL,
-					Callable(self, "_can_harvest"),
-					Callable(),
-					["speed.base.harvesting"],
-					"Whether the entity is able to harvest")\
-				.value("can_store", Property.Type.BOOL,
-					Callable(self, "_can_store"),
-					Callable(),
-					["speed.base.storing"],
-					"Whether the entity is able to store")\
-			.up()\
-		.build()
-
-	# Copy the container children from the built tree
-	var built_speed = tree
-	for child in built_speed.children.values():
-		add_child(child)
-
+	
+	# Initialize configuration
+	if not config:
+		config = SpeedResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 	logger.trace("Speed property tree initialized")
 
 #region Property Getters and Setters

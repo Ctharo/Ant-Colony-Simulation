@@ -15,41 +15,23 @@ const OVERLOAD_THRESHOLD := 90.0
 ## Base strength level of the entity
 var _level: int = DEFAULT_LEVEL
 #endregion
+@export var config: StrengthResource
+
 
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("strength", Type.CONTAINER, _entity)
-
-	# Create the tree with the container name matching self
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("strength", "Strength management")\
-			.container("base", "Base strength attributes")\
-				.value("level", Property.Type.INT,
-					Callable(self, "_get_level"),
-					Callable(self, "_set_level"),
-					[],
-					"Base strength level of the entity")\
-			.up()\
-			.container("derived", "Values derived from strength")\
-				.value("carry_factor", Property.Type.FLOAT,
-					Callable(self, "_get_carry_factor"),
-					Callable(),
-					["strength.base.level"],
-					"Base carrying capacity factor")\
-			.up()\
-			.container("status", "Status of strength")\
-				.value("overloaded", Property.Type.BOOL,
-					Callable(self, "_get_is_overloaded"),
-					Callable(),
-					["storage.capacity.percentage"],
-					"Whether entity is carrying too much weight")\
-			.up()\
-		.build()
-
-	# Copy the container children from the built tree's root strength node
-	var built_strength = tree
-	for child in built_strength.children.values():
-		add_child(child)
+	
+	# Initialize configuration
+	if not config:
+		config = StrengthResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 
 	logger.trace("Strength property tree initialized")
 

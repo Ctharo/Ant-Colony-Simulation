@@ -10,66 +10,23 @@ const DEFAULT_RANGE := 50.0
 ## Maximum range at which the entity can see
 var _range: float = DEFAULT_RANGE
 #endregion
+@export var config: VisionResource
+
 
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("vision", Type.CONTAINER, _entity)
-
-	# Then build and copy children
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("range", "Vision range information")\
-			.value("current", Property.Type.FLOAT,
-				Callable(self, "_get_range"),
-				Callable(self, "_set_range"),
-				[],
-				"Maximum range at which the entity can see")\
-		.up()\
-		.container("ants", "Properties related to ants in vision range")\
-			.value("list", Property.Type.ANTS,
-				Callable(self, "_get_ants_in_range"),
-				Callable(),
-				["vision.range.current"],
-				"Ants within vision range")\
-			.value("count", Property.Type.INT,
-				Callable(self, "_get_ants_in_range_count"),
-				Callable(),
-				["vision.ants.list"],
-				"Number of ants within vision range")\
-		.up()\
-		.container("foods", "Properties related to food in vision range")\
-			.value("list", Property.Type.FOODS,
-				Callable(self, "_get_foods_in_range"),
-				Callable(),
-				["vision.range.current"],
-				"Food items within vision range")\
-			.container("nearest", "Nearest food item to entity")\
-				.value("object", Property.Type.FOOD,
-					Callable(self, "_get_nearest_food"),
-					Callable(),
-					["vision.foods.list"],
-					"Nearest visible food item")\
-				.value("position", Property.Type.VECTOR2,
-					Callable(self, "_get_nearest_food_position"),
-					Callable(),
-					["vision.foods.nearest.object"],
-					"Nearest visible food item position")\
-			.up()\
-			.value("count", Property.Type.INT,
-				Callable(self, "_get_foods_in_range_count"),
-				Callable(),
-				["vision.foods.list"],
-				"Number of food items within vision range")\
-			.value("mass", Property.Type.FLOAT,
-				Callable(self, "_get_foods_in_range_mass"),
-				Callable(),
-				["vision.foods.list"],
-				"Total mass of food within vision range")\
-		.build()
-
-	# Copy children from built tree
-	for child in tree.children.values():
-		add_child(child)
-
+	
+	# Initialize configuration
+	if not config:
+		config = VisionResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 	logger.trace("Vision property tree initialized")
 
 #region Property Getters and Setters

@@ -2,54 +2,23 @@ class_name Storage
 extends PropertyNode
 ## Component responsible for managing entity's storage capacity and contents
 
+@export var config: StorageResource
+
+
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("storage", Type.CONTAINER, _entity)
-
-	# Create the tree with the container name matching self
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("storage", "Storage management")\
-			.container("capacity", "Information about entity's storage capacity")\
-				.value("max", Property.Type.FLOAT,
-					Callable(self, "_get_max_capacity"),
-					Callable(),
-					["strength.base.level"],
-					"Maximum weight the entity can store")\
-				.value("current", Property.Type.FLOAT,
-					Callable(self, "_get_current_capacity"),
-					Callable(),
-					[],
-					"Current total mass of stored items")\
-				.value("percentage", Property.Type.FLOAT,
-					Callable(self, "_get_percentage_full"),
-					Callable(),
-					["storage.capacity.current", "storage.capacity.max"],
-					"Current storage used as percentage of maximum")\
-				.value("available", Property.Type.FLOAT,
-					Callable(self, "_get_mass_available"),
-					Callable(),
-					["storage.capacity.max", "storage.capacity.current"],
-					"Remaining storage capacity available")\
-			.up()\
-			.container("status", "Storage status information")\
-				.value("is_carrying", Property.Type.BOOL,
-					Callable(self, "_is_carrying"),
-					Callable(),
-					["storage.capacity.current"],
-					"Whether the entity is currently carrying anything")\
-				.value("is_full", Property.Type.BOOL,
-					Callable(self, "_is_full"),
-					Callable(),
-					["storage.capacity.current", "storage.capacity.max"],
-					"Whether storage is at maximum capacity")\
-			.up()\
-		.build()
-
-	# Copy the container children from the built tree
-	var built_storage = tree
-	for child in built_storage.children.values():
-		add_child(child)
-
+	
+	# Initialize configuration
+	if not config:
+		config = StorageResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 	logger.trace("Storage property tree initialized")
 
 #region Property Getters and Setters

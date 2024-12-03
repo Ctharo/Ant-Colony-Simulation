@@ -18,54 +18,23 @@ var _max_level: float = DEFAULT_MAX_HEALTH
 ## Current health level
 var _current_level: float = DEFAULT_MAX_HEALTH
 #endregion
+@export var config: HealthResource
 
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("health", Type.CONTAINER, _entity)
+	
+	# Initialize configuration
+	if not config:
+		config = HealthResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 
-	# Create the tree with the container name matching self
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("health", "Health management")\
-			.container("capacity", "Health capacity information")\
-				.value("max", Property.Type.FLOAT,
-					Callable(self, "_get_max_level"),
-					Callable(self, "_set_max_level"),
-					[],
-					"Maximum health level")\
-				.value("current", Property.Type.FLOAT,
-					Callable(self, "_get_current_level"),
-					Callable(self, "_set_current_level"),
-					[],
-					"Current health level")\
-				.value("percentage", Property.Type.FLOAT,
-					Callable(self, "_get_percentage"),
-					Callable(),
-					["health.capacity.current", "health.capacity.max"],
-					"Current health level as a percentage of max health")\
-			.up()\
-			.container("status", "Health status information")\
-				.value("replenishable", Property.Type.FLOAT,
-					Callable(self, "_get_replenishable_amount"),
-					Callable(),
-					["health.capacity.current", "health.capacity.max"],
-					"Amount of health that can be restored")\
-				.value("is_full", Property.Type.BOOL,
-					Callable(self, "_get_is_full"),
-					Callable(),
-					["health.capacity.current", "health.capacity.max"],
-					"Whether health is at maximum level")\
-				.value("is_low", Property.Type.BOOL,
-					Callable(self, "_get_is_low"),
-					Callable(),
-					["health.capacity.current", "health.capacity.max"],
-					"Whether health level is low")\
-			.up()\
-		.build()
-
-	# Copy the container children from the built tree's root health node
-	var built_health = tree
-	for child in built_health.children.values():
-		add_child(child)
 
 	logger.trace("Health property tree initialized")
 

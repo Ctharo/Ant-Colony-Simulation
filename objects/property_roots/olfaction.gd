@@ -10,81 +10,22 @@ const DEFAULT_RANGE := 100.0
 ## Maximum range at which the ant can detect scents
 var _range: float = DEFAULT_RANGE
 #endregion
+@export var config: OlfactionResource
+
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("olfaction", Type.CONTAINER, _entity)
-
-	# Create the tree with the container name matching self
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("olfaction", "Olfaction management")\
-			.container("base", "Base olfaction attributes")\
-				.value("range", Property.Type.FLOAT,
-					Callable(self, "_get_range"),
-					Callable(self, "_set_range"),
-					[],
-					"Maximum range at which to smell things")\
-			.up()\
-			.container("pheromones", "Information about pheromones within range")\
-				.value("list", Property.Type.PHEROMONES,
-					Callable(self, "_get_pheromones_in_range"),
-					Callable(),
-					["olfaction.base.range"],
-					"All pheromones within olfactory range")\
-				.value("count", Property.Type.INT,
-					Callable(self, "_get_pheromones_in_range_count"),
-					Callable(),
-					["olfaction.pheromones.list"],
-					"Count of all pheromones within range")\
-				.container("status", "Pheromone detection status")\
-					.value("is_detecting", Property.Type.BOOL,
-						Callable(self, "_is_detecting_any"),
-						Callable(),
-						["olfaction.pheromones.count"],
-						"Whether any pheromones are being detected")\
-				.up()\
-				.container("food", "Food-related pheromone information")\
-					.value("list", Property.Type.PHEROMONES,
-						Callable(self, "_get_food_pheromones_in_range"),
-						Callable(),
-						["olfaction.base.range"],
-						"Food pheromones within range")\
-					.value("count", Property.Type.INT,
-						Callable(self, "_get_food_pheromones_in_range_count"),
-						Callable(),
-						["olfaction.pheromones.food.list"],
-						"Count of food pheromones within range")\
-					.container("status", "Food pheromone detection status")\
-						.value("is_detecting", Property.Type.BOOL,
-							Callable(self, "_is_detecting_food"),
-							Callable(),
-							["olfaction.pheromones.food.count"],
-							"Whether food pheromones are being detected")\
-				.up()\
-				.up()\
-				.container("home", "Home-related pheromone information")\
-					.value("list", Property.Type.PHEROMONES,
-						Callable(self, "_get_home_pheromones_in_range"),
-						Callable(),
-						["olfaction.base.range"],
-						"Home pheromones within range")\
-					.value("count", Property.Type.INT,
-						Callable(self, "_get_home_pheromones_in_range_count"),
-						Callable(),
-						["olfaction.pheromones.home.list"],
-						"Count of home pheromones within range")\
-					.container("status", "Home pheromone detection status")\
-						.value("is_detecting", Property.Type.BOOL,
-							Callable(self, "_is_detecting_home"),
-							Callable(),
-							["olfaction.pheromones.home.count"],
-							"Whether home pheromones are being detected")\
-			.up()\
-		.build()
-
-	# Copy the container children from the built tree
-	var built_olfaction = tree
-	for child in built_olfaction.children.values():
-		add_child(child)
+	
+	# Initialize configuration
+	if not config:
+		config = OlfactionResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 
 	logger.trace("Olfaction property tree initialized")
 

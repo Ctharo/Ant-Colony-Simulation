@@ -11,94 +11,23 @@ const DEFAULT_RANGE := 15.0
 #endregion
 
 #region Member Variables
+@export var config: ReachResource
 ## The maximum reach distance of the entity
 var _range: float = DEFAULT_RANGE
 #endregion
 
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("reach", Type.CONTAINER, _entity)
-
-	# Then build and copy children
-	var tree = PropertyNode.create_tree(_entity)\
-		.value("range", Property.Type.FLOAT,
-			Callable(self, "_get_range"),
-			Callable(self, "_set_range"),
-			[],
-			"Maximum distance the entity can reach to interact with objects")\
-		.up()\
-		.container("foods", "Properties related to food in reach range")\
-			.value("list", Property.Type.FOODS,
-				Callable(self, "_get_foods_in_range"),
-				Callable(),
-				["reach.range.current"],
-				"Food items within reach range")\
-			.value("count", Property.Type.INT,
-				Callable(self, "_get_foods_in_range_count"),
-				Callable(),
-				["reach.foods.in_range"],
-				"Number of food items within reach range")\
-			.value("mass", Property.Type.FLOAT,
-				Callable(self, "_get_foods_in_range_mass"),
-				Callable(),
-				["reach.foods.in_range"],
-				"Total mass of food within reach range")\
-		.build()
-
-	# Copy children from built tree
-	for child in tree.children.values():
-		add_child(child)
-
+	
+	# Initialize configuration
+	if not config:
+		config = ReachResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 	logger.trace("Reach property tree initialized")
-
-#region Property Getters and Setters
-func _get_range() -> float:
-	return _range
-
-func _set_range(value: float) -> void:
-	if value <= 0:
-		logger.error("Attempted to set reach.range.current to non-positive value -> Action not allowed")
-		return
-
-	var old_value = _range
-	_range = value
-
-	if old_value != _range:
-		logger.trace("Range updated: %.2f -> %.2f" % [old_value, _range])
-
-func _get_foods_in_range() -> Foods:
-	if not entity:
-		logger.error("Cannot get foods in range: entity reference is null")
-		return null
-	return Foods.in_range(entity.global_position, _range)
-
-func _get_foods_in_range_count() -> int:
-	var foods = _get_foods_in_range()
-	if not foods:
-		return 0
-	return foods.size()
-
-func _get_foods_in_range_mass() -> float:
-	var foods = _get_foods_in_range()
-	if not foods:
-		return 0.0
-
-	var mass: float = 0.0
-	for food in foods:
-		mass += food.mass
-	return mass
-#endregion
-
-#region Public Methods
-## Reset reach distance to default value
-func reset() -> void:
-	_set_range(DEFAULT_RANGE)
-	logger.trace("Range reset to default: %.2f" % DEFAULT_RANGE)
-
-## Check if a specific position is within reach
-func is_position_in_range(position: Vector2) -> bool:
-	if not entity:
-		logger.error("Cannot check position: entity reference is null")
-		return false
-	return entity.global_position.distance_to(position) <= _range
-#endregion

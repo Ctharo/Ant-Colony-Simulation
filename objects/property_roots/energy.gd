@@ -18,60 +18,22 @@ var _max_level: float = DEFAULT_MAX_ENERGY
 ## Current energy level
 var _current_level: float = DEFAULT_MAX_ENERGY
 #endregion
+@export var config: EnergyResource
 
 func _init(_entity: Node) -> void:
-	# First create self as container
+	## Initialize the proprioception component
 	super._init("energy", Type.CONTAINER, _entity)
-
-	# Create the tree with the container name matching self
-	var tree = PropertyNode.create_tree(_entity)\
-		.container("energy", "Energy management")\
-			.container("capacity", "Energy capacity information")\
-				.value("max", Property.Type.FLOAT,
-					Callable(self, "_get_max_level"),
-					Callable(self, "_set_max_level"),
-					[],
-					"Maximum energy level")\
-				.value("current", Property.Type.FLOAT,
-					Callable(self, "_get_current_level"),
-					Callable(self, "_set_current_level"),
-					[],
-					"Current energy level")\
-				.value("percentage", Property.Type.FLOAT,
-					Callable(self, "_get_percentage"),
-					Callable(),
-					["energy.capacity.current", "energy.capacity.max"],
-					"Current energy level as a percentage of max energy")\
-			.up()\
-			.container("status", "Energy status information")\
-				.value("replenishable", Property.Type.FLOAT,
-					Callable(self, "_get_replenishable_amount"),
-					Callable(),
-					["energy.capacity.current", "energy.capacity.max"],
-					"Amount of energy that can be replenished")\
-				.value("is_full", Property.Type.BOOL,
-					Callable(self, "_get_is_full"),
-					Callable(),
-					["energy.capacity.current", "energy.capacity.max"],
-					"Whether energy is at maximum level")\
-				.value("is_depleted", Property.Type.BOOL,
-					Callable(self, "_get_is_depleted"),
-					Callable(),
-					["energy.capacity.current"],
-					"Whether energy is completely depleted")\
-				.value("is_low", Property.Type.BOOL,
-					Callable(self, "_get_is_low"),
-					Callable(),
-					["energy.capacity.current", "energy.capacity.max"],
-					"Whether energy level is low")\
-			.up()\
-		.build()
-
-	# Copy the container children from the built tree's root energy node
-	var built_energy = tree
-	for child in built_energy.children.values():
-		add_child(child)
-
+	
+	# Initialize configuration
+	if not config:
+		config = EnergyResource.new()
+	
+	# Create the complete property tree from the resource
+	var node := PropertyNode.from_resource(config, _entity)
+	
+	# Copy the configured tree into this instance
+	copy_from(node)
+	
 	logger.trace("Energy property tree initialized")
 
 #region Property Getters and Setters
