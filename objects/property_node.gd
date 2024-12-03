@@ -42,6 +42,7 @@ var parent: PropertyNode
 var entity: Node
 #endregion
 
+#FIXME: Why are we passing name? 
 func _init(
 	p_name: String,
 	p_type: Type,
