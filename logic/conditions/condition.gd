@@ -1,12 +1,11 @@
 class_name Condition
-extends RefCounted
 
 ## Signals
 signal evaluation_changed(is_met: bool)
 
 ## Properties
-var name: String
-var config: ConfigBase
+@export var name: String
+@export var config: ConditionConfig
 var previous_result: bool = false
 var _required_properties: Array[Path] = []
 

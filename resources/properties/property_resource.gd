@@ -1,4 +1,3 @@
-@tool
 class_name PropertyResource
 extends Resource
 ## Base resource for managing property configurations and values
@@ -21,6 +20,8 @@ extends Resource
 
 ## Child resources (for container nodes)
 @export var children: Dictionary = {}  # name -> PropertyResource
+
+var logger: Logger
 #endregion
 
 ## Create a property node from this resource configuration

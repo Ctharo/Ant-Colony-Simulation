@@ -20,4 +20,4 @@ script = ExtResource("2_donwt")
 name = "FollowFoodPheromones"
 priority = "LOW"
 action = SubResource("Resource_gdmon")
-conditions = Array[Dictionary]([])
+conditions = []

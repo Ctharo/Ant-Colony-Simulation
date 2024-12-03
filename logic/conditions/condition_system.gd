@@ -52,7 +52,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 		logger.error("Attempted to evaluate null condition")
 		return false
 
-	var result := _evaluate_condition_config(condition.config, context)
+	var result: bool = _evaluate_condition_config(condition.config, context)
 	var previous = condition.previous_result
 	if result != previous:
 		condition.previous_result = result
@@ -61,7 +61,7 @@ func evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 #endregion
 
 #region Evaluation Methods
-func _evaluate_condition_config(config: ConfigBase, context: Dictionary) -> bool:
+func _evaluate_condition_config(config: ConditionConfig, context: Dictionary) -> bool:
 	match config.type:
 		"Custom":
 			var custom_config := config as CustomConditionConfig
@@ -95,19 +95,19 @@ func _evaluate_property_check(config: PropertyCheckConfig, context: Dictionary) 
 	var result = _compare_values(value_a, value_b, config.operator)
 	return result
 
-func _evaluate_and_operator(operands: Array[ConfigBase], context: Dictionary) -> bool:
+func _evaluate_and_operator(operands: Array[ConditionConfig], context: Dictionary) -> bool:
 	for operand in operands:
 		if not _evaluate_condition_config(operand, context):
 			return false
 	return true
 
-func _evaluate_or_operator(operands: Array[ConfigBase], context: Dictionary) -> bool:
+func _evaluate_or_operator(operands: Array[ConditionConfig], context: Dictionary) -> bool:
 	for operand in operands:
 		if _evaluate_condition_config(operand, context):
 			return true
 	return false
 
-func _evaluate_not_operator(operands: Array[ConfigBase], context: Dictionary) -> bool:
+func _evaluate_not_operator(operands: Array[ConditionConfig], context: Dictionary) -> bool:
 	if operands.size() != 1:
 		logger.error("NOT operator requires exactly one operand")
 		return false

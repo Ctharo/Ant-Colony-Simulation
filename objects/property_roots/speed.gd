@@ -25,7 +25,7 @@ func _init(_entity: Node) -> void:
 	var tree = PropertyNode.create_tree(_entity)\
 		.container("speed", "Speed management")\
 			.container("base", "Base speed rates")\
-				.value("movement", Property.Type.FLOAT,
+				.value("rate", Property.Type.FLOAT,
 					Callable(self, "_get_movement_rate"),
 					Callable(self, "_set_movement_rate"),
 					[],
