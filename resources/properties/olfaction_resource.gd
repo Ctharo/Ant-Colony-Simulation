@@ -17,7 +17,7 @@ class RangeResource extends PropertyResource:
 		return func(): return entity.get_property_value("olfaction.base.range")
 	
 	func create_setter(entity: Node) -> Callable:
-		return func(value): entity.range = value
+		return func(value): entity.get_property("olfaction").range = value
 
 class PheromoneListResource extends PropertyResource:
 	func _init() -> void:

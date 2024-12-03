@@ -43,7 +43,7 @@ class ColonyPositionResource extends PropertyResource:
 		)
 
 	func create_getter(entity: Node) -> Callable:
-		return func(): return entity.get_property_value("colony.position") or Vector2.ZERO
+		return func(): return entity.colony.global_position
 
 class ColonyDirectionResource extends PropertyResource:
 	func _init() -> void:

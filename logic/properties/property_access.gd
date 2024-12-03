@@ -31,7 +31,7 @@ func _init(owner: Object) -> void:
 		type = "Unknown type"
 	logger.debug("Initialized for %s" % type)
 
-## Get a property's value directly without caching
+## Get a property's value.  #TODO: Should get direct value from entity if applicable?
 func get_property_value(path: Path) -> Variant:
 	if not has_node(path):
 		logger.error("Node not found: %s" % path.full)

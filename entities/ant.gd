@@ -239,6 +239,7 @@ func get_property(path: Path) -> PropertyNode:
 	return _property_access.get_property(path)
 
 ## Get a property value by path
+#TODO initial value should be direct? Or to property_access because we want this method to be the public entry
 func get_property_value(path_string: String) -> Variant:
 	if not _property_access:
 		logger.error("Cannot get ant property value: ant property access system not initialized")

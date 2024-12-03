@@ -153,7 +153,7 @@ func get_value() -> Variant:
 		logger.error("Invalid getter for property")
 		return null
 
-	return getter.call()
+	return getter.call() # This is what is set when creating PropertyNode from property_resource - should get direct value if set properly?
 
 func set_value(value: Variant) -> Result:
 	if not is_value_node():
