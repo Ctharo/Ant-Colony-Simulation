@@ -23,6 +23,7 @@ func _ready() -> void:
 static func load_configs() -> void:
 	if not task_configs:
 		task_configs = load("res://resources/ant_tasks.tres") as TaskConfigList
+		assert(task_configs)
 		if task_configs:
 			task_configs.load_tasks()
 		else:
@@ -30,6 +31,7 @@ static func load_configs() -> void:
 
 	if not behavior_configs:
 		behavior_configs = load("res://resources/ant_behaviors.tres") as BehaviorConfigList
+		assert(behavior_configs)
 		if behavior_configs:
 			behavior_configs.load_behaviors()
 		else:
@@ -37,6 +39,7 @@ static func load_configs() -> void:
 
 	if not condition_configs:
 		condition_configs = load("res://resources/ant_conditions.tres") as ConditionConfigList
+		assert(condition_configs)
 		if condition_configs:
 			condition_configs.load_conditions()
 		else:
@@ -73,16 +76,14 @@ static func create_task_from_config(config: TaskConfig, ant: Ant, condition_syst
 	task.ant = ant
 
 	# Add task conditions
-	for condition_name in config.conditions:
-		var condition_config: ConditionConfig = AntConfigs.get_condition_config(condition_name)
-		if condition_config:
-			var condition = create_condition_from_config(condition_config)
-			if condition:
-				task.add_condition(condition)
-			else:
-				push_error("Failed to create condition for task: %s with config: %s" % [config.name, condition_name])
+	for condition_config in config.conditions:
+		var condition_name: String = condition_config.name
+		var condition = create_condition_from_config(condition_config)
+		if condition:
+			task.add_condition(condition)
 		else:
-			push_error("Failed to get condition config for: %s" % condition_name)
+			push_error("Failed to create condition for task: %s with config: %s" % [condition_config.name, condition_name])
+	
 
 	# Create and add behaviors
 	var behaviors = create_task_behaviors(config.name, ant, condition_system)

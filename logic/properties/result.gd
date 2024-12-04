@@ -32,3 +32,6 @@ func success() -> bool:
 
 func is_error() -> bool:
 	return not success()
+
+func get_error() -> String:
+	return error_message

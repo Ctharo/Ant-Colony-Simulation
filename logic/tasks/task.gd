@@ -66,8 +66,8 @@ class Builder:
 		return _task
 
 ## Static method to create a new builder instance
-static func builder(priority: Priority = Priority.MEDIUM) -> Builder:
-	return Builder.new(priority)
+static func builder(_priority: Priority = Priority.MEDIUM) -> Builder:
+	return Builder.new(_priority)
 #endregion
 
 #region Properties
@@ -325,8 +325,8 @@ func find_next_valid_behavior(context: Dictionary, current_priority: int = -1) -
 		if behaviors_at_priority.is_empty():
 			continue
 		var behavior_count: int = behaviors_at_priority.size()
-		var str: String = "behavior" if behavior_count == 1 else "behaviors"
-		logger.trace("Checking %s %s at priority level %d" % [behavior_count, str, priority])
+		var s: String = "behavior" if behavior_count == 1 else "behaviors"
+		logger.trace("Checking %s %s at priority level %d" % [behavior_count, s, priority])
 		for behavior: Behavior in behaviors_at_priority:
 			if not is_instance_valid(behavior):
 				continue
@@ -348,7 +348,7 @@ func _evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	return result
 
 ## Helper function to format conditions for debug output
-func _format_condition(config: ConfigBase) -> String:
+func _format_condition(config: ConditionConfig) -> String:
 	match config.type:
 		"Operator":
 			var operator_config := config as OperatorConfig

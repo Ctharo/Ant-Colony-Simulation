@@ -85,8 +85,8 @@ class Builder:
 		return behavior
 
 ## Static method to create a new builder instance
-static func builder(priority: int = Priority.MEDIUM) -> Builder:
-	return Builder.new(priority)
+static func builder(_priority: int = Priority.MEDIUM) -> Builder:
+	return Builder.new(_priority)
 #endregion
 
 #region Properties
@@ -213,10 +213,10 @@ func _evaluate_condition(condition: Condition, context: Dictionary) -> bool:
 	return result
 
 ## Helper function to format conditions for debug output
-func _format_condition(config: ConfigBase) -> String:
+func _format_condition(_config: ConditionConfig) -> String:
 	match config.type:
 		"Operator":
-			var operator_config := config as OperatorConfig
+			var operator_config := _config as OperatorConfig
 			var formatted_operands = operator_config.operands.map(func(op): return _format_condition(op))
 
 			# Formatting operators with human-readable logic
@@ -228,10 +228,10 @@ func _format_condition(config: ConfigBase) -> String:
 				"or":
 					return "(" + " or ".join(formatted_operands) + ")"
 		"Custom":
-			var custom_config := config as CustomConditionConfig
+			var custom_config := _config as CustomConditionConfig
 			return custom_config.condition_name
 		"PropertyCheck":
-			var property_config := config as PropertyCheckConfig
+			var property_config := _config as PropertyCheckConfig
 			return "(%s %s %s)" % [
 				property_config.property,
 				property_config.operator.to_lower(),

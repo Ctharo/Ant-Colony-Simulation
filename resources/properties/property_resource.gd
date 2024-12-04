@@ -45,14 +45,14 @@ func create_node(entity: Node) -> PropertyNode:
 
 ## Create a getter function for this property
 ## Override in derived classes to provide specific getter logic
-func create_getter(entity: Node) -> Callable:
+func create_getter(_entity: Node) -> Callable:
 	if type != PropertyNode.Type.VALUE:
 		return Callable()
 	return Callable()
 
 ## Create a setter function for this property
 ## Override in derived classes to provide specific setter logic
-func create_setter(entity: Node) -> Callable:
+func create_setter(_entity: Node) -> Callable:
 	if type != PropertyNode.Type.VALUE:
 		return Callable()
 	return Callable()

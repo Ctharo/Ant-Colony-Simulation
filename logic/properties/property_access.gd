@@ -54,13 +54,13 @@ func set_property_value(path: Path, value: Variant) -> Result:
 		return Result.new(Result.ErrorType.TYPE_MISMATCH, "Not a value node")
 	var node = find_property_node(path)
 	var old_value = node.get_value()
-	var result = node.set_value(value)
+	var result: Result = node.set_value(value)
 	if result.success():
 		_log_property_change(path, old_value, value)
 		property_changed.emit(path.full, old_value, value)
 		_log_property_access(path, value, "WRITE")
 	else:
-		logger.error("Failed to set value for %s: %s" % [path.full, result.get_error()])
+		logger.error("Failed to set value for %s: %s" % [path.full, result.error_message])
 	return result
 #endregion
 

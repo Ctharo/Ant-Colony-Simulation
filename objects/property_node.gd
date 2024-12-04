@@ -65,14 +65,14 @@ func _init(
 	logger = Logger.new("property_node", DebugLogger.Category.PROPERTY)
 
 ## Create a property node from a resource configuration
-static func from_resource(resource: PropertyResource, entity: Node) -> PropertyNode:
+static func from_resource(resource: PropertyResource, _entity: Node) -> PropertyNode:
 	var node := PropertyNode.new(
 		resource.path.full,
 		resource.type,
-		entity,
+		_entity,
 		resource.value_type,
-		resource.create_getter(entity),
-		resource.create_setter(entity),
+		resource.create_getter(_entity),
+		resource.create_setter(_entity),
 		resource.dependencies,
 		resource.description
 	)
@@ -80,7 +80,7 @@ static func from_resource(resource: PropertyResource, entity: Node) -> PropertyN
 	# Recursively create child nodes from child resources
 	if resource.type == Type.CONTAINER:
 		for child_resource in resource.children.values():
-			var child_node := from_resource(child_resource, entity)
+			var child_node := from_resource(child_resource, _entity)
 			node.add_child(child_node)
 
 	return node

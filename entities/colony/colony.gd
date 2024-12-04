@@ -65,30 +65,7 @@ func _init_property_nodes() -> void:
 
 ## Get colony as a property node tree
 func get_as_node() -> PropertyNode:
-	var builder = PropertyNode.create_tree(self)
-	var root = builder\
-		.container("colony", "Colony root properties")\
-		.value("position", Property.Type.VECTOR2, get_position, Callable(), [], "Colony position in world space")\
-		.value("radius", Property.Type.FLOAT, _get_radius, _set_radius, ["reach.range"], "Colony radius")\
-		.value("area", Property.Type.FLOAT, _get_area, Callable(), ["radius"], "Colony area")\
-		.value("perimeter", Property.Type.FLOAT, _get_perimeter, Callable(), ["radius"], "Colony perimeter")\
-		.container("food", "Food management properties")\
-			.value("count", Property.Type.INT, _get_food_count, Callable(), [], "Number of food items")\
-			.value("total_mass", Property.Type.FLOAT, _get_total_food_mass, Callable(), [], "Total mass of all food")\
-		.up()\
-		.container("population", "Population statistics")\
-			.value("count", Property.Type.INT, _get_ant_count, Callable(), [], "Number of ants")\
-			.value("average_energy", Property.Type.FLOAT, _get_average_ant_energy, Callable(), [], "Average ant energy")\
-		.build()
-
-	# Add existing root nodes as children
-	var root_names = get_root_names()
-	for root_name in root_names:
-		var node = _property_access.find_property_node(Path.parse(root_name))
-		if node:
-			root.add_child(node)
-
-	return root
+	return PropertyNode.new("colony", PropertyNode.Type.CONTAINER)
 #endregion
 
 #region Property Access Interface

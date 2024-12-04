@@ -25,12 +25,12 @@ var _path: String
 		path = value  # This will trigger path's setter and update everything
 
 ## The parts of the path from root to leaf - now private
-var _parts: Array[String]
+var _parts: PackedStringArray
 
 ## Public accessor for parts that ensures synchronization
-var parts: Array[String]:
+var parts: PackedStringArray:
 	set(value):
-		var new_parts: Array[String] = []
+		var new_parts: PackedStringArray = []
 		for part in value:
 			new_parts.append(part.to_lower())
 		_parts = new_parts
@@ -47,8 +47,8 @@ var sub: Path:
 ## Static path separator
 const SEPARATOR = "."
 
-func _init(path_parts: Array[String] = []) -> void:
-	var normalized_parts: Array[String] = []
+func _init(path_parts: PackedStringArray) -> void:
+	var normalized_parts: PackedStringArray = []
 	for part in path_parts:
 		normalized_parts.append(part.to_lower())
 	_parts = normalized_parts
@@ -133,10 +133,10 @@ static func from_root_and_property(root: String, property: String) -> Path:
 	return Path.new([root.to_lower(), property.to_lower()])
 
 ## Returns all ancestor paths including self, from root to leaf
-static func get_ancestor_paths(path: Path) -> Array[Path]:
+static func get_ancestor_paths(_path: Path) -> Array[Path]:
 	var ancestors: Array[Path] = []
 	var current_parts: Array[String] = []
-	for part in path._parts:
+	for part in _path._parts:
 		current_parts.append(part)
 		ancestors.append(Path.new(current_parts.duplicate()))
 	return ancestors

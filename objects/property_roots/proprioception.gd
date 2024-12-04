@@ -1,4 +1,3 @@
-@tool
 class_name Proprioception
 extends PropertyNode
 ## The component responsible for sense of direction and position

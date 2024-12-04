@@ -18,9 +18,6 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-DataManager="*res://managers/data_manager.gd"
-RuleManager="*res://managers/rule_manager.gd"
-SimulationState="*res://managers/simulation_state.gd"
 PheromoneManager="*res://managers/pheromone_manager.gd"
 AntManager="*res://managers/ant_manager.gd"
 FoodManager="*res://managers/food_manager.gd"
