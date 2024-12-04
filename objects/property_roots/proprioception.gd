@@ -19,13 +19,3 @@ func _init(_entity: Node) -> void:
 	copy_from(node)
 	
 	logger.trace("Proprioception property tree initialized")
-
-#region Public Methods
-## Helper method to get value from a child node
-func get_node_value(path: String) -> Variant:
-	var node := find_node_by_string(path)
-	if not node:
-		logger.error("Could not find node at path: %s" % path)
-		return null
-	return node.get_value()
-#endregion

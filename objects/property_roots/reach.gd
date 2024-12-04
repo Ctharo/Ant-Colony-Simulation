@@ -12,8 +12,7 @@ const DEFAULT_RANGE := 15.0
 
 #region Member Variables
 @export var config: ReachResource
-## The maximum reach distance of the entity
-var _range: float = DEFAULT_RANGE
+
 #endregion
 
 func _init(_entity: Node) -> void:
