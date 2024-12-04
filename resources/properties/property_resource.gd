@@ -24,25 +24,6 @@ extends Resource
 var logger: Logger
 #endregion
 
-## Create a property node from this resource configuration
-func create_node(entity: Node) -> PropertyNode:
-	var node := PropertyNode.new(
-		path.full,
-		type,
-		entity,
-		value_type,
-		create_getter(entity),
-		create_setter(entity),
-		dependencies,
-		description
-	)
-
-	if node.is_container_node():
-		for child in children.values():
-			node.add_child(child.create_node(entity))
-
-	return node
-
 ## Create a getter function for this property
 ## Override in derived classes to provide specific getter logic
 func create_getter(_entity: Node) -> Callable:

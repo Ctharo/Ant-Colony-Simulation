@@ -40,6 +40,9 @@ var parent: PropertyNode
 
 ## Owner entity (for getting context in getters/setters)
 var entity: Node
+
+## Resource configuration that created this node
+var config: PropertyResource
 #endregion
 
 #FIXME: Why are we passing name? 
@@ -47,6 +50,7 @@ func _init(
 	p_name: String,
 	p_type: Type,
 	p_entity: Node = null,
+	p_config: PropertyResource = null,
 	p_value_type: Property.Type = Property.Type.UNKNOWN,
 	p_getter: Callable = Callable(),
 	p_setter: Callable = Callable(),
@@ -56,6 +60,7 @@ func _init(
 	name = p_name
 	type = p_type
 	entity = p_entity
+	config = p_config
 	value_type = p_value_type
 	getter = p_getter
 	setter = p_setter
@@ -65,11 +70,12 @@ func _init(
 	logger = Logger.new("property_node", DebugLogger.Category.PROPERTY)
 
 ## Create a property node from a resource configuration
-static func from_resource(resource: PropertyResource, _entity: Node) -> PropertyNode:
+static func create_tree(resource: PropertyResource, _entity: Node) -> PropertyNode:
 	var node := PropertyNode.new(
 		resource.path.full,
 		resource.type,
 		_entity,
+		resource,
 		resource.value_type,
 		resource.create_getter(_entity),
 		resource.create_setter(_entity),
@@ -80,7 +86,7 @@ static func from_resource(resource: PropertyResource, _entity: Node) -> Property
 	# Recursively create child nodes from child resources
 	if resource.type == Type.CONTAINER:
 		for child_resource in resource.children.values():
-			var child_node := from_resource(child_resource, _entity)
+			var child_node := create_tree(child_resource, _entity)
 			node.add_child(child_node)
 
 	return node
