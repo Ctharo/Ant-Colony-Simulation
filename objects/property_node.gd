@@ -15,7 +15,11 @@ var name: String
 var type: Type
 
 ## Full path from root to this node
-var path: Path : get = get_path
+var path: Path : 
+	get:
+		return path
+	set(value):
+		path = value
 
 ## Type of value (for Value nodes)
 var value_type: Property.Type
@@ -108,6 +112,8 @@ func copy_from(other: PropertyNode) -> void:
 
 #region Tree Navigation
 func get_path() -> Path:
+	if path:
+		return path
 	var parts: Array[String] = []
 	var current: PropertyNode = self
 

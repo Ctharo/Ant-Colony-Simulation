@@ -39,33 +39,30 @@ func _init_property_access() -> void:
 	logger.debug("Property access system initialized")
 
 func _init_property_nodes() -> void:
-	logger.debug("Initializing property nodes...")
-
+	logger.debug("Initializing colony property nodes...")
 	if not _property_access:
 		_init_property_access()
-
-	var nodes = [
-		Reach.new(self)
-	]
-
-	for node in nodes:
-		logger.debug("Registering property node: %s" % node.name)
-		var result = _property_access.register_node(node)
-		if not result.success():
-			logger.error("Failed to register property node %s: %s" % [
-				node.name,
-				result.get_error()
-			])
-		else:
-			logger.debug("Successfully registered property node: %s" % node.name)
-
+		
+	var node = PropertyNode.create_tree(
+		PropertyFactory.create_colony_resource(),
+		self
+	)
+	
+	var result = _property_access.register_node(node)
+	if not result.success():
+		logger.error("Failed to register colony properties: %s" % result.get_error())
+	else:
+		logger.debug("Successfully registered colony properties")
+		
 	set_property_value("reach.range", 50.0)
-
-	logger.debug("Property node initialization complete")
-
-## Get colony as a property node tree
+	logger.debug("Colony property initialization complete")
+	
+## Method for ants to get colony property tree
 func get_as_node() -> PropertyNode:
-	return PropertyNode.new("colony", PropertyNode.Type.CONTAINER)
+	return PropertyNode.create_tree(
+		PropertyFactory.create_colony_resource(),
+		self
+	)
 #endregion
 
 #region Property Access Interface

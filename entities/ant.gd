@@ -174,21 +174,23 @@ func register_property_node(node: PropertyNode, at_path: Path = null) -> Result:
 ## Initialize all component property nodes
 func _init_property_groups() -> void:
 	logger.trace("Initializing ant property nodes...")
-
+	
 	var nodes = [
-		Energy.new(self),        # Energy management
-		Health.new(self),        # Health management
-		Speed.new(self),         # Movement and action rates
-		Strength.new(self),      # Base strength attributes
-		Storage.new(self),       # Item storage capacity
-		Vision.new(self),        # Visual perception
-		Olfaction.new(self),     # Scent detection
-		Reach.new(self),         # Interaction range
-		Proprioception.new(self) # Position awareness
+		PropertyNode.create_tree(PropertyFactory.create_energy_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_health_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_speed_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_strength_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_storage_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_vision_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_olfaction_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_reach_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_proprioception_resource(), self),
+		PropertyNode.create_tree(PropertyFactory.create_colony_resource(), self),
 	]
+	
 	var successes: int = 0
 	var failures: int = 0
-
+	
 	for node in nodes:
 		var result = register_property_node(node)
 		if result.success():
@@ -197,9 +199,8 @@ func _init_property_groups() -> void:
 		else:
 			failures += 1
 			logger.error("Ant property %s failed to register" % node.name)
-
+			
 	logger.trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
-
 ## Register colony-specific properties
 func _register_colony_properties() -> void:
 	if not _colony:
