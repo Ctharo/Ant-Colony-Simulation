@@ -54,6 +54,9 @@ var _property_access: PropertyAccess :
 var logger: Logger
 #endregion
 
+var movement_rate = 10.0
+var storing_rate = 13.0
+var harvesting_rate = 4.0
 
 func _init(init_as_active: bool = false) -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
@@ -93,7 +96,7 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 #region Action Methods
 ## Placeholder for actions
-func perform_action(action: Action, args: Dictionary = {}) -> void:
+func perform_action(action: Action, _args: Dictionary = {}) -> void:
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
 	event_str += action.description if action.description else "N/A"
@@ -160,30 +163,21 @@ func _init_property_access() -> void:
 func _init_property_groups() -> void:
 	logger.trace("Initializing ant property nodes...")
 
-	var nodes = [
-		PropertyTreeBuilder.build(PropertyFactory.create_energy_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_health_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_speed_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_strength_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_storage_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_vision_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_olfaction_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_reach_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_proprioception_resource(), self),
-		PropertyTreeBuilder.build(PropertyFactory.create_colony_resource(), self),
+	var trees = [
+		Proprioception.new(self)
 	]
 
 	var successes: int = 0
 	var failures: int = 0
 
-	for node in nodes:
-		var result = _property_access.register_node(node)
+	for tree: PropertyNode in trees:
+		var result = _property_access.register_node_tree(tree)
 		if result.success():
 			successes += 1
-			logger.trace("Ant property %s registered successfully" % node.name)
+			logger.trace("Ant property %s registered successfully" % tree.name)
 		else:
 			failures += 1
-			logger.error("Ant property %s failed to register" % node.name)
+			logger.error("Ant property %s failed to register" % tree.name)
 
 	logger.trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
 ## Register colony-specific properties

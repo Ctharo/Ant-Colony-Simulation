@@ -75,7 +75,7 @@ func create_ui(parent_window: Window) -> Dictionary:
 	return refs
 
 ## Creates and displays a loading indicator
-func show_loading_indicator(parent_window: Window) -> void:
+func show_loading_indicator(_parent_window: Window) -> void:
 	loading_label.text = "Creating content..."
 	loading_label.visible = true
 
@@ -93,7 +93,7 @@ func remove_loading_indicator() -> void:
 
 #region Layout Creation
 ## Creates the main content split layout and its contents
-func _create_content_split(parent_window: Window, refs: Dictionary) -> HSplitContainer:
+func _create_content_split(_parent_window: Window, refs: Dictionary) -> HSplitContainer:
 	var content_split := HSplitContainer.new()
 	content_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -212,7 +212,7 @@ func _on_path_changed(new_path: Path) -> void:
 	if new_path.is_root():
 		return
 
-	var root_node = current_ant.get_root_node(new_path.get_root_name())
+	var root_node = current_ant.get_property(new_path.get_root_name())
 	if not root_node:
 		return
 
@@ -235,7 +235,10 @@ func create_ant_to_browse() -> void:
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
-	ant.foods.add_food(ant.get_property_value("storage.capacity.max"))
+	var storage_space = ant.get_property_value("storage.capacity.max")
+	if not storage_space:
+		storage_space = 100.0
+	ant.foods.add_food(storage_space)
 
 	current_ant = ant
 	navigation_manager.set_property_access(ant)
@@ -256,7 +259,7 @@ func generate_content() -> void:
 	_staged_creation(to_create, current_ant)
 
 ## Create components in stages to avoid freezing
-func _staged_creation(params: Dictionary, main_ant: Ant) -> void:
+func _staged_creation(params: Dictionary, _main_ant: Ant) -> void:
 	var items_created: int = params.values().reduce(func(accum, value): return accum + value, 0)
 
 	var timer = Timer.new()

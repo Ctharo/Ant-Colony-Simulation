@@ -22,7 +22,7 @@ var logger: Logger
 func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
 	_init_property_access()
-	_init_property_nodes()
+	#_init_property_nodes()
 
 func add_ant(ant: Ant) -> Result:
 	if not ant:
@@ -37,25 +37,25 @@ func add_ant(ant: Ant) -> Result:
 func _init_property_access() -> void:
 	_property_access = PropertyAccess.new(self)
 	logger.debug("Property access system initialized")
-
-func _init_property_nodes() -> void:
-	logger.debug("Initializing colony property nodes...")
-	if not _property_access:
-		_init_property_access()
-
-	var node = PropertyTreeBuilder.build(
-		PropertyFactory.create_colony_resource(),
-		self
-	)
-
-	var result = _property_access.register_node(node)
-	if not result.success():
-		logger.error("Failed to register colony properties: %s" % result.get_error())
-	else:
-		logger.debug("Successfully registered colony properties")
-
-	set_property_value("reach.range", 50.0)
-	logger.debug("Colony property initialization complete")
+#
+#func _init_property_nodes() -> void:
+	#logger.debug("Initializing colony property nodes...")
+	#if not _property_access:
+		#_init_property_access()
+#
+	#var node = PropertyTreeBuilder.build(
+		#PropertyFactory.create_colony_resource(),
+		#self
+	#)
+#
+	#var result = _property_access.register_node_tree(node)
+	#if not result.success():
+		#logger.error("Failed to register colony properties: %s" % result.get_error())
+	#else:
+		#logger.debug("Successfully registered colony properties")
+#
+	#set_property_value("reach.range", 50.0)
+	#logger.debug("Colony property initialization complete")
 
 
 #endregion
