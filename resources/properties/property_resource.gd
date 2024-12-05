@@ -37,40 +37,7 @@ func create_setter(_entity: Node) -> Callable:
 	if type != PropertyNode.Type.VALUE:
 		return Callable()
 	return Callable()
-
-## Static factory method for creating container resources
-static func create_container(
-	p_path: String,
-	p_description: String,
-	p_children: Dictionary = {}
-) -> PropertyResource:
-	var resource := PropertyResource.new()
-	resource.setup(
-		p_path,
-		PropertyNode.Type.CONTAINER,
-		p_description,
-		p_children
-	)
-	return resource
-
-## Static factory method for creating value resources
-static func create_value(
-	p_path: String,
-	p_description: String,
-	p_value_type: Property.Type,
-	p_dependencies: Array[String] = []
-) -> PropertyResource:
-	var resource := PropertyResource.new()
-	resource.setup(
-		p_path,
-		PropertyNode.Type.VALUE,
-		p_description,
-		{},
-		p_value_type,
-		p_dependencies
-	)
-	return resource
-
+	
 ## Helper function to setup basic properties
 func setup(
 	p_path: String,

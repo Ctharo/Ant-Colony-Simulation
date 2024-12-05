@@ -650,7 +650,8 @@ static func _create_speed_derived_builder() -> PropertyResourceBuilder:
 			))
 	)
 #endregion
-#region Colony resource
+
+#region Colony factory
 static func create_colony_resource() -> PropertyResource:
 	return (
 		PropertyResourceBuilder.container("colony")

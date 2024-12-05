@@ -57,12 +57,7 @@ func _init_property_nodes() -> void:
 	set_property_value("reach.range", 50.0)
 	logger.debug("Colony property initialization complete")
 	
-## Method for ants to get colony property tree
-func get_as_node() -> PropertyNode:
-	return PropertyNode.create_tree(
-		PropertyFactory.create_colony_resource(),
-		self
-	)
+
 #endregion
 
 #region Property Access Interface

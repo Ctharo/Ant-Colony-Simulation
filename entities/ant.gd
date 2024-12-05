@@ -81,9 +81,6 @@ func _physics_process(delta: float) -> void:
 func set_colony(p_colony: Colony) -> void:
 	if _colony != p_colony:
 		_colony = p_colony
-		_register_colony_properties()
-
-
 #endregion
 
 #region Event Handlers
@@ -202,21 +199,6 @@ func _init_property_groups() -> void:
 			
 	logger.trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
 ## Register colony-specific properties
-func _register_colony_properties() -> void:
-	if not _colony:
-		logger.warn("Cannot register colony properties: no colony reference available")
-		return
-
-	var node: PropertyNode = _colony.get_as_node()
-	if not node:
-		logger.error("Failed to get colony property node for ant property registration")
-		return
-
-	var result: Result = register_property_node(node)
-	if result.success():
-		logger.trace("Colony properties registered successfully to ant")
-	else:
-		logger.error("Colony properties not registered to ant -> %s" % result.error_message)
 
 func _init_task_tree() -> void:
 	logger.trace("Initializing ant task_tree")

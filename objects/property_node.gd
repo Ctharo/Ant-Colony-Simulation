@@ -111,18 +111,6 @@ func copy_from(other: PropertyNode) -> void:
 		add_child(child)
 
 #region Tree Navigation
-func get_path() -> Path:
-	if path:
-		return path
-	var parts: Array[String] = []
-	var current: PropertyNode = self
-
-	while current != null:
-		parts.push_front(current.name)
-		current = current.parent
-
-	return Path.new(parts)
-
 func find_node(_path: Path) -> PropertyNode:
 	if _path.parts[0] != name:
 		return null # Often due to path.get_subpath
