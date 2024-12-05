@@ -82,13 +82,6 @@ func set_property_value(path: Variant, value: Variant) -> Result:
 
 	return result
 
-## Registers a node from a resource
-func register_node_tree_from_resource(resource: PropertyResource) -> Result:
-	var node = PropertyTreeBuilder.build(resource, _owner)
-	if not node:
-		return Result.new(Result.ErrorType.INVALID_RESOURCE, "Failed to create property tree")
-	return register_node_tree(node)
-
 ## Removes a property tree and its path mappings
 func remove_node(root_name: String) -> Result:
 	var root = _root_nodes.get(root_name)
