@@ -1,57 +1,23 @@
 class_name PropertyNode
 extends RefCounted
-## A node in the property tree that can be either a leaf (value) or branch (container)
 
-enum Type {
-	VALUE,     # Leaf node with a value
-	CONTAINER  # Branch node with children
-}
+enum Type { VALUE, CONTAINER }
 
-#region Member Variables
-## Node name
 var name: String
-
-## Node type (Value or Container)
 var type: Type
-
-## Full path from root to this node
-var path: Path : 
-	get:
-		return path
-	set(value):
-		path = value
-
-## Type of value (for Value nodes)
+var path: Path
 var value_type: Property.Type
-
-## Value accessor functions (for Value nodes)
 var getter: Callable
 var setter: Callable
-
-var logger: Logger
-
-## Dependencies that affect this node's value
 var dependencies: Array[Path]
-
-## Description for documentation
 var description: String
-
-## Child nodes (for Container nodes)
-var children: Dictionary = {}  # name -> PropertyNode
-
-## Parent node (null for root)
+var children: Dictionary = {}
 var parent: PropertyNode
-
-## Owner entity (for getting context in getters/setters)
 var entity: Node
-
-## Resource configuration that created this node
 var config: PropertyResource
-#endregion
 
-#FIXME: Why are we passing name? 
 func _init(
-	p_name: String,
+	p_path: Path,
 	p_type: Type,
 	p_entity: Node = null,
 	p_config: PropertyResource = null,
@@ -61,7 +27,8 @@ func _init(
 	p_dependencies: Array[Path] = [],
 	p_description: String = ""
 ) -> void:
-	name = p_name
+	path = p_path
+	name = path.get_property()
 	type = p_type
 	entity = p_entity
 	config = p_config
@@ -71,154 +38,56 @@ func _init(
 	dependencies = p_dependencies
 	description = p_description
 
-	logger = Logger.new("property_node", DebugLogger.Category.PROPERTY)
+func has_valid_accessor(check_setter: bool = false) -> bool:
+	var has_valid = Property.is_valid_getter(getter)
+	if check_setter:
+		has_valid = has_valid and Property.is_valid_setter(setter)
+	return has_valid
 
-## Create a property node from a resource configuration
-static func create_tree(resource: PropertyResource, _entity: Node) -> PropertyNode:
-	var node := PropertyNode.new(
-		resource.path.full,
-		resource.type,
-		_entity,
-		resource,
-		resource.value_type,
-		resource.create_getter(_entity),
-		resource.create_setter(_entity),
-		resource.dependencies,
-		resource.description
-	)
+func get_value() -> Variant:
+	return getter.call() if has_valid_accessor() else null
 
-	# Recursively create child nodes from child resources
-	if resource.type == Type.CONTAINER:
-		for child_resource in resource.children.values():
-			var child_node := create_tree(child_resource, _entity)
-			node.add_child(child_node)
+func set_value(value: Variant) -> Result:
+	if not Property.is_valid_type(value, value_type):
+		return Result.new(
+			Result.ErrorType.TYPE_MISMATCH,
+			"Invalid value type for property: %s" % path.full
+		)
 
-	return node
+	setter.call(value)
+	return Result.new()
 
-func copy_from(other: PropertyNode) -> void:
-	name = other.name
-	type = other.type
-	entity = other.entity
-	value_type = other.value_type
-	getter = other.getter
-	setter = other.setter
-	dependencies = other.dependencies.duplicate()
-	description = other.description
-
-	# Copy children
-	children.clear()
-	for child in other.children.values():
-		add_child(child)
-
-#region Tree Navigation
-func find_node(_path: Path) -> PropertyNode:
-	if _path.parts[0] != name:
-		return null # Often due to path.get_subpath
-
-	if _path.parts.size() == 1:
+func find_node(search_path: Path) -> PropertyNode:
+	if search_path.equals(path):
 		return self
 
-	var child_name = _path.parts[1]
-	if not children.has(child_name):
+	if not search_path.is_descendant_of(path):
 		return null
 
-	return children[child_name].find_node(Path.new(_path.parts.slice(1)))
+	var next_part = search_path.parts[path.get_depth()]
+	return children.get(next_part, null).find_node(search_path) if children.has(next_part) else null
 
-func find_node_by_string(path_string: String) -> PropertyNode:
-	return find_node(Path.parse(path_string))
-#endregion
-
-#region Tree Modification
 func add_child(child: PropertyNode) -> void:
-	if not is_container_node():
-		logger.error("Cannot add child to value node")
+	if type != Type.CONTAINER:
+		push_error("Cannot add child to value node: %s" % path.full)
+		return
+
+	if not child:
+		push_error("Cannot add null child to node: %s" % path.full)
+		return
+
+	if children.has(child.name):
+		push_error("Child already exists with name: %s" % child.name)
 		return
 
 	child.parent = self
 	children[child.name] = child
 
 func remove_child(child_name: String) -> void:
-	if has_child(child_name):
-		children[child_name].parent = null
-		children.erase(child_name)
-#endregion
+	if not children.has(child_name):
+		push_error("No child found with name: %s" % child_name)
+		return
 
-#region Value Access
-func get_value() -> Variant:
-	if not is_value_node():
-		logger.error("Cannot get value from container node")
-		return null
-
-	if not has_valid_accessor():
-		logger.error("Invalid getter for property")
-		return null
-
-	return getter.call() # This is what is set when creating PropertyNode from property_resource - should get direct value if set properly?
-
-func set_value(value: Variant) -> Result:
-	if not is_value_node():
-		return Result.new(
-			Result.ErrorType.TYPE_MISMATCH,
-			"Cannot set value on container node"
-		)
-
-	if not Property.is_valid_type(value, value_type):
-		return Result.new(
-			Result.ErrorType.TYPE_MISMATCH,
-			"Invalid value type"
-		)
-
-	if not has_valid_accessor(true):
-		return Result.new(
-			Result.ErrorType.INVALID_SETTER,
-			"Invalid setter for property"
-		)
-
-	setter.call(value)
-	return Result.new()
-#endregion
-
-#region Tree Traversal
-func get_all_values() -> Array[PropertyNode]:
-	var values: Array[PropertyNode] = []
-
-	if type == Type.VALUE:
-		values.append(self)
-
-	for child in children.values():
-		values.append_array(child.get_all_values())
-
-	return values
-
-func get_all_containers() -> Array[PropertyNode]:
-	var containers: Array[PropertyNode] = []
-
-	if type == Type.CONTAINER:
-		containers.append(self)
-
-	for child in children.values():
-		containers.append_array(child.get_all_containers())
-
-	return containers
-#endregion
-
-#region Node Validation
-## Check if this node has a child with the given name
-func has_child(child_name: String) -> bool:
-	return children.has(child_name)
-
-## Check if this is a value node
-func is_value_node() -> bool:
-	return type == Type.VALUE
-
-## Check if this is a container node
-func is_container_node() -> bool:
-	return type == Type.CONTAINER
-
-## Check if this node has valid getter/setter
-func has_valid_accessor(check_setter: bool = false) -> bool:
-	var has_valid = Property.is_valid_getter(getter)
-	if check_setter:
-		has_valid = has_valid and Property.is_valid_setter(setter)
-	return has_valid
-#endregion
+	var child = children[child_name]
+	child.parent = null
+	children.erase(child_name)

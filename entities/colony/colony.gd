@@ -42,21 +42,21 @@ func _init_property_nodes() -> void:
 	logger.debug("Initializing colony property nodes...")
 	if not _property_access:
 		_init_property_access()
-		
-	var node = PropertyNode.create_tree(
+
+	var node = PropertyTreeBuilder.build(
 		PropertyFactory.create_colony_resource(),
 		self
 	)
-	
+
 	var result = _property_access.register_node(node)
 	if not result.success():
 		logger.error("Failed to register colony properties: %s" % result.get_error())
 	else:
 		logger.debug("Successfully registered colony properties")
-		
+
 	set_property_value("reach.range", 50.0)
 	logger.debug("Colony property initialization complete")
-	
+
 
 #endregion
 

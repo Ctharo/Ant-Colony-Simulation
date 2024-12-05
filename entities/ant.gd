@@ -152,51 +152,39 @@ func _init_property_access() -> void:
 	logger.debug("Initializing new property access system")
 	_property_access = PropertyAccess.new(self)
 
-## Register a property node at the specified path
-func register_property_node(node: PropertyNode, at_path: Path = null) -> Result:
-	if not node:
-		return Result.new(
-			Result.ErrorType.NOT_FOUND,
-			"Node to register invalid"
-		)
 
-	if not _property_access:
-		return Result.new(
-			Result.ErrorType.SYSTEM_ERROR,
-			"Failed to register property node %s: property access not yet initialized" % [node.name]
-		)
-	return _property_access.register_node_at_path(node, at_path)
+
 
 
 ## Initialize all component property nodes
 func _init_property_groups() -> void:
 	logger.trace("Initializing ant property nodes...")
-	
+
 	var nodes = [
-		PropertyNode.create_tree(PropertyFactory.create_energy_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_health_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_speed_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_strength_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_storage_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_vision_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_olfaction_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_reach_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_proprioception_resource(), self),
-		PropertyNode.create_tree(PropertyFactory.create_colony_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_energy_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_health_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_speed_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_strength_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_storage_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_vision_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_olfaction_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_reach_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_proprioception_resource(), self),
+		PropertyTreeBuilder.build(PropertyFactory.create_colony_resource(), self),
 	]
-	
+
 	var successes: int = 0
 	var failures: int = 0
-	
+
 	for node in nodes:
-		var result = register_property_node(node)
+		var result = _property_access.register_node(node)
 		if result.success():
 			successes += 1
 			logger.trace("Ant property %s registered successfully" % node.name)
 		else:
 			failures += 1
 			logger.error("Ant property %s failed to register" % node.name)
-			
+
 	logger.trace("Ant property group initialization complete - %d components registered successfully, %d failed" % [successes, failures])
 ## Register colony-specific properties
 
@@ -214,75 +202,63 @@ func _init_task_tree() -> void:
 		logger.error("Ant task_tree failed to be initialized")
 
 #region Property Access Interface
-## Get a property node by path
-func get_property(path: Path) -> PropertyNode:
-	if not _property_access:
-		logger.error("Cannot get ant property: ant property access system not initialized")
+## Get a property node with validation and error handling
+func get_property(path: Variant) -> PropertyNode:
+	# Validate system state
+	if not _validate_system_state():
 		return null
+
 	return _property_access.get_property(path)
 
-## Get a property value by path
-#TODO initial value should be direct? Or to property_access because we want this method to be the public entry
-func get_property_value(path_string: String) -> Variant:
-	if not _property_access:
-		logger.error("Cannot get ant property value: ant property access system not initialized")
+## Get a property value with comprehensive error handling
+func get_property_value(path: Variant) -> Variant:
+	# Validate system state
+	if not _validate_system_state():
 		return null
-	return _property_access.get_property_value(Path.parse(path_string))
 
-## Set a property value by path string
-func set_property_value(path_string: String, value: Variant) -> Result:
-	if not _property_access:
+	return _property_access.get_property_value(path)
+
+## Set a property value with validation and error handling
+func set_property_value(path: Variant, value: Variant) -> Result:
+	# Validate system state
+	if not _validate_system_state():
 		return Result.new(
 			Result.ErrorType.SYSTEM_ERROR,
-			"Cannot set ant property value: ant property access system not initialized"
+			"PropertyAccess not initialized for ant"
 		)
-	return _property_access.set_property_value(Path.parse(path_string), value)
 
-## Find a property node by path
-func find_property_node(path: Path) -> PropertyNode:
-	if not _property_access:
-		logger.error("Cannot find ant property node: ant property access system not initialized")
-		return null
+	return _property_access.set_property_value(path, value)
 
-	if path.is_root():
-		return null
-
-	var root_node = get_root_node(path.get_root_name())
-	if not root_node:
-		return null
-
-	if path.is_root_node():
-		return root_node
-
-	return root_node.find_node(path)
 #endregion
 
-#region Root Node Access
-## Get a root node by name
-func get_root_node(root_name: String) -> PropertyNode:
+#region Helper Methods
+## Validate that the property system is initialized
+func _validate_system_state() -> bool:
 	if not _property_access:
-		logger.error("Cannot get ant property root: %s -> Ant property access system not initialized" % root_name)
-		return null
-	return _property_access.get_root_node(root_name)
+		return false
+	return true
 
-## Get all value nodes in a root by root name
-func get_root_values(root_name: String) -> Array[PropertyNode]:
-	if not _property_access:
-		logger.error("Cannot get ant property root values: %s -> Ant property access system not initialized" % root_name)
-		return []
-	return _property_access.get_root_values(root_name)
+## Validate a property node exists
+func _validate_property_node(node: PropertyNode, path: Path) -> bool:
+	if not node:
+		return false
+	return true
+#endregion
 
-## Get all registered root names
-func get_root_names() -> Array[String]:
-	if not _property_access:
-		logger.error("Cannot get ant property root names -> Ant property access system not initialized")
-		return []
-	return _property_access.get_root_names()
+#region Type Checking and Validation
+## Check if a property exists
+func has_property(path: Variant) -> bool:
+	var node = get_property(path)
+	return node != null
 
-## Get all containers under a root node
-func get_root_containers(root_name: String) -> Array[PropertyNode]:
-	if not _property_access:
-		logger.error("Cannot get ant property containers for root: %s -> Ant property access system not initialized" % root_name)
-		return []
-	return _property_access.get_root_containers(root_name)
+## Get the type of a property
+func get_property_type(path: Variant) -> Property.Type:
+	var node = get_property(path)
+	if not node:
+		return Property.Type.UNKNOWN
+	return node.value_type
+
+## Check if a property is a specific type
+func is_property_type(path: Variant, type: Property.Type) -> bool:
+	return get_property_type(path) == type
 #endregion

@@ -5,6 +5,7 @@ extends RefCounted
 enum ErrorType {
 	NONE,               # No error
 	INVALID_PATH,       # Property path format is invalid
+	INVALID_RESOURCE,   # Property resource is invalid
 	NO_CONTEXT,         # Required context object missing
 	NO_CONTAINER,       # Container object not found
 	NOT_FOUND,          # Something doesn't exist

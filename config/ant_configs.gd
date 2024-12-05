@@ -83,7 +83,7 @@ static func create_task_from_config(config: TaskConfig, ant: Ant, condition_syst
 			task.add_condition(condition)
 		else:
 			push_error("Failed to create condition for task: %s with config: %s" % [condition_config.name, condition_name])
-	
+
 
 	# Create and add behaviors
 	var behaviors = create_task_behaviors(config.name, ant, condition_system)
