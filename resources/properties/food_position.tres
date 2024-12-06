@@ -9,4 +9,4 @@ id = "food_position"
 name = "Food Position"
 description = ""
 return_type = 4
-use_current_item = false
+use_current_item = true
