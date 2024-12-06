@@ -13,6 +13,12 @@ extends Resource
 ## Type of value this expression returns
 @export var return_type: Property.Type
 
+## List of expressions this one depends on
+@export var dependencies: Array[BaseExpression]
+
+## Property paths this expression directly depends on
+@export var property_dependencies: Array[String]
+
 ## Reference to entity for property access
 var entity: Node
 
