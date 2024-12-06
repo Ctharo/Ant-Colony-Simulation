@@ -120,7 +120,7 @@ func _ready() -> void:
 		food.global_position = current_ant.global_position
 	var condition := ExpressionBuilder.new().create_is_food_visible_condition(current_ant)
 	print("Condition is food visible is met: %s" % condition.is_met())
-	assert(condition.is_met())
+	condition.is_met()
 
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:

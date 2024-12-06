@@ -1,4 +1,3 @@
-## Core logic evaluator class that all other logic components inherit from
 class_name LogicExpression
 extends Resource
 
@@ -12,13 +11,17 @@ extends Resource
 ## Type of value this logic expression returns
 @export var return_type: int  # Using Property.Type enum
 ## Dependencies on other logic expressions
-@export var dependencies: Array[LogicExpression] = []
+var dependencies: Array[LogicExpression] = []
 ## Property paths this logic expression depends on
-@export var required_properties: Array[Path] = []
+var required_properties: Array[Path] = []
 ## Reference to the entity (ant) for property access
 var entity: Node
+## Current evaluation context
+var current_context: EvaluationContext
 ## Reference to cache manager
 var cache_manager: ExpressionCache
+
+var use_current_item: bool = false
 #endregion
 
 #region Signals
@@ -27,12 +30,16 @@ signal dependencies_changed
 #endregion
 
 #region Public Methods
-## Initialize logic expression with entity reference
 func initialize(p_entity: Node, p_cache_manager: ExpressionCache = null) -> void:
 	entity = p_entity
 	cache_manager = p_cache_manager
-	_register_dependencies()
-	_setup_dependency_signals()
+
+## Set the current evaluation context
+func set_context(context: EvaluationContext) -> void:
+	current_context = context
+	# Propagate context to dependencies
+	for dep in dependencies:
+		dep.set_context(context)
 
 ## Add a dependency to this expression
 func add_dependency(expression: LogicExpression) -> void:
@@ -40,10 +47,6 @@ func add_dependency(expression: LogicExpression) -> void:
 		dependencies.append(expression)
 		if cache_manager:
 			cache_manager.register_dependency(id, expression.id)
-
-		# Ensure the dependency is initialized
-		if entity and cache_manager:
-			expression.initialize(entity, cache_manager)
 
 ## Add a required property
 func add_required_property(property_path: Path) -> void:
@@ -57,16 +60,24 @@ func is_valid() -> bool:
 
 	# Check all dependencies are valid
 	for dep in dependencies:
-		if dep and not dep.is_valid():
+		if not dep.is_valid():
+			return false
+
+	# Check all required properties exist
+	for prop_path in required_properties:
+		if not entity.has_property(prop_path):
 			return false
 
 	return true
 
-## Evaluate the logic expression
-func evaluate() -> Variant:
-	#if not is_valid():
-		#push_error("Attempted to evaluate invalid logic expression: %s" % name)
-		#return null
+## Evaluate with optional context
+func evaluate(context: EvaluationContext = null) -> Variant:
+	if context:
+		set_context(context)
+
+	if not is_valid():
+		push_error("Attempted to evaluate invalid expression: %s" % name)
+		return null
 
 	# Check cache first
 	if cache_manager:
@@ -87,15 +98,12 @@ func evaluate() -> Variant:
 func _evaluate() -> Variant:
 	return null
 
-## Register dependencies (override in derived classes)
-func _register_dependencies() -> void:
-	pass
-
-## Setup dependency signals
-func _setup_dependency_signals() -> void:
+## Register dependencies with cache manager
+func register_with_cache_manager(p_cache_manager: ExpressionCache) -> void:
+	cache_manager = p_cache_manager
 	for dep in dependencies:
-		if not dep.is_connected("value_changed", _on_dependency_changed):
-			dep.connect("value_changed", _on_dependency_changed)
+		dep.register_with_cache_manager(p_cache_manager)
+		cache_manager.register_dependency(id, dep.id)
 #endregion
 
 #region Private Methods

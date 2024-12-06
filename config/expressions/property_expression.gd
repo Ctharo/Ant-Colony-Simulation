@@ -9,4 +9,5 @@ func _init() -> void:
 	description = "Returns the value of a property"
 
 func _evaluate() -> Variant:
-	return entity.get_property_value(property_path)
+	var target = current_context.current_item if use_current_item else entity
+	return target.get_property_value(property_path)

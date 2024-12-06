@@ -18,8 +18,10 @@ func _register_dependencies() -> void:
 		add_dependency(position2_expression)
 
 func _evaluate() -> float:
-	var pos1 = position1_expression.evaluate()
-	var pos2 = position2_expression.evaluate()
+	var pos1 = position1_expression.evaluate(current_context)
+	var pos2 = position2_expression.evaluate(current_context)
+
 	if not pos1 or not pos2:
 		return INF
+
 	return pos1.distance_to(pos2)

@@ -31,13 +31,16 @@ func _evaluate() -> Array:
 
 	var filtered = []
 	for item in source_array:
-		predicate_expression.position2_expression = PropertyExpression.new()
-		predicate_expression.position2_expression.entity = item
-		predicate_expression.position2_expression.property_path = "global_position"
-		var value = predicate_expression.evaluate()
-		var compare_value = compare_value.evaluate()
-		if _compare(value, compare_value, operator):
+		# Create context for this item
+		var item_context = EvaluationContext.create(item, entity)
+
+		# Evaluate predicate and compare value with context
+		var pred_value = predicate_expression.evaluate(item_context)
+		var comp_value = compare_value.evaluate(current_context)  # Use root context
+
+		if _compare(pred_value, comp_value, operator):
 			filtered.append(item)
+
 	return filtered
 
 func _compare(a: Variant, b: Variant, op: int) -> bool:
