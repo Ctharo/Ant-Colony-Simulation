@@ -9,3 +9,4 @@ id = "ant_position"
 name = "Ant Position"
 description = ""
 return_type = 4
+use_current_item = false

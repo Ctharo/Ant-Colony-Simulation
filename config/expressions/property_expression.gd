@@ -9,5 +9,13 @@ func _init() -> void:
 	description = "Returns the value of a property"
 
 func _evaluate() -> Variant:
-	var target = current_context.current_item if use_current_item else entity
-	return target.get_property_value(property_path)
+	if current_context and use_current_item:
+		if current_context.is_node_context:
+			# If it's a Node, use get_property_value
+			return current_context.current_item.get_property_value(property_path)
+		else:
+			# If it's a primitive type (like Vector2), return it directly
+			return current_context.current_item
+	else:
+		# Use the entity as before
+		return entity.get_property_value(property_path)

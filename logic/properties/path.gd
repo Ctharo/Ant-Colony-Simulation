@@ -26,6 +26,12 @@ func _init(path: Variant) -> void:
 			normalized_parts.append(part.to_lower())
 		parts = normalized_parts
 		full = SEPARATOR.join(parts) if not parts.is_empty() else "root"
+	elif path is Array:
+		var normalized_parts: PackedStringArray = []
+		for part in path:
+			normalized_parts.append(part.to_lower())
+		parts = normalized_parts
+		full = SEPARATOR.join(parts) if not parts.is_empty() else "root"
 	elif path is String:
 		full = path
 	else:
@@ -39,7 +45,10 @@ static func parse(full_path: String) -> Path:
 
 	if full_path.to_lower() == "root":
 		return Path.new([])
-	return Path.new(full_path.to_lower().split(SEPARATOR))
+
+	if full_path == "world.food.list":
+		pass
+	return Path.new(full_path)
 #endregion
 
 #region Path Information

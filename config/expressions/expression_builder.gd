@@ -18,31 +18,33 @@ func create_is_food_visible_condition(entity: Node) -> Condition:
 	ant_position.initialize(entity, cache_manager)
 	print("Ant Position: ", ant_position.evaluate())
 
-	var food_position = preload("res://resources/properties/food_position.tres").duplicate()
-	food_position.initialize(entity, cache_manager)
-	food_position.use_current_item = true  # Use current food item
-	print("Food Position: ", food_position.evaluate())
-
 	var food_list = preload("res://resources/properties/all_food_list.tres").duplicate()
 	food_list.initialize(entity, cache_manager)
 	print("Food List Size: ", food_list.evaluate().size())
 
-	# Create distance calculator for food items
-	var food_distance = DistanceExpression.new()
+	var food_position = preload("res://resources/properties/food_position.tres").duplicate()
+	food_position.initialize(entity, cache_manager)
+
+	# Map positions to food items
+	var food_positions = preload("res://resources/properties/food_positions.tres").duplicate()
+	food_positions.initialize(entity, cache_manager)
+	print("Food Positions: ", food_positions.evaluate())
+
+	var food_distance = preload("res://resources/properties/food_distance.tres").duplicate()
 	food_distance.initialize(entity, cache_manager)
-	food_distance.id = "food_distance"
-	food_distance.name = "Distance to Food"
-	food_distance.position1_expression = ant_position
-	food_distance.position2_expression = food_position
-	print("Food Distance: ", food_distance.evaluate())
+
+	# Create distance calculator
+	var food_distances = preload("res://resources/properties/food_distances.tres").duplicate()
+	food_distances.initialize(entity, cache_manager)
+	print("Food Distances: ", food_distances.evaluate())
 
 	# Filter foods by distance
-	var visible_food = preload("res://resources/properties/visible_food.tres")
+	var visible_food = preload("res://resources/properties/visible_food.tres").duplicate()
 	visible_food.initialize(entity, cache_manager)
 	print("Visible Food Count: ", visible_food.evaluate().size())
 
 	# Check if any food is visible
-	var has_visible_food = preload("res://resources/properties/has_visible_food.tres")
+	var has_visible_food = preload("res://resources/properties/has_visible_food.tres").duplicate()
 	has_visible_food.initialize(entity, cache_manager)
 	print("Has Visible Food: ", has_visible_food.evaluate())
 

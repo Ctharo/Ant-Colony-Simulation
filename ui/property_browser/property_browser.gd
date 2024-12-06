@@ -117,7 +117,8 @@ func _ready() -> void:
 
 	FoodManager.spawn_foods(100)
 	for food in Foods.all():
-		food.global_position = current_ant.global_position
+		food.global_position = _get_random_position()
+		print(food.global_position)
 	var condition := ExpressionBuilder.new().create_is_food_visible_condition(current_ant)
 	print("Condition is food visible is met: %s" % condition.is_met())
 	condition.is_met()
@@ -251,15 +252,15 @@ func create_ant_to_browse() -> void:
 ## Create simulation components
 func generate_content() -> void:
 	create_ant_to_browse()
-	if foods_to_spawn + pheromones_to_spawn + ants_to_spawn > 0:
-		ui_builder.show_loading_indicator(self)
-
-	var to_create = {
-		"food": foods_to_spawn,
-		"pheromones": pheromones_to_spawn,
-		"ants": ants_to_spawn
-	}
-	_staged_creation(to_create, current_ant)
+	#if foods_to_spawn + pheromones_to_spawn + ants_to_spawn > 0:
+		#ui_builder.show_loading_indicator(self)
+#
+	#var to_create = {
+		#"food": foods_to_spawn,
+		#"pheromones": pheromones_to_spawn,
+		#"ants": ants_to_spawn
+	#}
+	#_staged_creation(to_create, current_ant)
 
 ## Create components in stages to avoid freezing
 func _staged_creation(params: Dictionary, _main_ant: Ant) -> void:

@@ -30,3 +30,4 @@ func _init(entity: Node) -> void:
 		[],
 		"Global list of all foods"
 	)
+	food_container.add_child(food_list)

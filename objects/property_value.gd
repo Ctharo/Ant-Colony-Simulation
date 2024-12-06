@@ -58,3 +58,6 @@ func validate_path(path: Variant) -> Path:
 			return null
 		_:
 			return null
+
+func has_valid_accessor() -> bool:
+	return getter.is_valid()

@@ -45,7 +45,7 @@ func validate_node_operation(node: PropertyNode, path: Path, for_write: bool = f
 			"Invalid setter for property: %s" % path.full
 		)
 
-	if not node.has_valid_accessor():
+	if node is PropertyValue and not node.has_valid_accessor():
 		return Result.new(
 			Result.ErrorType.INVALID_GETTER,
 			"Invalid getter for property: %s" % path.full

@@ -10,6 +10,10 @@ func _init() -> void:
 	description = "Checks if a list contains any items"
 	return_type = TYPE_BOOL
 
+func _register_dependencies() -> void:
+	if list_expression:
+		add_dependency(list_expression)
+
 func _evaluate() -> bool:
 	var list = list_expression.evaluate()
 	return list != null and list.size() > 0

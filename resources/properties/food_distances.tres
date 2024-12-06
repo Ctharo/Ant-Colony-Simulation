@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ListMapExpression" load_steps=4 format=3 uid="uid://25en8qwrc1bx"]
+
+[ext_resource type="Script" path="res://config/expressions/list_map_expression.gd" id="1_07c7d"]
+[ext_resource type="Resource" uid="uid://bdutcamkicll2" path="res://resources/properties/food_positions.tres" id="1_n0nk3"]
+[ext_resource type="Resource" uid="uid://cwrprdpunbbbn" path="res://resources/properties/food_distance.tres" id="2_l7cbk"]
+
+[resource]
+script = ExtResource("1_07c7d")
+array_expression = ExtResource("1_n0nk3")
+map_expression = ExtResource("2_l7cbk")
+id = "food_distances"
+name = "Food Distances"
+description = ""
+return_type = 6

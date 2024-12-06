@@ -21,7 +21,7 @@ var current_context: EvaluationContext
 ## Reference to cache manager
 var cache_manager: ExpressionCache
 
-var use_current_item: bool = false
+@export var use_current_item: bool = false
 #endregion
 
 #region Signals

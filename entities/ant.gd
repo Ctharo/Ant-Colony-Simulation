@@ -54,6 +54,8 @@ var _property_access: PropertyAccess :
 var logger: Logger
 #endregion
 
+
+var vision_range = 50.0
 var movement_rate = 10.0
 var storing_rate = 13.0
 var harvesting_rate = 4.0
