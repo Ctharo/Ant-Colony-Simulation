@@ -115,6 +115,13 @@ func _ready() -> void:
 	generate_content()
 	_trace("PropertyBrowser UI initialization complete")
 
+	FoodManager.spawn_foods(100)
+	for food in Foods.all():
+		food.global_position = current_ant.global_position
+	var condition := ExpressionBuilder.new().create_is_food_visible_condition(current_ant)
+	print("Condition is food visible is met: %s" % condition.is_met())
+	assert(condition.is_met())
+
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -235,10 +242,6 @@ func create_ant_to_browse() -> void:
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
-	var storage_space = ant.get_property_value("storage.capacity.max")
-	if not storage_space:
-		storage_space = 100.0
-	ant.foods.add_food(storage_space)
 
 	current_ant = ant
 	navigation_manager.set_property_access(ant)

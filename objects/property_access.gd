@@ -48,6 +48,16 @@ func get_property(path: Variant) -> PropertyNode:
 
 ## Gets a property's value
 func get_property_value(path: Variant) -> Variant:
+	#HACK: Needed for testing new condition/expression system
+	if path is String and path == "world.food.list":
+		return Foods.all().as_array()
+	#HACK: Needed for testing new condition/expression system
+	if path is String and path == "proprioception.base.position":
+		return _owner.global_position
+	#HACK: Needed for testing new condition/expression system
+	if path is String and path == "vision.base.range":
+		return 50.0
+
 	var property_path = _validator.validate_path(path)
 	if not property_path:
 		return null

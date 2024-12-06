@@ -39,3 +39,9 @@ func remove_amount(mass_to_remove: float) -> float:
 	var actual_removed = min(mass_to_remove, mass)
 	mass -= actual_removed
 	return actual_removed
+
+func get_property_value(property_string: String) -> Variant:
+	if property_string == "global_position":
+		return global_position
+	else:
+		return null
