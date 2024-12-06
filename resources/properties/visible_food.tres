@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ListFilterExpression" load_steps=5 format=3 uid="uid://ctxhrrdn087do"]
+
+[ext_resource type="Resource" uid="uid://ba2odp62gs3wl" path="res://resources/properties/all_food_list.tres" id="1_7nvrt"]
+[ext_resource type="Script" path="res://config/expressions/list_filter_expression.gd" id="1_rnesb"]
+[ext_resource type="Resource" uid="uid://bne5w42p0f4ui" path="res://resources/properties/vision_range.tres" id="2_sew88"]
+[ext_resource type="Resource" uid="uid://cwrprdpunbbbn" path="res://resources/properties/food_distance.tres" id="3_lbobh"]
+
+[resource]
+script = ExtResource("1_rnesb")
+array_expression = ExtResource("1_7nvrt")
+predicate_expression = ExtResource("3_lbobh")
+operator = 1
+compare_value = ExtResource("2_sew88")
+id = "visible_food"
+name = "Visible Food Items"
+description = ""
+return_type = 6

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PropertyExpression" load_steps=2 format=3 uid="uid://bne5w42p0f4ui"]
+
+[ext_resource type="Script" path="res://config/expressions/property_expression.gd" id="1_qjwel"]
+
+[resource]
+script = ExtResource("1_qjwel")
+property_path = "vision.base.range"
+id = "vision_range"
+name = "Vision Range"
+description = "The range of vision"
+return_type = 2

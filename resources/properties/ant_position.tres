@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PropertyExpression" load_steps=2 format=3 uid="uid://dkiid8fulc3f6"]
+
+[ext_resource type="Script" path="res://config/expressions/property_expression.gd" id="1_t5oib"]
+
+[resource]
+script = ExtResource("1_t5oib")
+property_path = "proprioception.base.position"
+id = "ant_position"
+name = "Ant Position"
+description = ""
+return_type = 4

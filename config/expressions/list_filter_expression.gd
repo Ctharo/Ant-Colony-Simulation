@@ -25,6 +25,10 @@ func _register_dependencies() -> void:
 		add_dependency(compare_value)
 
 func _evaluate() -> Array:
+	if not is_valid():
+		push_error("Attempting to evaluate invalid ListFilterExpression: %s" % id)
+		return []
+
 	var source_array = array_expression.evaluate()
 	if not source_array:
 		return []

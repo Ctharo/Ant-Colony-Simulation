@@ -164,7 +164,9 @@ func _init_property_groups() -> void:
 	logger.trace("Initializing ant property nodes...")
 
 	var trees = [
-		Proprioception.new(self)
+		Proprioception.new(self),
+		Vision.new(self),
+		World.new(self)
 	]
 
 	var successes: int = 0

@@ -34,6 +34,13 @@ func initialize(p_entity: Node, p_cache_manager: ExpressionCache = null) -> void
 	entity = p_entity
 	cache_manager = p_cache_manager
 
+	_register_dependencies()
+
+
+	# Initialize all dependencies with the same entity and cache
+	for dep in dependencies:
+		dep.initialize(entity, cache_manager)
+
 ## Set the current evaluation context
 func set_context(context: EvaluationContext) -> void:
 	current_context = context
@@ -104,6 +111,10 @@ func register_with_cache_manager(p_cache_manager: ExpressionCache) -> void:
 	for dep in dependencies:
 		dep.register_with_cache_manager(p_cache_manager)
 		cache_manager.register_dependency(id, dep.id)
+
+## Override in derived classes to register dependencies
+func _register_dependencies() -> void:
+	pass
 #endregion
 
 #region Private Methods
