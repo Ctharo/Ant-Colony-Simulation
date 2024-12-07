@@ -18,6 +18,10 @@ var previous_result: bool = false
 signal evaluation_changed(is_met: bool)
 #endregion
 
+func _init() -> void:
+	assert(false) # depreciated conditions -> remove
+
+
 #region Public Methods
 ## Initialize the condition
 func initialize(entity: Node) -> void:

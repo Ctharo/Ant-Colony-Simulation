@@ -119,9 +119,10 @@ func _ready() -> void:
 	for food in Foods.all():
 		food.global_position = _get_random_position()
 		print(food.global_position)
-	var condition := ExpressionBuilder.new().create_is_food_visible_condition(current_ant)
-	print("Condition is food visible is met: %s" % condition.is_met())
-	condition.is_met()
+	var expression := preload("res://resources/properties/has_visible_food.tres") as LogicExpression
+	expression.initialize(current_ant)
+	print("Expression has food visible: %s" % expression.evaluate())
+	assert(expression.evaluate())
 
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
