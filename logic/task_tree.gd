@@ -111,7 +111,7 @@ func get_active_task() -> Task:
 	return _get_active_task_recursive(root_task)
 
 ## Evaluate an expression with the current context
-func evaluate_expression(expression: LogicExpression) -> Variant:
+func evaluate_expression(expression: Logic) -> Variant:
 	return expression.evaluate()
 
 ## Prints the chain of active tasks for debugging purposes

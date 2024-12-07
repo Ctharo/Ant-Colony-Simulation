@@ -1,4 +1,4 @@
-class_name LogicExpression
+class_name Logic
 extends Resource
 
 #region Properties
@@ -23,8 +23,8 @@ var id: String
 			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") var type: int = 19  # UNKNOWN
 
 
-## Array of LogicExpression resources to use as nested expressions
-@export var nested_expressions: Array[LogicExpression]
+## Array of Logic resources to use as nested expressions
+@export var nested_expressions: Array[Logic]
 
 ## The base node for evaluating expressions
 var base_node: Node

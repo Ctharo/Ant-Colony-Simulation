@@ -1,7 +1,9 @@
 class_name BehaviorConfig
-extends Resource
+extends Logic
 
-@export var name: String
 @export var priority: String = "MEDIUM"
 @export var action: ActionConfig
-@export var expressions: Array[LogicExpression] = []
+
+func should_activate() -> bool:
+	var result = get_value()
+	return bool(result)

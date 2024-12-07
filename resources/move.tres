@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Action" load_steps=2 format=3 uid="uid://m6os4ysg8b45"]
+
+[ext_resource type="Script" path="res://logic/action.gd" id="1_unrdc"]
+
+[resource]
+script = ExtResource("1_unrdc")
+id = "move"
+name = "Move"
+description = ""
+cooldown = 0.0
+duration = 0.0
+params = {}

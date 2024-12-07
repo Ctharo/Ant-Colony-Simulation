@@ -23,7 +23,7 @@ var state: State = State.INACTIVE:
 var name: String = ""
 var priority: int = Priority.MEDIUM
 var action: Action
-var conditions: Array[LogicExpression] = []
+var conditions: Array[Logic] = []
 var logger: Logger
 #endregion
 
@@ -34,7 +34,7 @@ func _init(p_priority: int = Priority.MEDIUM) -> void:
 #endregion
 
 #region Public Methods
-func add_condition(condition: LogicExpression) -> void:
+func add_condition(condition: Logic) -> void:
 	conditions.append(condition)
 	logger.trace("Added condition to behavior '%s'" % name)
 

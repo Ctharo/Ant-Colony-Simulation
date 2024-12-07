@@ -14,10 +14,6 @@ extends Resource
 @export var duration: float = 0.0
 ## Parameters required for this action
 @export var params: Dictionary = {}
-## Conditions that must be met for action to be valid
-@export var conditions: Array[LogicExpression]
-## Properties this action depends on
-@export var properties: Array[LogicExpression] # TODO REMOVE
 #endregion
 
 #region Internal State
@@ -37,22 +33,11 @@ signal interrupted
 ## Initialize the action with an entity
 func initialize(entity: Node) -> void:
 	_entity = entity
-	
-	# Initialize conditions
-	for condition in conditions:
-		condition.initialize(entity)
-		
-
 
 ## Check if the action can be executed
 func can_execute() -> bool:
 	if not is_ready():
 		return false
-		
-	# Check all conditions are met
-	for condition in conditions:
-		if not condition.get_value():
-			return false
 			
 	return _validate_params()
 

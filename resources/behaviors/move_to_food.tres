@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="BehaviorConfig" load_steps=4 format=3 uid="uid://wy2p0nhf5hik"]
+[gd_resource type="Resource" script_class="BehaviorConfig" load_steps=5 format=3 uid="uid://wy2p0nhf5hik"]
 
 [ext_resource type="Script" path="res://config/action_config.gd" id="1_ssao7"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="2_0gfp7"]
 [ext_resource type="Script" path="res://config/behavior_config.gd" id="2_y8xgl"]
 
 [sub_resource type="Resource" id="Resource_7xh4i"]
@@ -17,7 +18,11 @@ description = "Moving towards food"
 
 [resource]
 script = ExtResource("2_y8xgl")
-name = "MoveToFood"
 priority = "HIGH"
 action = SubResource("Resource_7xh4i")
-conditions = Array[Dictionary]([])
+expressions = Array[ExtResource("2_0gfp7")]([])
+name = "MoveToFood"
+expression_string = ""
+description = ""
+type = 19
+nested_expressions = Array[ExtResource("2_0gfp7")]([])
