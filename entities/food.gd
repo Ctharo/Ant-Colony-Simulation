@@ -8,9 +8,6 @@ var carried: bool = false
 var targeted: bool = false
 var is_available: bool : get = _is_available
 
-var _property_access: PropertyAccess :
-	get:
-		return _property_access
 
 ## The mass of food
 var mass: float:
@@ -21,8 +18,6 @@ var mass: float:
 
 func _init(initial_mass: float = 0.0) -> void:
 	mass = initial_mass
-	_property_access = PropertyAccess.new(self)
-	_property_access.register_node_tree(Proprioception.new(self))
 	add_to_group("food")
 
 ## Check if there's any food left
@@ -45,6 +40,3 @@ func remove_amount(mass_to_remove: float) -> float:
 	var actual_removed = min(mass_to_remove, mass)
 	mass -= actual_removed
 	return actual_removed
-
-func get_property_value(path: Variant) -> Variant:
-	return _property_access.get_property_value(path)

@@ -50,8 +50,8 @@ func start() -> void:
 func should_activate() -> bool:
 	return _check_conditions()
 
-func can_execute(ant: Ant) -> bool:
-	return action != null and action.can_execute(ant)
+func can_execute() -> bool:
+	return action != null and action.can_execute()
 
 func execute(delta: float, ant: Ant) -> void:
 	if state != State.ACTIVE:
@@ -62,7 +62,7 @@ func execute(delta: float, ant: Ant) -> void:
 		stop()
 		return
 
-	action.execute(delta, ant)
+	action.execute(delta)
 
 	if action.is_completed():
 		state = State.COMPLETED

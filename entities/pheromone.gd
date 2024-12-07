@@ -1,5 +1,5 @@
 class_name Pheromone
-extends Node2D
+extends Area2D
 
 signal spawned
 signal died

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://1nls8wb6824s"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_4uvlq"]
+
+[resource]
+script = ExtResource("1_4uvlq")
+name = "is low energy"
+expression_string = "energy_level < 0.2 * energy_max"
+description = ""
+type = 19
+nested_expressions = Array[ExtResource("1_4uvlq")]([])
