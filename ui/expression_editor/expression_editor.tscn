@@ -23,6 +23,7 @@ grow_vertical = 2
 layout_mode = 2
 
 [node name="TypeOption" type="OptionButton" parent="MainContainer/TopBar"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -46,6 +47,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="ExpressionTree" type="Tree" parent="MainContainer/HSplitContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -58,6 +60,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="PropertyConfig" type="VBoxContainer" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
@@ -74,6 +77,7 @@ layout_mode = 2
 text = "Use Current Item Context"
 
 [node name="ListConfig" type="VBoxContainer" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
@@ -92,6 +96,7 @@ text = "Map Expression:"
 layout_mode = 2
 
 [node name="DistanceConfig" type="VBoxContainer" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea"]
+unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
@@ -113,6 +118,7 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="PreviewLabel" type="Label" parent="MainContainer/HSplitContainer/RightPanel/PreviewArea"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Expression Preview"
 

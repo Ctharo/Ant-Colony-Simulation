@@ -120,7 +120,7 @@ func _ready() -> void:
 		food.global_position = _get_random_position()
 		print(food.global_position)
 	var expression := preload("res://resources/properties/has_visible_food.tres") as LogicExpression
-	expression.initialize(current_ant)
+	expression.initialize(current_ant, ExpressionCache.new())
 	print("Expression has food visible: %s" % expression.evaluate())
 	assert(expression.evaluate())
 

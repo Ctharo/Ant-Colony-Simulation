@@ -14,17 +14,35 @@ var expression_types: Dictionary = {
 	"ListHasItems": ListHasItemsExpression
 }
 
-@onready var type_option: OptionButton = $MainContainer/TopBar/TypeOption
+@onready var type_option: OptionButton = %TypeOption
 @onready var id_edit: LineEdit = $MainContainer/TopBar/IdEdit
 @onready var name_edit: LineEdit = $MainContainer/TopBar/NameEdit
 @onready var desc_edit: TextEdit = $MainContainer/TopBar/DescEdit
-@onready var property_container: VBoxContainer = $MainContainer/ConfigArea/PropertyConfig
-@onready var list_container: VBoxContainer = $MainContainer/ConfigArea/ListConfig
-@onready var distance_container: VBoxContainer = $MainContainer/ConfigArea/DistanceConfig
-@onready var expression_tree: Tree = $MainContainer/ExpressionTree
-@onready var preview_label: Label = $MainContainer/PreviewArea/PreviewLabel
+@onready var property_container: VBoxContainer = %PropertyConfig
+@onready var list_container: VBoxContainer = %ListConfig
+@onready var distance_container: VBoxContainer = %DistanceConfig
+@onready var expression_tree: Tree = %ExpressionTree
+@onready var preview_label: Label = %PreviewLabel
 
 func _ready() -> void:
+	# Dictionary mapping control variables to their expected paths
+	var required_controls = {
+		"type_option": "MainContainer/TopBar/TypeOption",
+		"id_edit": "MainContainer/TopBar/IdEdit",
+		"name_edit": "MainContainer/TopBar/NameEdit",
+		"desc_edit": "MainContainer/TopBar/DescEdit",
+		"property_container": "MainContainer/ConfigArea/PropertyConfig",
+		"list_container": "MainContainer/ConfigArea/ListConfig",
+		"distance_container": "MainContainer/ConfigArea/DistanceConfig",
+		"expression_tree": "MainContainer/ExpressionTree",
+		"preview_label": "MainContainer/PreviewArea/PreviewLabel"
+	}
+	
+	# Validate all required controls
+	for control_name in required_controls:
+		assert(get(control_name) != null, 
+			"Required control '%s' not found at %s" % [control_name, required_controls[control_name]])
+	
 	_setup_type_options()
 	_setup_signals()
 	
