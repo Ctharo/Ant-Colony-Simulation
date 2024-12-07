@@ -23,6 +23,7 @@ var expression_types: Dictionary = {
 @onready var distance_container: VBoxContainer = %DistanceConfig
 @onready var expression_tree: Tree = %ExpressionTree
 @onready var preview_label: Label = %PreviewLabel
+@onready var test_environment: ExpressionTestEnvironment = %ExpressionTestEnvironment
 
 func _ready() -> void:
 	# Dictionary mapping control variables to their expected paths
@@ -35,7 +36,7 @@ func _ready() -> void:
 		"list_container": "MainContainer/ConfigArea/ListConfig",
 		"distance_container": "MainContainer/ConfigArea/DistanceConfig",
 		"expression_tree": "MainContainer/ExpressionTree",
-		"preview_label": "MainContainer/PreviewArea/PreviewLabel"
+		"preview_label": "MainContainer/PreviewArea/PreviewLabel",
 	}
 	
 	# Validate all required controls
@@ -51,11 +52,26 @@ func _setup_type_options() -> void:
 	for type_name in expression_types.keys():
 		type_option.add_item(type_name)
 		
+		
 func _setup_signals() -> void:
 	type_option.item_selected.connect(_on_type_selected)
 	id_edit.text_changed.connect(_on_id_changed)
 	name_edit.text_changed.connect(_on_name_changed)
 	desc_edit.text_changed.connect(_on_desc_changed)
+	# Connect to test environment
+	test_environment.test_entity_changed.connect(_on_test_entity_changed)
+	
+func _on_expression_changed() -> void:
+	# Update preview
+	_update_preview()
+	
+	# Update test environment
+	test_environment.set_expression(current_expression)	
+
+func _on_test_entity_changed(entity: Node) -> void:
+	if current_expression and entity:
+		current_expression.initialize(entity)
+		_update_preview()
 
 func _on_type_selected(index: int) -> void:
 	var type_name = type_option.get_item_text(index)

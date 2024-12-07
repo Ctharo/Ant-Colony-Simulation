@@ -5,4 +5,6 @@ extends ConditionConfig
 @export var evaluation: PropertyCheckConfig
 
 func _init() -> void:
+	assert(false) # depreciated conditions -> remove
+
 	type = "Custom"

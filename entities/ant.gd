@@ -98,7 +98,7 @@ func _on_active_task_changed(_new_task: Task) -> void:
 
 #region Action Methods
 ## Placeholder for actions
-func perform_action(action: Action, _args: Dictionary = {}) -> void:
+func perform_action(action: Action, _args: Dictionary = {}) -> Result:
 	var event_str: String = "Ant is performing action:"
 	event_str += " "
 	event_str += action.description if action.description else "N/A"
@@ -149,6 +149,7 @@ func perform_action(action: Action, _args: Dictionary = {}) -> void:
 			logger.warn("Unknown action type: %s" % action.base_name)
 			await get_tree().create_timer(action.duration).timeout
 			action_completed.emit()
+	return Result.new()
 #endregion
 
 #region Property System

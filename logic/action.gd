@@ -1,28 +1,19 @@
 class_name Action
 extends RefCounted
 
+#region Signals
 signal started
 signal completed
 signal interrupted
+#endregion
 
-var ant: Ant:
-	set(value):
-		ant = value
-
-var cooldown: float = 0.0:
-	set(value):
-		cooldown = value
-
+#region Properties
+var cooldown: float = 0.0
 var duration: float
-
-var current_cooldown: float = 0.0:
-	set(value):
-		current_cooldown = value
-
+var current_cooldown: float = 0.0
 var params: Dictionary = {}:
 	set(value):
 		params = value
-		_apply_params()
 
 var name: String
 var base_name: String
@@ -31,13 +22,12 @@ var description: String
 var logger: Logger
 var _is_executing: bool = false
 var _elapsed_time: float = 0.0
-
+#endregion
 
 #region Builder
 class Builder:
 	var action_class: GDScript
 	var name: String
-	var ant: Ant
 	var params: Dictionary = {}
 	var duration: float
 	var cooldown: float
@@ -62,10 +52,6 @@ class Builder:
 		duration = time
 		return self
 
-	func with_ant(_ant: Ant) -> Builder:
-		ant = _ant
-		return self
-
 	func with_cooldown(time: float) -> Builder:
 		cooldown = time
 		return self
@@ -76,132 +62,63 @@ class Builder:
 		action.description = description
 		action.cooldown = cooldown
 		action.duration = duration
-		action.ant = ant
 		action.params = params
 		return action
+#endregion
 
 func _init():
 	logger = Logger.new("action", DebugLogger.Category.ACTION)
 
-#region Params
-func _apply_params() -> void:
-	if not ant:
-		logger.error("Cannot apply params: no ant reference")
-		return
-
-	if params.is_empty():
-		return
-
-	for param in params:
-		if not _apply_single_param(params[param]):
-			logger.error("Failed to apply param: %s" % param)
-			return
-
-func _apply_single_param(param: Dictionary) -> bool:
-	if not param.has_all(["type", "property", "property_value"]):
-		logger.error("Param missing required fields: %s" % param)
-		return false
-
-	var param_type = param.get("type")
-	var property = param.get("property")
-	var property_value = param.get("property_value")
-
-	match param_type:
-		"target_position":
-			return _handle_target_position(property, property_value)
-		"speed":
-			return _handle_speed(property, property_value)
-		"pheromone":
-			return _handle_pheromone(property, property_value)
-		"none":
-			return true
-		_:
-			logger.error("Unknown param type: %s" % param_type)
-			return false
-
-func _handle_target_position(property: String, value: Variant) -> bool:
-	if value == "random":
-		var random_offset = Vector2(
-			randf_range(-50, 50),
-			randf_range(-50, 50)
-		)
-		var target = ant.global_position + random_offset
-		return ant.set_property_value(property, target).success()
-
-	if value is String and value.contains("."):
-		var pos = ant.get_property_value(value)
-		if pos == null:
-			logger.error("Failed to get position from path: %s" % value)
-			return false
-		return ant.set_property_value(property, pos).success()
-
-	return ant.set_property_value(property, value).success()
-
-func _handle_speed(property: String, value: Variant) -> bool:
-	return ant.set_property_value(property, value).success()
-
-func _handle_pheromone(property: String, value: Variant) -> bool:
-	return ant.set_property_value(property, value).success()
-
 #region Core Action Methods
-func start(_ant: Ant) -> void:
-	ant = _ant
-	current_cooldown = cooldown
-	_is_executing = true
+func can_execute(ant: Ant) -> bool:
+	return is_ready() and _validate_params(ant)
 
-	if not ant.action_completed.is_connected(_on_ant_action_completed):
-		ant.action_completed.connect(_on_ant_action_completed)
-
-	started.emit()
-
-func update(delta: float) -> void:
-	if is_completed():
-		_update_action(delta)
-
-func _update_action(_delta: float) -> void:
-	pass
-
-func _complete() -> void:
+func execute(delta: float, ant: Ant) -> void:
 	if not _is_executing:
+		_start_execution(ant)
 		return
+		
+	_update_execution(delta, ant)
 
+func stop() -> void:
 	_is_executing = false
-	_elapsed_time = 0.0
-	completed.emit()
-
-func is_completed() -> bool:
-	return not _is_executing
-
-func cancel() -> void:
-	_is_executing = false
-	if ant and ant.action_completed.is_connected(_on_ant_action_completed):
-		ant.action_completed.disconnect(_on_ant_action_completed)
-
-func interrupt() -> void:
-	cancel()
-	current_cooldown = cooldown
 	interrupted.emit()
 
 func reset() -> void:
 	current_cooldown = 0.0
 	_is_executing = false
-	if ant and ant.action_completed.is_connected(_on_ant_action_completed):
-		ant.action_completed.disconnect(_on_ant_action_completed)
+	_elapsed_time = 0.0
 
 func is_ready() -> bool:
 	return current_cooldown <= 0
 
-func _on_ant_action_completed() -> void:
-	_is_executing = false
-	completed.emit()
-	if ant and ant.action_completed.is_connected(_on_ant_action_completed):
-		ant.action_completed.disconnect(_on_ant_action_completed)
+func is_completed() -> bool:
+	return not _is_executing
+#endregion
+
+#region Protected Methods - Override in subclasses
+func _validate_params(ant: Ant) -> bool:
+	return true
+
+func _start_execution(ant: Ant) -> void:
+	_is_executing = true
+	current_cooldown = cooldown
+	started.emit()
+
+func _update_execution(delta: float, ant: Ant) -> void:
+	pass
+
+func _complete_execution() -> void:
+	if _is_executing:
+		_is_executing = false
+		_elapsed_time = 0.0
+		completed.emit()
+#endregion
 
 #region Action Classes
+#region Action Classes
 class Move extends Action:
-	## How far ahead to set intermediate nav targets
 	const LOOK_AHEAD_DISTANCE = 50.0
-	## How close we need to be to consider reaching intermediate target
 	const INTERMEDIATE_TARGET_THRESHOLD = 5.0
 
 	var _ultimate_target: Vector2
@@ -215,54 +132,43 @@ class Move extends Action:
 	static func create() -> Builder:
 		return Builder.new(Move)
 
-	func _on_start() -> void:
-		if not ant:
-			_complete()
-			return
+	func _validate_params(ant: Ant) -> bool:
+		var target = ant.get_property_value("proprioception.base.target_position")
+		return target != null
 
+	func _start_execution(ant: Ant) -> void:
+		super._start_execution(ant)
+		
 		_ultimate_target = ant.get_property_value("proprioception.base.target_position")
-		if not _ultimate_target:
-			logger.error("No target position set for move action")
-			_complete()
+		_set_next_intermediate_target(ant)
+
+	func _update_execution(delta: float, ant: Ant) -> void:
+		if not ant.nav_agent:
+			_complete_execution()
 			return
 
-		_set_next_intermediate_target()
-
-	func _update_action(delta: float) -> void:
-		if not ant or not ant.nav_agent:
-			_complete()
-			return
-
-		# Check if we've reached current intermediate target
 		if ant.global_position.distance_to(_current_intermediate_target) <= INTERMEDIATE_TARGET_THRESHOLD:
-			# If we're also at ultimate target, complete the action
 			if ant.global_position.distance_to(_ultimate_target) <= INTERMEDIATE_TARGET_THRESHOLD:
 				ant.set_property_value("proprioception.status.at_target", true)
-				_complete()
+				_complete_execution()
 				return
-			# Otherwise set next intermediate target
-			_set_next_intermediate_target()
+			_set_next_intermediate_target(ant)
 
-		# Update velocity based on navigation
 		var next_path_position: Vector2 = ant.nav_agent.get_next_path_position()
 		var direction = ant.global_position.direction_to(next_path_position)
 		ant.velocity = direction * ant.get_property_value("speed.base.value")
 
-	func _set_next_intermediate_target() -> void:
-		if not ant or not ant.nav_agent:
+	func _set_next_intermediate_target(ant: Ant) -> void:
+		if not ant.nav_agent:
 			return
 
-		# Get direction to ultimate target
 		var direction = ant.global_position.direction_to(_ultimate_target)
 
-		# If we're close to ultimate target, use it directly
 		if ant.global_position.distance_to(_ultimate_target) <= LOOK_AHEAD_DISTANCE:
 			_current_intermediate_target = _ultimate_target
 		else:
-			# Otherwise set intermediate target LOOK_AHEAD_DISTANCE units ahead
 			_current_intermediate_target = ant.global_position + direction * LOOK_AHEAD_DISTANCE
 
-		# Update navigation agent target
 		ant.nav_agent.target_position = _current_intermediate_target
 		logger.trace("Set new intermediate target: %s" % _current_intermediate_target)
 
@@ -275,8 +181,13 @@ class Harvest extends Action:
 	static func create() -> Builder:
 		return Builder.new(Harvest)
 
-	func _update_action(delta: float) -> void:
-		ant.perform_action(self, params)
+	func _validate_params(ant: Ant) -> bool:
+		return ant.can_perform_action("harvest", params)
+
+	func _update_execution(delta: float, ant: Ant) -> void:
+		var result: Result = await ant.perform_action(self, params)
+		if result.success():
+			_complete_execution()
 
 class FollowPheromone extends Action:
 	func _init():
@@ -287,8 +198,13 @@ class FollowPheromone extends Action:
 	static func create() -> Builder:
 		return Builder.new(FollowPheromone)
 
-	func _update_action(delta: float) -> void:
-		ant.perform_action(self, params)
+	func _validate_params(ant: Ant) -> bool:
+		return ant.can_perform_action("follow_pheromone", params)
+
+	func _update_execution(delta: float, ant: Ant) -> void:
+		var result: Result = await ant.perform_action(self, params)
+		if result.success():
+			_complete_execution()
 
 class RandomMove extends Action:
 	func _init():
@@ -299,8 +215,13 @@ class RandomMove extends Action:
 	static func create() -> Builder:
 		return Builder.new(RandomMove)
 
-	func _update_action(delta: float) -> void:
-		ant.perform_action(self, params)
+	func _validate_params(ant: Ant) -> bool:
+		return ant.can_perform_action("random_move", params)
+
+	func _update_execution(delta: float, ant: Ant) -> void:
+		var result: Result = await ant.perform_action(self, params)
+		if result.success():
+			_complete_execution()
 
 class Store extends Action:
 	func _init():
@@ -311,8 +232,13 @@ class Store extends Action:
 	static func create() -> Builder:
 		return Builder.new(Store)
 
-	func _update_action(delta: float) -> void:
-		ant.perform_action(self, params)
+	func _validate_params(ant: Ant) -> bool:
+		return ant.can_perform_action("store", params)
+
+	func _update_execution(delta: float, ant: Ant) -> void:
+		var result: Result = await ant.perform_action(self, params)
+		if result.success():
+			_complete_execution()
 
 class Rest extends Action:
 	func _init():
@@ -323,5 +249,11 @@ class Rest extends Action:
 	static func create() -> Builder:
 		return Builder.new(Rest)
 
-	func _update_action(delta: float) -> void:
-		ant.perform_action(self, params)
+	func _validate_params(ant: Ant) -> bool:
+		return ant.can_perform_action("rest", params)
+
+	func _update_execution(delta: float, ant: Ant) -> void:
+		var result: Result = await ant.perform_action(self, params)
+		if result.success():
+			_complete_execution()
+#endregion

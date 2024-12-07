@@ -7,4 +7,6 @@ var value: Variant
 
 
 func _init() -> void:
+	assert(false) # depreciated conditions -> remove
+
 	type = "PropertyCheck"

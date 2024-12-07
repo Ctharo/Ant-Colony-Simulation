@@ -36,6 +36,8 @@ var logger: Logger
 
 #region Initialization
 func _init(p_ant: Ant) -> void:
+	assert(false) # depreciated conditions -> remove
+
 	logger = Logger.new("condition_system", DebugLogger.Category.CONDITION)
 	register_required_properties()
 #endregion

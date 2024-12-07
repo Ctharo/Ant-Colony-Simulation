@@ -52,23 +52,6 @@ func _process(delta: float) -> void:
 		update_timer = 0.0
 		update(delta)
 
-func _setup_context_providers() -> void:
-	# Register context providers based on condition system requirements
-	for property in _condition_system.get_required_properties():
-		var path: Path = Path.parse(property)
-
-		# Determine update frequency based on property type
-		# This could be configured via property metadata or condition requirements
-		var frequency = _get_property_frequency(path)
-		var can_interrupt = _can_property_interrupt(path)
-
-		_context_registry.register_value(
-			path.full,
-			frequency,
-			func(): return ant.get_property_value(path.full),
-			can_interrupt
-		)
-
 #region Public Methods
 ## Creates a new TaskTree instance with the specified ant agent
 ## [param _ant] The ant agent to associate with this task tree
@@ -91,9 +74,6 @@ func update(delta: float) -> bool:
 		logger.error("No root task set")
 		return false
 
-	_context_registry.update(update_timer)
-	var context := gather_context()
-
 	if root_task.state != Task.State.ACTIVE:
 		logger.info("Starting root task: %s" % root_task.name)
 		root_task.start(ant)
@@ -101,7 +81,7 @@ func update(delta: float) -> bool:
 	var previous_active = get_active_task()
 	var previous_behavior = previous_active.get_active_behavior() if previous_active else null
 
-	root_task.update(update_timer, context)
+	root_task.update(update_timer)
 
 	var current_active = get_active_task()
 	var current_behavior = current_active.get_active_behavior() if current_active else null
@@ -120,13 +100,7 @@ func update(delta: float) -> bool:
 	tree_updated.emit()
 	return true
 
-# TODO: Not working
-func _get_property_frequency(_path: Path) -> Context.UpdateFrequency:
-	return Context.UpdateFrequency.NORMAL  # Default frequency
 
-# TODO: Not working
-func _can_property_interrupt(_path: Path) -> bool:
-	return false
 
 ## Gathers context information used by tasks and behaviors for decision making
 ## [return] A dictionary containing the current context information
@@ -145,10 +119,9 @@ func reset() -> void:
 func get_active_task() -> Task:
 	return _get_active_task_recursive(root_task)
 
-## Evaluate a condition with the current context
-func evaluate_condition(condition: Condition) -> bool:
-	var context = gather_context()
-	return _condition_system.evaluate_condition(condition, context)
+## Evaluate an expression with the current context
+func evaluate_expression(expression: LogicExpression) -> Variant:
+	return expression.evaluate()
 
 ## Prints the chain of active tasks for debugging purposes
 func print_active_task_chain() -> void:
@@ -207,10 +180,8 @@ class Builder:
 		# Verify configs are loaded
 		assert(AntConfigs.behavior_configs, "Behavior configs not loaded")
 		assert(AntConfigs.task_configs, "Task configs not loaded")
-		assert(AntConfigs.condition_configs, "Condition configs not loaded")
 
-		# Create condition system
-		tree._condition_system = ConditionSystem.new(_ant)
+
 
 		# Create context provider
 		tree._context_registry = ContextRegistry.new()

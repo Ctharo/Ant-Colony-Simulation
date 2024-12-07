@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://example"]
+[gd_scene load_steps=3 format=3 uid="uid://example"]
 
 [ext_resource type="Script" path="res://ui/expression_editor/expression_editor.gd" id="1_abcde"]
+[ext_resource type="PackedScene" uid="uid://example" path="res://ui/expression_editor/expression_test_environment.tscn" id="2_715mj"]
 
 [node name="ExpressionEditor" type="Control"]
 layout_mode = 3
@@ -133,3 +134,14 @@ text = "Load Expression"
 [node name="SaveButton" type="Button" parent="MainContainer/BottomBar"]
 layout_mode = 2
 text = "Save Expression"
+
+[node name="ExpressionTestEnvironment" parent="." instance=ExtResource("2_715mj")]
+unique_name_in_owner = true
+layout_mode = 2
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 1200.0
+offset_top = 594.0
+offset_right = 1200.0
+offset_bottom = 625.0

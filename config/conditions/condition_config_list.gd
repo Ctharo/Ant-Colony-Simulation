@@ -25,6 +25,8 @@ var conditions: Dictionary = {}
 
 ## Loads all conditions from their saved paths
 func load_conditions() -> void:
+	assert(false) # depreciated conditions -> remove
+
 	conditions.clear()
 	for condition_name in _paths:
 		var condition = load(_paths[condition_name]) as ConditionConfig

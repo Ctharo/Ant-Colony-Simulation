@@ -115,14 +115,6 @@ func _ready() -> void:
 	generate_content()
 	_trace("PropertyBrowser UI initialization complete")
 
-	FoodManager.spawn_foods(100)
-	for food in Foods.all():
-		food.global_position = _get_random_position()
-		print(food.global_position)
-	var expression := preload("res://resources/properties/has_visible_food.tres") as LogicExpression
-	expression.initialize(current_ant, ExpressionCache.new())
-	print("Expression has food visible: %s" % expression.evaluate())
-	assert(expression.evaluate())
 
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
@@ -226,13 +218,9 @@ func _on_path_changed(new_path: Path) -> void:
 		return
 
 	var node: PropertyNode
-	if new_path.is_root():
-		node = root_node
-	else:
-		node = root_node.find_node(new_path)
-
-	if node:
-		property_manager.update_property_view(node)
+	node = current_ant.get_property(new_path)
+	assert(node)
+	property_manager.update_property_view(node)
 #endregion
 
 #region Public Interface

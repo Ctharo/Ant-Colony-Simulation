@@ -3,31 +3,34 @@ extends Control
 
 signal test_entity_changed(entity: Node)
 
-@onready var required_controls = {
-	setup_container = $SetupContainer,
-	spawn_foods_spin = $SetupContainer/SpawnFoodsSpinBox,
-	spawn_ant_button = $SetupContainer/SpawnAntButton,
-	clear_button = $SetupContainer/ClearButton,
-	test_results = $TestResultsContainer/TestResults,
-	evaluate_button = $TestResultsContainer/EvaluateButton,
-}
+@onready var setup_container: HBoxContainer = $SetupContainer
+@onready var spawn_foods_spin: SpinBox = $SetupContainer/SpawnFoodsSpinBox
+@onready var spawn_ant_button: Button = $SetupContainer/SpawnAntButton
+@onready var clear_button: Button = $SetupContainer/ClearButton
+@onready var test_results: TextEdit = %TestResults
+@onready var evaluate_button: Button = $TestResultsContainer/EvaluateButton
+
 
 var current_test_ant: Ant
 var current_expression: LogicExpression
 
 func _ready() -> void:
-	# Validate required controls
-	for control_name in required_controls:
-		assert(required_controls[control_name] != null, 
-			"Required control '%s' not found in scene" % control_name)
-	
+	assert(setup_container)
+	assert(spawn_foods_spin)
+	assert(spawn_ant_button)
+	assert(clear_button)
+	assert(test_results)
+	assert(evaluate_button)
+
+
+
 	_setup_signals()
 
 func _setup_signals() -> void:
-	required_controls.spawn_ant_button.pressed.connect(_spawn_test_ant)
-	required_controls.clear_button.pressed.connect(_clear_test_environment)
-	required_controls.evaluate_button.pressed.connect(_evaluate_current_expression)
-	required_controls.spawn_foods_spin.value_changed.connect(_spawn_test_foods)
+	spawn_ant_button.pressed.connect(_spawn_test_ant)
+	clear_button.pressed.connect(_clear_test_environment)
+	evaluate_button.pressed.connect(_evaluate_current_expression)
+	spawn_foods_spin.value_changed.connect(_spawn_test_foods)
 
 func set_expression(expression: LogicExpression) -> void:
 	current_expression = expression
@@ -46,9 +49,7 @@ func _spawn_test_ant() -> void:
 	colony.global_position = _get_random_position()
 	current_test_ant.global_position = _get_random_position()
 	
-	# Setup navigation and properties
-	get_parent().navigation_manager.set_property_access(current_test_ant)
-	
+	# Setup navigation and properties	
 	test_entity_changed.emit(current_test_ant)
 	
 	if current_expression:
@@ -71,12 +72,12 @@ func _clear_test_environment() -> void:
 	for food in Foods.all():
 		food.queue_free()
 	
-	required_controls.test_results.text = ""
+	test_results.text = ""
 	test_entity_changed.emit(null)
 
 func _evaluate_current_expression() -> void:
 	if not current_expression or not current_test_ant:
-		required_controls.test_results.text = "No expression or test ant available"
+		test_results.text = "No expression or test ant available"
 		return
 	
 	var result = current_expression.evaluate()
@@ -100,7 +101,7 @@ func _evaluate_current_expression() -> void:
 				result_text += "\nPosition 1: %s" % str(pos1)
 				result_text += "\nPosition 2: %s" % str(pos2)
 	
-	required_controls.test_results.text = result_text
+	test_results.text = result_text
 
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()

@@ -25,6 +25,8 @@ func _init() -> void:
 #region Public Methods
 ## Initialize the condition
 func initialize(entity: Node) -> void:
+	assert(false) # depreciated conditions -> remove
+
 	if logic_expression:
 		logic_expression.initialize(entity)
 		if not logic_expression.is_connected("value_changed", _on_logic_changed):
