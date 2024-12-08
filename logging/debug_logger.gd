@@ -14,11 +14,12 @@ enum LogLevel {
 ## Categories for different components
 enum Category {
 	TASK,           ## Task-related messages
+	ENTITY,
 	ACTION,         ## Action-related messages
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages
 	CONTEXT,        ## Context building messages
-	ENTITY,         ## Ant, colony, pheromone, etc. related messages
+	LOGIC,          ## Logic-related messages
 	PROPERTY,       ## Property-related messsages
 	TRANSITION,     ## State transition messages
 	HIERARCHY,      ## Tree hierarchy messages
@@ -54,7 +55,7 @@ static var enabled_categories := {
 	Category.CONDITION: false,
 	Category.PROPERTY: false,
 	Category.CONTEXT: false,
-	Category.ENTITY: false,
+	Category.ENTITY: true,
 	Category.TRANSITION: false,
 	Category.HIERARCHY: false,
 	Category.UI: false,
