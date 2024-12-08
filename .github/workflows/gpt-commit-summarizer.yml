@@ -4,7 +4,8 @@ name: GPT Commits summarizer
 on:
   pull_request:
     types: [opened, synchronize]
-
+  workflow_dispatch:
+  
 jobs:
   summarize:
     runs-on: ubuntu-latest
