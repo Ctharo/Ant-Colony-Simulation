@@ -1,14 +1,14 @@
-[gd_resource type="Resource" script_class="Task" load_steps=5 format=3 uid="uid://ddpf08kwawgun"]
+[gd_resource type="Resource" script_class="Task" load_steps=4 format=3 uid="uid://ddpf08kwawgun"]
 
 [ext_resource type="Script" path="res://logic/task.gd" id="1_80pst"]
-[ext_resource type="Script" path="res://logic/behavior.gd" id="1_lmfet"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="2_jxycv"]
 [ext_resource type="Resource" uid="uid://1nls8wb6824s" path="res://resources/expressions/conditions/is_low_energy.tres" id="3_qq1hu"]
 
 [resource]
 script = ExtResource("1_80pst")
 priority = 50
-behaviors = Array[ExtResource("1_lmfet")]([])
+behaviors = []
 conditions = Array[ExtResource("2_jxycv")]([ExtResource("3_qq1hu")])
 description = ""
+formula = null
 name = "Collect Food"

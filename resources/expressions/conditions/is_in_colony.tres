@@ -1,13 +1,6 @@
-[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://c6fh5yuhbmhyb"]
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://c6fh5yuhbmhyb"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_pymsc"]
-[ext_resource type="Resource" uid="uid://dnup72fdn73rb" path="res://resources/expressions/distance_to_colony.tres" id="2_32dt2"]
 
 [resource]
 script = ExtResource("1_pymsc")
-id = "is_in_colony"
-name = "is in colony"
-expression_string = "distance_to_colony < colony.radius"
-description = ""
-type = 0
-nested_expressions = Array[ExtResource("1_pymsc")]([ExtResource("2_32dt2")])
