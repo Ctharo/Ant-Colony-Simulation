@@ -35,13 +35,13 @@ var foods: Foods :
 		foods = value
 		foods.mark_as_carried()
 
-## The task tree for this ant
-var task_tree: TaskTree
+var action_manager: ActionManager
 
 ## The navigation agent for this ant
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 
 var target_position: Vector2
+
 
 ## Task update timer
 var task_update_timer: float = 0.0
@@ -57,10 +57,12 @@ var carry_max = 100
 
 func _init(init_as_active: bool = false) -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
+	action_manager = ActionManager.new()
+	action_manager.initialize(self)
+	
+	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
+	action_manager.register_action(rand_move)
 
-	# In case we don't want to start behavior immediately
-	if init_as_active:
-		_init_task_tree()
 
 func _ready() -> void:
 	spawned.emit()
@@ -73,12 +75,11 @@ func _ready() -> void:
 		var c: Colony = ColonyManager.spawn_colony()
 		c.global_position = _get_random_position()
 		set_colony(c)
-
-	var test_expression: LogicExpression = load("res://resources/expressions/conditions/should_wander_for_food.tres") as LogicExpression
-	test_expression.initialize(self)
-	print(test_expression.name + ": " + str(test_expression.get_value()))
-
-	print(foods.mass)
+	
+	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
+	rand_move.initialize(self)
+	rand_move.can_execute()
+	
 func _physics_process(delta: float) -> void:
 	if velocity:
 		move_and_slide()
@@ -90,11 +91,7 @@ func set_colony(p_colony: Colony) -> void:
 #endregion
 
 #region Event Handlers
-func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
-	pass
 
-func _on_active_task_changed(_new_task: Task) -> void:
-	pass
 #endregion
 
 #region Action Methods
@@ -156,19 +153,6 @@ func _on_active_task_changed(_new_task: Task) -> void:
 #region Property System
 
 	
-func _init_task_tree() -> void:
-	logger.trace("Initializing ant task_tree")
-	task_tree = TaskTree.create(self)\
-		.with_root_task("CollectFood")\
-		.build()
-	add_child(task_tree, true)
-	if task_tree and task_tree.get_active_task():
-		logger.trace("Ant task_tree initialized successfully")
-		task_tree.active_task_changed.connect(_on_active_task_changed)
-		task_tree.active_behavior_changed.connect(_on_active_behavior_changed)
-	else:
-		logger.error("Ant task_tree failed to be initialized")
-
 #endregion
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()

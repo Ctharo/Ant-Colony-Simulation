@@ -4,20 +4,29 @@ extends Resource
 #region Properties
 ## Unique identifier for this action
 @export var id: String
+
 ## Human readable name
 @export var name: String
+
 ## Description of what this action does
 @export var description: String
+
 ## Time before action can be used again
 @export var cooldown: float = 0.0
+
 ## How long the action takes to complete
 @export var duration: float = 0.0
+
 ## Parameters required for this action
 @export var params: Dictionary = {}
-## Conditions that must be met for action to be valid
-@export var conditions: Array[LogicExpression]
-## Properties this action depends on
-@export var properties: Array[LogicExpression] # TODO REMOVE
+
+## Expression string to evaluate conditions
+@export_multiline var condition_expression: String
+
+## Nested conditions used in the expression
+@export var nested_conditions: Array[LogicExpression]
+
+var logger: Logger
 #endregion
 
 #region Internal State
@@ -25,6 +34,7 @@ var _is_executing: bool = false
 var _elapsed_time: float = 0.0
 var _current_cooldown: float = 0.0
 var _entity: Node
+var _condition: LogicExpression
 #endregion
 
 #region Signals
@@ -33,28 +43,31 @@ signal completed
 signal interrupted
 #endregion
 
+func _init() -> void:
+	logger = Logger.new(name, DebugLogger.Category.ACTION)
+
 #region Public Methods
 ## Initialize the action with an entity
 func initialize(entity: Node) -> void:
 	_entity = entity
 	
-	# Initialize conditions
-	for condition in conditions:
+	# Create and initialize main condition
+	_condition = LogicExpression.new()
+	_condition.name = id + "_condition"
+	_condition.expression_string = condition_expression
+	_condition.nested_expressions = nested_conditions
+	_condition.initialize(entity)
+	
+	# Initialize nested conditions
+	for condition in nested_conditions:
 		condition.initialize(entity)
-		
-
 
 ## Check if the action can be executed
 func can_execute() -> bool:
 	if not is_ready():
 		return false
 		
-	# Check all conditions are met
-	for condition in conditions:
-		if not condition.get_value():
-			return false
-			
-	return _validate_params()
+	return _condition.get_value()
 
 ## Execute one tick of the action
 func execute(delta: float) -> void:

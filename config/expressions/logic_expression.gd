@@ -11,23 +11,25 @@ var id: String
 		name = value
 		id = name.to_camel_case()
 
-## The expression string to evaluate
-@export_multiline var expression_string: String
-
-## Description of what this expression does
-@export var description: String
-
 ## Type of value this expression returns
 @export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY", 
 			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES", 
 			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") var type: int = 19  # UNKNOWN
 
+## The expression string to evaluate
+@export_multiline var expression_string: String
 
 ## Array of LogicExpression resources to use as nested expressions
 @export var nested_expressions: Array[LogicExpression]
 
+
+## Description of what this expression does
+@export var description: String
+
 ## The base node for evaluating expressions
 var base_node: Node
+
+var logger: Logger
 
 ## Cached expression result
 var _cache: Variant
@@ -61,6 +63,7 @@ func initialize(p_base_node: Node) -> void:
 		return
 		
 	id = name.to_snake_case()
+	logger = Logger.new("expression_%s" % id, DebugLogger.Category.LOGIC)
 	
 	# Initialize all nested expressions
 	for expr in nested_expressions:
@@ -93,58 +96,71 @@ func get_display_value() -> String:
 #endregion
 
 #region Protected Methods
-## Calculate the expression value
 func _calculate() -> Variant:
 	if not is_parsed or not base_node:
 		push_error("Expression not ready: %s" % expression_string)
 		return null
 	
-	# Create variable bindings array
+	logger.debug("Calculating expression: %s" % expression_string)
+	
+	# Create variable bindings array in same order as parsed variable names
 	var bindings = []
 	
-	# Add nested expression values
+	# Add nested expression values to array in same order as we parsed them
 	for expr in nested_expressions:
 		var value = expr.get_value()
 		if value == null:
 			push_error("Could not get value for nested expression: %s" % expr.name)
 			return null
 		bindings.append(value)
+		logger.debug("Added binding for %s: %s" % [expr.id, str(value)])
 	
-	# Execute expression with bindings
+	logger.debug("Final bindings array: %s" % str(bindings))
+	
+	# Execute expression with binding array and base instance
 	var result = _expression.execute(bindings, base_node)
 	if _expression.has_execute_failed():
-		push_error("Failed to execute expression: %s\nError: %s" % [
+		var error_msg = "Failed to execute expression: %s\nError: %s" % [
 			expression_string, 
 			_expression.get_error_text()
-		])
+		]
+		logger.error(error_msg)
+		push_error(error_msg)
 		return null
 	
+	logger.debug("Expression result: %s" % str(result))
 	return result
 
-## Parse the expression string
 func parse_expression() -> void:
 	if expression_string.is_empty():
 		push_error("Empty expression string")
 		return
 	
-	# Create array of variable names
+	logger.debug("Parsing expression: %s" % expression_string)
+	
+	# Create array of names - these will be used as variable names in expression
 	var variable_names = []
-		
-	# Add nested expression names
+	
+	# Add each nested expression name - order must match execute bindings array
 	for expr in nested_expressions:
 		variable_names.append(expr.id)
+		logger.debug("Added variable name: %s" % expr.id)
 	
-	# Parse the expression
+	logger.debug("Variable names array: %s" % str(variable_names))
+	
+	# Parse with ordered variable names array
 	var error = _expression.parse(expression_string, PackedStringArray(variable_names))
 	if error != OK:
-		push_error("Failed to parse expression: %s\nError: %s" % [
+		var error_msg = "Failed to parse expression: %s\nError: %s" % [
 			expression_string,
 			_expression.get_error_text()
-		])
+		]
+		print(error_msg)
+		push_error(error_msg)
 		return
 	
+	logger.debug("Successfully parsed expression")
 	is_parsed = true
-
 ## Handle property value changes
 func _on_property_changed(_value: Variant) -> void:
 	invalidate()

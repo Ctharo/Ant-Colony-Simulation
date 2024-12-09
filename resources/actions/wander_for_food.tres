@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="Move" load_steps=5 format=3 uid="uid://dhqlu84b60xip"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_tovab"]
+[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="2_j3pkd"]
+[ext_resource type="Script" path="res://logic/actions/move.gd" id="2_um3s7"]
+[ext_resource type="Resource" uid="uid://1nls8wb6824s" path="res://resources/expressions/conditions/is_low_energy.tres" id="3_wwxy7"]
+
+[resource]
+script = ExtResource("2_um3s7")
+target_position = Vector2(0, 0)
+is_continuous = false
+arrival_threshold = 5.0
+speed = 100.0
+face_direction = true
+max_steering = 200.0
+max_speed = 150.0
+id = ""
+name = ""
+description = ""
+cooldown = 0.0
+duration = 0.0
+params = {}
+condition_expression = "not is_overloaded and not is_low_energy"
+nested_conditions = Array[ExtResource("1_tovab")]([ExtResource("2_j3pkd"), ExtResource("3_wwxy7")])
