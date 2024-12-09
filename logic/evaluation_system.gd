@@ -1,26 +1,33 @@
 class_name EvaluationSystem
 extends Resource
 
+#region Properties
+## Registered formulas
 var _formulas: Dictionary = {}
+## Current variable values
 var _variables: Dictionary = {}
+## Cache system
 var _cache: EvaluationCache = EvaluationCache.new()
+## Logger instance
 var logger: Logger
+#endregion
 
 func _init() -> void:
-	logger = Logger.new("evaluation_system", DebugLogger.Category.LOGIC)
+	logger = Logger.new("formula_system", DebugLogger.Category.LOGIC)
 
 func add_formula(id: String, formula_string: String, variables: Array[String]) -> void:
 	var evaluator = Evaluator.new()
 	evaluator.formula = formula_string
 	evaluator.variable_names = variables
-	if evaluator.parse():
-		_formulas[id] = evaluator
-	else:
+	if not evaluator.parse():
 		logger.error("Failed to parse formula: %s" % id)
+		return
+	_formulas[id] = evaluator
 
 func set_variable(name: String, value: Variant) -> void:
 	if _variables.get(name) != value:
 		_variables[name] = value
+		# Invalidate all formulas using this variable
 		for id in _formulas:
 			if name in _formulas[id].variable_names:
 				_cache.invalidate(id)
@@ -36,6 +43,3 @@ func evaluate(id: String) -> Variant:
 		return result
 		
 	return _cache.get_value(id)
-
-func add_dependency(dependent: String, dependency: String) -> void:
-	_cache.add_dependency(dependent, dependency)
