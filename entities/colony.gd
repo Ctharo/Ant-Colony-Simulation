@@ -3,7 +3,6 @@ extends Node2D
 ## The ant colony node that manages colony-wide properties and resources
 
 #region Member Variables
-var id: int
 ## Colony radius in units
 var radius: float = 10.0 
 ## Collection of food resources

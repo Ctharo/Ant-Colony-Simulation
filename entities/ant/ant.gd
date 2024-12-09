@@ -3,23 +3,19 @@ extends CharacterBody2D
 
 #region Signals
 signal spawned
-signal food_spotted(food: Node2D)
-signal ant_spotted(ant: Ant)
+signal food_spotted
+signal ant_spotted
 signal action_completed
-signal pheromone_sensed(pheromone: Node2D)
-signal damaged(amount: float)
+signal pheromone_sensed
+signal damaged
 signal died
 #endregion
 
 #region Constants
 const DEFAULT_CONFIG_ROOT = "res://config/"
-const DEFAULT_VISION_RANGE = 50.0
-const DEFAULT_MOVEMENT_RATE = 10.0
-const DEFAULT_ENERGY_MAX = 100
-const DEFAULT_CARRY_MAX = 100
 #endregion
 
-#region Properties
+#region Member Variables
 ## The unique identifier for this ant
 var id: int
 
@@ -27,14 +23,10 @@ var id: int
 var role: String
 
 ## The colony this ant belongs to
-var colony: Colony:
-	set(value):
-		if colony != value:
-			colony = value
-			_on_colony_changed()
+var colony: Colony : set = set_colony
 
 ## The foods being carried by the ant
-var foods: Foods:
+var foods: Foods :
 	get:
 		if not foods:
 			foods = Foods.new()
@@ -49,86 +41,126 @@ var task_tree: TaskTree
 ## The navigation agent for this ant
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 
-## Current target position for movement
-var target_position: Vector2:
-	set(value):
-		if target_position != value:
-			target_position = value
-			if nav_agent:
-				nav_agent.target_position = value
+var target_position: Vector2
 
-## Vision range for detecting objects
-var vision_range: float = DEFAULT_VISION_RANGE
-
-## Movement speed
-var movement_rate: float = DEFAULT_MOVEMENT_RATE
-
-## Current energy level
-var energy_level: float = DEFAULT_ENERGY_MAX * 0.8:
-	set(value):
-		energy_level = clampf(value, 0, energy_max)
-		if energy_level <= 0:
-			_handle_death()
-
-## Maximum energy capacity
-var energy_max: float = DEFAULT_ENERGY_MAX
-
-## Maximum carry capacity
-var carry_max: float = DEFAULT_CARRY_MAX
-
-## Logger instance
+## Task update timer
+var task_update_timer: float = 0.0
 var logger: Logger
 #endregion
 
-#region Initialization
-func _init(init_as_active: bool = true) -> void:
+var vision_range = 50.0
+var movement_rate = 10.0
+var energy_level = 80
+var energy_max = 100
+var carry_max = 100
+
+
+func _init(init_as_active: bool = false) -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
-	
+
+	# In case we don't want to start behavior immediately
 	if init_as_active:
 		_init_task_tree()
 
 func _ready() -> void:
-	_setup_navigation()
-	_initialize_position()
-	_setup_colony()
-	_load_behaviors()
-	
 	spawned.emit()
+	# Setup navigation
+	nav_agent.path_desired_distance = 4.0
+	nav_agent.target_desired_distance = 4.0
+
+	global_position = _get_random_position()
+	if not colony:
+		var c: Colony = ColonyManager.spawn_colony()
+		c.global_position = _get_random_position()
+		set_colony(c)
+
+	var test_behavior: BehaviorConfig = load("res://resources/behaviors/wander_for_food.tres")
+	test_behavior.initialize(self)
+	print(test_behavior.name.to_snake_case() + " is valid: " + str(test_behavior.should_activate()))
 
 func _physics_process(delta: float) -> void:
 	if velocity:
 		move_and_slide()
-		_update_energy(delta)
+
+#region Colony Management
+func set_colony(p_colony: Colony) -> void:
+	if colony != p_colony:
+		colony = p_colony
 #endregion
 
-#region Public Methods
-## Handle the ant taking damage
-func take_damage(amount: float) -> void:
-	energy_level -= amount
-	damaged.emit(amount)
+#region Event Handlers
+func _on_active_behavior_changed(_new_behavior: Behavior) -> void:
+	pass
+
+func _on_active_task_changed(_new_task: Task) -> void:
+	pass
+#endregion
+
+#region Action Methods
+### Placeholder for actions
+#func perform_action(action: Action, _args: Dictionary = {}) -> Result:
+	#var event_str: String = "Ant is performing action:"
+	#event_str += " "
+	#event_str += action.description if action.description else "N/A"
+	#logger.trace(event_str)
+#
+	#match action.base_name:
+		#"store":
+			#if foods.is_empty():
+				#action_completed.emit()
+			#else:
+				#await get_tree().create_timer(action.duration).timeout
+				#foods.clear()
+#
+		#"move":
+			#if get_property_value("proprioception.status.at_target"):
+				#action_completed.emit()
+			#else:
+				#await get_tree().create_timer(action.duration).timeout
+				#var target_position: Vector2 = get_property_value("proprioception.base.target_position")
+				#if target_position and global_position != target_position:
+					#global_position = target_position
+					#logger.debug("Ant moved to position: %s" % target_position)
+#
+		#"harvest":
+			#if get_property_value("storage.status.is_full"):
+				#action_completed.emit()
+			#else:
+				#await get_tree().create_timer(action.duration).timeout
+				## TODO: Add actual harvesting logic here
+				#foods.add_food(get_property_value("storage.capacity.max"))
+#
+		#"follow_pheromone":
+			#await get_tree().create_timer(action.duration).timeout
+			## TODO: Add pheromone following logic here
+			#action_completed.emit()
+#
+		#"random_move":
+			#await get_tree().create_timer(action.duration).timeout
+			## Movement handled by action params setting target position
+			#action_completed.emit()
+#
+		#"rest":
+			#await get_tree().create_timer(action.duration).timeout
+			## TODO: Add rest/energy recovery logic here
+			#action_completed.emit()
+#
+		#_:
+			#logger.warn("Unknown action type: %s" % action.base_name)
+			#await get_tree().create_timer(action.duration).timeout
+			#action_completed.emit()
+	#return Result.new()
+#endregion
+
+#region Property System
+
 	
-## Check if ant can carry more items
-func can_carry_more() -> bool:
-	return foods.get_total_weight() < carry_max
-
-## Get current carried weight
-func get_carried_weight() -> float:
-	return foods.get_total_weight()
-
-## Get remaining carry capacity
-func get_remaining_capacity() -> float:
-	return carry_max - get_carried_weight()
-#endregion
-
-#region Private Methods
-## Initialize the task tree system
 func _init_task_tree() -> void:
 	logger.trace("Initializing ant task_tree")
-	
-	task_tree = TaskTree.create(self).build()
-	task_tree.root_task = load("res://resources/tasks/collect_food.tres") as Task
+	task_tree = TaskTree.create(self)\
+		.with_root_task("CollectFood")\
+		.build()
 	add_child(task_tree, true)
-	
 	if task_tree and task_tree.get_active_task():
 		logger.trace("Ant task_tree initialized successfully")
 		task_tree.active_task_changed.connect(_on_active_task_changed)
@@ -136,81 +168,9 @@ func _init_task_tree() -> void:
 	else:
 		logger.error("Ant task_tree failed to be initialized")
 
-## Setup navigation agent parameters
-func _setup_navigation() -> void:
-	nav_agent.path_desired_distance = 4.0
-	nav_agent.target_desired_distance = 4.0
-	nav_agent.velocity_computed.connect(_on_velocity_computed)
-
-## Initialize starting position
-func _initialize_position() -> void:
-	global_position = _get_random_position()
-
-## Setup colony association
-func _setup_colony() -> void:
-	if not colony:
-		var new_colony: Colony = ColonyManager.spawn_colony()
-		new_colony.global_position = _get_random_position()
-		set_colony(new_colony)
-
-## Load and initialize behaviors
-func _load_behaviors() -> void:
-	var behavior_configs := _load_behavior_configs()
-	for config in behavior_configs:
-		config.initialize(self)
-
-## Load behavior configurations
-func _load_behavior_configs() -> Array:
-	var configs: Array = []
-	var dir := DirAccess.open(DEFAULT_CONFIG_ROOT + "behaviors")
-	if dir:
-		for file in dir.get_files():
-			if file.ends_with(".tres"):
-				var config = load(DEFAULT_CONFIG_ROOT + "behaviors/" + file)
-				if config is BehaviorConfig:
-					configs.append(config)
-	return configs
-
-## Update energy based on activities
-func _update_energy(delta: float) -> void:
-	# Basic energy consumption from movement
-	if velocity.length() > 0:
-		energy_level -= delta * 0.1 * velocity.length() / movement_rate
-	
-	# Energy consumption from carrying items
-	if not foods.is_empty():
-		energy_level -= delta * 0.05 * foods.get_total_weight() / carry_max
-
-## Handle ant death
-func _handle_death() -> void:
-	logger.info("Ant %s has died" % id)
-	died.emit()
-	queue_free()
-
-## Get a random position within viewport
+#endregion
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
 	var x := randf_range(0, viewport_rect.size.x)
 	var y := randf_range(0, viewport_rect.size.y)
 	return Vector2(x, y)
-#endregion
-#region Colony Management
-func set_colony(p_colony: Colony) -> void:
-	if colony != p_colony:
-		colony = p_colony
-#endregion
-#region Event Handlers
-func _on_active_behavior_changed(new_behavior: Behavior) -> void:
-	if new_behavior:
-		logger.trace("Behavior changed to: %s" % new_behavior.name)
-
-func _on_active_task_changed(new_task: Task) -> void:
-	if new_task:
-		logger.trace("Task changed to: %s" % new_task.name)
-
-func _on_colony_changed() -> void:
-	logger.info("Ant %s assigned to colony %s" % [id, colony.id if colony else "None"])
-
-func _on_velocity_computed(safe_velocity: Vector2) -> void:
-	velocity = safe_velocity * movement_rate
-#endregion

@@ -5,5 +5,5 @@ extends Logic
 @export var action: ActionConfig
 
 func should_activate() -> bool:
-	assert(false)
-	return true
+	var result = get_value()
+	return bool(result)

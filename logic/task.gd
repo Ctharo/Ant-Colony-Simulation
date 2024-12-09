@@ -1,19 +1,15 @@
 class_name Task
-extends Evaluatable
+extends RefCounted
 
 #region Signals
-## Emitted when task starts execution
 signal started
-## Emitted when task successfully completes
 signal completed
-## Emitted when task is interrupted before completion
 signal interrupted
-## Emitted when task state changes
 signal state_changed(new_state: State)
 #endregion
 
 #region Enums
-## Represents the current state of the task
+## Task states
 enum State {
 	INACTIVE,    ## Task is not running
 	ACTIVE,      ## Task is currently running
@@ -21,7 +17,7 @@ enum State {
 	INTERRUPTED  ## Task was interrupted before completion
 }
 
-## Defines priority levels for task execution
+## Task priority levels
 enum Priority {
 	LOWEST = 0,
 	LOW = 25,
@@ -31,165 +27,144 @@ enum Priority {
 }
 #endregion
 
-#region Exported Properties
-## Task execution priority
-@export var priority: Priority = Priority.MEDIUM
-
-## Collection of behaviors associated with this task
-@export var behaviors: Array[Behavior] = []
-
-## Collection of conditions that must be met for task execution
-@export var conditions: Array[Logic] = []
-
-## Description of what the task does
-@export_multiline var description: String = ""
-#endregion
-
-#region Runtime Properties
-## Current state of the task
+#region Properties
 var state: State = State.INACTIVE:
 	set(value):
 		if state != value:
 			state = value
 			state_changed.emit(state)
 
-## Currently executing behavior
-var active_behavior: Behavior
-
-## Reference to the ant this task is controlling
+var name: String = ""
+var priority: int = Priority.MEDIUM
 var ant: Ant
+var behaviors: Array[Behavior] = []
+var conditions: Array[Logic] = []
+var active_behavior: Behavior
+var allow_interruption: bool = true
+var logger: Logger
+
 #endregion
 
-#region Lifecycle Methods
+#region Initialization
+func _init(p_priority: int = Priority.MEDIUM) -> void:
+	priority = p_priority
+	logger = Logger.new("task", DebugLogger.Category.TASK)
+#endregion
 
-## Initialize the task and its components
-func initialize(p_evaluation_system: EvaluationSystem) -> void:
-	if Engine.is_editor_hint():
-		return
-		
-	super(p_evaluation_system)
-	_initialize_conditions()
-	_initialize_behaviors()
-
-## Update task state and behavior
+#region Public Methods
 func update(delta: float) -> void:
-	if Engine.is_editor_hint():
-		return
-		
-	if not _validate_active_state():
+	if state != Task.State.ACTIVE:
+		logger.warn("Task %s marked as inactive, cannot update task" % name)
 		return
 
 	logger.trace("Updating Task: %s" % name)
 	
-	if not _check_conditions():
+	# Check task-level conditions
+	if not _check_task_conditions():
+		logger.info("Task conditions not met, interrupting: %s" % name)
+		interrupt()
 		return
 
 	_update_behavior(delta)
 
-## Reset task to initial state
-func reset() -> void:
-	if Engine.is_editor_hint():
+func add_behavior(behavior: Behavior) -> void:
+	behaviors.append(behavior)
+	behavior.name = behavior.name if not behavior.name.is_empty() else "Behavior" + str(behaviors.size())
+	logger.trace("Added behavior '%s' to task '%s'" % [behavior.name, name])
+
+func add_condition(condition: Logic) -> void:
+	if condition:
+		conditions.append(condition)
+		logger.trace("Added condition to task '%s'" % name)
+
+func start(p_ant: Ant) -> void:
+	if state == State.ACTIVE:
 		return
-		
+
+	ant = p_ant
+	state = State.ACTIVE
+	started.emit()
+	logger.info("Started task: %s" % name)
+
+func interrupt() -> void:
+	if state == State.ACTIVE:
+		state = State.INTERRUPTED
+		_stop_active_behavior()
+		interrupted.emit()
+		logger.info("Interrupted task: %s" % name)
+
+func reset() -> void:
 	state = State.INACTIVE
 	_stop_active_behavior()
 	
 	for behavior in behaviors:
 		behavior.reset()
+
+func get_active_behavior() -> Behavior:
+	return active_behavior if active_behavior and active_behavior.is_active() else null
+
+func get_conditions() -> Array[Logic]:
+	return conditions
+
+func get_debug_info() -> Dictionary:
+	return {
+		"name": name,
+		"state": State.keys()[state],
+		"priority": priority,
+		"behavior_count": behaviors.size(),
+		"active_behavior": active_behavior.name if active_behavior else "None",
+		"condition_count": conditions.size()
+	}
 #endregion
 
-#region Protected Methods
-## Calculate if all conditions are met
-func _calculate() -> bool:
-	if Engine.is_editor_hint():
-		return false
-		
+#region Private Methods
+func _check_task_conditions() -> bool:
 	for condition in conditions:
 		if not condition.evaluate():
 			return false
 	return true
-#endregion
 
-#region Private Methods
-## Initialize all task conditions
-func _initialize_conditions() -> void:
-	for condition in conditions:
-		condition.initialize(evaluation_system)
-		add_dependency(condition.id)
-
-## Initialize all task behaviors
-func _initialize_behaviors() -> void:
-	for behavior in behaviors:
-		behavior.initialize(evaluation_system)
-
-## Validate task is in active state
-func _validate_active_state() -> bool:
-	if state != State.ACTIVE:
-		logger.warn("Task %s marked as inactive, cannot update task" % name)
-		return false
-	return true
-
-## Check if task conditions are met
-func _check_conditions() -> bool:
-	if not evaluate():
-		logger.info("Task conditions not met, interrupting: %s" % name)
-		interrupt()
-		return false
-	return true
-
-## Update current behavior execution
 func _update_behavior(delta: float) -> void:
 	if active_behavior:
-		_handle_active_behavior(delta)
+		if active_behavior.is_completed():
+			if _should_activate_behavior(active_behavior):
+				var higher_priority_behavior = _find_next_valid_behavior(active_behavior.priority)
+				if higher_priority_behavior:
+					_switch_behavior(higher_priority_behavior)
+				else:
+					logger.info("Restarting completed behavior '%s' as it's still optimal" % active_behavior.name)
+					active_behavior.reset()
+					active_behavior.start()
+			else:
+				var next_behavior = _find_next_valid_behavior()
+				if next_behavior:
+					_switch_behavior(next_behavior)
+				else:
+					assert(false, "No behavior found, should loop")
+		elif _should_activate_behavior(active_behavior):
+			var higher_priority_behavior = _find_next_valid_behavior(active_behavior.priority)
+			if higher_priority_behavior:
+				_switch_behavior(higher_priority_behavior)
+			else:
+				logger.trace("Continuing current behavior")
+				active_behavior.execute(delta, ant)
+		else:
+			var next_behavior = _find_next_valid_behavior()
+			if next_behavior:
+				_switch_behavior(next_behavior)
+			else:
+				logger.info("No valid behaviors found")
+				_stop_active_behavior()
 	else:
-		_start_new_behavior()
+		var next_behavior = _find_next_valid_behavior()
+		if next_behavior:
+			_switch_behavior(next_behavior)
 
-## Handle active behavior state and execution
-func _handle_active_behavior(delta: float) -> void:
-	if active_behavior.is_completed():
-		_handle_completed_behavior()
-	elif _should_switch_behavior():
-		_switch_to_higher_priority_behavior(delta)
-	else:
-		active_behavior.execute(delta, ant)
+func _should_activate_behavior(behavior: Behavior) -> bool:
+	return behavior.should_activate() and behavior.can_execute()
 
-## Handle switching to a higher priority behavior
-func _switch_to_higher_priority_behavior(delta: float) -> void:
-	if not active_behavior:
-		return
-		
-	var higher_priority_behavior = _find_next_valid_behavior(active_behavior.priority)
-	
-	if higher_priority_behavior:
-		logger.trace("Found higher priority behavior: %s (priority: %d)" % [
-			higher_priority_behavior.name, 
-			higher_priority_behavior.priority
-		])
-		_switch_behavior(higher_priority_behavior)
-	else:
-		logger.trace("No higher priority behaviors available, continuing with: %s" % active_behavior.name)
-		active_behavior.execute(delta, ant)
-
-## Handle completed behavior state
-func _handle_completed_behavior() -> void:
-	var next_behavior = _find_next_valid_behavior()
-	if next_behavior:
-		_switch_behavior(next_behavior)
-	else:
-		logger.info("No valid behaviors found")
-		_stop_active_behavior()
-
-## Check if behavior should be switched
-func _should_switch_behavior() -> bool:
-	if not active_behavior:
-		return true
-	
-	var higher_priority_behavior = _find_next_valid_behavior(active_behavior.priority)
-	return higher_priority_behavior != null
-
-## Find next valid behavior above given priority
-func _find_next_valid_behavior(min_priority: int = -1) -> Behavior:
-	var priority_groups = _group_behaviors_by_priority(min_priority)
+func _find_next_valid_behavior(current_priority: int = -1) -> Behavior:
+	var priority_groups = _group_behaviors_by_priority()
 	if priority_groups.is_empty():
 		return null
 
@@ -198,29 +173,26 @@ func _find_next_valid_behavior(min_priority: int = -1) -> Behavior:
 	priorities.reverse()
 
 	for priority in priorities:
+		if current_priority >= 0 and priority <= current_priority:
+			break
+
 		var behaviors_at_priority = priority_groups[priority]
 		for behavior in behaviors_at_priority:
-			if behavior.should_activate():
+			if _should_activate_behavior(behavior):
 				return behavior
 	
 	return null
 
-## Group behaviors by priority level
 func _group_behaviors_by_priority(min_priority: int = -1) -> Dictionary:
 	var priority_groups: Dictionary = {}
-	
 	for behavior in behaviors:
 		if behavior.priority <= min_priority:
 			continue
-			
 		if not behavior.priority in priority_groups:
 			priority_groups[behavior.priority] = []
-			
 		priority_groups[behavior.priority].append(behavior)
-		
 	return priority_groups
 
-## Switch to a new behavior
 func _switch_behavior(new_behavior: Behavior) -> void:
 	logger.info("Switching behaviors: %s -> %s" % [
 		active_behavior.name if active_behavior else "None",
@@ -231,58 +203,8 @@ func _switch_behavior(new_behavior: Behavior) -> void:
 	active_behavior = new_behavior
 	active_behavior.start()
 
-## Stop the currently active behavior
 func _stop_active_behavior() -> void:
 	if active_behavior:
 		active_behavior.stop()
 		active_behavior = null
-
-## Start a new behavior if available
-func _start_new_behavior() -> void:
-	var next_behavior = _find_next_valid_behavior()
-	if next_behavior:
-		_switch_behavior(next_behavior)
-#endregion
-
-#region Public Methods
-## Add a new behavior to the task
-func add_behavior(behavior: Behavior) -> void:
-	behaviors.append(behavior)
-	if not Engine.is_editor_hint():
-		behavior.initialize(evaluation_system)
-	logger.trace("Added behavior '%s' to task '%s'" % [behavior.name, name])
-
-## Add a new condition to the task
-func add_condition(condition: Logic) -> void:
-	conditions.append(condition)
-	if not Engine.is_editor_hint():
-		condition.initialize(evaluation_system)
-		add_dependency(condition.id)
-	logger.trace("Added condition to task '%s'" % name)
-
-## Start task execution
-func start(p_ant: Ant) -> void:
-	if state == State.ACTIVE:
-		return
-
-	ant = p_ant
-	state = State.ACTIVE
-	started.emit()
-	logger.info("Started task: %s" % name)
-
-## Interrupt task execution
-func interrupt() -> void:
-	if state == State.ACTIVE:
-		state = State.INTERRUPTED
-		_stop_active_behavior()
-		interrupted.emit()
-		logger.info("Interrupted task: %s" % name)
-
-## Get currently active behavior
-func get_active_behavior() -> Behavior:
-	return active_behavior if active_behavior and active_behavior.is_active() else null
-
-## Get task conditions
-func get_conditions() -> Array[Logic]:
-	return conditions
 #endregion
