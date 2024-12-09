@@ -50,7 +50,7 @@ func unregister_action(action_id: String) -> void:
 		action.interrupted.disconnect(_on_action_interrupted)
 		_actions.erase(action_id)
 
-func update(delta: float) -> void:
+func update(delta: float = 0.0) -> void:
 	if _current_action:
 		_current_action.execute(delta)
 	else:
@@ -62,7 +62,7 @@ func update(delta: float) -> void:
 			action._current_cooldown = max(0.0, action._current_cooldown - delta)
 
 func get_next_action() -> Action:
-	var valid_actions = _actions.values().filter(func(action): 
+	var valid_actions = _actions.values().filter(func(action: Action): 
 		return action.is_ready() and evaluation_system.get_value(action._condition.id)
 	)
 	return valid_actions[0] if not valid_actions.is_empty() else null

@@ -29,6 +29,9 @@ var id: String
 ## The base node for evaluating expressions
 var base_node: Node
 
+## Reference to evaluation system
+var evaluation_system: EvaluationSystem
+
 var logger: Logger
 
 ## Cached expression result
@@ -53,10 +56,10 @@ signal dependencies_changed
 #endregion
 
 #region Public Methods
-## Initialize the expression with a base node for property resolution
-func initialize(p_base_node: Node) -> void:
+## Initialize the expression with a base node and evaluation system
+func initialize(p_base_node: Node, p_evaluation_system: EvaluationSystem = null) -> void:
 	base_node = p_base_node
-	_dirty = true
+	evaluation_system = p_evaluation_system
 	
 	if name.is_empty():
 		push_error("Expression name cannot be empty")
@@ -67,18 +70,22 @@ func initialize(p_base_node: Node) -> void:
 	
 	# Initialize all nested expressions
 	for expr in nested_expressions:
-		expr.initialize(base_node)
-		if not expr.value_changed.is_connected(_on_nested_expression_changed):
-			expr.value_changed.connect(_on_nested_expression_changed)
+		expr.initialize(base_node, evaluation_system)
 	
 	parse_expression()
 
 ## Get the current value of the expression
 func get_value() -> Variant:
+	# If we have an evaluation system, always use it
+	if evaluation_system:
+		return evaluation_system.get_value(id)
+		
+	# Fallback to local calculation if no evaluation system
 	if _dirty or _cache == null:
 		_cache = _calculate()
 		_dirty = false
 	return _cache
+
 
 ## Force recalculation on next get_value() call
 func invalidate() -> void:
@@ -103,21 +110,22 @@ func _calculate() -> Variant:
 	
 	logger.debug("Calculating expression: %s" % expression_string)
 	
-	# Create variable bindings array in same order as parsed variable names
 	var bindings = []
 	
 	# Add nested expression values to array in same order as we parsed them
 	for expr in nested_expressions:
-		var value = expr.get_value()
+		# Always use evaluation system's get_value if available
+		var value = evaluation_system.get_value(expr.id) if evaluation_system else expr.get_value()
+		
 		if value == null:
 			push_error("Could not get value for nested expression: %s" % expr.name)
 			return null
+			
 		bindings.append(value)
 		logger.debug("Added binding for %s: %s" % [expr.id, str(value)])
 	
 	logger.debug("Final bindings array: %s" % str(bindings))
 	
-	# Execute expression with binding array and base instance
 	var result = _expression.execute(bindings, base_node)
 	if _expression.has_execute_failed():
 		var error_msg = "Failed to execute expression: %s\nError: %s" % [

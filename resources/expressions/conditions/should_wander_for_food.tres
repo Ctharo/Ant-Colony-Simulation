@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LogicExpression" load_steps=4 format=3 uid="uid://bvuf7cf2k8cj6"]
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=4 format=3 uid="uid://5aysilf0288r"]
 
 [ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_uwabv"]
 [ext_resource type="Resource" uid="uid://1nls8wb6824s" path="res://resources/expressions/conditions/is_low_energy.tres" id="2_a5sb6"]
@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("1_uwabv")
 name = "should wander for food"
-expression_string = "not is_overloaded and not is_low_energy"
-description = ""
 type = 19
+expression_string = "not is_overloaded and not is_low_energy"
 nested_expressions = Array[ExtResource("1_uwabv")]([ExtResource("2_a5sb6"), ExtResource("3_lfa3y")])
+description = ""

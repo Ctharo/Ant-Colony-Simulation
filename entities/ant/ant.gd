@@ -57,12 +57,21 @@ var carry_max = 100
 
 func _init(init_as_active: bool = false) -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
+	
+	colony = ColonyManager.spawn_colony()
+	colony.add_ant(self)
+	colony.global_position = Vector2(randf_range(0, 1000), randf_range(0, 1000))
+	
 	action_manager = ActionManager.new()
 	action_manager.initialize(self)
 	
 	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
 	action_manager.register_action(rand_move)
-
+	var store_food: Action = load("res://resources/actions/store_food.tres")
+	action_manager.register_action(store_food)
+	action_manager.update()
+	action_manager.get_next_action()
+	pass
 
 func _ready() -> void:
 	spawned.emit()
@@ -79,11 +88,8 @@ func _ready() -> void:
 	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
 	rand_move.initialize(self)
 	rand_move.can_execute()
-	
-func _physics_process(delta: float) -> void:
-	if velocity:
-		move_and_slide()
 
+	
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
 	if colony != p_colony:

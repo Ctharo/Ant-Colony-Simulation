@@ -3,7 +3,7 @@ extends Resource
 
 #region Properties
 ## Unique identifier for this action
-@export var id: String
+var id: String
 
 ## Human readable name
 @export var name: String
@@ -50,7 +50,7 @@ func _init() -> void:
 ## Initialize the action with an entity
 func initialize(entity: Node) -> void:
 	_entity = entity
-	
+	id = name.to_snake_case()
 	# Create and initialize main condition
 	_condition = LogicExpression.new()
 	_condition.name = id + "_condition"
