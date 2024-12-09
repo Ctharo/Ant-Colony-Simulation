@@ -74,10 +74,11 @@ func _ready() -> void:
 		c.global_position = _get_random_position()
 		set_colony(c)
 
-	var test_behavior: BehaviorConfig = load("res://resources/behaviors/wander_for_food.tres")
-	test_behavior.initialize(self)
-	print(test_behavior.name.to_snake_case() + " is valid: " + str(test_behavior.should_activate()))
+	var test_expression: LogicExpression = load("res://resources/expressions/conditions/should_wander_for_food.tres") as LogicExpression
+	test_expression.initialize(self)
+	print(test_expression.name + ": " + str(test_expression.get_value()))
 
+	print(foods.mass)
 func _physics_process(delta: float) -> void:
 	if velocity:
 		move_and_slide()

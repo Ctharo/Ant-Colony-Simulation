@@ -1,0 +1,147 @@
+[gd_scene load_steps=3 format=3 uid="uid://example"]
+
+[ext_resource type="Script" path="res://ui/expression_editor/expression_editor.gd" id="1_abcde"]
+[ext_resource type="PackedScene" uid="uid://example" path="res://ui/expression_editor/expression_test_environment.tscn" id="2_715mj"]
+
+[node name="ExpressionEditor" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_abcde")
+
+[node name="MainContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopBar" type="HBoxContainer" parent="MainContainer"]
+layout_mode = 2
+
+[node name="TypeOption" type="OptionButton" parent="MainContainer/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="IdEdit" type="LineEdit" parent="MainContainer/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Expression ID"
+
+[node name="NameEdit" type="LineEdit" parent="MainContainer/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Expression Name"
+
+[node name="DescEdit" type="TextEdit" parent="MainContainer/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Description"
+
+[node name="HSplitContainer" type="HSplitContainer" parent="MainContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ExpressionTree" type="Tree" parent="MainContainer/HSplitContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightPanel" type="VBoxContainer" parent="MainContainer/HSplitContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ConfigArea" type="PanelContainer" parent="MainContainer/HSplitContainer/RightPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PropertyConfig" type="VBoxContainer" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="PathLabel" type="Label" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/PropertyConfig"]
+layout_mode = 2
+text = "Property Path:"
+
+[node name="PathEdit" type="LineEdit" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/PropertyConfig"]
+layout_mode = 2
+placeholder_text = "e.g. proprioception.base.position"
+
+[node name="UseCurrentItem" type="CheckBox" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/PropertyConfig"]
+layout_mode = 2
+text = "Use Current Item Context"
+
+[node name="ListConfig" type="VBoxContainer" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="SourceLabel" type="Label" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/ListConfig"]
+layout_mode = 2
+text = "Source Expression:"
+
+[node name="SourceOption" type="OptionButton" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/ListConfig"]
+layout_mode = 2
+
+[node name="MapLabel" type="Label" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/ListConfig"]
+layout_mode = 2
+text = "Map Expression:"
+
+[node name="MapOption" type="OptionButton" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/ListConfig"]
+layout_mode = 2
+
+[node name="DistanceConfig" type="VBoxContainer" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Pos1Label" type="Label" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/DistanceConfig"]
+layout_mode = 2
+text = "Position 1 Expression:"
+
+[node name="Pos1Option" type="OptionButton" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/DistanceConfig"]
+layout_mode = 2
+
+[node name="Pos2Label" type="Label" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/DistanceConfig"]
+layout_mode = 2
+text = "Position 2 Expression:"
+
+[node name="Pos2Option" type="OptionButton" parent="MainContainer/HSplitContainer/RightPanel/ConfigArea/DistanceConfig"]
+layout_mode = 2
+
+[node name="PreviewArea" type="PanelContainer" parent="MainContainer/HSplitContainer/RightPanel"]
+layout_mode = 2
+
+[node name="PreviewLabel" type="Label" parent="MainContainer/HSplitContainer/RightPanel/PreviewArea"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Expression Preview"
+
+[node name="BottomBar" type="HBoxContainer" parent="MainContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="LoadButton" type="Button" parent="MainContainer/BottomBar"]
+layout_mode = 2
+text = "Load Expression"
+
+[node name="SaveButton" type="Button" parent="MainContainer/BottomBar"]
+layout_mode = 2
+text = "Save Expression"
+
+[node name="ExpressionTestEnvironment" parent="." instance=ExtResource("2_715mj")]
+unique_name_in_owner = true
+layout_mode = 2
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 1200.0
+offset_top = 594.0
+offset_right = 1200.0
+offset_bottom = 625.0

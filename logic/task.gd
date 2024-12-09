@@ -38,7 +38,7 @@ var name: String = ""
 var priority: int = Priority.MEDIUM
 var ant: Ant
 var behaviors: Array[Behavior] = []
-var conditions: Array[Logic] = []
+var conditions: Array[LogicExpression] = []
 var active_behavior: Behavior
 var allow_interruption: bool = true
 var logger: Logger
@@ -72,7 +72,7 @@ func add_behavior(behavior: Behavior) -> void:
 	behavior.name = behavior.name if not behavior.name.is_empty() else "Behavior" + str(behaviors.size())
 	logger.trace("Added behavior '%s' to task '%s'" % [behavior.name, name])
 
-func add_condition(condition: Logic) -> void:
+func add_condition(condition: LogicExpression) -> void:
 	if condition:
 		conditions.append(condition)
 		logger.trace("Added condition to task '%s'" % name)
@@ -103,7 +103,7 @@ func reset() -> void:
 func get_active_behavior() -> Behavior:
 	return active_behavior if active_behavior and active_behavior.is_active() else null
 
-func get_conditions() -> Array[Logic]:
+func get_conditions() -> Array[LogicExpression]:
 	return conditions
 
 func get_debug_info() -> Dictionary:

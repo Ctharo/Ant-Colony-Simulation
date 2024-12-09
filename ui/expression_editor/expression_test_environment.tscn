@@ -1,0 +1,46 @@
+[gd_scene load_steps=2 format=3 uid="uid://example"]
+
+[ext_resource type="Script" path="res://ui/expression_editor/expression_test_environment.gd" id="1_hlu3f"]
+
+[node name="ExpressionTestEnvironment" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_hlu3f")
+
+[node name="SetupContainer" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SpawnFoodsLabel" type="Label" parent="SetupContainer"]
+layout_mode = 2
+text = "Food Amount:"
+
+[node name="SpawnFoodsSpinBox" type="SpinBox" parent="SetupContainer"]
+layout_mode = 2
+min_value = 1.0
+max_value = 1000.0
+value = 100.0
+
+[node name="SpawnAntButton" type="Button" parent="SetupContainer"]
+layout_mode = 2
+text = "Spawn Test Ant"
+
+[node name="ClearButton" type="Button" parent="SetupContainer"]
+layout_mode = 2
+text = "Clear Environment"
+
+[node name="TestResultsContainer" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="EvaluateButton" type="Button" parent="TestResultsContainer"]
+layout_mode = 2
+text = "Evaluate Expression"
+
+[node name="TestResults" type="TextEdit" parent="TestResultsContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+editable = false
