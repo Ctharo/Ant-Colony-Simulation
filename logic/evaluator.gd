@@ -4,7 +4,7 @@ extends Resource
 
 #region Properties
 ## The formula string to evaluate
-@export var formula: String
+var formula: String
 ## Variable names used in formula
 var variable_names: Array[String] = []
 ## The parsed GDScript expression
