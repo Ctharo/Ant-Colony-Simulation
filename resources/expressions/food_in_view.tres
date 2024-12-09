@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://m3jl4m64djj5"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_tayxo"]
+
+[resource]
+script = ExtResource("1_tayxo")
+name = "food in view"
+type = 6
+expression_string = "get_food_in_view()"
+nested_expressions = Array[ExtResource("1_tayxo")]([])
+description = "Returns array of food items within view"
+_runtime_state = {}

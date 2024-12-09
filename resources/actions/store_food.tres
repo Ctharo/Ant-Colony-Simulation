@@ -8,9 +8,9 @@
 [resource]
 script = ExtResource("2_e167r")
 name = "store food"
-description = ""
-cooldown = 0.0
-duration = 0.0
-params = {}
+description = null
+cooldown = null
+duration = null
+params = null
 condition_expression = "is_in_colony and is_carrying_food"
 nested_conditions = Array[ExtResource("1_w4dqg")]([ExtResource("2_lgcl7"), ExtResource("3_p0q8r")])

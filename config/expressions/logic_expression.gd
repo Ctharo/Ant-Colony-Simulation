@@ -9,7 +9,7 @@ var id: String
 @export var name: String :
 	set(value):
 		name = value
-		id = name.to_camel_case()
+		id = name.to_snake_case()
 
 ## Type of value this expression returns
 @export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY", 
@@ -22,15 +22,16 @@ var id: String
 ## Array of LogicExpression resources to use as nested expressions
 @export var nested_expressions: Array[LogicExpression]
 
-
 ## Description of what this expression does
 @export var description: String
 
 ## The base node for evaluating expressions
 var base_node: Node
 
-## Reference to evaluation system
-var evaluation_system: EvaluationSystem
+## Evaluation system reference
+var evaluation_system: EvaluationSystem:
+	set(value):
+		evaluation_system = value
 
 var logger: Logger
 
@@ -45,6 +46,9 @@ var _expression: Expression = Expression.new()
 
 ## Flag indicating if expression is successfully parsed
 var is_parsed: bool = false
+
+## Dictionary to store runtime state for serialization
+@export var _runtime_state: Dictionary = {}
 #endregion
 
 #region Signals
@@ -57,7 +61,11 @@ signal dependencies_changed
 
 #region Public Methods
 ## Initialize the expression with a base node and evaluation system
-func initialize(p_base_node: Node, p_evaluation_system: EvaluationSystem = null) -> void:
+func initialize(p_base_node: Node, p_evaluation_system: EvaluationSystem) -> void:
+	# Only initialize if needed
+	if base_node == p_base_node and evaluation_system == p_evaluation_system and is_parsed:
+		return
+		
 	base_node = p_base_node
 	evaluation_system = p_evaluation_system
 	
@@ -66,26 +74,27 @@ func initialize(p_base_node: Node, p_evaluation_system: EvaluationSystem = null)
 		return
 		
 	id = name.to_snake_case()
-	logger = Logger.new("expression_%s" % id, DebugLogger.Category.LOGIC)
+	if not logger:  # Only create logger once
+		logger = Logger.new("expression_%s" % id, DebugLogger.Category.LOGIC)
 	
-	# Initialize all nested expressions
-	for expr in nested_expressions:
-		expr.initialize(base_node, evaluation_system)
+
+	# Only parse if not already parsed
+	if not is_parsed:
+		parse_expression()
 	
-	parse_expression()
+	_save_runtime_state()
 
 ## Get the current value of the expression
 func get_value() -> Variant:
-	# If we have an evaluation system, always use it
+	# Always use evaluation system if available
 	if evaluation_system:
 		return evaluation_system.get_value(id)
 		
-	# Fallback to local calculation if no evaluation system
+	# Otherwise fall back to local calculation
 	if _dirty or _cache == null:
 		_cache = _calculate()
 		_dirty = false
 	return _cache
-
 
 ## Force recalculation on next get_value() call
 func invalidate() -> void:
@@ -112,11 +121,9 @@ func _calculate() -> Variant:
 	
 	var bindings = []
 	
-	# Add nested expression values to array in same order as we parsed them
+	# Get values for each nested expression name in our parse list
 	for expr in nested_expressions:
-		# Always use evaluation system's get_value if available
-		var value = evaluation_system.get_value(expr.id) if evaluation_system else expr.get_value()
-		
+		var value = expr.get_value()
 		if value == null:
 			push_error("Could not get value for nested expression: %s" % expr.name)
 			return null
@@ -126,6 +133,7 @@ func _calculate() -> Variant:
 	
 	logger.debug("Final bindings array: %s" % str(bindings))
 	
+	# Execute expression with the cached values
 	var result = _expression.execute(bindings, base_node)
 	if _expression.has_execute_failed():
 		var error_msg = "Failed to execute expression: %s\nError: %s" % [
@@ -140,6 +148,10 @@ func _calculate() -> Variant:
 	return result
 
 func parse_expression() -> void:
+	if is_parsed:
+		logger.debug("Expression already parsed, skipping: %s" % expression_string)
+		return
+		
 	if expression_string.is_empty():
 		push_error("Empty expression string")
 		return
@@ -169,6 +181,7 @@ func parse_expression() -> void:
 	
 	logger.debug("Successfully parsed expression")
 	is_parsed = true
+
 ## Handle property value changes
 func _on_property_changed(_value: Variant) -> void:
 	invalidate()
@@ -176,4 +189,46 @@ func _on_property_changed(_value: Variant) -> void:
 ## Handle nested expression value changes
 func _on_nested_expression_changed(_value: Variant) -> void:
 	invalidate()
+
+func _save_runtime_state() -> void:
+	_runtime_state = {
+		"evaluation_system_connected": evaluation_system != null,
+		"is_parsed": is_parsed,
+		"has_base_node": base_node != null,
+		"name": name,
+		"id": id
+	}
+
+func _restore_runtime_state() -> void:
+	if not _runtime_state.is_empty():
+		is_parsed = _runtime_state.get("is_parsed", false)
+		# Don't restore null references, they'll be set during initialization
+		if _runtime_state.get("name"):
+			name = _runtime_state.get("name")
+		if _runtime_state.get("id"):
+			id = _runtime_state.get("id")
+
+func _post_load() -> void:
+	# Clear runtime references
+	evaluation_system = null
+	base_node = null
+	_dirty = true
+	is_parsed = false
+	_cache = null
+	
+	# Reset nested expressions
+	for nested in nested_expressions:
+		nested._post_load()
+	
+	# Restore saved state
+	_restore_runtime_state()
+
+func _get_property_list() -> Array:
+	var props = []
+	props.append({
+		"name": "_runtime_state",
+		"type": TYPE_DICTIONARY,
+		"usage": PROPERTY_USAGE_STORAGE
+	})
+	return props
 #endregion

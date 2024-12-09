@@ -8,13 +8,13 @@
 [resource]
 script = ExtResource("2_um3s7")
 target_position = Vector2(0, 0)
-is_continuous = false
+is_continuous = true
+is_random = true
 arrival_threshold = 5.0
 speed = 100.0
 face_direction = true
 max_steering = 200.0
 max_speed = 150.0
-id = "wander_for_food"
 name = "Wander for Food"
 description = ""
 cooldown = 0.0

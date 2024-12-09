@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://b6jri4s7ybdvb"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_e6r0y"]
+[ext_resource type="Resource" uid="uid://m3jl4m64djj5" path="res://resources/expressions/food_in_view.tres" id="2_51ib6"]
+
+[resource]
+script = ExtResource("1_e6r0y")
+name = "can see food"
+type = 19
+expression_string = "food_in_view.size() > 0"
+nested_expressions = Array[ExtResource("1_e6r0y")]([ExtResource("2_51ib6")])
+description = "Is available food visible?"
+_runtime_state = {}

@@ -5,11 +5,11 @@ func spawn_foods(num: int) -> void:
 	for i in range(num):
 		spawn_food()
 
-func spawn_food() -> void:
-
+func spawn_food() -> Food:
 	var food := Food.new()
 	food.add_to_group("food")
 	add_child(food)
+	return food
 
 func get_all() -> Foods:
 	var f: Foods = Foods.new([] as Array[Food])

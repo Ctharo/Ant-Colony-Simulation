@@ -8,6 +8,8 @@ extends Action
 ## Whether the movement should be continuous (keep updating target position)
 @export var is_continuous: bool = false
 
+@export var is_random: bool = false
+
 ## Minimum distance to consider target reached
 @export var arrival_threshold: float = 5.0
 
@@ -61,7 +63,8 @@ func _update_execution(delta: float) -> void:
 	_velocity = (_velocity + steering).limit_length(max_speed)
 	
 	# Update position
-	_entity.global_position += _velocity * delta
+	_entity.velocity = _velocity
+	_entity.move_and_slide()
 	
 	# Update rotation if needed
 	if face_direction and _velocity.length() > 0:
@@ -70,6 +73,9 @@ func _update_execution(delta: float) -> void:
 ## Start movement execution
 func _start_execution() -> void:
 	super._start_execution()
+	if is_random:
+		target_position = _entity.global_position + Vector2(randf_range(-10, 10), randf_range(-10, 10))
+
 	_velocity = Vector2.ZERO
 	_target_reached = false
 #endregion

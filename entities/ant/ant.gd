@@ -48,6 +48,8 @@ var task_update_timer: float = 0.0
 var logger: Logger
 #endregion
 
+@onready var sight_area: Area2D = %SightArea
+
 var vision_range = 50.0
 var movement_rate = 10.0
 var energy_level = 80
@@ -64,14 +66,7 @@ func _init(init_as_active: bool = false) -> void:
 	
 	action_manager = ActionManager.new()
 	action_manager.initialize(self)
-	
-	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
-	action_manager.register_action(rand_move)
-	var store_food: Action = load("res://resources/actions/store_food.tres")
-	action_manager.register_action(store_food)
-	action_manager.update()
-	action_manager.get_next_action()
-	pass
+
 
 func _ready() -> void:
 	spawned.emit()
@@ -85,9 +80,20 @@ func _ready() -> void:
 		c.global_position = _get_random_position()
 		set_colony(c)
 	
+	var food: Food = FoodManager.spawn_food()
+	food.global_position = global_position
 	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
-	rand_move.initialize(self)
-	rand_move.can_execute()
+	action_manager.register_action(rand_move)
+	var store_food: Action = load("res://resources/actions/store_food.tres")
+	action_manager.register_action(store_food)
+	var move_to_food: Action = load("res://resources/actions/move_to_food.tres")
+	action_manager.register_action(move_to_food)
+
+func _physics_process(delta: float) -> void:
+	task_update_timer += delta
+	action_manager.update(delta)
+	
+
 
 	
 #region Colony Management
@@ -96,72 +102,15 @@ func set_colony(p_colony: Colony) -> void:
 		colony = p_colony
 #endregion
 
-#region Event Handlers
-
-#endregion
-
-#region Action Methods
-### Placeholder for actions
-#func perform_action(action: Action, _args: Dictionary = {}) -> Result:
-	#var event_str: String = "Ant is performing action:"
-	#event_str += " "
-	#event_str += action.description if action.description else "N/A"
-	#logger.trace(event_str)
-#
-	#match action.base_name:
-		#"store":
-			#if foods.is_empty():
-				#action_completed.emit()
-			#else:
-				#await get_tree().create_timer(action.duration).timeout
-				#foods.clear()
-#
-		#"move":
-			#if get_property_value("proprioception.status.at_target"):
-				#action_completed.emit()
-			#else:
-				#await get_tree().create_timer(action.duration).timeout
-				#var target_position: Vector2 = get_property_value("proprioception.base.target_position")
-				#if target_position and global_position != target_position:
-					#global_position = target_position
-					#logger.debug("Ant moved to position: %s" % target_position)
-#
-		#"harvest":
-			#if get_property_value("storage.status.is_full"):
-				#action_completed.emit()
-			#else:
-				#await get_tree().create_timer(action.duration).timeout
-				## TODO: Add actual harvesting logic here
-				#foods.add_food(get_property_value("storage.capacity.max"))
-#
-		#"follow_pheromone":
-			#await get_tree().create_timer(action.duration).timeout
-			## TODO: Add pheromone following logic here
-			#action_completed.emit()
-#
-		#"random_move":
-			#await get_tree().create_timer(action.duration).timeout
-			## Movement handled by action params setting target position
-			#action_completed.emit()
-#
-		#"rest":
-			#await get_tree().create_timer(action.duration).timeout
-			## TODO: Add rest/energy recovery logic here
-			#action_completed.emit()
-#
-		#_:
-			#logger.warn("Unknown action type: %s" % action.base_name)
-			#await get_tree().create_timer(action.duration).timeout
-			#action_completed.emit()
-	#return Result.new()
-#endregion
-
-#region Property System
-
-	
-#endregion
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
 	var x := randf_range(0, viewport_rect.size.x)
 	var y := randf_range(0, viewport_rect.size.y)
 	return Vector2(x, y)
+
+func get_food_in_view() -> Array:
+	var fiv: Array = []
+	for food in sight_area.get_overlapping_bodies():
+		if food is Food and food != null and food.is_available:
+			fiv.append(food)
+	return fiv

@@ -34,13 +34,22 @@ func register_action(action: Action) -> void:
 		
 	_actions[action.id] = action
 	
-	# Register action's main condition with evaluation system
+	# Initialize the action first
 	action.initialize(_entity)
-	evaluation_system.register_expression(action._condition)
+	
+	# Now properly set up the condition
+	if action._condition:
+		# Explicitly set evaluation system
+		action._condition.evaluation_system = evaluation_system
+		
+		# Register the condition to handle nested expressions
+		evaluation_system.register_expression(action._condition)
 	
 	# Connect signals
-	action.completed.connect(_on_action_completed.bind(action.id))
-	action.interrupted.connect(_on_action_interrupted.bind(action.id))
+	if not action.completed.is_connected(_on_action_completed):
+		action.completed.connect(_on_action_completed.bind(action.id))
+	if not action.interrupted.is_connected(_on_action_interrupted):
+		action.interrupted.connect(_on_action_interrupted.bind(action.id))
 
 func unregister_action(action_id: String) -> void:
 	if action_id in _actions:
@@ -72,6 +81,23 @@ func interrupt_current_action() -> void:
 		_current_action.stop()
 		_current_action = null
 #endregion
+
+func validate_expression_chain(expression: LogicExpression, visited: Array = []) -> bool:
+	if expression.id in visited:
+		push_error("Cyclic dependency detected for expression: %s" % expression.id)
+		return false
+		
+	visited.append(expression.id)
+	
+	if expression.evaluation_system == null:
+		push_error("Expression missing evaluation system: %s" % expression.id)
+		return false
+		
+	for nested in expression.nested_expressions:
+		if not validate_expression_chain(nested, visited):
+			return false
+			
+	return true
 
 #region Private Methods
 func _select_next_action() -> void:

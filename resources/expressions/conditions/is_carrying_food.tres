@@ -1,11 +1,13 @@
-[gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://dorntljrvg8e6"]
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://dorntljrvg8e6"]
 
 [ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_7mq7g"]
+[ext_resource type="Resource" uid="uid://dyh7hwjxorc2u" path="res://resources/expressions/carried_food_mass.tres" id="2_buxkc"]
 
 [resource]
 script = ExtResource("1_7mq7g")
 name = "is carrying food"
 type = 19
-expression_string = "foods.mass > 0"
-nested_expressions = Array[ExtResource("1_7mq7g")]([])
+expression_string = "carried_food_mass > 0"
+nested_expressions = Array[ExtResource("1_7mq7g")]([ExtResource("2_buxkc")])
 description = ""
+_runtime_state = {}

@@ -51,16 +51,16 @@ func _init() -> void:
 func initialize(entity: Node) -> void:
 	_entity = entity
 	id = name.to_snake_case()
-	# Create and initialize main condition
+	
+	# Create and initialize condition with proper deep copying
 	_condition = LogicExpression.new()
 	_condition.name = id + "_condition"
 	_condition.expression_string = condition_expression
-	_condition.nested_expressions = nested_conditions
-	_condition.initialize(entity)
 	
-	# Initialize nested conditions
-	for condition in nested_conditions:
-		condition.initialize(entity)
+	# Deep copy nested conditions
+	_condition.nested_expressions = []
+	for nested in nested_conditions:
+		_condition.nested_expressions.append(nested)
 
 ## Check if the action can be executed
 func can_execute() -> bool:
@@ -123,3 +123,13 @@ func _complete_execution() -> void:
 	_is_executing = false
 	completed.emit()
 #endregion
+
+func _post_load() -> void:
+	# Reset runtime state
+	_is_executing = false 
+	_elapsed_time = 0.0
+	_current_cooldown = 0.0
+	
+	# Reset condition references
+	if _condition:
+		_condition._post_load()
