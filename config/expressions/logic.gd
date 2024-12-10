@@ -1,4 +1,4 @@
-class_name LogicExpression
+class_name Logic
 extends Resource
 
 #region Properties
@@ -20,7 +20,7 @@ var id: String
 @export_multiline var expression_string: String
 
 ## Array of LogicExpression resources to use as nested expressions
-@export var nested_expressions: Array[LogicExpression]
+@export var nested_expressions: Array[Logic]
 
 ## Description of what this expression does
 @export var description: String
@@ -180,7 +180,7 @@ func parse_expression() -> void:
 		logger.error(error_msg)
 		return
 	
-	logger.debug("Successfully parsed expression")
+	logger.trace("Successfully parsed expression")
 	is_parsed = true
 
 ## Handle property value changes

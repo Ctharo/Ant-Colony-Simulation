@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Action" load_steps=6 format=3 uid="uid://buj2rlf8e5gux"]
 
-[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_pqcvn"]
+[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_pqcvn"]
 [ext_resource type="Script" path="res://logic/actions/action.gd" id="2_nhcwm"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="2_nscr5"]
 [ext_resource type="Resource" uid="uid://bhuxa53a3phdd" path="res://resources/expressions/sense/reach/foods_in_reach.tres" id="3_opqg3"]

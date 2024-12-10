@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Action" load_steps=5 format=3 uid="uid://bv5mtrpa7bnxi"]
 
-[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_w4dqg"]
+[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_w4dqg"]
 [ext_resource type="Script" path="res://logic/actions/action.gd" id="2_e167r"]
 [ext_resource type="Resource" uid="uid://c6fh5yuhbmhyb" path="res://resources/expressions/conditions/is_in_colony.tres" id="2_lgcl7"]
 [ext_resource type="Resource" uid="uid://dorntljrvg8e6" path="res://resources/expressions/conditions/is_carrying_food.tres" id="3_p0q8r"]

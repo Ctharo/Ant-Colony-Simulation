@@ -41,8 +41,8 @@ func initialize(p_base_node: Node) -> void:
 #endregion
 
 #region Expression Management
-## Register a LogicExpression with the system
-func register_expression(expression: LogicExpression) -> void:
+## Register a Logic component with the system
+func register_expression(expression: Logic) -> void:
 	# Skip if already registered with evaluation system intact
 	if expression.id in _expressions and expression.evaluation_system == self:
 		return
@@ -87,7 +87,7 @@ func get_value(id: String) -> Variant:
 		logger.error("Unknown expression: %s" % id)
 		return null
 		
-	var expression: LogicExpression = _expressions[id]
+	var expression: Logic = _expressions[id]
 	if not expression.evaluation_system:
 		expression.initialize(base_node, self)
 		logger.warn("evaluation system was missing from expression: %s" % expression.name)

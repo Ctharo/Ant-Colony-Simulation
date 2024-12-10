@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://0x4f254w7h8n"]
 
-[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_efs0a"]
+[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_efs0a"]
 [ext_resource type="Resource" uid="uid://b60gyn1ftpuoa" path="res://resources/expressions/sense/vision/ant/ants_in_view_unfriendly.tres" id="2_h0bij"]
 
 [resource]

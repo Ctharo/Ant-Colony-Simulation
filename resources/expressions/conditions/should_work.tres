@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://bgetyudhmykay"]
 
-[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_2duo8"]
+[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_2duo8"]
 [ext_resource type="Resource" uid="uid://ba2lcbu777pev" path="res://resources/expressions/conditions/threat/in_danger.tres" id="2_uujsp"]
 
 [resource]

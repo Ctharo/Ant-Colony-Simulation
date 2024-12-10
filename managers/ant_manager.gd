@@ -9,7 +9,7 @@ func start_ants(enable: bool = true) -> Result:
 	for ant: Ant in ants:
 		ant.set_physics_process(enable)
 		ant.set_process(enable)
-		ant._init_task_tree()
+		
 	logger.info("Ant task tree and processes started")
 	return Result.new()
 

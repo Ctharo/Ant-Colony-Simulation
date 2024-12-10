@@ -1,5 +1,5 @@
 class_name ActionManager
-extends Resource
+extends Node
 
 #region Properties
 ## Evaluation system for caching expressions
@@ -24,9 +24,11 @@ func _init() -> void:
 
 func initialize(entity: Node) -> void:
 	_entity = entity
+	entity.tree_exiting.connect(_on_entity_tree_exiting)
 	evaluation_system.initialize(entity)
 
 #region Action Management
+## Register an action with instance-specific signal handling
 func register_action(action: Action) -> void:
 	if not _entity:
 		push_error("Initialize action manager before registering actions")
@@ -38,51 +40,63 @@ func register_action(action: Action) -> void:
 	action.initialize(_entity)
 	
 	# Now properly set up the condition
-	if action._condition:
+	var state = action._get_instance_state(_entity)
+	if state and state.condition:
 		# Explicitly set evaluation system
-		action._condition.evaluation_system = evaluation_system
+		state.condition.evaluation_system = evaluation_system
 		
 		# Register the condition to handle nested expressions
-		evaluation_system.register_expression(action._condition)
+		evaluation_system.register_expression(state.condition)
 	
-	# Connect signals
+	# Connect signals with entity-specific handling
 	if not action.completed.is_connected(_on_action_completed):
-		action.completed.connect(_on_action_completed.bind(action.id))
+		action.completed.connect(_on_action_completed)
 	if not action.interrupted.is_connected(_on_action_interrupted):
-		action.interrupted.connect(_on_action_interrupted.bind(action.id))
+		action.interrupted.connect(_on_action_interrupted)
 
+## Unregister an action and clean up its instance-specific state
 func unregister_action(action_id: String) -> void:
 	if action_id in _actions:
 		var action = _actions[action_id]
-		evaluation_system.unregister_expression(action._condition.id)
+		var state = action._get_instance_state(_entity)
+		if state and state.condition:
+			evaluation_system.unregister_expression(state.condition.id)
+		
 		action.completed.disconnect(_on_action_completed)
 		action.interrupted.disconnect(_on_action_interrupted)
+		action.cleanup_instance(_entity)
 		_actions.erase(action_id)
 
+## Update the action system
 func update(delta: float = 0.0) -> void:
 	if _current_action:
-		_current_action.execute(delta)
+		_current_action.execute(_entity, delta)
 	else:
 		_select_next_action()
 	
 	# Update cooldowns
 	for action in _actions.values():
-		if not action.is_ready():
-			action._current_cooldown = max(0.0, action._current_cooldown - delta)
+		if not action.is_ready(_entity):
+			var state = action._get_instance_state(_entity)
+			if state:
+				state.current_cooldown = max(0.0, state.current_cooldown - delta)
 
+## Get the next valid action
 func get_next_action() -> Action:
 	var valid_actions = _actions.values().filter(func(action: Action): 
-		return action.is_ready() and evaluation_system.get_value(action._condition.id)
+		var state = action._get_instance_state(_entity)
+		return action.is_ready(_entity) and state and evaluation_system.get_value(state.condition.id)
 	)
 	return valid_actions[0] if not valid_actions.is_empty() else null
 
+## Interrupt the current action
 func interrupt_current_action() -> void:
 	if _current_action:
-		_current_action.stop()
+		_current_action.stop(_entity)
 		_current_action = null
-#endregion
 
-func validate_expression_chain(expression: LogicExpression, visited: Array = []) -> bool:
+## Validate the expression chain
+func validate_expression_chain(expression: Logic, visited: Array = []) -> bool:
 	if expression.id in visited:
 		push_error("Cyclic dependency detected for expression: %s" % expression.id)
 		return false
@@ -98,18 +112,31 @@ func validate_expression_chain(expression: LogicExpression, visited: Array = [])
 			return false
 			
 	return true
+#endregion
 
 #region Private Methods
+## Select the next action to execute
 func _select_next_action() -> void:
 	var next_action = get_next_action()
 	if next_action:
 		_current_action = next_action
 
-func _on_action_completed(action_id: String) -> void:
-	if _current_action and _current_action.id == action_id:
+## Handle action completion
+func _on_action_completed(entity: Node) -> void:
+	if entity == _entity and _current_action:
 		_current_action = null
 
-func _on_action_interrupted(action_id: String) -> void:
-	if _current_action and _current_action.id == action_id:
+## Handle action interruption
+func _on_action_interrupted(entity: Node) -> void:
+	if entity == _entity and _current_action:
 		_current_action = null
+
+## Clean up when entity is removed
+func _on_entity_tree_exiting() -> void:
+	for action in _actions.values():
+		action.cleanup_instance(_entity)
+		
+	# Cleanup evaluation system
+	evaluation_system = null
+	_current_action = null
 #endregion

@@ -12,7 +12,7 @@ func _ready() -> void:
 	logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
 	#logger.set_logging_category(DebugLogger.Category.CONDITION)
 
-	spawn_ants(1)
+	spawn_ants(2)
 	AntManager.start_ants()
 	_staged_creation()
 

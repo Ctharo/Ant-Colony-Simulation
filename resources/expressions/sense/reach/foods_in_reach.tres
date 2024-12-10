@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://bhuxa53a3phdd"]
 
-[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_ynbnn"]
+[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_ynbnn"]
 
 [resource]
 script = ExtResource("1_ynbnn")

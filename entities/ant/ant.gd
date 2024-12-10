@@ -54,10 +54,10 @@ var logger: Logger
 
 var vision_range: float = 50.0
 var movement_rate: float = 10.0
-var energy_level: float = 80
+var energy_level: float = randf_range(1, 100)
 var energy_max: float = 100
 var carry_max: float = 100
-var health_level: float = 100
+var health_level: float = randf_range(1, 100)
 var health_max: float = 100
 
 
@@ -94,6 +94,8 @@ func _ready() -> void:
 	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
 	action_manager.register_action(rand_move)
 	action_manager.update()
+	await get_tree().create_timer(randf_range(5,10)).timeout
+	queue_free()
 	
 
 #func _physics_process(delta: float) -> void:
@@ -135,12 +137,12 @@ func get_ants_in_view() -> Array:
 		if ant is Ant and ant != null:
 			ants.append(ant)
 	if not ants:
-		for i in range(10):
+		for i in range(randi_range(0, 20)):
 			var _ant = {
 				colony = colony
 			}
 			ants.append(_ant)
-		for i in range(20):
+		for i in range(randi_range(0, 20)):
 			var _ant = {
 				colony = null
 			}
