@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://c0bqcyotj1esu"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_vhbki"]
+[ext_resource type="Resource" uid="uid://dprvbp8la7j0l" path="res://resources/expressions/sense/vision/ant/ants_in_view.tres" id="2_2x005"]
+
+[resource]
+script = ExtResource("1_vhbki")
+name = "ants_in_view_friendly"
+type = 6
+expression_string = "filter_friendly_ants(ants_in_view, true)"
+nested_expressions = Array[ExtResource("1_vhbki")]([ExtResource("2_2x005")])
+description = ""
+_runtime_state = {}

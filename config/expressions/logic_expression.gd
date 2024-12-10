@@ -145,7 +145,7 @@ func _calculate() -> Variant:
 		push_error(error_msg)
 		return null
 	
-	logger.debug("Expression result: %s" % str(result))
+	logger.debug("Expression result: %s" % str(result.size()) + " values in array" if result is Array else str(result))
 	return result
 
 func parse_expression() -> void:

@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://broqntixdgd2i"]
 
 [ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_jbaie"]
-[ext_resource type="Resource" uid="uid://dprvbp8la7j0l" path="res://resources/expressions/sense/vision/ant/ants_in_view.tres" id="2_x873n"]
+[ext_resource type="Resource" uid="uid://c0bqcyotj1esu" path="res://resources/expressions/sense/vision/ant/ants_in_view_friendly.tres" id="2_25vp8"]
 
 [resource]
 script = ExtResource("1_jbaie")
 name = "nearby friendly count"
 type = 1
-expression_string = "get_friendly_ants_in_view().size()"
-nested_expressions = Array[ExtResource("1_jbaie")]([ExtResource("2_x873n")])
+expression_string = "ants_in_view_friendly.size()"
+nested_expressions = Array[ExtResource("1_jbaie")]([ExtResource("2_25vp8")])
 description = ""
 _runtime_state = {}

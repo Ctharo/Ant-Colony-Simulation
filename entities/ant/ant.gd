@@ -147,12 +147,8 @@ func get_ants_in_view() -> Array:
 			ants.append(_ant)
 	return ants
 
-func get_friendly_ants_in_view() -> Array:
-	return get_ants_in_view().filter(func(ant): return ant.colony == colony)
-
-func get_unfriendly_ants_in_view() -> Array:
-	return get_ants_in_view().filter(func(ant): return ant.colony != colony)
-
+func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
+	return ants.filter(func(ant): return friendly == (ant.colony == colony))
 
 func get_foods_in_reach() -> Array:
 	var _foods: Array = []
