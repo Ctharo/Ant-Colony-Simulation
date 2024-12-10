@@ -4,12 +4,13 @@
 [ext_resource type="Resource" uid="uid://b6jri4s7ybdvb" path="res://resources/expressions/conditions/can_see_food.tres" id="2_6dch2"]
 [ext_resource type="Script" path="res://logic/actions/move.gd" id="2_qf7xk"]
 [ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="3_jv3po"]
-[ext_resource type="Resource" uid="uid://1nls8wb6824s" path="res://resources/expressions/conditions/is_low_energy.tres" id="4_6u08p"]
+[ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="3_wl1yv"]
 
 [resource]
 script = ExtResource("2_qf7xk")
 target_position = Vector2(0, 0)
 is_continuous = false
+is_random = false
 arrival_threshold = 5.0
 speed = 100.0
 face_direction = true
@@ -20,5 +21,5 @@ description = ""
 cooldown = 0.0
 duration = 0.0
 params = {}
-condition_expression = "can_see_food and not (is_overloaded or is_low_energy)"
-nested_conditions = Array[ExtResource("1_kll5x")]([ExtResource("2_6dch2"), ExtResource("3_jv3po"), ExtResource("4_6u08p")])
+condition_expression = "can_see_food and can_work and not is_overloaded"
+nested_conditions = Array[ExtResource("1_kll5x")]([ExtResource("2_6dch2"), ExtResource("3_wl1yv"), ExtResource("3_jv3po")])

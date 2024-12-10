@@ -1,12 +1,12 @@
 [gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://dyh7hwjxorc2u"]
 
-[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_d3ntx"]
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_cxgbl"]
 
 [resource]
-script = ExtResource("1_d3ntx")
+script = ExtResource("1_cxgbl")
 name = "carried food mass"
-type = 13
+type = 2
 expression_string = "foods.mass"
-nested_expressions = Array[ExtResource("1_d3ntx")]([])
+nested_expressions = Array[ExtResource("1_cxgbl")]([])
 description = "Mass of carried foods"
 _runtime_state = {}

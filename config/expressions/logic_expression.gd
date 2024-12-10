@@ -70,7 +70,8 @@ func initialize(p_base_node: Node, p_evaluation_system: EvaluationSystem) -> voi
 	evaluation_system = p_evaluation_system
 	
 	if name.is_empty():
-		push_error("Expression name cannot be empty")
+		assert(name, "Expression name cannot be empty")
+		logger.error("Expression name cannot be empty")
 		return
 		
 	id = name.to_snake_case()
@@ -114,7 +115,7 @@ func get_display_value() -> String:
 #region Protected Methods
 func _calculate() -> Variant:
 	if not is_parsed or not base_node:
-		push_error("Expression not ready: %s" % expression_string)
+		logger.error("Expression not ready: %s" % expression_string)
 		return null
 	
 	logger.debug("Calculating expression: %s" % expression_string)
@@ -125,13 +126,13 @@ func _calculate() -> Variant:
 	for expr in nested_expressions:
 		var value = expr.get_value()
 		if value == null:
-			push_error("Could not get value for nested expression: %s" % expr.name)
+			logger.error("Could not get value for nested expression: %s" % expr.name)
 			return null
 			
 		bindings.append(value)
-		logger.debug("Added binding for %s: %s" % [expr.id, str(value)])
+		logger.trace("Added binding for %s: %s" % [expr.id, str(value)])
 	
-	logger.debug("Final bindings array: %s" % str(bindings))
+	logger.trace("Final bindings array: %s" % str(bindings))
 	
 	# Execute expression with the cached values
 	var result = _expression.execute(bindings, base_node)
@@ -153,7 +154,8 @@ func parse_expression() -> void:
 		return
 		
 	if expression_string.is_empty():
-		push_error("Empty expression string")
+		assert(expression_string, "Empty expression string")
+		logger.error("Empty expression string")
 		return
 	
 	logger.debug("Parsing expression: %s" % expression_string)
@@ -164,9 +166,9 @@ func parse_expression() -> void:
 	# Add each nested expression name - order must match execute bindings array
 	for expr in nested_expressions:
 		variable_names.append(expr.id)
-		logger.debug("Added variable name: %s" % expr.id)
+		logger.trace("Added variable name: %s" % expr.id)
 	
-	logger.debug("Variable names array: %s" % str(variable_names))
+	logger.trace("Variable names array: %s" % str(variable_names))
 	
 	# Parse with ordered variable names array
 	var error = _expression.parse(expression_string, PackedStringArray(variable_names))
@@ -175,8 +177,7 @@ func parse_expression() -> void:
 			expression_string,
 			_expression.get_error_text()
 		]
-		print(error_msg)
-		push_error(error_msg)
+		logger.error(error_msg)
 		return
 	
 	logger.debug("Successfully parsed expression")

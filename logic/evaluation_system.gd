@@ -55,6 +55,10 @@ func register_expression(expression: LogicExpression) -> void:
 	
 	# First register all nested expressions
 	for nested in expression.nested_expressions:
+		if nested == null:
+			assert(nested, "Cannot register null nested expression for expression: %s" % expression.name)
+			logger.error("Cannot register null nested expression for expression: %s" % expression.name)
+			return
 		register_expression(nested)
 		_cache.add_dependency(expression.id, nested.id)
 	

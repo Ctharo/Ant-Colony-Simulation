@@ -20,7 +20,7 @@ func spawn_ants(num: int = 1) -> Array[Ant]:
 	return array
 
 func spawn_ant() -> Ant:
-	var ant: Ant = load("res://entities/ant.tscn").instantiate() as Ant
+	var ant: Ant = preload("res://entities/ant/ant.tscn").instantiate() as Ant
 	add_child(ant)
 	ant.set_physics_process(false)
 	ant.set_process(false)

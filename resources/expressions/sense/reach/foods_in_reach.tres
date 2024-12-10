@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://bhuxa53a3phdd"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_ynbnn"]
+
+[resource]
+script = ExtResource("1_ynbnn")
+name = "foods in reach"
+type = 6
+expression_string = "get_foods_in_reach()"
+nested_expressions = Array[ExtResource("1_ynbnn")]([])
+description = ""
+_runtime_state = {}

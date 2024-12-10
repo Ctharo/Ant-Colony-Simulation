@@ -49,12 +49,16 @@ var logger: Logger
 #endregion
 
 @onready var sight_area: Area2D = %SightArea
+@onready var sense_area: Area2D = %SenseArea
+@onready var reach_area: Area2D = %ReachArea
 
-var vision_range = 50.0
-var movement_rate = 10.0
-var energy_level = 80
-var energy_max = 100
-var carry_max = 100
+var vision_range: float = 50.0
+var movement_rate: float = 10.0
+var energy_level: float = 80
+var energy_max: float = 100
+var carry_max: float = 100
+var health_level: float = 100
+var health_max: float = 100
 
 
 func _init(init_as_active: bool = false) -> void:
@@ -82,19 +86,19 @@ func _ready() -> void:
 	
 	var food: Food = FoodManager.spawn_food()
 	food.global_position = global_position
-	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
-	action_manager.register_action(rand_move)
+
 	var store_food: Action = load("res://resources/actions/store_food.tres")
 	action_manager.register_action(store_food)
 	var move_to_food: Action = load("res://resources/actions/move_to_food.tres")
 	action_manager.register_action(move_to_food)
-
-func _physics_process(delta: float) -> void:
-	task_update_timer += delta
-	action_manager.update(delta)
+	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
+	action_manager.register_action(rand_move)
+	action_manager.update()
 	
 
-
+#func _physics_process(delta: float) -> void:
+	#task_update_timer += delta
+	#action_manager.update(delta)
 	
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
@@ -114,3 +118,45 @@ func get_food_in_view() -> Array:
 		if food is Food and food != null and food.is_available:
 			fiv.append(food)
 	return fiv
+
+func get_pheromones_sensed(pheromone_type: String = "") -> Array:
+	var pheromones: Array = []
+	for pheromone in sight_area.get_overlapping_bodies():
+		if pheromone is Pheromone and pheromone != null:
+			if not pheromone_type or pheromone_type == pheromone.type:
+				pheromones.append(pheromone)
+	if pheromone_type == "penis":
+		return Array(["penis"])
+	return pheromones
+
+func get_ants_in_view() -> Array:
+	var ants: Array = []
+	for ant in sight_area.get_overlapping_bodies():
+		if ant is Ant and ant != null:
+			ants.append(ant)
+	if not ants:
+		for i in range(10):
+			var _ant = {
+				colony = colony
+			}
+			ants.append(_ant)
+		for i in range(20):
+			var _ant = {
+				colony = null
+			}
+			ants.append(_ant)
+	return ants
+
+func get_friendly_ants_in_view() -> Array:
+	return get_ants_in_view().filter(func(ant): return ant.colony == colony)
+
+func get_unfriendly_ants_in_view() -> Array:
+	return get_ants_in_view().filter(func(ant): return ant.colony != colony)
+
+
+func get_foods_in_reach() -> Array:
+	var _foods: Array = []
+	for food in reach_area.get_overlapping_bodies():
+		if food is Food and food != null and food.is_available:
+			_foods.append(food)
+	return _foods

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://dwwmqd4c8clkq"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_bvieo"]
+[ext_resource type="Resource" uid="uid://d307mmqr4fh46" path="res://resources/expressions/stats/health/derived/health_percentage.tres" id="2_p5peh"]
+
+[resource]
+script = ExtResource("1_bvieo")
+name = "low health"
+type = 19
+expression_string = "health_percentage < 20"
+nested_expressions = Array[ExtResource("1_bvieo")]([ExtResource("2_p5peh")])
+description = ""
+_runtime_state = {}

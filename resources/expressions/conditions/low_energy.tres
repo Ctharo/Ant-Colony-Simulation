@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://1nls8wb6824s"]
+
+[ext_resource type="Script" path="res://config/expressions/logic_expression.gd" id="1_og0tp"]
+[ext_resource type="Resource" uid="uid://cnhv58wx0evch" path="res://resources/expressions/stats/energy/derived/energy_percentage.tres" id="2_tggi3"]
+
+[resource]
+script = ExtResource("1_og0tp")
+name = "low energy"
+type = 19
+expression_string = "energy_percentage < 20"
+nested_expressions = Array[ExtResource("1_og0tp")]([ExtResource("2_tggi3")])
+description = ""
+_runtime_state = {}

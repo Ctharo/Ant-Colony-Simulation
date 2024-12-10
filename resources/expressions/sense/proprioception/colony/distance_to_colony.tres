@@ -9,3 +9,4 @@ type = 2
 expression_string = "global_position.distance_to(colony.global_position)"
 nested_expressions = Array[ExtResource("1_d1vnn")]([])
 description = ""
+_runtime_state = {}
