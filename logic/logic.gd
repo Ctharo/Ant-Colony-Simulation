@@ -1,5 +1,8 @@
 class_name Logic
 extends Resource
+## Base class for logic expressions. Instance safety is handled by EvaluationSystem -
+## each ant will get its own EvaluationSystem which creates unique Logic instances,
+## so no additional instance state management is needed in this class.
 
 #region Properties
 ## Unique identifier for this expression

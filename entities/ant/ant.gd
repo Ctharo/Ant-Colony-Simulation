@@ -54,20 +54,15 @@ var logger: Logger
 
 var vision_range: float = 50.0
 var movement_rate: float = 10.0
-var energy_level: float = randf_range(1, 100)
+var energy_level: float = randf_range(50, 100)
 var energy_max: float = 100
 var carry_max: float = 100
-var health_level: float = randf_range(1, 100)
+var health_level: float = randf_range(50, 100)
 var health_max: float = 100
 
 
 func _init(init_as_active: bool = false) -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
-	
-	colony = ColonyManager.spawn_colony()
-	colony.add_ant(self)
-	colony.global_position = Vector2(randf_range(0, 1000), randf_range(0, 1000))
-	
 	action_manager = ActionManager.new()
 	action_manager.initialize(self)
 
@@ -93,14 +88,16 @@ func _ready() -> void:
 	action_manager.register_action(move_to_food)
 	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
 	action_manager.register_action(rand_move)
+	var move_home: Action = load("res://resources/actions/move_to_home.tres")
+	action_manager.register_action(move_home)
+	var harvest: Action = load("res://resources/actions/harvest_food.tres")
+	action_manager.register_action(harvest)
 	action_manager.update()
-	await get_tree().create_timer(randf_range(5,10)).timeout
-	queue_free()
-	
 
-#func _physics_process(delta: float) -> void:
-	#task_update_timer += delta
-	#action_manager.update(delta)
+
+func _physics_process(delta: float) -> void:
+	task_update_timer += delta
+	action_manager.update(delta)
 	
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
@@ -136,17 +133,6 @@ func get_ants_in_view() -> Array:
 	for ant in sight_area.get_overlapping_bodies():
 		if ant is Ant and ant != null:
 			ants.append(ant)
-	if not ants:
-		for i in range(randi_range(0, 20)):
-			var _ant = {
-				colony = colony
-			}
-			ants.append(_ant)
-		for i in range(randi_range(0, 20)):
-			var _ant = {
-				colony = null
-			}
-			ants.append(_ant)
 	return ants
 
 func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:

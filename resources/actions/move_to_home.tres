@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Move" load_steps=6 format=3 uid="uid://da52ftc75qu25"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_kjxdf"]
+[ext_resource type="Script" path="res://logic/actions/move.gd" id="2_7xsp1"]
+[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="2_yxudy"]
+[ext_resource type="Resource" uid="uid://ba2lcbu777pev" path="res://resources/expressions/conditions/threat/in_danger.tres" id="3_j88xq"]
+[ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="4_e3y6r"]
+
+[resource]
+script = ExtResource("2_7xsp1")
+target_position = Vector2(0, 0)
+is_continuous = false
+is_random = false
+arrival_threshold = 5.0
+speed = 100.0
+face_direction = true
+max_steering = 200.0
+max_speed = 150.0
+name = "move to home"
+priority = 50
+description = ""
+cooldown = 0.0
+duration = 0.0
+params = {}
+condition_expression = "is_overloaded or in_danger or not can_work"
+nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("2_yxudy"), ExtResource("3_j88xq"), ExtResource("4_e3y6r")])

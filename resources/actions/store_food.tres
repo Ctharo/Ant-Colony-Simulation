@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Action" load_steps=5 format=3 uid="uid://bv5mtrpa7bnxi"]
 
-[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_w4dqg"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_bqhim"]
 [ext_resource type="Script" path="res://logic/actions/action.gd" id="2_e167r"]
 [ext_resource type="Resource" uid="uid://c6fh5yuhbmhyb" path="res://resources/expressions/conditions/is_in_colony.tres" id="2_lgcl7"]
 [ext_resource type="Resource" uid="uid://dorntljrvg8e6" path="res://resources/expressions/conditions/is_carrying_food.tres" id="3_p0q8r"]
@@ -8,9 +8,10 @@
 [resource]
 script = ExtResource("2_e167r")
 name = "store food"
-description = null
-cooldown = null
-duration = null
-params = null
+priority = 60
+description = ""
+cooldown = 0.0
+duration = 0.0
+params = {}
 condition_expression = "is_in_colony and is_carrying_food"
-nested_conditions = Array[ExtResource("1_w4dqg")]([ExtResource("2_lgcl7"), ExtResource("3_p0q8r")])
+nested_conditions = Array[ExtResource("1_bqhim")]([ExtResource("2_lgcl7"), ExtResource("3_p0q8r")])

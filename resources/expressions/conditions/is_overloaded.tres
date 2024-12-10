@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://bf6wlqebehkrn"]
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://bf6wlqebehkrn"]
 
-[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_qtaqr"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_qtaqr"]
 [ext_resource type="Resource" uid="uid://dyh7hwjxorc2u" path="res://resources/expressions/stats/carry/carried_food_mass.tres" id="2_jehv7"]
 
 [resource]

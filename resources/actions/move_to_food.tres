@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Move" load_steps=6 format=3 uid="uid://du4pcotoujehr"]
 
-[ext_resource type="Script" path="res://config/expressions/logic.gd" id="1_kll5x"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_xv0ox"]
 [ext_resource type="Resource" uid="uid://b6jri4s7ybdvb" path="res://resources/expressions/conditions/can_see_food.tres" id="2_6dch2"]
 [ext_resource type="Script" path="res://logic/actions/move.gd" id="2_qf7xk"]
 [ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="3_jv3po"]
@@ -17,9 +17,10 @@ face_direction = true
 max_steering = 200.0
 max_speed = 150.0
 name = "move to food"
+priority = 30
 description = ""
 cooldown = 0.0
 duration = 0.0
 params = {}
 condition_expression = "can_see_food and can_work and not is_overloaded"
-nested_conditions = Array[ExtResource("1_kll5x")]([ExtResource("2_6dch2"), ExtResource("3_wl1yv"), ExtResource("3_jv3po")])
+nested_conditions = Array[ExtResource("1_xv0ox")]([ExtResource("2_6dch2"), ExtResource("3_wl1yv"), ExtResource("3_jv3po")])

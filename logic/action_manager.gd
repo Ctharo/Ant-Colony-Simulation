@@ -28,83 +28,83 @@ func initialize(entity: Node) -> void:
 	evaluation_system.initialize(entity)
 
 #region Action Management
-## Register an action with instance-specific signal handling
-func register_action(action: Action) -> void:
+## Register an action by creating a unique instance for this entity
+func register_action(action_template: Action) -> void:
+	logger.debug("Registering action %s to ant %s" % [action_template.name, _entity.name])
 	if not _entity:
-		push_error("Initialize action manager before registering actions")
+		logger.error("Initialize action manager before registering actions")
 		return
 		
+	# Create a new instance of the action for this entity
+	var action = action_template.duplicate()
 	_actions[action.id] = action
 	
-	# Initialize the action first
+	# Initialize the action with this entity
 	action.initialize(_entity)
 	
-	# Now properly set up the condition
-	var state = action._get_instance_state(_entity)
-	if state and state.condition:
-		# Explicitly set evaluation system
-		state.condition.evaluation_system = evaluation_system
-		
-		# Register the condition to handle nested expressions
-		evaluation_system.register_expression(state.condition)
+	# Set up the condition with our evaluation system
+	if action._condition:
+		action._condition.evaluation_system = evaluation_system
+		evaluation_system.register_expression(action._condition)
 	
-	# Connect signals with entity-specific handling
+	# Connect signals
 	if not action.completed.is_connected(_on_action_completed):
 		action.completed.connect(_on_action_completed)
 	if not action.interrupted.is_connected(_on_action_interrupted):
 		action.interrupted.connect(_on_action_interrupted)
 
-## Unregister an action and clean up its instance-specific state
+## Unregister an action and clean up
 func unregister_action(action_id: String) -> void:
 	if action_id in _actions:
 		var action = _actions[action_id]
-		var state = action._get_instance_state(_entity)
-		if state and state.condition:
-			evaluation_system.unregister_expression(state.condition.id)
+		if action._condition:
+			evaluation_system.unregister_expression(action._condition.id)
 		
 		action.completed.disconnect(_on_action_completed)
 		action.interrupted.disconnect(_on_action_interrupted)
-		action.cleanup_instance(_entity)
 		_actions.erase(action_id)
 
 ## Update the action system
 func update(delta: float = 0.0) -> void:
 	if _current_action:
-		_current_action.execute(_entity, delta)
+		_current_action.execute(delta)
 	else:
 		_select_next_action()
 	
 	# Update cooldowns
 	for action in _actions.values():
-		if not action.is_ready(_entity):
-			var state = action._get_instance_state(_entity)
-			if state:
-				state.current_cooldown = max(0.0, state.current_cooldown - delta)
+		if not action.is_ready():
+			action._current_cooldown = max(0.0, action._current_cooldown - delta)
 
-## Get the next valid action
+## Get the next valid action based on priority
 func get_next_action() -> Action:
-	var valid_actions = _actions.values().filter(func(action: Action): 
-		var state = action._get_instance_state(_entity)
-		return action.is_ready(_entity) and state and evaluation_system.get_value(state.condition.id)
-	)
-	return valid_actions[0] if not valid_actions.is_empty() else null
+	# Sort actions by priority (highest first)
+	var sorted_actions = _actions.values()
+	sorted_actions.sort_custom(func(a: Action, b: Action): return a.priority > b.priority)
+	
+	# Check conditions in priority order, return first valid action
+	for action in sorted_actions:
+		if action.is_ready() and evaluation_system.get_value(action._condition.id):
+			return action
+	
+	return null
 
 ## Interrupt the current action
 func interrupt_current_action() -> void:
 	if _current_action:
-		_current_action.stop(_entity)
+		_current_action.stop()
 		_current_action = null
 
 ## Validate the expression chain
 func validate_expression_chain(expression: Logic, visited: Array = []) -> bool:
 	if expression.id in visited:
-		push_error("Cyclic dependency detected for expression: %s" % expression.id)
+		logger.error("Cyclic dependency detected for expression: %s" % expression.id)
 		return false
 		
 	visited.append(expression.id)
 	
 	if expression.evaluation_system == null:
-		push_error("Expression missing evaluation system: %s" % expression.id)
+		logger.error("Expression missing evaluation system: %s" % expression.id)
 		return false
 		
 	for nested in expression.nested_expressions:
@@ -112,6 +112,11 @@ func validate_expression_chain(expression: Logic, visited: Array = []) -> bool:
 			return false
 			
 	return true
+	
+## Helper method to change action priorities at runtime
+func set_action_priority(action_id: String, new_priority: int) -> void:
+	if action_id in _actions:
+		_actions[action_id].priority = new_priority
 #endregion
 
 #region Private Methods
@@ -122,20 +127,21 @@ func _select_next_action() -> void:
 		_current_action = next_action
 
 ## Handle action completion
-func _on_action_completed(entity: Node) -> void:
-	if entity == _entity and _current_action:
-		_current_action = null
+func _on_action_completed() -> void:
+	_current_action = null
 
 ## Handle action interruption
-func _on_action_interrupted(entity: Node) -> void:
-	if entity == _entity and _current_action:
-		_current_action = null
+func _on_action_interrupted() -> void:
+	_current_action = null
 
 ## Clean up when entity is removed
 func _on_entity_tree_exiting() -> void:
+	# Cleanup actions
 	for action in _actions.values():
-		action.cleanup_instance(_entity)
-		
+		if action._condition:
+			evaluation_system.unregister_expression(action._condition.id)
+	_actions.clear()
+	
 	# Cleanup evaluation system
 	evaluation_system = null
 	_current_action = null
