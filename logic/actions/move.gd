@@ -2,23 +2,27 @@ class_name Move
 extends Action
 
 #region Properties
+## Expression returning target to move towards
+@export var target: Logic
 ## Target position to move to
-@export var target_position: Vector2
+var target_position: Vector2
 
 ## Whether the movement should be continuous
 @export var is_continuous: bool = false
 
 ## Enable random movement
-@export var is_random: bool = false
+var is_random: bool :
+	get:
+		return target == null
 
 ## Maximum random movement range
-@export var random_range: float = 100.0
+@export var random_range: float = 50.0
 
 ## Minimum distance to consider target reached
-@export var arrival_threshold: float = 5.0
+var arrival_threshold: float = 5.0
 
 ## Movement speed in pixels per second
-@export var speed: float = 50.0
+var speed: float = 35.0
 
 ## Whether to rotate towards movement direction
 @export var face_direction: bool = true
@@ -28,6 +32,16 @@ extends Action
 
 ## Maximum angle for random movement deviation
 @export var max_random_angle: float = PI/3  # 60 degrees
+
+## Color configuration for debug visualization
+@export_group("Debug Colors")
+@export var forward_color: Color = Color.RED
+@export var pheromone_color: Color = Color.YELLOW
+@export var colony_color: Color = Color.GREEN
+@export var ant_color: Color = Color.PURPLE
+@export var random_color: Color = Color.BLUE
+@export var exploration_color: Color = Color.ORANGE
+#endregion
 
 #region Internal State
 var _velocity: Vector2 = Vector2.ZERO
@@ -53,8 +67,7 @@ func initialize(entity: Node) -> void:
 	_nav_agent.radius = 10.0  # Agent's physical size for avoidance
 	_nav_agent.neighbor_distance = 50.0  # Distance to look for neighbors for avoidance
 	_nav_agent.max_neighbors = 10  # Maximum number of neighbors to consider for avoidance
-
-
+		
 ## Get new random target position based on current direction
 func _get_random_target() -> Vector2:
 	# Get current facing direction
@@ -103,7 +116,7 @@ func _update_execution(delta: float) -> void:
 	# Check if navigation is stuck
 	if _nav_agent.is_navigation_finished():
 		if not target_reached:
-			logger.debug("Navigation finished but target not reached, finding new target")
+			logger.trace("Navigation finished but target not reached, finding new target")
 			_current_target = _get_random_target()
 			_nav_agent.target_position = _current_target
 		return
@@ -117,14 +130,10 @@ func _update_execution(delta: float) -> void:
 	
 	# Update position
 	_entity.velocity = _velocity
+	if face_direction:
+		_entity.global_rotation = _velocity.angle()
 	_entity.move_and_slide()
-	
-	# Update rotation smoothly if needed
-	if face_direction and _velocity.length() > 0:
-		var target_angle = _velocity.angle()
-		var angle_diff = wrapf(target_angle - _current_rotation, -PI, PI)
-		_current_rotation += angle_diff * turn_speed * delta * 60.0
-		_entity.rotation = _current_rotation
+
 
 ## Start movement execution
 func _start_execution() -> void:
@@ -135,7 +144,7 @@ func _start_execution() -> void:
 	if is_random:
 		_current_target = _get_random_target()
 	else:
-		_current_target = target_position
+		_current_target = target.get_value().global_position
 		
 	if _nav_agent:
 		_nav_agent.target_position = _current_target

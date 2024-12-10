@@ -144,3 +144,17 @@ func get_foods_in_reach() -> Array:
 		if food is Food and food != null and food.is_available:
 			_foods.append(food)
 	return _foods
+
+func get_nearest_item(list: Array) -> Variant:
+	# Filter out nulls and find nearest item by distance
+	var valid_items = list.filter(func(item): return item != null)	
+	var nearest = null
+	var min_distance = INF
+
+	for item in valid_items:
+		var distance = global_position.distance_to(item.global_position) 
+		if distance < min_distance:
+			min_distance = distance
+			nearest = item
+			
+	return nearest

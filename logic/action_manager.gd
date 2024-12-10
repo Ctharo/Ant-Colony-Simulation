@@ -44,8 +44,11 @@ func register_action(action_template: Action) -> void:
 	
 	# Set up the condition with our evaluation system
 	if action._condition:
-		action._condition.evaluation_system = evaluation_system
 		evaluation_system.register_expression(action._condition)
+	
+	# Set up the target Logic node with our evaluation system
+	if action is Move and action.target:
+		evaluation_system.register_expression(action.target)
 	
 	# Connect signals
 	if not action.completed.is_connected(_on_action_completed):
