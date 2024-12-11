@@ -1,12 +1,12 @@
-[gd_resource type="Resource" script_class="LogicExpression" load_steps=2 format=3 uid="uid://bdrbbxn5sn228"]
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bdrbbxn5sn228"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_ni7sd"]
 
 [resource]
 script = ExtResource("1_ni7sd")
-name = "home pheromones sensed"
 type = 6
-expression_string = "get_pheromones_sensed(\"home\")"
+expression_string = "get_sensed_pheromones(\"home\")"
 nested_expressions = Array[ExtResource("1_ni7sd")]([])
 description = ""
 _runtime_state = {}
+name = "home pheromones sensed"

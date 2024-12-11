@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=4 format=3 uid="uid://i2ior7knwmrg"]
+
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_8kpyg"]
+[ext_resource type="Script" path="res://logic/influence/influence_config.gd" id="2_f8wfo"]
+[ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influence/forward_influence.tres" id="2_ikky1"]
+
+[resource]
+script = ExtResource("2_f8wfo")
+influences = Array[ExtResource("1_8kpyg")]([ExtResource("2_ikky1")])

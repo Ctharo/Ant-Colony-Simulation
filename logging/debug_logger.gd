@@ -15,6 +15,7 @@ enum LogLevel {
 enum Category {
 	TASK,           ## Task-related messages
 	LOGIC,
+	INFLUENCE,
 	ACTION,         ## Action-related messages
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages

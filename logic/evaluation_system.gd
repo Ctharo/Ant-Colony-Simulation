@@ -43,6 +43,9 @@ func initialize(p_base_node: Node) -> void:
 #region Expression Management
 ## Register a Logic component with the system
 func register_expression(expression: Logic) -> void:
+	if not expression:
+		return
+		
 	if expression.id in _expressions and expression.evaluation_system == self:
 		return
 		

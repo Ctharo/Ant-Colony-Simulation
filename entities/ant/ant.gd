@@ -35,7 +35,9 @@ var foods: Foods :
 		foods = value
 		foods.mark_as_carried()
 
+#region Managers
 var action_manager: ActionManager
+#endregion
 
 ## The navigation agent for this ant
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
@@ -54,11 +56,12 @@ var logger: Logger
 
 var vision_range: float = 50.0
 var movement_rate: float = 10.0
-var energy_level: float = randf_range(50, 100)
 var energy_max: float = 100
+var energy_level: float = energy_max
 var carry_max: float = 100
-var health_level: float = randf_range(50, 100)
 var health_max: float = 100
+var health_level: float = health_max
+
 
 
 func _init() -> void:
@@ -77,8 +80,9 @@ func _ready() -> void:
 	spawned.emit()
 
 func _initialize_state() -> void:
-	energy_level = randf_range(50, energy_max)
-	health_level = randf_range(50, health_max)
+	energy_level = 50
+	health_level = 50
+	foods.add_food(50)
 	
 	# Setup navigation
 	%NavigationAgent2D.path_desired_distance = 4.0
@@ -117,6 +121,9 @@ func set_colony(p_colony: Colony) -> void:
 		colony = p_colony
 #endregion
 
+func is_carrying_food() -> bool:
+	return foods.mass > 0
+
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
 	var x := randf_range(0, viewport_rect.size.x)
@@ -130,7 +137,7 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
-func get_pheromones_sensed(pheromone_type: String = "") -> Array:
+func get_sensed_pheromones(pheromone_type: String = "") -> Array:
 	var pheromones: Array = []
 	for pheromone in sight_area.get_overlapping_bodies():
 		if pheromone is Pheromone and pheromone != null:

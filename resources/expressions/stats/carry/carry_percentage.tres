@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://d4e82unybvx7y"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_ea0pm"]
+[ext_resource type="Resource" uid="uid://dyh7hwjxorc2u" path="res://resources/expressions/stats/carry/carried_food_mass.tres" id="2_wvkvp"]
+
+[resource]
+script = ExtResource("1_ea0pm")
+type = 19
+expression_string = "carried_food_mass/carry_max * 100"
+nested_expressions = Array[ExtResource("1_ea0pm")]([ExtResource("2_wvkvp")])
+description = ""
+_runtime_state = {}
+name = ""

@@ -8,23 +8,23 @@
 
 [resource]
 script = ExtResource("2_qf7xk")
-random_range = 50.0
-arrival_threshold = 5.0
-speed = 35.0
-face_direction = true
-turn_speed = 0.1
+random_range = null
+arrival_threshold = null
+speed = null
+face_direction = null
+turn_speed = null
 max_random_angle = 1.0472
-forward_color = Color(1, 0, 0, 1)
-pheromone_color = Color(1, 1, 0, 1)
-colony_color = Color(0, 1, 0, 1)
+forward_color = null
+pheromone_color = null
+colony_color = null
 ant_color = Color(0.627451, 0.12549, 0.941176, 1)
-random_color = Color(0, 0, 1, 1)
+random_color = null
 exploration_color = Color(1, 0.647059, 0, 1)
 priority = 100
-description = ""
-cooldown = 0.0
-duration = 0.0
-params = {}
+description = null
+cooldown = null
+duration = null
+params = null
 condition_expression = "can_see_food and can_work and not is_overloaded"
 nested_conditions = Array[ExtResource("1_xv0ox")]([ExtResource("2_6dch2"), ExtResource("3_wl1yv"), ExtResource("3_jv3po")])
 name = "move to food"

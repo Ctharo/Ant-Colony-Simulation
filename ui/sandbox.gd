@@ -17,9 +17,8 @@ func _ready() -> void:
 	setup_navigation()
 	var nav_debug = preload("res://navigation/nav_debug.gd").new()
 	add_child(nav_debug)
-	spawn_ants(2)
+	spawn_ants(1)
 
-## Setup the navigation system for the entire sandbox
 ## Setup the navigation system for the entire sandbox
 func setup_navigation() -> void:
 	# Create navigation region

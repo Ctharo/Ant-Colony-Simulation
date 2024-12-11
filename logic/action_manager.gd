@@ -4,7 +4,7 @@ extends Node
 #region Properties
 ## Evaluation system for caching expressions
 var evaluation_system: EvaluationSystem
-
+var influence_manager: InfluenceManager
 ## Dictionary of registered actions
 var _actions: Dictionary = {}
 
@@ -20,13 +20,15 @@ var logger: Logger
 
 func _init() -> void:
 	evaluation_system = EvaluationSystem.new()
+	influence_manager = InfluenceManager.new()
 
 func initialize(entity: Node) -> void:
 	_entity = entity
 	logger = Logger.new("action_manager" + "][" + entity.name, DebugLogger.Category.LOGIC)
 	entity.tree_exiting.connect(_on_entity_tree_exiting)
 	evaluation_system.initialize(entity)
-
+	influence_manager.initialize(entity, {"evaluation_system": evaluation_system})
+	
 #region Action Management
 ## Register an action by creating a unique instance for this entity
 func register_action(action_template: Action) -> void:
