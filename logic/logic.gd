@@ -46,16 +46,9 @@ func _post_initialize() -> void:
 		parse_expression()
 
 ## Get the current value of the expression
-func get_value(force_recalculate: bool = false) -> Variant:
-	# Always use evaluation system if available
-	if evaluation_system:
-		return evaluation_system.get_value(id)
+func get_value(force_update: bool = false) -> Variant:
+	return evaluation_system.get_value(id, force_update)
 		
-	# Otherwise fall back to local calculation
-	if _dirty or _cache == null or force_recalculate:
-		_cache = _calculate()
-		_dirty = false
-	return _cache
 
 ## Force recalculation on next get_value() call
 func invalidate() -> void:
@@ -74,7 +67,7 @@ func get_display_value() -> String:
 
 #region Protected Methods
 func _calculate() -> Variant:
-	if not is_parsed or not base_node:
+	if not _runtime_state.is_parsed or not base_node:
 		logger.error("Expression not ready: %s" % expression_string)
 		return null
 	
@@ -138,6 +131,7 @@ func parse_expression() -> void:
 			_expression.get_error_text()
 		]
 		logger.error(error_msg)
+		assert(error == OK)
 		return
 	
 	logger.trace("Successfully parsed expression")

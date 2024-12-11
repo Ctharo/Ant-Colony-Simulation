@@ -77,7 +77,7 @@ func unregister_expression(id: String) -> void:
 
 #region Evaluation
 ## Get the current value of an expression
-func get_value(id: String) -> Variant:
+func get_value(id: String, force_update: bool = false) -> Variant:
 	if id not in _expressions:
 		logger.error("Unknown expression: %s" % id)
 		return null
@@ -89,7 +89,7 @@ func get_value(id: String) -> Variant:
 		#
 	var stats = _stats[id]
 	
-	if _cache.needs_evaluation(id):
+	if _cache.needs_evaluation(id) or force_update:
 		stats.misses += 1
 		logger.trace("Cache MISS for expression: %s (Hits: %d, Misses: %d, Hit Rate: %.1f%%)" % [
 			id, 

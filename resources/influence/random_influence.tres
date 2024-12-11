@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Influence" load_steps=5 format=3 uid="uid://cw1owtck8lyu1"]
+
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_d8g8r"]
+[ext_resource type="Resource" uid="uid://irvvirjn5pew" path="res://resources/influence/directions/random_direction.tres" id="1_o8hqk"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="3_hqprq"]
+
+[sub_resource type="Resource" id="Resource_jwbw5"]
+script = ExtResource("3_hqprq")
+type = 2
+expression_string = "1.0"
+nested_expressions = Array[ExtResource("3_hqprq")]([])
+description = ""
+_runtime_state = {}
+name = "random influence weight"
+
+[resource]
+script = ExtResource("1_d8g8r")
+name = "random influence"
+direction = ExtResource("1_o8hqk")
+weight = SubResource("Resource_jwbw5")
+color = Color(0, 0, 0, 1)

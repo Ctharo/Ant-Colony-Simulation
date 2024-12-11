@@ -10,8 +10,9 @@ func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
 
 func _ready() -> void:
-	logger.set_logging_category(DebugLogger.Category.TASK)
-	logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
+	logger.set_logging_category(DebugLogger.Category.MOVEMENT)
+	#logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
+	#logger.set_logging_category(DebugLogger.Category.LOGIC)
 	
 	# Setup navigation before spawning ants
 	setup_navigation()

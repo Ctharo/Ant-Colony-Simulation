@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1_s0orc")
-type = 19
-expression_string = ""
+type = 4
+expression_string = "Vector2(1,0).rotated(randf_range(-3.14, 3.24))"
 nested_expressions = Array[ExtResource("1_s0orc")]([])
 description = ""
 _runtime_state = {}
-name = ""
+name = "random direction"

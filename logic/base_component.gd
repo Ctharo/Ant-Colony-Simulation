@@ -25,6 +25,7 @@ func _init() -> void:
 func initialize(p_entity: Node, dependencies: Dictionary = {}) -> void:
 	if not name:
 		push_error("Component name cannot be empty")
+		assert(name, "Component name cannot be empty")
 		return
 		
 	entity = p_entity
