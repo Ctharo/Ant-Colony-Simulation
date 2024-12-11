@@ -85,8 +85,7 @@ func _initialize_state() -> void:
 	foods.add_food(50)
 	
 	# Setup navigation
-	%NavigationAgent2D.path_desired_distance = 4.0
-	%NavigationAgent2D.target_desired_distance = 4.0
+	_configure_nav_agent()
 	
 	# Set initial position
 	global_position = _get_random_position()
@@ -96,7 +95,25 @@ func _initialize_state() -> void:
 		var new_colony := ColonyManager.spawn_colony()
 		new_colony.global_position = _get_random_position()
 		set_colony(new_colony)
-
+		
+func _configure_nav_agent() -> void:
+	var nav_config := {
+		"path_desired_distance": 4.0,
+		"target_desired_distance": 4.0,
+		"path_max_distance": 50.0,
+		"avoidance_enabled": true,
+		"radius": 10.0,
+		"neighbor_distance": 50.0,
+		"max_neighbors": 10
+	}
+	
+	# Apply configuration
+	for property in nav_config:
+		if property in nav_agent:
+			nav_agent.set(property, nav_config[property])
+		else:
+			logger.warn("Navigation property not found: %s" % property)
+			
 func _load_actions() -> void:
 	var actions := [
 		preload("res://resources/actions/store_food.tres"),

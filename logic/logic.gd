@@ -46,13 +46,13 @@ func _post_initialize() -> void:
 		parse_expression()
 
 ## Get the current value of the expression
-func get_value() -> Variant:
+func get_value(force_recalculate: bool = false) -> Variant:
 	# Always use evaluation system if available
 	if evaluation_system:
 		return evaluation_system.get_value(id)
 		
 	# Otherwise fall back to local calculation
-	if _dirty or _cache == null:
+	if _dirty or _cache == null or force_recalculate:
 		_cache = _calculate()
 		_dirty = false
 	return _cache

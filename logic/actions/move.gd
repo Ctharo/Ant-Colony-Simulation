@@ -2,8 +2,7 @@ class_name Move
 extends Action
 
 #region Properties
-## Maximum random movement range
-@export var random_range: float = 50.0
+@export var influence_profile: InfluenceProfile
 ## Minimum distance to consider target reached
 @export var arrival_threshold: float = 5.0
 ## Movement speed in pixels per second
@@ -15,13 +14,6 @@ extends Action
 ## Maximum angle for random movement deviation
 @export var max_random_angle: float = PI/3  # 60 degrees
 
-@export_group("Debug Colors")
-@export var forward_color: Color = Color.RED
-@export var pheromone_color: Color = Color.YELLOW
-@export var colony_color: Color = Color.GREEN
-@export var ant_color: Color = Color.PURPLE
-@export var random_color: Color = Color.BLUE
-@export var exploration_color: Color = Color.ORANGE
 
 #region Internal State
 var _velocity: Vector2 = Vector2.ZERO
@@ -40,6 +32,7 @@ func _setup_dependencies(dependencies: Dictionary) -> void:
 	super._setup_dependencies(dependencies)
 	_setup_navigation()
 
+
 func _setup_navigation() -> void:
 	if not entity:
 		logger.error("Cannot setup navigation without entity")
@@ -49,43 +42,10 @@ func _setup_navigation() -> void:
 	if not _nav_agent:
 		logger.error("No NavigationAgent2D found on entity")
 		return
-		
-	# Configure navigation agent
-	var nav_config := {
-		"path_desired_distance": 4.0,
-		"target_desired_distance": 4.0,
-		"path_max_distance": 50.0,
-		"avoidance_enabled": true,
-		"radius": 10.0,
-		"neighbor_distance": 50.0,
-		"max_neighbors": 10
-	}
-	
-	# Apply configuration
-	for property in nav_config:
-		if property in _nav_agent:
-			_nav_agent.set(property, nav_config[property])
-		else:
-			logger.warn("Navigation property not found: %s" % property)
 
 func _post_initialize() -> void:
 	if face_direction:
 		_current_rotation = entity.rotation if entity else 0.0
-
-## Get new random target position based on current direction
-func _get_random_target() -> Vector2:
-	# Get current facing direction
-	var current_direction = Vector2.RIGHT.rotated(_current_rotation)
-	
-	# Random angle within constraints relative to current direction
-	var random_angle = randf_range(-max_random_angle, max_random_angle)
-	var target_direction = current_direction.rotated(random_angle)
-	
-	# Random distance within range
-	var distance = randf_range(random_range * 0.2, random_range)
-	
-	# Calculate target position
-	return entity.global_position + target_direction * distance
 
 ## Check if position is navigable
 func _is_navigable(location: Vector2) -> bool:
@@ -98,15 +58,22 @@ func _is_navigable(location: Vector2) -> bool:
 ## Start movement execution
 func _start_execution() -> void:
 	super._start_execution()
-	
-	_current_rotation = entity.rotation
-	_current_target = _get_random_target()
-		
-	if _nav_agent:
-		_nav_agent.target_position = _current_target
-		
+	if not influence_profile:
+		influence_profile = load("res://resources/influence/configs/wandering_for_food.tres")
 	_velocity = Vector2.ZERO
 	_target_reached = false
+
+func calculate_target_position() -> Vector2:
+	var total_weight = 0.0
+	var weighted_direction = Vector2.ZERO
+	
+	for influence in influence_profile.influences:
+		var weight = influence.weight.get_value(true)
+		var dir = influence.direction.get_value(true)
+		total_weight += weight
+		weighted_direction += dir * weight
+	
+	return weighted_direction.normalized()
 
 ## Update movement execution
 func _update_execution(delta: float) -> void:
@@ -114,20 +81,18 @@ func _update_execution(delta: float) -> void:
 		return
 		
 	var current_pos = entity.global_position
+	_current_target = calculate_target_position()
 	
 	# Check if we need a new target
 	var target_reached = _current_target and _nav_agent.is_target_reached()
 	
 	if target_reached or not _current_target:
-		logger.debug("Getting new random target")
-		_current_target = _get_random_target()
 		_nav_agent.target_position = _current_target
 	
 	# Check if navigation is stuck
 	if _nav_agent.is_navigation_finished():
 		if not target_reached:
 			logger.trace("Navigation finished but target not reached, finding new target")
-			_current_target = _get_random_target()
 			_nav_agent.target_position = _current_target
 		return
 		

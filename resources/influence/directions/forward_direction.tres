@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_kmk4y")
 type = 4
-expression_string = "global_rotation"
+expression_string = "velocity.normalized()"
 nested_expressions = Array[ExtResource("1_kmk4y")]([])
 description = ""
 _runtime_state = {}

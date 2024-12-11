@@ -48,7 +48,11 @@ func register_action(action_template: Action) -> void:
 	if action._condition:
 		evaluation_system.register_expression(action._condition)
 
-	
+	if action is Move:
+		if action.influence_profile:
+			for logic in action.influence_profile.influences:
+				evaluation_system.register_expression(logic)
+				
 	# Connect signals
 	if not action.completed.is_connected(_on_action_completed):
 		action.completed.connect(_on_action_completed)
