@@ -61,39 +61,51 @@ var health_level: float = randf_range(50, 100)
 var health_max: float = 100
 
 
-func _init(init_as_active: bool = false) -> void:
+func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 	action_manager = ActionManager.new()
-	action_manager.initialize(self)
-
-
-func _ready() -> void:
-	spawned.emit()
-	# Setup navigation
-	nav_agent.path_desired_distance = 4.0
-	nav_agent.target_desired_distance = 4.0
-
-	global_position = _get_random_position()
-	if not colony:
-		var c: Colony = ColonyManager.spawn_colony()
-		c.global_position = _get_random_position()
-		set_colony(c)
 	
-	var food: Food = FoodManager.spawn_food()
-	food.global_position = global_position
+func _ready() -> void:
+	# Initialize components
+	action_manager.initialize(self)
+	
+	# Initialize state
+	_initialize_state()
+	_load_actions()
+	
+	# Emit ready signal
+	spawned.emit()
 
-	var store_food: Action = load("res://resources/actions/store_food.tres")
-	action_manager.register_action(store_food)
-	var move_to_food: Action = load("res://resources/actions/move_to_food.tres")
-	action_manager.register_action(move_to_food)
-	var rand_move: Action = load("res://resources/actions/wander_for_food.tres") as Action
-	action_manager.register_action(rand_move)
-	var move_home: Action = load("res://resources/actions/move_to_home.tres")
-	action_manager.register_action(move_home)
-	var harvest: Action = load("res://resources/actions/harvest_food.tres")
-	action_manager.register_action(harvest)
+func _initialize_state() -> void:
+	energy_level = randf_range(50, energy_max)
+	health_level = randf_range(50, health_max)
+	
+	# Setup navigation
+	%NavigationAgent2D.path_desired_distance = 4.0
+	%NavigationAgent2D.target_desired_distance = 4.0
+	
+	# Set initial position
+	global_position = _get_random_position()
+	
+	# Initialize colony if needed
+	if not colony:
+		var new_colony := ColonyManager.spawn_colony()
+		new_colony.global_position = _get_random_position()
+		set_colony(new_colony)
+
+func _load_actions() -> void:
+	var actions := [
+		preload("res://resources/actions/store_food.tres"),
+		preload("res://resources/actions/move_to_food.tres"),
+		preload("res://resources/actions/wander_for_food.tres"),
+		preload("res://resources/actions/move_to_home.tres"),
+		preload("res://resources/actions/harvest_food.tres")
+	]
+	
+	for action in actions:
+		action_manager.register_action(action)
+	
 	action_manager.update()
-
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta

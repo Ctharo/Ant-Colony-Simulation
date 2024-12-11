@@ -5,9 +5,9 @@
 
 [resource]
 script = ExtResource("1_2duo8")
-name = "should work"
 type = 19
 expression_string = "not in_danger"
 nested_expressions = Array[ExtResource("1_2duo8")]([ExtResource("2_uujsp")])
 description = ""
 _runtime_state = {}
+name = "should work"

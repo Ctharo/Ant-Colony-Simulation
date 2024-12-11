@@ -5,9 +5,9 @@
 
 [resource]
 script = ExtResource("1_e6r0y")
-name = "can see food"
 type = 19
 expression_string = "food_in_view.size() > 0"
 nested_expressions = Array[ExtResource("1_e6r0y")]([ExtResource("2_51ib6")])
 description = "Is available food visible?"
 _runtime_state = {}
+name = "can see food"

@@ -1,92 +1,49 @@
 class_name Logic
-extends Resource
-## Base class for logic expressions. Instance safety is handled by EvaluationSystem -
-## each ant will get its own EvaluationSystem which creates unique Logic instances,
-## so no additional instance state management is needed in this class.
+extends BaseComponent
 
 #region Properties
-## Unique identifier for this expression
-var id: String
-
-## Human readable name
-@export var name: String :
-	set(value):
-		name = value
-		id = name.to_snake_case()
-
 ## Type of value this expression returns
 @export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY", 
 			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES", 
 			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") var type: int = 19  # UNKNOWN
-
 ## The expression string to evaluate
 @export_multiline var expression_string: String
-
 ## Array of LogicExpression resources to use as nested expressions
 @export var nested_expressions: Array[Logic]
-
 ## Description of what this expression does
 @export var description: String
-
 ## The base node for evaluating expressions
 var base_node: Node
-
 ## Evaluation system reference
-var evaluation_system: EvaluationSystem:
-	set(value):
-		evaluation_system = value
-
-var logger: Logger
-
+var evaluation_system: EvaluationSystem
 ## Cached expression result
 var _cache: Variant
-
 ## Flag for cache invalidation
 var _dirty: bool = true
-
 ## Expression object for evaluation
 var _expression: Expression = Expression.new()
-
 ## Flag indicating if expression is successfully parsed
 var is_parsed: bool = false
-
 ## Dictionary to store runtime state for serialization
 @export var _runtime_state: Dictionary = {}
-#endregion
 
 #region Signals
-## Emitted when the expression value changes
 signal value_changed(new_value: Variant)
-
-## Emitted when properties or nested expressions are modified
 signal dependencies_changed
 #endregion
 
-#region Public Methods
-## Initialize the expression with a base node and evaluation system
-func initialize(p_base_node: Node, p_evaluation_system: EvaluationSystem) -> void:
-	# Only initialize if needed
-	if base_node == p_base_node and evaluation_system == p_evaluation_system and is_parsed:
-		return
-		
-	base_node = p_base_node
-	evaluation_system = p_evaluation_system
+func _setup_dependencies(dependencies: Dictionary) -> void:
+	base_node = dependencies.get("base_node", entity)
+	evaluation_system = dependencies.get("evaluation_system")
 	
-	if name.is_empty():
-		assert(name, "Expression name cannot be empty")
-		logger.error("Expression name cannot be empty")
-		return
-		
-	id = name.to_snake_case()
-	if not logger:  # Only create logger once
-		logger = Logger.new("expression_%s" % id, DebugLogger.Category.LOGIC)
-	
-
-	# Only parse if not already parsed
 	if not is_parsed:
 		parse_expression()
 	
 	_save_runtime_state()
+
+func _post_initialize() -> void:
+	if expression_string and not is_parsed:
+		parse_expression()
 
 ## Get the current value of the expression
 func get_value() -> Variant:

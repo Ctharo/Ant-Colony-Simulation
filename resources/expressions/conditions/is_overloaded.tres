@@ -5,9 +5,9 @@
 
 [resource]
 script = ExtResource("1_qtaqr")
-name = "is_overloaded"
 type = 19
 expression_string = "carried_food_mass > carry_max * 0.90"
 nested_expressions = Array[ExtResource("1_qtaqr")]([ExtResource("2_jehv7")])
 description = ""
 _runtime_state = {}
+name = "is_overloaded"

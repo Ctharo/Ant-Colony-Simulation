@@ -19,18 +19,18 @@ var logger: Logger
 #endregion
 
 func _init() -> void:
-	logger = Logger.new("action_manager", DebugLogger.Category.LOGIC)
 	evaluation_system = EvaluationSystem.new()
 
 func initialize(entity: Node) -> void:
 	_entity = entity
+	logger = Logger.new("action_manager" + "][" + entity.name, DebugLogger.Category.LOGIC)
 	entity.tree_exiting.connect(_on_entity_tree_exiting)
 	evaluation_system.initialize(entity)
 
 #region Action Management
 ## Register an action by creating a unique instance for this entity
 func register_action(action_template: Action) -> void:
-	logger.debug("Registering action %s to ant %s" % [action_template.name, _entity.name])
+	logger.debug("Registering action %s" % [action_template.name])
 	if not _entity:
 		logger.error("Initialize action manager before registering actions")
 		return
@@ -45,10 +45,7 @@ func register_action(action_template: Action) -> void:
 	# Set up the condition with our evaluation system
 	if action._condition:
 		evaluation_system.register_expression(action._condition)
-	
-	# Set up the target Logic node with our evaluation system
-	if action is Move and action.target:
-		evaluation_system.register_expression(action.target)
+
 	
 	# Connect signals
 	if not action.completed.is_connected(_on_action_completed):
@@ -86,8 +83,8 @@ func get_next_action() -> Action:
 	sorted_actions.sort_custom(func(a: Action, b: Action): return a.priority > b.priority)
 	
 	# Check conditions in priority order, return first valid action
-	for action in sorted_actions:
-		if action.is_ready() and evaluation_system.get_value(action._condition.id):
+	for action: Action in sorted_actions:
+		if action.is_ready() and action.conditions_met():
 			return action
 	
 	return null

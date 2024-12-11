@@ -5,9 +5,9 @@
 
 [resource]
 script = ExtResource("1_pymsc")
-name = "is in colony"
 type = 0
 expression_string = "distance_to_colony < colony.radius"
 nested_expressions = Array[ExtResource("1_pymsc")]([ExtResource("2_32dt2")])
 description = ""
 _runtime_state = {}
+name = "is in colony"

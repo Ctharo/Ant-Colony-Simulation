@@ -43,17 +43,15 @@ func initialize(p_base_node: Node) -> void:
 #region Expression Management
 ## Register a Logic component with the system
 func register_expression(expression: Logic) -> void:
-	# Skip if already registered with evaluation system intact
 	if expression.id in _expressions and expression.evaluation_system == self:
 		return
 		
-	# Set evaluation system reference before anything else
-	expression.evaluation_system = self
+	expression.initialize(base_node, {
+		"evaluation_system": self
+	})
 	
-	# Initialize stats for this expression
 	_stats[expression.id] = ExpressionStats.new()
 	
-	# First register all nested expressions
 	for nested in expression.nested_expressions:
 		if nested == null:
 			assert(nested, "Cannot register null nested expression for expression: %s" % expression.name)
@@ -61,15 +59,9 @@ func register_expression(expression: Logic) -> void:
 			return
 		register_expression(nested)
 		_cache.add_dependency(expression.id, nested.id)
-	
-	# Now initialize this expression
-	expression.initialize(base_node, self)
+		
 	_expressions[expression.id] = expression
 	
-	# Connect signals
-	if not expression.value_changed.is_connected(_on_expression_value_changed):
-		expression.value_changed.connect(_on_expression_value_changed.bind(expression.id))
-		
 ## Unregister a LogicExpression from the system
 func unregister_expression(id: String) -> void:
 	if id in _expressions:
@@ -88,10 +80,10 @@ func get_value(id: String) -> Variant:
 		return null
 		
 	var expression: Logic = _expressions[id]
-	if not expression.evaluation_system:
-		expression.initialize(base_node, self)
-		logger.warn("evaluation system was missing from expression: %s" % expression.name)
-		
+	#if not expression.evaluation_system:
+		#expression.initialize(base_node, self)
+		#logger.warn("evaluation system was missing from expression: %s" % expression.name)
+		#
 	var stats = _stats[id]
 	
 	if _cache.needs_evaluation(id):

@@ -1,44 +1,26 @@
 class_name Action
-extends Resource
+extends BaseComponent
 
 #region Properties
-## Unique identifier for this action
-var id: String
-
-## Human readable name
-@export var name: String :
-	set(value):
-		name = value
-		id = name.to_snake_case()
-
 ## Priority level - higher numbers mean higher priority
 @export_range(0, 100) var priority: int = 0
-
 ## Description of what this action does
 @export var description: String
-
 ## Time before action can be used again
 @export var cooldown: float = 0.0
-
 ## How long the action takes to complete
 @export var duration: float = 0.0
-
 ## Parameters required for this action
 @export var params: Dictionary = {}
-
 ## Expression string to evaluate conditions
 @export_multiline var condition_expression: String
-
 ## Nested conditions used in the expression
 @export var nested_conditions: Array[Logic]
 
-var logger: Logger
-
 #region Internal State
-var _is_executing: bool = false
-var _elapsed_time: float = 0.0
-var _current_cooldown: float = 0.0
-var _entity: Node
+var is_executing: bool = false
+var elapsed_time: float = 0.0
+var current_cooldown: float = 0.0
 var _condition: Logic
 #endregion
 
@@ -48,25 +30,61 @@ signal completed
 signal interrupted
 #endregion
 
-func _init() -> void:
-	logger = Logger.new(name, DebugLogger.Category.ACTION)
+func _setup_dependencies(dependencies: Dictionary) -> void:
+	# Create and initialize condition if we have an expression
+	if condition_expression:
+		_condition = Logic.new()
+		_condition.name = id + "_condition"
+		_condition.expression_string = condition_expression
+		_condition.nested_expressions = nested_conditions.duplicate()
+		
+		# Get evaluation system from dependencies if provided
+		if dependencies.has("evaluation_system"):
+			_condition.initialize(entity, {
+				"evaluation_system": dependencies.get("evaluation_system")
+			})
+		else:
+			_condition.initialize(entity)
 
-#region Public Methods
-## Initialize the action with an entity
-func initialize(entity: Node) -> void:
-	_entity = entity
-	id = name.to_snake_case()
-	
-	# Create and initialize condition
-	_condition = Logic.new()
-	_condition.name = id + "_condition"
-	_condition.expression_string = condition_expression
-	
-	# Deep copy nested conditions
-	_condition.nested_expressions = []
-	for nested in nested_conditions:
-		_condition.nested_expressions.append(nested)
+## Check if action is ready to execute (off cooldown)
+func is_ready() -> bool:
+	return current_cooldown <= 0.0
 
+## Get whether conditions are met for this action
+func conditions_met() -> bool:
+	if not _condition:
+		return true
+	return _condition.get_value()
+
+## Start executing the action
+func start() -> void:
+	is_executing = true
+	elapsed_time = 0.0
+	started.emit()
+
+## Stop executing and reset state
+func stop() -> void:
+	is_executing = false
+	elapsed_time = 0.0
+	current_cooldown = cooldown
+	completed.emit()
+
+## Interrupt execution
+func interrupt() -> void:
+	is_executing = false
+	elapsed_time = 0.0
+	interrupted.emit()
+
+## Update action state
+func update(delta: float) -> void:
+	if current_cooldown > 0:
+		current_cooldown = max(0, current_cooldown - delta)
+		
+	if is_executing:
+		elapsed_time += delta
+		if duration > 0 and elapsed_time >= duration:
+			stop()
+			
 ## Check if the action can be executed
 func can_execute() -> bool:
 	if not is_ready():
@@ -76,35 +94,25 @@ func can_execute() -> bool:
 
 ## Execute one tick of the action
 func execute(delta: float) -> void:
-	if not _is_executing:
+	if not is_executing:
 		_start_execution()
 		return
 		
-	_elapsed_time += delta
+	elapsed_time += delta
 	_update_execution(delta)
 	
-	if _elapsed_time >= duration and duration > 0:
+	if elapsed_time >= duration and duration > 0:
 		_complete_execution()
-
-## Stop the action early
-func stop() -> void:
-	if _is_executing:
-		_is_executing = false
-		interrupted.emit()
 
 ## Reset the action state
 func reset() -> void:
-	_current_cooldown = 0.0
-	_is_executing = false 
-	_elapsed_time = 0.0
-
-## Check if action is ready to use
-func is_ready() -> bool:
-	return _current_cooldown <= 0.0
+	current_cooldown = 0.0
+	is_executing = false 
+	elapsed_time = 0.0
 
 ## Check if action has completed
 func is_completed() -> bool:
-	return not _is_executing
+	return not is_executing
 
 #region Protected Methods
 ## Validate action parameters (override in subclasses)
@@ -113,9 +121,9 @@ func _validate_params() -> bool:
 
 ## Start executing the action
 func _start_execution() -> void:
-	_is_executing = true
-	_current_cooldown = cooldown
-	_elapsed_time = 0.0
+	is_executing = true
+	current_cooldown = cooldown
+	elapsed_time = 0.0
 	started.emit()
 
 ## Update the action execution (override in subclasses)
@@ -124,6 +132,6 @@ func _update_execution(delta: float) -> void:
 
 ## Complete the action execution
 func _complete_execution() -> void:
-	_is_executing = false
+	is_executing = false
 	completed.emit()
 #endregion

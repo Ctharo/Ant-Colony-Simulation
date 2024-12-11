@@ -8,15 +8,18 @@
 
 [resource]
 script = ExtResource("2_7xsp1")
-target_position = Vector2(0, 0)
-is_continuous = false
-is_random = false
+random_range = 50.0
 arrival_threshold = 5.0
 speed = 100.0
 face_direction = true
-max_steering = 200.0
-max_speed = 150.0
-name = "move to home"
+turn_speed = 0.1
+max_random_angle = 1.0472
+forward_color = Color(1, 0, 0, 1)
+pheromone_color = Color(1, 1, 0, 1)
+colony_color = Color(0, 1, 0, 1)
+ant_color = Color(0.627451, 0.12549, 0.941176, 1)
+random_color = Color(0, 0, 1, 1)
+exploration_color = Color(1, 0.647059, 0, 1)
 priority = 50
 description = ""
 cooldown = 0.0
@@ -24,3 +27,4 @@ duration = 0.0
 params = {}
 condition_expression = "is_overloaded or in_danger or not can_work"
 nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("2_yxudy"), ExtResource("3_j88xq"), ExtResource("4_e3y6r")])
+name = "move to home"

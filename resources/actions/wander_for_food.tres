@@ -8,15 +8,18 @@
 
 [resource]
 script = ExtResource("2_um3s7")
-target_position = Vector2(0, 0)
-is_continuous = true
-is_random = true
+random_range = 50.0
 arrival_threshold = 5.0
 speed = 100.0
 face_direction = true
-max_steering = 200.0
-max_speed = 150.0
-name = "Wander for Food"
+turn_speed = 0.1
+max_random_angle = 1.0472
+forward_color = Color(1, 0, 0, 1)
+pheromone_color = Color(1, 1, 0, 1)
+colony_color = Color(0, 1, 0, 1)
+ant_color = Color(0.627451, 0.12549, 0.941176, 1)
+random_color = Color(0, 0, 1, 1)
+exploration_color = Color(1, 0.647059, 0, 1)
 priority = 10
 description = ""
 cooldown = 0.0
@@ -24,3 +27,4 @@ duration = 0.0
 params = {}
 condition_expression = "not is_overloaded and can_work and should_work"
 nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("2_j3pkd"), ExtResource("3_qceye"), ExtResource("4_5k8w3")])
+name = "Wander for Food"
