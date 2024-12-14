@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bo1tn7vdxjtu5"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_80mmx"]
+
+[resource]
+script = ExtResource("1_80mmx")
+type = 4
+expression_string = "global_position.direction_to(colony.global_position)"
+nested_expressions = Array[ExtResource("1_80mmx")]([])
+description = ""
+_runtime_state = {}
+name = "colony direction toward"

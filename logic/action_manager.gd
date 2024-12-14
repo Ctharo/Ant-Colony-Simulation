@@ -1,7 +1,18 @@
 class_name ActionManager
 extends Node
 
+
+class ActionState:
+	var condition: Logic
+	var current_cooldown: float = 0.0
+	var elapsed_time: float = 0.0
+	var evaluation_system: EvaluationSystem
+
+	func _init(p_eval_system: EvaluationSystem) -> void:
+		evaluation_system = p_eval_system
+
 #region Properties
+var _states: Dictionary = {}
 ## Evaluation system for caching expressions
 var evaluation_system: EvaluationSystem
 var influence_manager: InfluenceManager
@@ -9,114 +20,111 @@ var influence_manager: InfluenceManager
 var _actions: Dictionary = {}
 
 ## Currently executing action
-var _current_action: Action
+var _current_action: String  # Stores action ID instead of reference
 
 ## Entity being managed
-var _entity: Node
+var entity: Node
 
 ## Logger instance
 var logger: Logger
+
+var _current_action_id: String
 #endregion
 
 func _init() -> void:
 	evaluation_system = EvaluationSystem.new()
 	influence_manager = InfluenceManager.new()
 
-func initialize(entity: Node) -> void:
-	_entity = entity
-	logger = Logger.new("action_manager" + "][" + entity.name, DebugLogger.Category.LOGIC)
+func initialize(p_entity: Node) -> void:
+	entity = p_entity
+	logger = Logger.new("action_manager][" + entity.name, DebugLogger.Category.LOGIC)
 	entity.tree_exiting.connect(_on_entity_tree_exiting)
 	evaluation_system.initialize(entity)
-	influence_manager.initialize(entity, {"evaluation_system": evaluation_system})
-	
+	influence_manager.initialize(entity, evaluation_system)
+
+func get_or_create_state(action_id: String) -> ActionState:
+	if not _states.has(action_id):
+		_states[action_id] = ActionState.new(evaluation_system)
+	return _states[action_id]
+
 #region Action Management
 ## Register an action by creating a unique instance for this entity
-func register_action(action_template: Action) -> void:
-	logger.debug("Registering action %s" % [action_template.name])
-	if not _entity:
-		logger.error("Initialize action manager before registering actions")
-		return
-		
-	# Create a new instance of the action for this entity
-	var action = action_template.duplicate()
+
+func register_action(action: Action) -> void:
+	var state := get_or_create_state(action.id)
+
 	_actions[action.id] = action
-	
-	# Initialize the action with this entity
-	action.initialize(_entity)
-	
-	# Set up the condition with our evaluation system
-	if action._condition:
-		evaluation_system.register_expression(action._condition)
+
+
+	# Create condition Logic resource if needed
+	if action.condition_expression and not state.condition:
+		state.condition = Logic.new()
+		state.condition.expression_string = action.condition_expression
+		state.condition.nested_expressions = action.nested_conditions.duplicate()
+		evaluation_system.register_expression(state.condition)
 
 	if action is Move:
 		influence_manager.register_influences(action, evaluation_system)
-				
-	# Connect signals
-	if not action.completed.is_connected(_on_action_completed):
-		action.completed.connect(_on_action_completed)
-	if not action.interrupted.is_connected(_on_action_interrupted):
-		action.interrupted.connect(_on_action_interrupted)
-
-## Unregister an action and clean up
-func unregister_action(action_id: String) -> void:
-	if action_id in _actions:
-		var action = _actions[action_id]
-		if action._condition:
-			evaluation_system.unregister_expression(action._condition.id)
-		
-		action.completed.disconnect(_on_action_completed)
-		action.interrupted.disconnect(_on_action_interrupted)
-		_actions.erase(action_id)
 
 ## Update the action system
-func update(delta: float = 0.0) -> void:
-	if _current_action:
-		_current_action.execute(delta)
+func update(delta: float) -> void:
+	if _current_action_id:
+		var action: Action = _actions[_current_action_id]
+		var state := get_or_create_state(_current_action_id)
+
+		state.elapsed_time += delta
+		action.execute_tick(entity, state, delta)
+
+		if action.duration > 0 and state.elapsed_time >= action.duration:
+			_complete_current_action()
 	else:
 		_select_next_action()
-	
-	# Update cooldowns
-	for action in _actions.values():
-		if not action.is_ready():
-			action._current_cooldown = max(0.0, action._current_cooldown - delta)
+
+func _complete_current_action() -> void:
+	if _current_action_id:
+		var state := get_or_create_state(_current_action_id)
+		var action: Action = _actions[_current_action_id]
+		state.current_cooldown = action.cooldown
+		state.elapsed_time = 0.0
+		_current_action_id = ""
 
 ## Get the next valid action based on priority
 func get_next_action() -> Action:
-	# Sort actions by priority (highest first)
 	var sorted_actions = _actions.values()
 	sorted_actions.sort_custom(func(a: Action, b: Action): return a.priority > b.priority)
-	
-	# Check conditions in priority order, return first valid action
-	for action: Action in sorted_actions:
-		if action.is_ready() and action.conditions_met():
+
+	for action in sorted_actions:
+		if conditions_met(action):
 			return action
-	
+
 	return null
 
-## Interrupt the current action
-func interrupt_current_action() -> void:
-	if _current_action:
-		_current_action.stop()
-		_current_action = null
+func conditions_met(action: Action) -> bool:
+	var state := get_or_create_state(action.id)
+	if not state.condition:
+		return true
+	if state.current_cooldown > 0:
+		return false
+	return evaluation_system.get_value(state.condition.id)
 
 ## Validate the expression chain
 func validate_expression_chain(expression: Logic, visited: Array = []) -> bool:
 	if expression.id in visited:
 		logger.error("Cyclic dependency detected for expression: %s" % expression.id)
 		return false
-		
+
 	visited.append(expression.id)
-	
+
 	if expression.evaluation_system == null:
 		logger.error("Expression missing evaluation system: %s" % expression.id)
 		return false
-		
+
 	for nested in expression.nested_expressions:
 		if not validate_expression_chain(nested, visited):
 			return false
-			
+
 	return true
-	
+
 ## Helper method to change action priorities at runtime
 func set_action_priority(action_id: String, new_priority: int) -> void:
 	if action_id in _actions:
@@ -128,15 +136,15 @@ func set_action_priority(action_id: String, new_priority: int) -> void:
 func _select_next_action() -> void:
 	var next_action = get_next_action()
 	if next_action:
-		_current_action = next_action
+		_current_action_id = next_action.id
 
 ## Handle action completion
 func _on_action_completed() -> void:
-	_current_action = null
+	_current_action = ""
 
 ## Handle action interruption
 func _on_action_interrupted() -> void:
-	_current_action = null
+	_current_action = ""
 
 ## Clean up when entity is removed
 func _on_entity_tree_exiting() -> void:
@@ -145,8 +153,8 @@ func _on_entity_tree_exiting() -> void:
 		if action._condition:
 			evaluation_system.unregister_expression(action._condition.id)
 	_actions.clear()
-	
+
 	# Cleanup evaluation system
 	evaluation_system = null
-	_current_action = null
+	_current_action = ""
 #endregion

@@ -6,12 +6,11 @@
 
 [sub_resource type="Resource" id="Resource_jwbw5"]
 script = ExtResource("3_hqprq")
+id = ""
 type = 2
-expression_string = "0.5"
+expression_string = "1"
 nested_expressions = Array[ExtResource("3_hqprq")]([])
 description = ""
-_runtime_state = {}
-name = "random influence weight"
 
 [resource]
 script = ExtResource("1_d8g8r")

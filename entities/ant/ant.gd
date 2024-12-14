@@ -41,8 +41,12 @@ var action_manager: ActionManager
 
 ## The navigation agent for this ant
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
+var target_position: Vector2 :
+	get:
+		return nav_agent.target_position
+	set(value):
+		nav_agent.set_target_position(value)
 
-var target_position: Vector2
 
 
 ## Task update timer
@@ -55,27 +59,28 @@ var logger: Logger
 @onready var reach_area: Area2D = %ReachArea
 
 var vision_range: float = 50.0
-var movement_rate: float = 10.0
+var movement_rate: float = 30.0
 var energy_max: float = 100
 var energy_level: float = energy_max
 var carry_max: float = 100
 var health_max: float = 100
 var health_level: float = health_max
 
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
 func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 	action_manager = ActionManager.new()
-	
+
 func _ready() -> void:
 	# Initialize components
 	action_manager.initialize(self)
-	
+
 	# Initialize state
 	_initialize_state()
 	_load_actions()
-	
+
 	# Emit ready signal
 	spawned.emit()
 
@@ -83,19 +88,10 @@ func _initialize_state() -> void:
 	energy_level = 50
 	health_level = 50
 	foods.add_food(50)
-	
+
 	# Setup navigation
 	_configure_nav_agent()
-	
-	# Set initial position
-	global_position = _get_random_position()
-	
-	# Initialize colony if needed
-	if not colony:
-		var new_colony := ColonyManager.spawn_colony()
-		new_colony.global_position = _get_random_position()
-		set_colony(new_colony)
-		
+
 func _configure_nav_agent() -> void:
 	var nav_config := {
 		"path_desired_distance": 4.0,
@@ -106,32 +102,27 @@ func _configure_nav_agent() -> void:
 		"neighbor_distance": 50.0,
 		"max_neighbors": 10
 	}
-	
+
 	# Apply configuration
 	for property in nav_config:
 		if property in nav_agent:
 			nav_agent.set(property, nav_config[property])
 		else:
 			logger.warn("Navigation property not found: %s" % property)
-			
+
 func _load_actions() -> void:
 	var actions := [
-		preload("res://resources/actions/store_food.tres"),
-		preload("res://resources/actions/move_to_food.tres"),
-		preload("res://resources/actions/wander_for_food.tres"),
-		preload("res://resources/actions/move_to_home.tres"),
-		preload("res://resources/actions/harvest_food.tres")
+		load("res://resources/actions/wander_for_food.tres")
 	]
-	
+
 	for action in actions:
 		action_manager.register_action(action)
-	
-	action_manager.update()
+
+	action_manager.update(0.0)
 
 func _physics_process(delta: float) -> void:
-	task_update_timer += delta
 	action_manager.update(delta)
-	
+
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
 	if colony != p_colony:
@@ -140,6 +131,9 @@ func set_colony(p_colony: Colony) -> void:
 
 func is_carrying_food() -> bool:
 	return foods.mass > 0
+
+func is_navigation_finished() -> bool:
+	return nav_agent.is_navigation_finished()
 
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
@@ -183,14 +177,14 @@ func get_foods_in_reach() -> Array:
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance
-	var valid_items = list.filter(func(item): return item != null)	
+	var valid_items = list.filter(func(item): return item != null)
 	var nearest = null
 	var min_distance = INF
 
 	for item in valid_items:
-		var distance = global_position.distance_to(item.global_position) 
+		var distance = global_position.distance_to(item.global_position)
 		if distance < min_distance:
 			min_distance = distance
 			nearest = item
-			
+
 	return nearest

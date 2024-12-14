@@ -31,7 +31,7 @@ func spawn_ant() -> Ant:
 	var ant: Ant = preload("res://entities/ant/ant.tscn").instantiate() as Ant
 	ants_created += 1
 	ant.id = ants_created
-	ant.name = "Ant" + str(ant.id) 
+	ant.name = "Ant" + str(ant.id)
 	add_child(ant)
 	ant.set_physics_process(false)
 	ant.set_process(false)
