@@ -6,9 +6,8 @@
 
 [resource]
 script = ExtResource("1_nk8l4")
+id = ""
 type = 19
 expression_string = "nearby_unfriendly_count > nearby_friendly_count * 1.25"
 nested_expressions = Array[ExtResource("1_nk8l4")]([ExtResource("2_4c832"), ExtResource("3_1rwk5")])
 description = ""
-_runtime_state = {}
-name = "in danger"

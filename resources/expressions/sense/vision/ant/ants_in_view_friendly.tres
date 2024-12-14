@@ -5,9 +5,8 @@
 
 [resource]
 script = ExtResource("1_vhbki")
+id = ""
 type = 6
 expression_string = "filter_friendly_ants(ants_in_view, true)"
 nested_expressions = Array[ExtResource("1_vhbki")]([ExtResource("2_2x005")])
 description = ""
-_runtime_state = {}
-name = "ants_in_view_friendly"

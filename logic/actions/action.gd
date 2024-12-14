@@ -2,7 +2,11 @@ class_name Action
 extends Resource
 
 #region Properties
-@export var id: String
+@export var name: String :
+	set(value):
+		name = value
+		id = name.to_snake_case()
+var id: String
 ## Priority level - higher numbers mean higher priority
 @export_range(0, 100) var priority: int = 0
 ## Description of what this action does

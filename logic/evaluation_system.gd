@@ -4,9 +4,11 @@ extends Node
 class ExpressionState:
 	var expression: Expression
 	var is_parsed: bool = false
+	var logic_expression: Logic  # Store reference to Logic resource
 
-	func _init() -> void:
+	func _init(p_logic: Logic) -> void:
 		expression = Expression.new()
+		logic_expression = p_logic
 
 #region Properties
 # Map of expression resource ID to entity to state
@@ -48,11 +50,15 @@ func initialize(p_entity: Node) -> void:
 	entity = p_entity
 #endregion
 
-func get_or_create_state(expression_id: String) -> ExpressionState:
-	if not _states.has(expression_id):
-		_states[expression_id] = ExpressionState.new()
-		_stats[expression_id] = ExpressionStats.new()
-	return _states[expression_id]
+func get_or_create_state(expression: Logic) -> ExpressionState:
+	if expression.id.is_empty():
+		push_error("Expression has empty ID: %s" % expression)
+		return null
+		
+	if not _states.has(expression.id):
+		_states[expression.id] = ExpressionState.new(expression)
+		_stats[expression.id] = ExpressionStats.new()
+	return _states[expression.id]
 
 
 #region Expression Management
@@ -60,8 +66,17 @@ func get_or_create_state(expression_id: String) -> ExpressionState:
 func register_expression(expression: Logic) -> void:
 	if not expression:
 		return
+	
+	# Ensure expression has an ID
+	if expression.id.is_empty():
+		expression.id = str(expression.get_instance_id())
+		
+	logger.debug("Registering expression: %s with ID: %s" % [expression, expression.id])
 
-	var state := get_or_create_state(expression.id)
+	var state := get_or_create_state(expression)
+	if not state:
+		return
+		
 	if not state.is_parsed:
 		_parse_expression(expression)
 
@@ -78,6 +93,7 @@ func register_expression(expression: Logic) -> void:
 #region Evaluation
 ## Get the current value of an expression
 func get_value(id: String, force_update: bool = false) -> Variant:
+	assert(not id.is_empty())
 	if id not in _states:
 		logger.error("Unknown expression: %s" % id)
 		return null
@@ -94,7 +110,7 @@ func get_value(id: String, force_update: bool = false) -> Variant:
 	return _cache.get_value(id)
 
 func _parse_expression(expression: Logic) -> void:
-	var state := get_or_create_state(expression.id)
+	var state := get_or_create_state(expression)
 
 	if state.is_parsed or expression.expression_string.is_empty():
 		return
@@ -112,11 +128,16 @@ func _parse_expression(expression: Logic) -> void:
 	state.is_parsed = true
 
 func _calculate(expression_id: String) -> Variant:
-	var state := get_or_create_state(expression_id)
+	assert(not expression_id.is_empty())
+	var state: ExpressionState = _states.get(expression_id)
+	if not state:
+		logger.error("No state found for expression ID: %s" % expression_id)
+		return null
+		
 	if not state.is_parsed:
 		return null
 
-	var expression: Logic = _states[expression_id]
+	var expression: Logic = state.logic_expression
 	var bindings = []
 
 	for nested in expression.nested_expressions:

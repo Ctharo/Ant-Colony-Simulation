@@ -6,12 +6,11 @@
 
 [sub_resource type="Resource" id="Resource_tuaon"]
 script = ExtResource("3_bnmi8")
+id = ""
 type = 2
 expression_string = "1"
 nested_expressions = Array[ExtResource("3_bnmi8")]([])
 description = ""
-_runtime_state = {}
-name = "colony influence weight"
 
 [resource]
 script = ExtResource("1_v75j3")

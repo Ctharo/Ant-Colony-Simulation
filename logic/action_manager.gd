@@ -43,6 +43,7 @@ func initialize(p_entity: Node) -> void:
 	influence_manager.initialize(entity, evaluation_system)
 
 func get_or_create_state(action_id: String) -> ActionState:
+	assert(not action_id.is_empty())
 	if not _states.has(action_id):
 		_states[action_id] = ActionState.new(evaluation_system)
 	return _states[action_id]
@@ -51,6 +52,7 @@ func get_or_create_state(action_id: String) -> ActionState:
 ## Register an action by creating a unique instance for this entity
 
 func register_action(action: Action) -> void:
+	assert(not action.id.is_empty())
 	var state := get_or_create_state(action.id)
 
 	_actions[action.id] = action
@@ -59,6 +61,7 @@ func register_action(action: Action) -> void:
 	# Create condition Logic resource if needed
 	if action.condition_expression and not state.condition:
 		state.condition = Logic.new()
+		state.condition.id = action.id
 		state.condition.expression_string = action.condition_expression
 		state.condition.nested_expressions = action.nested_conditions.duplicate()
 		evaluation_system.register_expression(state.condition)
@@ -100,9 +103,11 @@ func get_next_action() -> Action:
 	return null
 
 func conditions_met(action: Action) -> bool:
+	assert(not action.id.is_empty())
 	var state := get_or_create_state(action.id)
 	if not state.condition:
 		return true
+	assert(not state.condition.id.is_empty())
 	if state.current_cooldown > 0:
 		return false
 	return evaluation_system.get_value(state.condition.id)

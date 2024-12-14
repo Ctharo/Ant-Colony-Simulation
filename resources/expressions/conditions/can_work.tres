@@ -6,9 +6,8 @@
 
 [resource]
 script = ExtResource("1_xworc")
+id = ""
 type = 19
 expression_string = "not (low_energy or low_health)"
 nested_expressions = Array[ExtResource("1_xworc")]([ExtResource("2_07eeg"), ExtResource("3_03n01")])
 description = "Bare essentials to be able to work"
-_runtime_state = {}
-name = "Can work"

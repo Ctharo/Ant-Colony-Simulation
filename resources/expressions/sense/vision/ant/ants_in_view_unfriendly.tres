@@ -5,9 +5,8 @@
 
 [resource]
 script = ExtResource("1_jugff")
+id = ""
 type = 6
 expression_string = "filter_friendly_ants(ants_in_view, false)"
 nested_expressions = Array[ExtResource("1_jugff")]([ExtResource("2_7ba4q")])
 description = ""
-_runtime_state = {}
-name = "ants_in_view_unfriendly"

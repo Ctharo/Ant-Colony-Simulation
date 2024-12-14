@@ -5,9 +5,8 @@
 
 [resource]
 script = ExtResource("1_bvieo")
+id = ""
 type = 19
 expression_string = "health_percentage < 20"
 nested_expressions = Array[ExtResource("1_bvieo")]([ExtResource("2_p5peh")])
 description = ""
-_runtime_state = {}
-name = "low health"

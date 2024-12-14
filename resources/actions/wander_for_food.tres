@@ -14,6 +14,7 @@
 script = ExtResource("2_um3s7")
 influences = Array[ExtResource("1_xhif2")]([ExtResource("2_2mwnf"), ExtResource("3_axiao"), ExtResource("4_fuorf")])
 face_direction = true
+name = "wan"
 priority = 10
 description = ""
 cooldown = 0.0
@@ -21,4 +22,3 @@ duration = 0.0
 params = {}
 condition_expression = "not is_overloaded and can_work and should_work"
 nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("2_j3pkd"), ExtResource("3_qceye"), ExtResource("4_5k8w3")])
-name = "Wander for Food"

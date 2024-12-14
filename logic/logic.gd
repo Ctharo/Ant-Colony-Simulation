@@ -2,7 +2,11 @@ class_name Logic
 extends Resource
 
 #region Properties
-@export var id: String
+@export var name: String :
+	set(value):
+		name = value
+		id = name.to_snake_case()
+var id: String
 ## Type of value this expression returns
 @export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY",
 			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES",
@@ -21,6 +25,10 @@ var is_parsed: bool = false
 signal value_changed(new_value: Variant)
 signal dependencies_changed
 #endregion
+
+func _init() -> void:
+	if id.is_empty():
+		id = str(get_instance_id())
 
 func setup() -> void:
 	if not is_parsed:
