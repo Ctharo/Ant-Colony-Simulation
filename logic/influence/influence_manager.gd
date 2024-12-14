@@ -2,9 +2,6 @@ class_name InfluenceManager
 extends BaseComponent
 
 #region Properties
-## Current influence configuration
-@export var profile: InfluenceProfile
-
 ## Active influences
 var influences: Array[Influence] = []
 
@@ -37,20 +34,11 @@ func _setup_dependencies(dependencies: Dictionary) -> void:
 	var eval_system = dependencies.get("evaluation_system", null)
 	if not eval_system:
 		return
-	profile = load("res://resources/influence/configs/wandering_for_food.tres")
-	# Register all expressions from profile
-	if profile:
-		_register_config_expressions(eval_system)
-	else:
-		logger.error("No influence profile set")
-
 	
-func _register_config_expressions(eval_system: EvaluationSystem) -> void:
-	var expressions = profile.influences
-	for expr in expressions:
-		if expr:
-			eval_system.register_expression(expr.direction)
-			eval_system.register_expression(expr.weight)
+func register_influences(move_action: Move, eval_system: EvaluationSystem) -> void:
+	for expr in move_action.influences:
+		eval_system.register_expression(expr.direction)
+		eval_system.register_expression(expr.weight)
 
 #region Public Methods
 func recalculate_target_position() -> Vector2:

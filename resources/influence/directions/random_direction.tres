@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_s0orc")
 type = 4
-expression_string = "Vector2(1,0).rotated(randf_range(-3.14, 3.24))"
+expression_string = "Vector2(randf_range(-1,1), randf_range(-1,1)).normalized()"
 nested_expressions = Array[ExtResource("1_s0orc")]([])
 description = ""
 _runtime_state = {}

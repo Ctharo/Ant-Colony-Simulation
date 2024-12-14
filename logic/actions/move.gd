@@ -2,7 +2,8 @@ class_name Move
 extends Action
 
 #region Properties
-@export var influence_profile: InfluenceProfile
+## List of influences for this movement 
+@export var influences: Array[Influence]
 ## Minimum distance to consider target reached
 @export var arrival_threshold: float = 5.0
 ## Movement speed in pixels per second
@@ -28,9 +29,30 @@ var target_position: Vector2:
 		return _current_target
 #endregion
 
+#region Internal State
+var _entity_state: Dictionary = {}
+
+func _get_entity_state(entity_id: String) -> Dictionary:
+	if not _entity_state.has(entity_id):
+		_entity_state[entity_id] = {
+			"velocity": Vector2.ZERO,
+			"target_reached": false,
+			"current_target": Vector2.ZERO,
+			"current_rotation": 0.0,
+			"nav_agent": null,
+			"rng": RandomNumberGenerator.new()
+		}
+		# Seed RNG uniquely for each entity
+		_entity_state[entity_id]["rng"].seed = hash(entity_id + str(Time.get_ticks_msec()))
+	return _entity_state[entity_id]
+
 func _setup_dependencies(dependencies: Dictionary) -> void:
 	super._setup_dependencies(dependencies)
-	_setup_navigation()
+	var state = _get_entity_state(entity.name)
+	state.nav_agent = entity.get_node_or_null("%NavigationAgent2D")
+	if not state.nav_agent:
+		logger.error("No NavigationAgent2D found on entity")
+		return
 
 
 func _setup_navigation() -> void:
@@ -46,7 +68,8 @@ func _setup_navigation() -> void:
 
 func _post_initialize() -> void:
 	if face_direction:
-		_current_rotation = entity.rotation if entity else 0.0
+		var state = _get_entity_state(entity.name)
+		state.current_rotation = entity.rotation if entity else 0.0
 
 ## Check if position is navigable
 func _is_navigable(location: Vector2) -> bool:
@@ -56,75 +79,80 @@ func _is_navigable(location: Vector2) -> bool:
 	query.collision_mask = 1  # Adjust mask based on your collision layers
 	return space_state.intersect_point(query).is_empty()
 
-## Start movement execution
 func _start_execution() -> void:
 	super._start_execution()
-	if not influence_profile:
-		influence_profile = load("res://resources/influence/configs/wandering_for_food.tres")
-	_velocity = Vector2.ZERO
-	_nav_agent.target_position = calculate_target_position()
+		
+	# Use entity-specific state
+	var state = _get_entity_state(entity.name)
+	state.velocity = Vector2.ZERO
+	state.current_target = calculate_target_position()
+	state.nav_agent.target_position = state.current_target
 
 func calculate_target_position() -> Vector2:
+	var state = _get_entity_state(entity.name)
 	var total_weight = 0.0
 	var weighted_direction = Vector2.ZERO
 	
-	# Sum up all weighted directions
-	for influence: Influence in influence_profile.influences:
+	for influence: Influence in influences:
 		var weight = influence.weight.get_value(true)
 		var dir = influence.direction.get_value(true)
 		total_weight += weight
 		weighted_direction += dir * weight
 	
-	# Normalize the weighted direction before applying distance
 	if total_weight > 0:
 		weighted_direction = (weighted_direction / total_weight).normalized()
 	
-	# Return position offset by the normalized direction
-	return entity.global_position + weighted_direction * TARGET_DISTANCE
+	# Use entity-specific RNG for random movement
+	var distance = state.rng.randf_range(15, 45)
+	var angle = state.rng.randf_range(-max_random_angle, max_random_angle)
+	weighted_direction = weighted_direction.rotated(angle)
+	
+	return entity.global_position + weighted_direction * distance
 
 ## Update movement execution
 func _update_execution(delta: float) -> void:
-	if not _nav_agent:
+	var state = _get_entity_state(entity.name)
+	if not state.nav_agent:
 		return
 		
 	var current_pos = entity.global_position
-	var distance_to_target = current_pos.distance_to(_current_target) if _current_target else INF
+	var distance_to_target = current_pos.distance_to(state.current_target) if state.current_target else INF
 	
-	# Get new target when we're close, but not exactly at target
-	# This should make movement more continuous
-	if distance_to_target <= _nav_agent.target_desired_distance * 1.5:  # Increased threshold
-		_current_target = calculate_target_position()
-		_nav_agent.target_position = _current_target
+	if distance_to_target <= state.nav_agent.target_desired_distance * 1.5:
+		state.current_target = calculate_target_position()
+		state.nav_agent.target_position = state.current_target
 		return
 		
-	# If navigation is finished but we haven't reached target, keep moving toward it
-	if _nav_agent.is_navigation_finished():
-		# Only get new target if we're really stuck
-		if distance_to_target > _nav_agent.target_desired_distance * 2:
-			_current_target = calculate_target_position()
-			_nav_agent.target_position = _current_target
+	if state.nav_agent.is_navigation_finished():
+		if distance_to_target > state.nav_agent.target_desired_distance * 2:
+			state.current_target = calculate_target_position()
+			state.nav_agent.target_position = state.current_target
 			return
 			
-	# Get new target if we don't have one
-	if not _current_target:
-		_current_target = calculate_target_position()
-		_nav_agent.target_position = _current_target
+	if not state.current_target:
+		state.current_target = calculate_target_position()
+		state.nav_agent.target_position = state.current_target
 		
-	var next_pos = _nav_agent.get_next_path_position()
+	var next_pos = state.nav_agent.get_next_path_position()
 	var direction = (next_pos - current_pos).normalized()
 	var target_velocity = direction * speed
 	
-	# Increased lerp factor for smoother acceleration
-	_velocity = _velocity.lerp(target_velocity, 0.15)  # Slightly faster response
+	# Entity-specific velocity lerping
+	state.velocity = state.velocity.lerp(target_velocity, 0.15)
 	
-	# Update position
-	entity.velocity = _velocity
+	entity.velocity = state.velocity
 	if face_direction:
-		entity.global_rotation = _velocity.angle()
+		entity.global_rotation = state.velocity.angle()
 	entity.move_and_slide()
 	
 func _complete_execution() -> void:
-	_target_reached = true
-	_velocity = Vector2.ZERO
+	var state = _get_entity_state(entity.name)
+	state.target_reached = true
+	state.velocity = Vector2.ZERO
 	entity.velocity = Vector2.ZERO
 	super._complete_execution()
+
+# Clear entity state when it's no longer needed
+func _cleanup_entity(entity_id: String) -> void:
+	if _entity_state.has(entity_id):
+		_entity_state.erase(entity_id)

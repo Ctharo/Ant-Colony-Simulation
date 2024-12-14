@@ -6,19 +6,46 @@ var logger: Logger
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 
+# Spawn control parameters
+const BATCH_SIZE = 4  # Number of ants to spawn per batch
+const FRAMES_BETWEEN_BATCHES = 2  # Frames to wait between batches
+
+# Spawning state
+var _pending_spawns: int = 0
+var _spawn_colony: Colony = null
+var _frames_until_next_batch: int = 0
+var _is_spawning: bool = false
+
 func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
 
+
 func _ready() -> void:
 	logger.set_logging_category(DebugLogger.Category.MOVEMENT)
-	#logger.set_logging_category(DebugLogger.Category.BEHAVIOR)
-	#logger.set_logging_category(DebugLogger.Category.LOGIC)
-	
+	logger.set_logging_category(DebugLogger.Category.ACTION)
+	logger.set_logging_category(DebugLogger.Category.LOGIC)
+
 	# Setup navigation before spawning ants
 	setup_navigation()
-	var nav_debug = preload("res://navigation/nav_debug.gd").new()
-	add_child(nav_debug)
-	spawn_ants(1)
+	spawn_ants(2)
+	
+func _physics_process(_delta: float) -> void:
+	if not _is_spawning:
+		return
+
+	if _frames_until_next_batch > 0:
+		_frames_until_next_batch -= 1
+		return
+
+	if _pending_spawns <= 0:
+		_finish_spawning()
+		return
+
+	var batch_size = mini(BATCH_SIZE, _pending_spawns)
+	_spawn_batch(batch_size)
+	_pending_spawns -= batch_size
+	_frames_until_next_batch = FRAMES_BETWEEN_BATCHES
+	
 
 ## Setup the navigation system for the entire sandbox
 func setup_navigation() -> void:
@@ -135,6 +162,9 @@ func setup_navigation() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	
+	var nav_debug = preload("res://navigation/nav_debug.gd").new()
+	add_child(nav_debug)
+	
 	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
 	
 ## Validate that a potential obstacle doesn't intersect with existing ones
@@ -221,9 +251,21 @@ func _change_scene(scene_name: String) -> void:
 		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)
 
 func spawn_ants(num_to_spawn: int = 1) -> void:
-	var colony: Colony = ColonyManager.spawn_colony()
-	colony.global_position = get_viewport_rect().get_center()
-	var ants = AntManager.spawn_ants(num_to_spawn)
+	_pending_spawns = num_to_spawn
+	_spawn_colony = ColonyManager.spawn_colony()
+	_spawn_colony.global_position = get_viewport_rect().get_center()
+	_is_spawning = true
+	_frames_until_next_batch = 0
+
+func _spawn_batch(size: int) -> void:
+	var ants = AntManager.spawn_ants(size, true)
 	for ant in ants:
-		colony.add_ant(ant)
-	AntManager.start_ants()
+		_spawn_colony.add_ant(ant)
+		ant.global_position = _spawn_colony.global_position 
+		ant.global_rotation = randf_range(-PI, PI)
+	logger.debug("Spawned batch of %d ants. Remaining: %d" % [size, _pending_spawns])
+
+func _finish_spawning() -> void:
+	_is_spawning = false
+	#AntManager.start_ants()
+	logger.debug("Finished spawning all ants")

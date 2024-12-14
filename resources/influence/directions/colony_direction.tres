@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_64uxo")
-type = 19
+type = 4
 expression_string = ""
 nested_expressions = Array[ExtResource("1_64uxo")]([])
 description = ""

@@ -26,4 +26,7 @@ func add_ant(ant: Ant) -> Result:
 	ants.append(ant)
 	ant.set_colony(self)
 	return Result.new()
+	
+func spawn_ants(num: int) -> Array[Ant]:
+	return [] as Array[Ant]
 #endregion

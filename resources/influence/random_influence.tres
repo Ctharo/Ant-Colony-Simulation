@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="Resource_jwbw5"]
 script = ExtResource("3_hqprq")
 type = 2
-expression_string = "1.0"
+expression_string = "0.5"
 nested_expressions = Array[ExtResource("3_hqprq")]([])
 description = ""
 _runtime_state = {}

@@ -30,6 +30,20 @@ signal completed
 signal interrupted
 #endregion
 
+# Add entity-specific state storage
+var _action_state: Dictionary = {}
+
+func _get_action_state(entity_id: String) -> Dictionary:
+	if not _action_state.has(entity_id):
+		_action_state[entity_id] = {
+			"is_executing": false,
+			"elapsed_time": 0.0,
+			"current_cooldown": 0.0
+		}
+	return _action_state[entity_id]
+
+
+
 func _setup_dependencies(dependencies: Dictionary) -> void:
 	# Create and initialize condition if we have an expression
 	if condition_expression:
@@ -48,7 +62,8 @@ func _setup_dependencies(dependencies: Dictionary) -> void:
 
 ## Check if action is ready to execute (off cooldown)
 func is_ready() -> bool:
-	return current_cooldown <= 0.0
+	var state = _get_action_state(entity.name)
+	return state.current_cooldown <= 0.0
 
 ## Get whether conditions are met for this action
 func conditions_met() -> bool:
@@ -94,14 +109,15 @@ func can_execute() -> bool:
 
 ## Execute one tick of the action
 func execute(delta: float) -> void:
-	if not is_executing:
+	var state = _get_action_state(entity.name)
+	if not state.is_executing:
 		_start_execution()
 		return
 		
-	elapsed_time += delta
+	state.elapsed_time += delta
 	_update_execution(delta)
 	
-	if elapsed_time >= duration and duration > 0:
+	if state.elapsed_time >= duration and duration > 0:
 		_complete_execution()
 
 ## Reset the action state
@@ -121,9 +137,10 @@ func _validate_params() -> bool:
 
 ## Start executing the action
 func _start_execution() -> void:
-	is_executing = true
-	current_cooldown = cooldown
-	elapsed_time = 0.0
+	var state = _get_action_state(entity.name)
+	state.is_executing = true
+	state.current_cooldown = cooldown
+	state.elapsed_time = 0.0
 	started.emit()
 
 ## Update the action execution (override in subclasses)
