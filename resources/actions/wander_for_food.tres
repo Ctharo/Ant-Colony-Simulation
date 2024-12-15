@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="Move" load_steps=10 format=3 uid="uid://dhqlu84b60xip"]
+[gd_resource type="Resource" script_class="Move" load_steps=9 format=3 uid="uid://dhqlu84b60xip"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_evkbf"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_xhif2"]
@@ -8,13 +8,12 @@
 [ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influence/random_influence.tres" id="3_axiao"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="3_qceye"]
 [ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="4_5k8w3"]
-[ext_resource type="Resource" uid="uid://ljffe576vfrc" path="res://resources/influence/colony_influence.tres" id="4_fuorf"]
 
 [resource]
 script = ExtResource("2_um3s7")
-influences = Array[ExtResource("1_xhif2")]([ExtResource("2_2mwnf"), ExtResource("3_axiao"), ExtResource("4_fuorf")])
+influences = Array[ExtResource("1_xhif2")]([ExtResource("2_2mwnf"), ExtResource("3_axiao")])
 face_direction = true
-name = "wan"
+name = "wander for food"
 priority = 10
 description = ""
 cooldown = 0.0

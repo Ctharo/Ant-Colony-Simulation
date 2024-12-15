@@ -2,11 +2,8 @@ class_name Action
 extends Resource
 
 #region Properties
-@export var name: String :
-	set(value):
-		name = value
-		id = name.to_snake_case()
 var id: String
+@export var name: String 
 ## Priority level - higher numbers mean higher priority
 @export_range(0, 100) var priority: int = 0
 ## Description of what this action does
@@ -32,6 +29,8 @@ signal completed
 signal interrupted
 #endregion
 
+func _init() -> void:
+	id = str(get_instance_id())
 
 func _setup_dependencies(dependencies: Dictionary) -> void:
 	# Create and initialize condition if we have an expression

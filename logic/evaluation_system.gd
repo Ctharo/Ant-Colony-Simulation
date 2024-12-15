@@ -3,8 +3,8 @@ extends Node
 
 class ExpressionState:
 	var expression: Expression
-	var is_parsed: bool = false
 	var logic_expression: Logic  # Store reference to Logic resource
+	var is_parsed: bool = false
 
 	func _init(p_logic: Logic) -> void:
 		expression = Expression.new()
@@ -144,6 +144,7 @@ func _calculate(expression_id: String) -> Variant:
 		bindings.append(get_value(nested.id))
 
 	var result = state.expression.execute(bindings, entity)
+	assert(result != null, "Result should never be null")
 	if state.expression.has_execute_failed():
 		push_error("Failed to execute expression: %s" % expression.expression_string)
 		return null

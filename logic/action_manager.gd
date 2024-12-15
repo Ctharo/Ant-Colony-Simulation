@@ -1,12 +1,11 @@
 class_name ActionManager
 extends Node
 
-
 class ActionState:
 	var condition: Logic
+	var evaluation_system: EvaluationSystem
 	var current_cooldown: float = 0.0
 	var elapsed_time: float = 0.0
-	var evaluation_system: EvaluationSystem
 
 	func _init(p_eval_system: EvaluationSystem) -> void:
 		evaluation_system = p_eval_system
@@ -52,11 +51,8 @@ func get_or_create_state(action_id: String) -> ActionState:
 ## Register an action by creating a unique instance for this entity
 
 func register_action(action: Action) -> void:
-	assert(not action.id.is_empty())
-	var state := get_or_create_state(action.id)
-
 	_actions[action.id] = action
-
+	var state := get_or_create_state(action.id)
 
 	# Create condition Logic resource if needed
 	if action.condition_expression and not state.condition:
