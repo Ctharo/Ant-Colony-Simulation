@@ -5,7 +5,7 @@
 
 [resource]
 script = ExtResource("1_og0tp")
-id = ""
+name = "low energy"
 type = 19
 expression_string = "energy_percentage < 20"
 nested_expressions = Array[ExtResource("1_og0tp")]([ExtResource("2_tggi3")])

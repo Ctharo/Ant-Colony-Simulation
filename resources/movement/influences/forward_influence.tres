@@ -1,12 +1,12 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=5 format=3 uid="uid://ocrh0kgvf20j"]
 
-[ext_resource type="Resource" uid="uid://dbh8ialni6s52" path="res://resources/influence/directions/forward_direction.tres" id="1_4ivb6"]
+[ext_resource type="Resource" uid="uid://dbh8ialni6s52" path="res://resources/movement/directions/forward_direction.tres" id="1_4ivb6"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_ewc0m"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="3_dcggw"]
 
 [sub_resource type="Resource" id="Resource_oe8f0"]
 script = ExtResource("3_dcggw")
-name = ""
+name = "forward influence weight"
 type = 2
 expression_string = "1.5"
 nested_expressions = Array[ExtResource("3_dcggw")]([])

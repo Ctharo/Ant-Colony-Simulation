@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="Rest" load_steps=6 format=3 uid="uid://c4um3m3kuutcr"]
+
+[ext_resource type="Script" path="res://logic/actions/rest.gd" id="1_boygb"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_olibj"]
+[ext_resource type="Resource" uid="uid://dorntljrvg8e6" path="res://resources/expressions/conditions/is_carrying_food.tres" id="3_77kxi"]
+[ext_resource type="Resource" uid="uid://3xn0nefy0al5" path="res://resources/expressions/stats/energy/derived/full_energy.tres" id="6_peqwv"]
+[ext_resource type="Resource" uid="uid://divsird6hf3dd" path="res://resources/expressions/stats/health/derived/full_health.tres" id="7_d1m55"]
+
+[resource]
+script = ExtResource("1_boygb")
+health_regen_rate = 10.0
+energy_regen_rate = 15.0
+name = "rest in home"
+priority = 90
+description = ""
+cooldown = 0.0
+duration = 0.0
+params = {}
+start_condition_expression = "not is_carrying_food and not (full_health and full_energy)"
+stop_condition_expression = "full_energy and full_health"
+start_nested_conditions = Array[ExtResource("1_olibj")]([ExtResource("3_77kxi"), ExtResource("7_d1m55"), ExtResource("6_peqwv")])
+stop_nested_conditions = Array[ExtResource("1_olibj")]([ExtResource("6_peqwv"), ExtResource("7_d1m55")])

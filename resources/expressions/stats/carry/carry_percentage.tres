@@ -5,9 +5,8 @@
 
 [resource]
 script = ExtResource("1_ea0pm")
+name = "carry percentage"
 type = 19
 expression_string = "carried_food_mass/carry_max * 100"
 nested_expressions = Array[ExtResource("1_ea0pm")]([ExtResource("2_wvkvp")])
 description = ""
-_runtime_state = {}
-name = ""

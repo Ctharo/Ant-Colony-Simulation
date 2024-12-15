@@ -32,7 +32,7 @@ enum Category {
 
 #region Configuration
 ## Current log level
-static var log_level := LogLevel.TRACE
+static var log_level := LogLevel.DEBUG
 
 ## Show context in logs
 static var show_context: bool = false
@@ -51,12 +51,12 @@ static var source_filters: Dictionary = {}
 
 ## Enabled categories (whitelist)
 static var enabled_categories := {
-	Category.TASK: false,
+	Category.TASK: true,
 	Category.LOGIC: true,
-	Category.MOVEMENT: false,
-	Category.ACTION: false,
+	Category.MOVEMENT: true,
+	Category.ACTION: true,
 	Category.BEHAVIOR: false,
-	Category.CONDITION: false,
+	Category.CONDITION: true,
 	Category.PROPERTY: false,
 	Category.CONTEXT: false,
 	Category.ENTITY: false,

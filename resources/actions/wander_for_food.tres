@@ -2,22 +2,25 @@
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_evkbf"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_xhif2"]
-[ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influence/forward_influence.tres" id="2_2mwnf"]
-[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="2_j3pkd"]
+[ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/movement/influences/forward_influence.tres" id="2_ch4ju"]
 [ext_resource type="Script" path="res://logic/actions/move.gd" id="2_um3s7"]
-[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influence/random_influence.tres" id="3_axiao"]
+[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/movement/influences/random_influence.tres" id="3_1xw0e"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="3_qceye"]
 [ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="4_5k8w3"]
+[ext_resource type="Resource" uid="uid://c14c2ty4as0jm" path="res://resources/movement/influences/colony_influence_repel.tres" id="4_slg37"]
 
 [resource]
 script = ExtResource("2_um3s7")
-influences = Array[ExtResource("1_xhif2")]([ExtResource("2_2mwnf"), ExtResource("3_axiao")])
+influences = Array[ExtResource("1_xhif2")]([ExtResource("2_ch4ju"), ExtResource("3_1xw0e"), ExtResource("4_slg37")])
 face_direction = true
+TARGET_DISTANCE = 45.0
 name = "wander for food"
 priority = 10
 description = ""
 cooldown = 0.0
 duration = 0.0
 params = {}
-condition_expression = "not is_overloaded and can_work and should_work"
-nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("2_j3pkd"), ExtResource("3_qceye"), ExtResource("4_5k8w3")])
+start_condition_expression = "can_work and should_work"
+stop_condition_expression = "not can_work"
+start_nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("3_qceye"), ExtResource("4_5k8w3")])
+stop_nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("3_qceye")])

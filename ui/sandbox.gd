@@ -7,8 +7,8 @@ var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 
 # Spawn control parameters
-const BATCH_SIZE = 4  # Number of ants to spawn per batch
-const FRAMES_BETWEEN_BATCHES = 2  # Frames to wait between batches
+const BATCH_SIZE = 3  # Number of ants to spawn per batch
+const FRAMES_BETWEEN_BATCHES = 20  # Frames to wait between batches
 
 # Spawning state
 var _pending_spawns: int = 0
@@ -24,7 +24,7 @@ func _ready() -> void:
 
 	# Setup navigation before spawning ants
 	setup_navigation()
-	spawn_ants(2)
+	spawn_ants(35)
 
 func _physics_process(_delta: float) -> void:
 	if not _is_spawning:
@@ -253,6 +253,7 @@ func spawn_colony() -> Colony:
 	return _spawn_colony
 
 func spawn_ants(num_to_spawn: int = 1) -> void:
+	logger.info("Spawning %s ants" % num_to_spawn)
 	_pending_spawns = num_to_spawn
 	if not _spawn_colony:
 		spawn_colony()
@@ -266,4 +267,4 @@ func _spawn_batch(size: int) -> void:
 func _finish_spawning() -> void:
 	_is_spawning = false
 	#AntManager.start_ants()
-	logger.debug("Finished spawning all ants")
+	logger.info("Finished spawning all ants")

@@ -20,12 +20,12 @@ func set_value(id: String, value: Variant) -> void:
 func needs_evaluation(id: String) -> bool:
 	if id not in _values:
 		return true
-		
+
 	var timestamp = _timestamps[id]
 	for dep_id in _dependencies.get(id, []):
 		if _timestamps.get(dep_id, 0) > timestamp:
 			return true
-	
+
 	return false
 
 func add_dependency(dependent: String, dependency: String) -> void:
@@ -40,11 +40,11 @@ func invalidate(id: String) -> void:
 func _invalidate_recursive(id: String, visited: Dictionary) -> void:
 	if id in visited:
 		return
-		
+
 	visited[id] = true
 	_values.erase(id)
 	_timestamps.erase(id)
-	
+
 	for dependent_id in _get_dependents(id):
 		_invalidate_recursive(dependent_id, visited)
 

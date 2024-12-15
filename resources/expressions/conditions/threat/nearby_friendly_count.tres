@@ -5,7 +5,7 @@
 
 [resource]
 script = ExtResource("1_jbaie")
-id = ""
+name = "nearby friendly count"
 type = 1
 expression_string = "ants_in_view_friendly.size()"
 nested_expressions = Array[ExtResource("1_jbaie")]([ExtResource("2_25vp8")])

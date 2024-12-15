@@ -1,30 +1,24 @@
-[gd_resource type="Resource" script_class="Move" load_steps=6 format=3 uid="uid://da52ftc75qu25"]
+[gd_resource type="Resource" script_class="Move" load_steps=7 format=3 uid="uid://da52ftc75qu25"]
 
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_5jfer"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_kjxdf"]
 [ext_resource type="Script" path="res://logic/actions/move.gd" id="2_7xsp1"]
-[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="2_yxudy"]
-[ext_resource type="Resource" uid="uid://ba2lcbu777pev" path="res://resources/expressions/conditions/threat/in_danger.tres" id="3_j88xq"]
+[ext_resource type="Resource" uid="uid://boijqqsqldlym" path="res://resources/movement/influences/colony_influence_attract.tres" id="2_c864x"]
+[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/movement/influences/random_influence.tres" id="3_hd74u"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="4_e3y6r"]
 
 [resource]
 script = ExtResource("2_7xsp1")
-random_range = null
-arrival_threshold = null
-speed = 100.0
-face_direction = null
-turn_speed = null
-max_random_angle = 1.0472
-forward_color = null
-pheromone_color = null
-colony_color = null
-ant_color = Color(0.627451, 0.12549, 0.941176, 1)
-random_color = null
-exploration_color = Color(1, 0.647059, 0, 1)
-priority = 50
-description = null
-cooldown = null
-duration = null
-params = null
-condition_expression = "is_overloaded or in_danger or not can_work"
-nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("2_yxudy"), ExtResource("3_j88xq"), ExtResource("4_e3y6r")])
+influences = Array[ExtResource("1_5jfer")]([ExtResource("2_c864x"), ExtResource("3_hd74u")])
+face_direction = false
+TARGET_DISTANCE = 45.0
 name = "move to home"
+priority = 50
+description = ""
+cooldown = 0.0
+duration = 0.0
+params = {}
+start_condition_expression = "not can_work"
+stop_condition_expression = "can_work"
+start_nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("4_e3y6r")])
+stop_nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("4_e3y6r")])

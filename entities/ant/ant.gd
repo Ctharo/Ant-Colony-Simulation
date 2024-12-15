@@ -85,9 +85,8 @@ func _ready() -> void:
 	spawned.emit()
 
 func _initialize_state() -> void:
-	energy_level = 50
-	health_level = 50
-	foods.add_food(50)
+	#energy_level = randi_range(1, energy_max)
+	#health_level = randi_range(1, health_max)
 
 	# Setup navigation
 	_configure_nav_agent()
@@ -112,7 +111,9 @@ func _configure_nav_agent() -> void:
 
 func _load_actions() -> void:
 	var actions := [
-		load("res://resources/actions/wander_for_food.tres")
+		load("res://resources/actions/wander_for_food.tres"),
+		load("res://resources/actions/move_to_home.tres"),
+		load("res://resources/actions/rest_in_home.tres")
 	]
 
 	for action in actions:
