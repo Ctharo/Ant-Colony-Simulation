@@ -26,19 +26,10 @@ signal dependencies_changed
 func _init() -> void:
 	id = str(get_instance_id())
 
-func _ready() -> void:
-	if id.is_empty():
-		assert(false)
-		id = str(get_instance_id())
-
-func setup() -> void:
+func initialize() -> void:
 	if not is_parsed:
 		parse_expression()
-
-func _post_initialize() -> void:
-	if expression_string and not is_parsed:
-		parse_expression()
-
+		
 ## Get the current value of the expression
 func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Variant:
 	return eval_system.get_value(id, force_update)

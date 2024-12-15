@@ -20,7 +20,7 @@ var id: String
 @export var nested_conditions: Array[Logic]
 
 #region Protected
-var _condition: Logic
+var condition: Logic
 #endregion
 
 #region Signals
@@ -32,24 +32,24 @@ signal interrupted
 func _init() -> void:
 	id = str(get_instance_id())
 
-func _setup_dependencies(dependencies: Dictionary) -> void:
+func generate_condition() -> void:
 	# Create and initialize condition if we have an expression
 	if condition_expression:
-		_condition = Logic.new()
-		_condition.name = id + "_condition"
-		_condition.expression_string = condition_expression
-		_condition.nested_expressions = nested_conditions.duplicate()
-		_condition.initialize()
+		condition = Logic.new()
+		condition.name = id + "_condition"
+		condition.expression_string = condition_expression
+		condition.nested_expressions = nested_conditions.duplicate()
+		condition.initialize()
 
 ## Get whether conditions are met for this action
 func conditions_met(entity: Node) -> bool:
-	if not _condition:
+	if not condition:
 		return true
-	return _condition.get_value(entity)
+	return condition.get_value(entity)
 
 ## Check if the action can be executed
 func can_execute(entity: Node) -> bool:
-	return _condition.get_value(entity)
+	return condition.get_value(entity)
 
 ## Execute one tick of the action
 func execute(entity: Node, delta: float) -> void:
