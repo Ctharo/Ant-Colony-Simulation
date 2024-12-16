@@ -18,15 +18,20 @@ var _is_spawning: bool = false
 
 func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
-
-
+	
 func _ready() -> void:
-
+	await initialize()
+	
+func initialize() -> void:
 	# Setup navigation before spawning ants
-	setup_navigation()
-	spawn_ants(35)
+	var result = await setup_navigation()
+	if result:
+		spawn_ants(35)
 
-func _physics_process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_spawn(delta)
+
+func _spawn(delta:float) -> void:
 	if not _is_spawning:
 		return
 
@@ -40,12 +45,12 @@ func _physics_process(_delta: float) -> void:
 
 	var batch_size = mini(BATCH_SIZE, _pending_spawns)
 	_spawn_batch(batch_size)
-	_pending_spawns -= batch_size
+	logger.debug("Spawned batch of %d ants. Remaining: %d" % [batch_size, _pending_spawns])
+
 	_frames_until_next_batch = FRAMES_BETWEEN_BATCHES
 
-
 ## Setup the navigation system for the entire sandbox
-func setup_navigation() -> void:
+func setup_navigation() -> bool:
 	# Create navigation region
 	navigation_region = NavigationRegion2D.new()
 	add_child(navigation_region)
@@ -163,6 +168,7 @@ func setup_navigation() -> void:
 	add_child(nav_debug)
 
 	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
+	return true
 
 ## Validate that a potential obstacle doesn't intersect with existing ones
 func validate_obstacle(points: PackedVector2Array, existing_outlines: Array) -> bool:
@@ -262,7 +268,7 @@ func spawn_ants(num_to_spawn: int = 1) -> void:
 
 func _spawn_batch(size: int) -> void:
 	var ants = _spawn_colony.spawn_ants(size, true)
-	logger.debug("Spawned batch of %d ants. Remaining: %d" % [size, _pending_spawns])
+	_pending_spawns -= size
 
 func _finish_spawning() -> void:
 	_is_spawning = false
