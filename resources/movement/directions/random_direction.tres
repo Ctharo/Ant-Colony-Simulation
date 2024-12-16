@@ -1,12 +1,13 @@
-[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://irvvirjn5pew"]
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://irvvirjn5pew"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_s0orc"]
+[ext_resource type="Resource" uid="uid://cx6pe1wste8qp" path="res://resources/expressions/sense/proprioception/global_rot.tres" id="2_wj3xw"]
 
 [resource]
 script = ExtResource("1_s0orc")
-type = 4
-expression_string = "Vector2(1,0).rotated(global_rotation + randf_range(-PI/2, PI/2))"
-nested_expressions = Array[ExtResource("1_s0orc")]([])
-description = ""
-_runtime_state = {}
 name = "random direction"
+force_recalculate = false
+type = 4
+expression_string = "Vector2(1,0).rotated(global_rot + randf_range(-PI/2, PI/2))"
+nested_expressions = Array[ExtResource("1_s0orc")]([ExtResource("2_wj3xw")])
+description = ""

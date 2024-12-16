@@ -3,8 +3,8 @@ extends Action
 
 @export var influences: Array[Influence]
 @export var face_direction: bool = false
-
 @export var TARGET_DISTANCE: float = 45.0
+var last_pos: Vector2
 
 func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
 	entity = entity as Ant
@@ -25,7 +25,12 @@ func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) 
 
 	entity.set_velocity(entity.velocity.lerp(target_velocity, 0.15))
 	if face_direction and entity.velocity:
-		entity.set_global_rotation(entity.velocity.angle())
+		var angle = entity.velocity.angle()
+		if entity.global_rotation != angle:
+			entity.set_global_rotation(angle)
 	entity.move_and_slide()
-	energy_loss(entity, energy_coefficient * entity.velocity.length() * delta)
-		
+	var moved_length: float = last_pos.distance_to(current_pos) if last_pos else 0.0
+	if moved_length > 0:
+		entity.position_changed.emit()
+		energy_loss(entity, energy_coefficient * moved_length * delta)
+	last_pos = current_pos

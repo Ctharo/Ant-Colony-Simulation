@@ -10,6 +10,7 @@ var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 
 # Spawn control parameters
+const ANTS_TO_SPAWN = 1
 const BATCH_SIZE = 3  # Number of ants to spawn per batch
 const FRAMES_BETWEEN_BATCHES = 20  # Frames to wait between batches
 
@@ -30,7 +31,7 @@ func initialize() -> bool:
 	# Setup navigation before spawning ants
 	var result = await setup_navigation()
 	if result:
-		spawn_ants(10)
+		spawn_ants(ANTS_TO_SPAWN)
 	return true
 
 func _process(delta: float) -> void:

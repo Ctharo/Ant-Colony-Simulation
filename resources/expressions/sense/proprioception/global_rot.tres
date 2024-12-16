@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://cx6pe1wste8qp"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_cw1mx"]
+
+[resource]
+script = ExtResource("1_cw1mx")
+name = "global_rot"
+force_recalculate = true
+type = 2
+expression_string = "global_rotation"
+nested_expressions = Array[ExtResource("1_cw1mx")]([])
+description = ""

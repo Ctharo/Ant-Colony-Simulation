@@ -6,6 +6,9 @@ extends CharacterBody2D
 signal spawned
 signal food_spotted
 signal ant_spotted
+signal position_changed
+signal energy_changed
+signal health_changed
 signal action_completed
 signal pheromone_sensed
 signal damaged
@@ -73,7 +76,10 @@ var movement_rate: float = 30.0
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
+		var first: int = int(energy_level)
 		energy_level = maxf(value, 0.0)
+		if first != int(energy_level):
+			energy_changed.emit()
 		dead = energy_level == 0.0
 		
 var carry_max: float = 100
@@ -141,7 +147,8 @@ func _load_actions() -> void:
 	action_manager.set_profile(action_profile)
 
 func _physics_process(delta: float) -> void:
-	action_manager.update(delta)
+	if colony:
+		action_manager.update(delta)
 
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:

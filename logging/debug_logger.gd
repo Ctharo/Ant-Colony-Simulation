@@ -32,7 +32,7 @@ enum Category {
 
 #region Configuration
 ## Current log level
-static var log_level := LogLevel.DEBUG
+static var log_level := LogLevel.TRACE
 
 ## Show context in logs
 static var show_context: bool = false

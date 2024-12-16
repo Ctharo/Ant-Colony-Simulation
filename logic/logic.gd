@@ -5,7 +5,7 @@ extends Resource
 	set(value):
 		name = value
 		id = name.to_snake_case()
-
+@export var force_recalculate: bool = false
 @export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY",
 			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES",
 			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") var type: int = 19
@@ -15,12 +15,23 @@ extends Resource
 
 var id: String
 
+var _last_value: Variant
+
 signal value_changed(new_value: Variant)
 signal dependencies_changed
 
-## Get the current value of the expression
+func set_value(new_value: Variant) -> void:
+	if _last_value != new_value:  # Only emit if value actually changed
+		print("Value for %s changing from %s to %s" % [id, _last_value, new_value])
+		_last_value = new_value
+		value_changed.emit(new_value, id)
+		
 func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Variant:
-	return eval_system.get_value(self, force_update)
+	var result = eval_system.get_value(self, force_update or force_recalculate)
+	if result != _last_value:  # Check if value has changed
+		set_value(result)
+	return result
+
 
 func _get_property_list() -> Array:
 	var props = []

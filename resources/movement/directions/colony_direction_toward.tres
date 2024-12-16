@@ -1,12 +1,13 @@
-[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bo1tn7vdxjtu5"]
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://bo1tn7vdxjtu5"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_80mmx"]
+[ext_resource type="Resource" uid="uid://dhu375ct2j8ru" path="res://resources/expressions/sense/proprioception/global_pos.tres" id="2_oqcvm"]
 
 [resource]
 script = ExtResource("1_80mmx")
-type = 4
-expression_string = "global_position.direction_to(colony.global_position)"
-nested_expressions = Array[ExtResource("1_80mmx")]([])
-description = ""
-_runtime_state = {}
 name = "colony direction toward"
+force_recalculate = false
+type = 4
+expression_string = "global_pos.direction_to(colony.global_position)"
+nested_expressions = Array[ExtResource("1_80mmx")]([ExtResource("2_oqcvm")])
+description = ""

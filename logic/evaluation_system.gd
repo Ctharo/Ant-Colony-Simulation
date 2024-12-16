@@ -3,8 +3,10 @@ extends Node
 
 class ExpressionState:
 	var expression: Expression
-	var logic_expression: Logic  # Store reference to Logic resource
+	var logic_expression: Logic
 	var is_parsed: bool = false
+	## Tracks if the value has actually changed in the last calculation
+	var has_value_changed: bool = false
 
 	func _init(p_logic: Logic) -> void:
 		expression = Expression.new()
@@ -14,7 +16,7 @@ class ExpressionState:
 # Map of expression resource ID to entity to state
 var _states: Dictionary = {}
 ## Evaluation cache system
-var _cache: EvaluationCache = EvaluationCache.new()
+var _cache: EvaluationCache 
 ## Cache statistics tracker
 var _stats: Dictionary = {}
 ## Entity for evaluations
@@ -48,6 +50,7 @@ func _init() -> void:
 func initialize(p_entity: Node) -> void:
 	entity = p_entity
 	logger = Logger.new("evaluation_system][" + entity.name, DebugLogger.Category.LOGIC)
+	_cache = EvaluationCache.new(entity.name)
 
 func get_or_create_state(expression: Logic) -> ExpressionState:
 	if expression.id.is_empty():
@@ -70,6 +73,10 @@ func register_expression(expression: Logic) -> void:
 		DebugLogger.debug(DebugLogger.Category.LOGIC,'Registering logic [b]%s[/b] with expression: "%s"' % [expression.id, expression.expression_string])
 		DebugLogger.registered_logic.append(expression.id)
 		
+	# Connect to value changed signal
+	if not expression.value_changed.is_connected(_on_expression_value_changed):
+		expression.value_changed.connect(_on_expression_value_changed)
+		
 	var state := get_or_create_state(expression)
 	if not state:
 		return
@@ -87,21 +94,43 @@ func register_expression(expression: Logic) -> void:
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	assert(expression != null and not expression.id.is_empty())
 
-	if expression.id == "full_health":
-		pass
-
 	var state := get_or_create_state(expression)
 	if not state:
 		push_error("No state found for expression: %s" % expression)
 		return null
 
 	var stats = _stats[expression.id]
+	
+	# Check if any force_recalculate dependencies have changed values
+	var should_recalculate = force_update
+	if expression.force_recalculate:
+		should_recalculate = true
+	else:
+		for nested in expression.nested_expressions:
+			if nested.force_recalculate:
+				var nested_state = get_or_create_state(nested)
+				if nested_state and nested_state.has_value_changed:
+					should_recalculate = true
+					break
 
-	if _cache.needs_evaluation(expression.id) or force_update:
+	if _cache.needs_evaluation(expression.id) or should_recalculate:
 		stats.misses += 1
-		var result = _calculate(state, force_update)
-		logger.trace("Result for expression %s: %s" % [expression.id, result])
+		var old_value = _cache.get_value(expression.id)
+		var result = _calculate(state)
+		
+		# Track if the value actually changed
+		state.has_value_changed = old_value != result
+		
+		logger.trace("Result calculated for expression %s: %s due to %s" % [
+			expression.id, 
+			result, 
+			"force_update" if force_update else 
+			"force_recalculate" if expression.force_recalculate else 
+			"cache needs_evaluation"
+		])
+		
 		_cache.set_value(expression.id, result)
+		expression.set_value(result)
 		return result
 
 	stats.hits += 1
@@ -133,23 +162,25 @@ func _parse_expression(expression: Logic) -> void:
 	var error = state.expression.parse(expression.expression_string,
 									 PackedStringArray(variable_names))
 	if error != OK:
-		push_error("Failed to parse expression '%s': %s" % [expression.name, expression.expression_string])
+		push_error('Failed to parse expression "%s": %s' % [expression.name, expression.expression_string])
 		return
 
 	state.is_parsed = true
 
-func _calculate(state: ExpressionState, force_update: bool = false) -> Variant:
+func _calculate(state: ExpressionState) -> Variant:
 	if not state.is_parsed:
 		return null
 
 	var bindings = []
 	for nested in state.logic_expression.nested_expressions:
-		bindings.append(get_value(nested, force_update))
+		bindings.append(get_value(nested))
 
 	var result = state.expression.execute(bindings, entity)
 	if state.expression.has_execute_failed():
-		#assert(false, "Failed to execute expression '%s': %s" % [state.logic_expression.id, state.logic_expression.expression_string])
-		push_error("Failed to execute expression '%s': %s" % [state.logic_expression.name, state.logic_expression.expression_string])
+		push_error('Failed to execute expression %s: "%s"' % [
+			state.logic_expression.id, 
+			state.logic_expression.expression_string
+		])
 		return null
 	return result
 

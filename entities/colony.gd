@@ -28,7 +28,7 @@ func add_ant(ant: Ant) -> Result:
 	return Result.new()
 
 func spawn_ants(num: int, physics_at_spawn: bool = false) -> Array[Ant]:
-	var _ants: Array[Ant] = AntManager.spawn_ants(num, physics_at_spawn)
+	var _ants: Array[Ant] = AntManager.spawn_ants(self, num, physics_at_spawn)
 	for ant in _ants:
 		randomize()
 		add_ant(ant)

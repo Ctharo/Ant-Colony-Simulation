@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_cxgbl")
 name = "carried_food_mass"
+force_recalculate = true
 type = 2
 expression_string = "foods.mass"
 nested_expressions = Array[ExtResource("1_cxgbl")]([])

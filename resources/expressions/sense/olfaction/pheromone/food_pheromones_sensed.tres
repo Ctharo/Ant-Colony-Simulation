@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1_rdsx1")
+name = "food pheromones sensed"
+force_recalculate = true
 type = 6
 expression_string = "get_sensed_pheromones(\"food\")"
 nested_expressions = Array[ExtResource("1_rdsx1")]([])
 description = ""
-_runtime_state = {}
-name = "food pheromones sensed"

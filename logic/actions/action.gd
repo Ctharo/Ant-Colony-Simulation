@@ -67,13 +67,13 @@ func can_start(entity: Node) -> bool:
 	if not start_condition:
 		assert(start_condition, "Should always have a start condition?")
 		return true
-	return start_condition.get_value(entity.action_manager.evaluation_system, true)
+	return start_condition.get_value(entity.action_manager.evaluation_system)
 
 ## Get whether the action should be stopped
 func should_stop(entity: Node) -> bool:
 	if not stop_condition:
 		return false
-	return stop_condition.get_value(entity.action_manager.evaluation_system, true)
+	return stop_condition.get_value(entity.action_manager.evaluation_system)
 
 ## Check if the action can be executed
 func can_execute(entity: Node) -> bool:
