@@ -47,6 +47,7 @@ func _init() -> void:
 
 func initialize(p_entity: Node) -> void:
 	entity = p_entity
+	logger = Logger.new("evaluation_system][" + entity.name, DebugLogger.Category.LOGIC)
 
 func get_or_create_state(expression: Logic) -> ExpressionState:
 	if expression.id.is_empty():
@@ -65,8 +66,10 @@ func register_expression(expression: Logic) -> void:
 	if expression.id.is_empty():
 		expression.id = str(expression.get_instance_id())
 
-	logger.debug("Registering expression: %s with ID: %s" % [expression, expression.id])
-
+	if expression.id not in DebugLogger.registered_logic:
+		DebugLogger.debug(DebugLogger.Category.LOGIC, "Registering expression: [b]%s[/b] with ID: %s" % [expression.expression_string, expression.id])
+		DebugLogger.registered_logic.append(expression.id)
+		
 	var state := get_or_create_state(expression)
 	if not state:
 		return
@@ -118,8 +121,10 @@ func _parse_expression(expression: Logic) -> void:
 			return
 		variable_names.append(nested.id)  # Using snake_case ID consistently
 
-	logger.debug("Parsing expression '%s' with variables: %s" % [expression.name, variable_names])
-
+	if expression.id not in DebugLogger.parsed_expression_strings:
+		DebugLogger.debug(DebugLogger.Category.LOGIC, "Parsing expression [b]%s[/b] with variables: %s" % [expression.name, variable_names])
+		DebugLogger.parsed_expression_strings.append(expression.id)
+		
 	var error = state.expression.parse(expression.expression_string,
 									 PackedStringArray(variable_names))
 	if error != OK:

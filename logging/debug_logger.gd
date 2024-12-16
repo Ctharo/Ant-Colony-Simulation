@@ -37,6 +37,9 @@ static var log_level := LogLevel.DEBUG
 ## Show context in logs
 static var show_context: bool = false
 
+static var registered_logic: PackedStringArray = []
+static var parsed_expression_strings: PackedStringArray = []
+
 ## Source filtering configuration
 class SourceFilter:
 	var enabled: bool
