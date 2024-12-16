@@ -67,7 +67,7 @@ func register_expression(expression: Logic) -> void:
 		expression.id = str(expression.get_instance_id())
 
 	if expression.id not in DebugLogger.registered_logic:
-		DebugLogger.debug(DebugLogger.Category.LOGIC, "Registering expression: [b]%s[/b] with ID: %s" % [expression.expression_string, expression.id])
+		DebugLogger.debug(DebugLogger.Category.LOGIC,'Registering logic [b]%s[/b] with expression: "%s"' % [expression.id, expression.expression_string])
 		DebugLogger.registered_logic.append(expression.id)
 		
 	var state := get_or_create_state(expression)
@@ -99,7 +99,8 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 
 	if _cache.needs_evaluation(expression.id) or force_update:
 		stats.misses += 1
-		var result = _calculate(state)
+		var result = _calculate(state, force_update)
+		logger.trace("Result for expression %s: %s" % [expression.id, result])
 		_cache.set_value(expression.id, result)
 		return result
 
@@ -122,7 +123,11 @@ func _parse_expression(expression: Logic) -> void:
 		variable_names.append(nested.id)  # Using snake_case ID consistently
 
 	if expression.id not in DebugLogger.parsed_expression_strings:
-		DebugLogger.debug(DebugLogger.Category.LOGIC, "Parsing expression [b]%s[/b] with variables: %s" % [expression.name, variable_names])
+		
+		DebugLogger.debug(DebugLogger.Category.LOGIC, "Parsing expression [b]%s[/b]%s" % [
+			expression.id,
+			" with variables: %s" % str(variable_names) if variable_names else ""
+		])
 		DebugLogger.parsed_expression_strings.append(expression.id)
 		
 	var error = state.expression.parse(expression.expression_string,
@@ -133,17 +138,17 @@ func _parse_expression(expression: Logic) -> void:
 
 	state.is_parsed = true
 
-func _calculate(state: ExpressionState) -> Variant:
+func _calculate(state: ExpressionState, force_update: bool = false) -> Variant:
 	if not state.is_parsed:
 		return null
 
 	var bindings = []
 	for nested in state.logic_expression.nested_expressions:
-		bindings.append(get_value(nested))
+		bindings.append(get_value(nested, force_update))
 
 	var result = state.expression.execute(bindings, entity)
 	if state.expression.has_execute_failed():
-		assert(false, "Failed to execute expression '%s': %s" % [state.logic_expression.id, state.logic_expression.expression_string])
+		#assert(false, "Failed to execute expression '%s': %s" % [state.logic_expression.id, state.logic_expression.expression_string])
 		push_error("Failed to execute expression '%s': %s" % [state.logic_expression.name, state.logic_expression.expression_string])
 		return null
 	return result

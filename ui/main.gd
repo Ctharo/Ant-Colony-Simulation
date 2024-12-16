@@ -117,7 +117,7 @@ func animate_ui_elements():
 
 func _on_start_simulation_button_pressed():
 	_info("Start Simulation pressed")
-	transition_to_scene("sandbox")
+	transition_to_scene("sandbox","sandbox")
 
 func _on_property_browser_button_pressed():
 	# Instead of transitioning to a scene, create the PropertyBrowser directly
@@ -148,7 +148,7 @@ func transition_to_scene(scene_name: String, in_folder: String = ""):
 	tween.tween_callback(Callable(self, "_change_scene").bind(path + scene_name))
 
 func _change_scene(scene_name: String):
-	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
+	var error = await get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
 		_error("Failed to load scene: " + scene_name)
 	else:

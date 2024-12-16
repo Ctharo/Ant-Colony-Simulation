@@ -6,7 +6,7 @@
 
 [sub_resource type="Resource" id="Resource_tuaon"]
 script = ExtResource("3_2rfr0")
-name = ""
+name = "colony influence repel weight"
 type = 2
 expression_string = "1"
 nested_expressions = Array[ExtResource("3_2rfr0")]([])

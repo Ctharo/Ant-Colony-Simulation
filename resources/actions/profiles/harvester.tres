@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ActionProfile" load_steps=8 format=3 uid="uid://2c6hoc2bo2vq"]
+
+[ext_resource type="Script" path="res://logic/actions/action_profile.gd" id="1_aarxr"]
+[ext_resource type="Resource" uid="uid://dhqlu84b60xip" path="res://resources/actions/wander_for_food.tres" id="1_e4nae"]
+[ext_resource type="Resource" uid="uid://da52ftc75qu25" path="res://resources/actions/move_to_home.tres" id="2_8nmtv"]
+[ext_resource type="Resource" uid="uid://bv5mtrpa7bnxi" path="res://resources/actions/store_food.tres" id="3_pvtgg"]
+[ext_resource type="Resource" uid="uid://du4pcotoujehr" path="res://resources/actions/move_to_food.tres" id="4_air3n"]
+[ext_resource type="Resource" uid="uid://buj2rlf8e5gux" path="res://resources/actions/harvest_food.tres" id="5_cc1bg"]
+[ext_resource type="Resource" uid="uid://c4um3m3kuutcr" path="res://resources/actions/rest_in_home.tres" id="6_hwuwe"]
+
+[resource]
+script = ExtResource("1_aarxr")
+name = "harvester"
+actions = {
+1: ExtResource("1_e4nae"),
+2: ExtResource("4_air3n"),
+3: ExtResource("5_cc1bg"),
+4: ExtResource("2_8nmtv"),
+5: ExtResource("3_pvtgg"),
+6: ExtResource("6_hwuwe")
+}

@@ -1,3 +1,4 @@
+@icon("res://assets/entities/Ant.svg")
 class_name Ant
 extends CharacterBody2D
 
@@ -8,7 +9,8 @@ signal ant_spotted
 signal action_completed
 signal pheromone_sensed
 signal damaged
-signal died
+signal died(ant: Ant)
+signal ant_selected(ant: Ant)
 #endregion
 
 #region Constants
@@ -58,13 +60,28 @@ var logger: Logger
 @onready var sense_area: Area2D = %SenseArea
 @onready var reach_area: Area2D = %ReachArea
 
+var dead: bool = false :
+	set(value):
+		if dead:
+			return
+		dead = value
+		if dead:
+			died.emit(self)
+
 var vision_range: float = 50.0
 var movement_rate: float = 30.0
 var energy_max: float = 100
-var energy_level: float = energy_max
+var energy_level: float = energy_max :
+	set(value):
+		energy_level = maxf(value, 0.0)
+		dead = energy_level == 0.0
+		
 var carry_max: float = 100
 var health_max: float = 100
-var health_level: float = health_max
+var health_level: float = health_max :
+	set(value):
+		health_level = maxf(value, 0.0)
+		dead = health_level == 0.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -84,9 +101,19 @@ func _ready() -> void:
 	# Emit ready signal
 	spawned.emit()
 
+func _input_event(_viewport, event, _shape_idx):
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			ant_selected.emit(self)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			# Get reference to info panel (adjust the path as needed)
+			var info_panel = get_node("res://ui/ant/ant_info_panel.tscn")
+			if info_panel:
+				info_panel.unselect_current()
+
 func _initialize_state() -> void:
-	#energy_level = randi_range(1, energy_max)
-	#health_level = randi_range(1, health_max)
+	energy_level = randi_range(35, energy_max)
+	health_level = randi_range(50, health_max)
 
 	# Setup navigation
 	_configure_nav_agent()
@@ -110,16 +137,8 @@ func _configure_nav_agent() -> void:
 			logger.warn("Navigation property not found: %s" % property)
 
 func _load_actions() -> void:
-	var actions := [
-		load("res://resources/actions/wander_for_food.tres"),
-		load("res://resources/actions/move_to_home.tres"),
-		load("res://resources/actions/rest_in_home.tres")
-	]
-
-	for action in actions:
-		action_manager.register_action(action)
-
-	action_manager.update(0.0)
+	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()
+	action_manager.set_profile(action_profile)
 
 func _physics_process(delta: float) -> void:
 	action_manager.update(delta)

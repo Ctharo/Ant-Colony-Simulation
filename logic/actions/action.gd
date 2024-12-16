@@ -20,6 +20,9 @@ var id: String
 ## How long the action takes to complete
 @export var duration: float = 0.0
 
+## How much energy does this action cost per second
+@export var energy_coefficient: float
+
 ## Parameters required for this action
 @export var params: Dictionary = {}
 
@@ -62,6 +65,7 @@ func generate_conditions() -> void:
 ## Get whether conditions are met to start this action
 func can_start(entity: Node) -> bool:
 	if not start_condition:
+		assert(start_condition, "Should always have a start condition?")
 		return true
 	return start_condition.get_value(entity.action_manager.evaluation_system, true)
 
@@ -77,7 +81,7 @@ func can_execute(entity: Node) -> bool:
 
 # Virtual method to be implemented by subclasses
 func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
-	pass
+	energy_loss(entity, energy_coefficient * delta)
 
 #region Protected Methods
 ## Validate action parameters (override in subclasses)
@@ -87,4 +91,8 @@ func _validate_params() -> bool:
 ## Update the action execution (override in subclasses)
 func _update_execution(entity: Node, delta: float) -> void:
 	pass
+	
+func energy_loss(entity: Node, amount: float) -> void:
+	entity.energy_level -= amount
+
 #endregion

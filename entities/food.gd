@@ -1,3 +1,4 @@
+@icon("res://assets/entities/apple-4967157_640.png")
 class_name Food
 extends Node2D
 

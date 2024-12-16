@@ -1,24 +1,135 @@
 extends Node
 
+signal colony_spawned(colony: Colony)
+signal colony_removed(colony: Colony)
 
+# Configuration constants
+const MAX_COLONIES := 10
+
+# Maintain list of active colonies
+var colonies: Array[Colony] = []
+var logger: Logger
+
+#region Initialization
+func _init() -> void:
+	logger = Logger.new("colony_manager", DebugLogger.Category.ENTITY)
+
+func _ready() -> void:
+	# Ensure we're in colony group for easy access
+	add_to_group("colony_manager")
+#endregion
+
+#region Colony Management
+## Start or stop all colonies
 func start_colonies(enable: bool = true) -> Result:
-	var colonies: Colonies = get_all()
-	for colony: Colony in colonies:
-		colony.set_physics_process(enable)
-		colony.set_process(enable)
-	return Result.new()
+	logger.debug("Starting all colonies: %s" % enable)
+	var result := Result.new()
 	
+	for colony in colonies:
+		var colony_result = start_colony(colony, enable)
+		if colony_result.is_error():
+			result = colony_result
+			logger.error("Failed to start colony: %s" % colony_result.error_message)
+			break
+			
+	return result
+
+## Start or stop a specific colony
+func start_colony(colony: Colony, enable: bool = true) -> Result:
+	if not colony:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Colony is null")
+		
+	if not colonies.has(colony):
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Colony not managed by this manager")
+	
+	colony.set_physics_process(enable)
+	colony.set_process(enable)
+	
+	logger.debug("Colony %s %s" % [colony.name, "started" if enable else "stopped"])
+	return Result.new()
+
+## Spawn multiple colonies
+func spawn_colonies(count: int = 1) -> Colonies:
+	var new_colonies := Colonies.new()
+	
+	# Check if we would exceed max colonies
+	if colonies.size() + count > MAX_COLONIES:
+		logger.warn("Cannot spawn %d colonies - would exceed maximum of %d" % [count, MAX_COLONIES])
+		count = MAX_COLONIES - colonies.size()
+	
+	for i in range(count):
+		var colony = spawn_colony()
+		if colony:
+			new_colonies.append(colony)
+			
+	return new_colonies
+
+## Spawn a single colony
 func spawn_colony() -> Colony:
-	var colony: Colony = Colony.new()
+	if colonies.size() >= MAX_COLONIES:
+		logger.warn("Cannot spawn colony - maximum of %d reached" % MAX_COLONIES)
+		return null
+		
+	var colony = Colony.new()
 	add_child(colony)
+	
+	# Initialize colony state
 	colony.set_physics_process(false)
 	colony.set_process(false)
-	add_to_group("colony")
+	
+	# Add to tracking
+	colonies.append(colony)
+	colony.name = "Colony_%d" % colonies.size()
+	colony_spawned.emit(colony)
+	
+	logger.debug("Spawned new colony: %s" % colony.name)
 	return colony
 
+## Remove a colony and clean up its resources
+func remove_colony(colony: Colony) -> Result:
+	if not colony:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Colony is null")
+		
+	if not colonies.has(colony):
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Colony not managed by this manager")
+	
+	# Stop colony processing
+	start_colony(colony, false)
+	
+	# Remove from tracking
+	colonies.erase(colony)
+	colony_removed.emit(colony)
+	
+	# Clean up node
+	colony.queue_free()
+	
+	logger.debug("Removed colony: %s" % colony.name)
+	return Result.new()
+
+## Get all valid colonies
 func get_all() -> Colonies:
-	var colonies: Colonies = Colonies.new()
-	for colony in get_tree().get_nodes_in_group("colony"):
-		if colony is Colony:
-			colonies.append(colony)
-	return colonies
+	var valid_colonies: = Colonies.new([])
+	
+	for colony in colonies:
+		if is_instance_valid(colony) and not colony.is_queued_for_deletion():
+			valid_colonies.append(colony)
+		else:
+			# Clean up invalid reference
+			colonies.erase(colony)
+			
+	return valid_colonies
+
+## Get colony by name
+func get_colony_by_name(colony_name: String) -> Colony:
+	for colony in colonies:
+		if colony.name == colony_name:
+			return colony
+	return null
+#endregion
+
+#region Cleanup
+func _exit_tree() -> void:
+	# Clean up all colonies when manager is removed
+	for colony in colonies.duplicate():  # Duplicate array to avoid modification during iteration
+		remove_colony(colony)
+#endregion

@@ -1,6 +1,9 @@
-extends Node2D
+extends Control
 
 var logger: Logger
+
+@onready var ant_info_panel = $AntInfoPanel
+
 
 # Navigation properties
 var navigation_region: NavigationRegion2D
@@ -20,13 +23,15 @@ func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
 	
 func _ready() -> void:
-	await initialize()
-	
-func initialize() -> void:
+	initialize()
+
+		
+func initialize() -> bool:
 	# Setup navigation before spawning ants
 	var result = await setup_navigation()
 	if result:
-		spawn_ants(35)
+		spawn_ants(10)
+	return true
 
 func _process(delta: float) -> void:
 	_spawn(delta)
@@ -247,6 +252,11 @@ func _on_close_pressed():
 func transition_to_scene(scene_name: String) -> void:
 	create_tween().tween_callback(Callable(self, "_change_scene").bind(scene_name))
 
+func _on_background_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			ant_info_panel.unselect_current()
+
 ## Change to a new scene
 func _change_scene(scene_name: String) -> void:
 	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
@@ -269,8 +279,31 @@ func spawn_ants(num_to_spawn: int = 1) -> void:
 func _spawn_batch(size: int) -> void:
 	var ants = _spawn_colony.spawn_ants(size, true)
 	_pending_spawns -= size
+	for ant in ants:
+		ant.ant_selected.connect(_on_ant_selected)
+
 
 func _finish_spawning() -> void:
 	_is_spawning = false
 	#AntManager.start_ants()
 	logger.info("Finished spawning all ants")
+
+func _on_ant_selected(ant: Ant):
+	ant_info_panel.show_ant_info(ant)
+
+
+func _on_gui_input(event: InputEvent) -> void:
+	report()
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT:
+			ant_info_panel.unselect_current()
+
+func report():
+	print("GUI input detected")
+
+
+func _on_mouse_entered() -> void:
+	report()
+
+func _on_mouse_exited() -> void:
+	report()

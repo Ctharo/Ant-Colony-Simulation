@@ -7,6 +7,7 @@ extends Action
 @export var TARGET_DISTANCE: float = 45.0
 
 func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
+	entity = entity as Ant
 	var target_pos = state.influence_manager.calculate_target_position(TARGET_DISTANCE, influences)
 
 	var current_pos = entity.global_position
@@ -26,3 +27,5 @@ func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) 
 	if face_direction and entity.velocity:
 		entity.set_global_rotation(entity.velocity.angle())
 	entity.move_and_slide()
+	energy_loss(entity, energy_coefficient * entity.velocity.length() * delta)
+		
