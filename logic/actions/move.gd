@@ -38,6 +38,6 @@ func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) 
 	
 	var moved_length: float = last_pos.distance_to(current_pos) if last_pos and current_pos else 0.0
 	if moved_length > 0:
-		energy_loss(entity, energy_coefficient * moved_length * delta)
+		energy_loss(entity, energy_coefficient * delta)
 		
 	last_pos = current_pos

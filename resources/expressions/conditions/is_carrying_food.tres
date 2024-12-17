@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_7mq7g")
 name = "is carrying food"
-type = 19
 expression_string = "carried_food_mass > 0"
 nested_expressions = Array[ExtResource("1_7mq7g")]([ExtResource("2_buxkc")])
 description = ""
+type = 19
