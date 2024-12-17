@@ -148,11 +148,30 @@ func setup_navigation() -> bool:
 			collision.polygon = local_points
 			obstacle.add_child(collision)
 
-			# Create visual polygon
+			# Create filled rock polygon
 			var polygon = Polygon2D.new()
 			polygon.polygon = local_points
-			polygon.color = Color(0.3, 0.3, 0.3, 0.8)  # Dark gray, slightly transparent
+			polygon.color = Color(0.5, 0.5, 0.5, 1.0)  # Solid gray base
 			obstacle.add_child(polygon)
+			
+			# Add darker border for depth
+			var border = Line2D.new()
+			# Create closed loop of points for border
+			var border_points = local_points.duplicate()
+			border_points.append(local_points[0])  # Add first point again to close the shape
+			border.points = border_points
+			border.width = 2.0
+			border.default_color = Color(0.3, 0.3, 0.3, 1.0)  # Darker gray border
+			obstacle.add_child(border)
+			
+			# Add some texture variation with a slightly lighter overlay
+			var texture_polygon = Polygon2D.new()
+			var smaller_points = PackedVector2Array()
+			for point in local_points:
+				smaller_points.append(point * 0.8)  # 80% size of original
+			texture_polygon.polygon = smaller_points
+			texture_polygon.color = Color(0.6, 0.6, 0.6, 0.3)  # Lighter gray with transparency
+			obstacle.add_child(texture_polygon)
 
 			obstacles_placed += 1
 
