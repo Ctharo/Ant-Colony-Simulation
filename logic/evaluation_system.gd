@@ -81,22 +81,10 @@ func register_expression(expression: Logic) -> void:
 	if expression.id.is_empty():
 		expression.id = str(expression.get_instance_id())
 		
-	# Debug logging
-	if expression.id not in DebugLogger.registered_logic:
-		DebugLogger.debug(
-			DebugLogger.Category.LOGIC,
-			'Registering logic [b]%s[/b] with expression: "%s"' % [
-				expression.id, 
-				expression.expression_string
-			]
-		)
-		DebugLogger.registered_logic.append(expression.id)
-		
-	# Connect signals for cache invalidation
-	if not expression.value_changed.is_connected(_on_expression_value_changed):
-		expression.value_changed.connect(_on_expression_value_changed)
-	if not expression.dependencies_changed.is_connected(_on_expression_dependencies_changed):
-		expression.dependencies_changed.connect(_on_expression_dependencies_changed)
+	logger.debug("=== Registering expression [b]%s[/b] ===" % expression.id)
+	logger.trace("- Expression string: %s" % expression.expression_string)
+	logger.trace("- Always evaluate: %s" % expression.always_evaluate)
+	logger.trace("- Nested expressions: %s" % str(expression.nested_expressions))
 		
 	# Create and parse state
 	var state := get_or_create_state(expression)
@@ -112,29 +100,57 @@ func register_expression(expression: Logic) -> void:
 			push_error("Cannot register null nested expression")
 			return
 			
+		logger.trace("- Registering nested expression [b]%s[/b] for [b]%s[/b]" % [
+			nested.id,
+			expression.id
+		])
 		register_expression(nested)
 		_cache.add_dependency(expression.id, nested.id)
 
+	logger.debug("=== Completed registration of [b]%s[/b] ===" % expression.id)
 
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	assert(expression != null and not expression.id.is_empty())
-
-	# If no nested expressions, always evaluate
+	
+	logger.trace("Getting value for [b]%s[/b]" % expression.id)
+	
+	# For always_evaluate expressions (no nested dependencies)
 	if expression.always_evaluate:
-		if expression.id == "energy_percentage":
-			pass
+		logger.trace("- Direct always_evaluate expression")
+		var result = _calculate(expression.id)
+		var old_value = _cache.get_value(expression.id)
 		
-		return _calculate(expression.id)
+		if old_value != result:
+			logger.trace("- Value changed: %s -> %s" % [old_value, result])
+			_cache.set_value(expression.id, result)
+		return result
 		
-	# Otherwise, check cache and dependencies
+	# Check if this expression has any always_evaluate dependencies
+	var has_always_eval_dep = _has_always_evaluate_dependency(expression)
+	if has_always_eval_dep:
+		logger.trace("- Has always_evaluate dependency, forcing calculation")
+		var result = _calculate(expression.id)
+		_cache.set_value(expression.id, result)
+		return result
+	
+	# Regular cached evaluation
 	if force_update or _cache.needs_evaluation(expression.id):
 		var result = _calculate(expression.id)
 		_cache.set_value(expression.id, result)
-		if expression.id == "low_energy":
-			pass
 		return result
 		
 	return _cache.get_value(expression.id)
+	
+func _has_always_evaluate_dependency(expression: Logic) -> bool:
+	logger.trace("Checking for always_evaluate dependencies in [b]%s[/b]" % expression.id)
+	for nested in expression.nested_expressions:
+		if nested.always_evaluate:
+			logger.trace("- Found always_evaluate dependency: [b]%s[/b]" % nested.id)
+			return true
+		if _has_always_evaluate_dependency(nested):
+			logger.trace("- Found nested always_evaluate dependency in [b]%s[/b]" % nested.id)
+			return true
+	return false
 
 func _parse_expression(expression: Logic) -> void:
 	var state := get_or_create_state(expression)
@@ -171,18 +187,26 @@ func _calculate(expression_id: String) -> Variant:
 	if not state.is_parsed:
 		return null
 
-	# Get values from nested expressions if any
+	logger.trace("Calculating [b]%s[/b]" % expression_id)
+	
+	# Get values from nested expressions
 	var bindings = []
 	for nested in state.logic.nested_expressions:
-		bindings.append(get_value(nested))
+		logger.trace("- Getting nested value for [b]%s[/b]" % nested.id)
+		# Pass force_update=true if this is an always_evaluate expression
+		var force = nested.always_evaluate
+		var value = get_value(nested, force)
+		bindings.append(value)
+		logger.trace("- Nested [b]%s[/b] = %s" % [nested.id, value])
 
 	var result = state.execute(bindings, entity)
 	if state.has_error():
 		push_error('Failed to execute expression: "%s"' % state.compiled_expression)
 		return null
 		
+	logger.debug("- Final result for [b]%s[/b] = %s" % [expression_id, result])
 	return result
-
+	
 ## Get cache statistics for a specific expression
 func get_expression_stats(id: String) -> Dictionary:
 	if id in _stats:

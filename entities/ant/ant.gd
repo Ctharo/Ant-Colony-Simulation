@@ -118,7 +118,7 @@ func _input_event(_viewport, event, _shape_idx):
 				info_panel.unselect_current()
 
 func _initialize_state() -> void:
-	energy_level = randi_range(35, energy_max)
+	energy_level = 35
 	health_level = randi_range(50, health_max)
 
 	# Setup navigation

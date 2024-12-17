@@ -21,21 +21,36 @@ func get_value(id: String) -> Variant:
 
 func set_value(id: String, value: Variant) -> void:
 	var old_value = _values.get(id)
-	if old_value != value:  # Only update if value actually changed
-		_values[id] = value
-		_timestamps[id] = Time.get_unix_time_from_system()
+	_values[id] = value
+	_timestamps[id] = Time.get_unix_time_from_system()
+	
+	if old_value != value:
+		logger.trace("Cache updated for [b]%s[/b]: %s -> %s" % [id, old_value, value])
 		# Invalidate dependents since this value changed
 		invalidate_dependents(id)
+	else:
+		logger.trace("Cache unchanged for [b]%s[/b]: %s" % [id, value])
 
 func needs_evaluation(id: String) -> bool:
 	if id not in _values:
+		logger.debug("Cache miss for [b]%s[/b]: not in cache" % id)
 		return true
 		
 	var timestamp = _timestamps[id]
+	logger.trace("Checking dependencies for [b]%s[/b]" % id)
+	logger.trace("- Dependencies: %s" % str(_dependencies.get(id, [])))
+	
 	for dep_id in _dependencies.get(id, []):
+		logger.trace("- Checking dependency [b]%s[/b] (timestamp: %d vs %d)" % [
+			dep_id,
+			_timestamps.get(dep_id, 0),
+			timestamp
+		])
 		if _timestamps.get(dep_id, 0) > timestamp:
-			logger.debug("Expression %s needs update due to dependency %s" % [id, dep_id])
+			logger.trace("Cache invalidated for [b]%s[/b]: dependency [b]%s[/b] changed" % [id, dep_id])
 			return true
+			
+	logger.debug("Cache hit for [b]%s[/b] (all dependencies unchanged)" % id)
 	return false
 
 func add_dependency(dependent: String, dependency: String) -> void:
@@ -44,28 +59,22 @@ func add_dependency(dependent: String, dependency: String) -> void:
 		_dependencies[dependent] = []
 	if not dependency in _dependencies[dependent]:
 		_dependencies[dependent].append(dependency)
+		logger.trace("Added forward dependency: [b]%s[/b] depends on [b]%s[/b]" % [dependent, dependency])
 	
 	# Add reverse dependency for faster invalidation
 	if dependency not in _reverse_dependencies:
 		_reverse_dependencies[dependency] = []
 	if not dependent in _reverse_dependencies[dependency]:
 		_reverse_dependencies[dependency].append(dependent)
-		
-	logger.debug("Added dependency: %s depends on %s" % [dependent, dependency])
+		logger.trace("Added reverse dependency: [b]%s[/b] affects [b]%s[/b]" % [dependency, dependent])
 
 ## Only invalidate the dependents of the changed value
 func invalidate_dependents(id: String) -> void:
-	var start_time := Time.get_ticks_msec()
 	var visited := {}
 	_invalidate_dependent_recursive(id, visited)
 	
-	var end_time := Time.get_ticks_msec()
-	if visited.size() > 0:
-		logger.trace("Invalidated %d dependent expressions in %d ms for %s" % [
-			visited.size(),
-			end_time - start_time,
-			id
-		])
+	if visited:
+		logger.debug("Invalidated dependents for [b]%s[/b]: %s" % [id, visited.keys()])
 
 func _invalidate_dependent_recursive(id: String, visited: Dictionary) -> void:
 	# Don't invalidate the source value, only its dependents
@@ -95,7 +104,15 @@ func remove_expression(id: String) -> void:
 	
 	_reverse_dependencies.erase(id)
 	logger.trace("Removed expression %s from cache" % id)
-
+	
+func get_debug_info(id: String) -> Dictionary:
+	return {
+		"value": _values.get(id, null),
+		"timestamp": _timestamps.get(id, 0),
+		"dependencies": _dependencies.get(id, []),
+		"reverse_dependencies": _reverse_dependencies.get(id, [])
+	}
+	
 func get_stats() -> Dictionary:
 	return {
 		"cached_values": _values.size(),

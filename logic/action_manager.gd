@@ -173,17 +173,23 @@ func conditions_met(action: Action) -> bool:
 	var state := get_or_create_state(action.id)
 
 	if state.current_cooldown > 0:
+		logger.trace("[b]%s[/b] on cooldown: %.2f" % [action.id, state.current_cooldown])
 		return false
 
 	# Reset the was_stopped flag when cooldown expires
 	if state.was_stopped and state.current_cooldown <= 0:
 		state.was_stopped = false
 	
-	return action.can_start(entity)
+	logger.debug("Checking conditions for action [b]%s[/b]" % action.id)
+	var can_start = action.can_start(entity)
+	logger.debug("Action [b]%s[/b] can_start = %s" % [action.id, can_start])
+	return can_start
 
 func _select_next_action() -> void:
-	logger.trace("Selecting next action")
+	logger.debug("=== Selecting next action ===")
 	var next_action: Action = get_next_action()
 	if next_action:
-		logger.debug("Selected action %s" % [next_action.id])
+		logger.debug("Selected action [b]%s[/b]" % [next_action.id])
 		_current_action_id = next_action.id
+	else:
+		logger.debug("No action selected")
