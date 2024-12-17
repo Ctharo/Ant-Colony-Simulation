@@ -11,8 +11,8 @@ var navigation_poly: NavigationPolygon
 
 # Spawn control parameters
 const ANTS_TO_SPAWN = 1
-const BATCH_SIZE = 3  # Number of ants to spawn per batch
-const FRAMES_BETWEEN_BATCHES = 20  # Frames to wait between batches
+const BATCH_SIZE = 1  # Number of ants to spawn per batch
+const FRAMES_BETWEEN_BATCHES = 5  # Frames to wait between batches
 
 # Spawning state
 var _pending_spawns: int = 0

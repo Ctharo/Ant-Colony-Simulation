@@ -121,7 +121,7 @@ func _process(_delta: float) -> void:
 		role_label.text = "Role: %s" % current_ant.role
 		queue_redraw()
 		
-func _on_ant_died() -> void:
+func _on_ant_died(_ant: Ant) -> void:
 	unselect_current()
 
 func _on_root_gui_input(event: InputEvent) -> void:

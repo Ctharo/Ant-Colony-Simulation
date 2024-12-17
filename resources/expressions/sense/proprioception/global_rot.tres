@@ -5,8 +5,9 @@
 [resource]
 script = ExtResource("1_cw1mx")
 name = "global_rot"
-force_recalculate = true
+force_recalculate = false
 type = 2
 expression_string = "global_rotation"
 nested_expressions = Array[ExtResource("1_cw1mx")]([])
 description = ""
+is_property_read = true

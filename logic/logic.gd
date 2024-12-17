@@ -1,43 +1,48 @@
 class_name Logic
 extends Resource
 
-@export var name: String :
+@export var name: String:
 	set(value):
 		name = value
 		id = name.to_snake_case()
-@export var force_recalculate: bool = false
-@export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY",
-			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES",
-			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") var type: int = 19
+
 @export_multiline var expression_string: String
 @export var nested_expressions: Array[Logic]
 @export var description: String
 
-var id: String
+@export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY",
+			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES",
+			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") 
+var type: int = 19
 
+var id: String
 var _last_value: Variant
 
-signal value_changed(new_value: Variant)
+signal value_changed(new_value: Variant, expression_id: String)
 signal dependencies_changed
 
+## If there are no nested expressions and no caching is desired,
+## this indicates the expression should be evaluated every time
+var always_evaluate: bool:
+	get:
+		return nested_expressions.is_empty()
+
 func set_value(new_value: Variant) -> void:
-	if _last_value != new_value:  # Only emit if value actually changed
-		print("Value for %s changing from %s to %s" % [id, _last_value, new_value])
+	if _last_value != new_value:
 		_last_value = new_value
 		value_changed.emit(new_value, id)
 		
 func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Variant:
-	var result = eval_system.get_value(self, force_update or force_recalculate)
-	if result != _last_value:  # Check if value has changed
+	var result = eval_system.get_value(self, force_update)
+	if result != _last_value:
 		set_value(result)
 	return result
 
-
 func _get_property_list() -> Array:
-	var props = []
-	props.append({
+	return [{
 		"name": "_runtime_state",
 		"type": TYPE_DICTIONARY,
 		"usage": PROPERTY_USAGE_STORAGE
-	})
-	return props
+	}]
+
+# State handling for expression evaluation

@@ -7,10 +7,12 @@
 [sub_resource type="Resource" id="Resource_tuaon"]
 script = ExtResource("3_2rfr0")
 name = "colony influence repel weight"
+force_recalculate = false
 type = 2
 expression_string = "1"
 nested_expressions = Array[ExtResource("3_2rfr0")]([])
 description = ""
+is_property_read = false
 
 [resource]
 script = ExtResource("2_xjw1a")

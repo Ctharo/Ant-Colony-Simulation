@@ -13,11 +13,8 @@ func _init() -> void:
 
 func initialize(p_entity: Node, p_eval_system: EvaluationSystem) -> void:
 	entity = p_entity
-	entity.position_changed.connect(_on_entity_position_changed)
 	eval_system = p_eval_system
 
-func _on_entity_position_changed() -> void:
-	position_changed = true
 
 func register_influences(move_action: Move) -> void:
 	for influence in move_action.influences:
@@ -35,7 +32,7 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 
 	for influence in influences:
 		var weight = eval_system.get_value(influence.weight)
-		var dir = eval_system.get_value(influence.direction, position_changed).normalized()
+		var dir = eval_system.get_value(influence.direction).normalized()
 		total_weight += weight
 		weighted_direction += dir * weight
 

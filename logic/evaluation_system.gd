@@ -1,19 +1,8 @@
 class_name EvaluationSystem
 extends Node
 
-class ExpressionState:
-	var expression: Expression
-	var logic_expression: Logic
-	var is_parsed: bool = false
-	## Tracks if the value has actually changed in the last calculation
-	var has_value_changed: bool = false
-
-	func _init(p_logic: Logic) -> void:
-		expression = Expression.new()
-		logic_expression = p_logic
-
 #region Properties
-# Map of expression resource ID to entity to state
+## Map of expression resource ID to entity to state
 var _states: Dictionary = {}
 ## Evaluation cache system
 var _cache: EvaluationCache 
@@ -25,7 +14,33 @@ var entity: Node
 var logger: Logger
 
 #endregion
-
+class ExpressionState:
+	var expression: Expression
+	var compiled_expression: String
+	var logic: Logic  # Store reference to the Logic object
+	var is_parsed: bool = false
+	
+	func _init(p_logic: Logic) -> void:
+		expression = Expression.new()
+		compiled_expression = p_logic.expression_string
+		logic = p_logic
+		
+	func parse(variables: PackedStringArray) -> Error:
+		if is_parsed:
+			return OK
+			
+		var error = expression.parse(compiled_expression, variables)
+		is_parsed = error == OK
+		return error
+		
+	func execute(bindings: Array, context: Object) -> Variant:
+		if not is_parsed:
+			return null
+		return expression.execute(bindings, context)
+		
+	func has_error() -> bool:
+		return expression.has_execute_failed()
+		
 #region Cache Statistics Structure
 class ExpressionStats:
 	var hits: int = 0
@@ -59,81 +74,66 @@ func get_or_create_state(expression: Logic) -> ExpressionState:
 
 	if not _states.has(expression.id):
 		_states[expression.id] = ExpressionState.new(expression)
-		_stats[expression.id] = ExpressionStats.new()
+		
 	return _states[expression.id]
-
+		
 func register_expression(expression: Logic) -> void:
-	if not expression:
-		return
-
 	if expression.id.is_empty():
 		expression.id = str(expression.get_instance_id())
-
+		
+	# Debug logging
 	if expression.id not in DebugLogger.registered_logic:
-		DebugLogger.debug(DebugLogger.Category.LOGIC,'Registering logic [b]%s[/b] with expression: "%s"' % [expression.id, expression.expression_string])
+		DebugLogger.debug(
+			DebugLogger.Category.LOGIC,
+			'Registering logic [b]%s[/b] with expression: "%s"' % [
+				expression.id, 
+				expression.expression_string
+			]
+		)
 		DebugLogger.registered_logic.append(expression.id)
 		
-	# Connect to value changed signal
+	# Connect signals for cache invalidation
 	if not expression.value_changed.is_connected(_on_expression_value_changed):
 		expression.value_changed.connect(_on_expression_value_changed)
+	if not expression.dependencies_changed.is_connected(_on_expression_dependencies_changed):
+		expression.dependencies_changed.connect(_on_expression_dependencies_changed)
 		
+	# Create and parse state
 	var state := get_or_create_state(expression)
 	if not state:
 		return
-
+		
 	if not state.is_parsed:
 		_parse_expression(expression)
-
+		
+	# Register nested expressions and dependencies
 	for nested in expression.nested_expressions:
 		if nested == null:
 			push_error("Cannot register null nested expression")
 			return
+			
 		register_expression(nested)
 		_cache.add_dependency(expression.id, nested.id)
+
 
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	assert(expression != null and not expression.id.is_empty())
 
-	var state := get_or_create_state(expression)
-	if not state:
-		push_error("No state found for expression: %s" % expression)
-		return null
-
-	var stats = _stats[expression.id]
-	
-	# Check if any force_recalculate dependencies have changed values
-	var should_recalculate = force_update
-	if expression.force_recalculate:
-		should_recalculate = true
-	else:
-		for nested in expression.nested_expressions:
-			if nested.force_recalculate:
-				var nested_state = get_or_create_state(nested)
-				if nested_state and nested_state.has_value_changed:
-					should_recalculate = true
-					break
-
-	if _cache.needs_evaluation(expression.id) or should_recalculate:
-		stats.misses += 1
-		var old_value = _cache.get_value(expression.id)
-		var result = _calculate(state)
+	# If no nested expressions, always evaluate
+	if expression.always_evaluate:
+		if expression.id == "energy_percentage":
+			pass
 		
-		# Track if the value actually changed
-		state.has_value_changed = old_value != result
+		return _calculate(expression.id)
 		
-		logger.trace("Result calculated for expression %s: %s due to %s" % [
-			expression.id, 
-			result, 
-			"force_update" if force_update else 
-			"force_recalculate" if expression.force_recalculate else 
-			"cache needs_evaluation"
-		])
-		
+	# Otherwise, check cache and dependencies
+	if force_update or _cache.needs_evaluation(expression.id):
+		var result = _calculate(expression.id)
 		_cache.set_value(expression.id, result)
-		expression.set_value(result)
+		if expression.id == "low_energy":
+			pass
 		return result
-
-	stats.hits += 1
+		
 	return _cache.get_value(expression.id)
 
 func _parse_expression(expression: Logic) -> void:
@@ -149,39 +149,38 @@ func _parse_expression(expression: Logic) -> void:
 		if nested.id.is_empty():
 			push_error("Nested expression missing ID (should be generated from name): %s" % nested)
 			return
-		variable_names.append(nested.id)  # Using snake_case ID consistently
+		variable_names.append(nested.id)
 
 	if expression.id not in DebugLogger.parsed_expression_strings:
-		
-		DebugLogger.debug(DebugLogger.Category.LOGIC, "Parsing expression [b]%s[/b]%s" % [
-			expression.id,
-			" with variables: %s" % str(variable_names) if variable_names else ""
-		])
+		DebugLogger.debug(
+			DebugLogger.Category.LOGIC, 
+			"Parsing expression [b]%s[/b]%s" % [
+				expression.id,
+				" with variables: %s" % str(variable_names) if variable_names else ""
+			]
+		)
 		DebugLogger.parsed_expression_strings.append(expression.id)
 		
-	var error = state.expression.parse(expression.expression_string,
-									 PackedStringArray(variable_names))
+	var error = state.parse(PackedStringArray(variable_names))
 	if error != OK:
 		push_error('Failed to parse expression "%s": %s' % [expression.name, expression.expression_string])
 		return
 
-	state.is_parsed = true
-
-func _calculate(state: ExpressionState) -> Variant:
+func _calculate(expression_id: String) -> Variant:
+	var state: ExpressionState = _states[expression_id]
 	if not state.is_parsed:
 		return null
 
+	# Get values from nested expressions if any
 	var bindings = []
-	for nested in state.logic_expression.nested_expressions:
+	for nested in state.logic.nested_expressions:
 		bindings.append(get_value(nested))
 
-	var result = state.expression.execute(bindings, entity)
-	if state.expression.has_execute_failed():
-		push_error('Failed to execute expression %s: "%s"' % [
-			state.logic_expression.id, 
-			state.logic_expression.expression_string
-		])
+	var result = state.execute(bindings, entity)
+	if state.has_error():
+		push_error('Failed to execute expression: "%s"' % state.compiled_expression)
 		return null
+		
 	return result
 
 ## Get cache statistics for a specific expression
@@ -218,5 +217,8 @@ func get_cache_stats() -> Dictionary:
 #region Signal Handlers
 ## Handle value changes in expressions
 func _on_expression_value_changed(_value: Variant, expression_id: String) -> void:
-	_cache.invalidate(expression_id)
+	_cache.invalidate_dependents(expression_id)
+	
+func _on_expression_dependencies_changed(expression_id: String) -> void:
+	_cache.invalidate_dependents(expression_id)
 #endregion

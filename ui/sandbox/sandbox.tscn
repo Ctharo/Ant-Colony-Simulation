@@ -9,6 +9,7 @@ anchors_preset = 0
 script = ExtResource("1_dcr83")
 
 [node name="AntInfoPanel" parent="." instance=ExtResource("2_rdqfb")]
+layout_mode = 0
 mouse_filter = 2
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

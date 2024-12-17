@@ -5,8 +5,9 @@
 [resource]
 script = ExtResource("1_c7ltp")
 name = "global pos"
-force_recalculate = true
+force_recalculate = false
 type = 4
 expression_string = "global_position"
 nested_expressions = Array[ExtResource("1_c7ltp")]([])
 description = ""
+is_property_read = true
