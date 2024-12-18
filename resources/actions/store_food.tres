@@ -12,6 +12,7 @@ priority = 60
 description = ""
 cooldown = 0.0
 duration = 0.0
+energy_coefficient = 0.0
 params = {}
 start_condition_expression = "is_carrying_food and not can_work"
 stop_condition_expression = "not is_carrying_food or not can_work"

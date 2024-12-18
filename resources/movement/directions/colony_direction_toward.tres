@@ -6,8 +6,7 @@
 [resource]
 script = ExtResource("1_80mmx")
 name = "colony direction toward"
-force_recalculate = false
-type = 4
 expression_string = "global_pos.direction_to(colony.global_position)"
 nested_expressions = Array[ExtResource("1_80mmx")]([ExtResource("2_oqcvm")])
 description = ""
+type = 4

@@ -14,6 +14,7 @@ priority = 40
 description = ""
 cooldown = 0.0
 duration = 0.0
+energy_coefficient = 0.0
 params = {}
 start_condition_expression = "food_in_reach and can_work and should_work"
 stop_condition_expression = "not (can_work and should_work) or is_overloaded or not food_in_reach"

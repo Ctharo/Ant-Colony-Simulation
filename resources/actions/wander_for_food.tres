@@ -1,17 +1,18 @@
-[gd_resource type="Resource" script_class="Move" load_steps=9 format=3 uid="uid://dhqlu84b60xip"]
+[gd_resource type="Resource" script_class="Move" load_steps=10 format=3 uid="uid://dhqlu84b60xip"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_evkbf"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_xhif2"]
-[ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/movement/influences/forward_influence.tres" id="2_ch4ju"]
+[ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influences/forward_influence.tres" id="2_pff12"]
 [ext_resource type="Script" path="res://logic/actions/move.gd" id="2_um3s7"]
-[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/movement/influences/random_influence.tres" id="3_1xw0e"]
+[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="3_dcild"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="3_qceye"]
+[ext_resource type="Resource" uid="uid://c14c2ty4as0jm" path="res://resources/influences/colony_repel_influence.tres" id="4_0i33x"]
 [ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="4_5k8w3"]
-[ext_resource type="Resource" uid="uid://c14c2ty4as0jm" path="res://resources/movement/influences/colony_influence_repel.tres" id="4_slg37"]
+[ext_resource type="Resource" uid="uid://duar8dik4bi45" path="res://resources/influences/exploration_influence.tres" id="5_rlw5b"]
 
 [resource]
 script = ExtResource("2_um3s7")
-influences = Array[ExtResource("1_xhif2")]([ExtResource("2_ch4ju"), ExtResource("3_1xw0e"), ExtResource("4_slg37")])
+influences = Array[ExtResource("1_xhif2")]([ExtResource("2_pff12"), ExtResource("3_dcild"), ExtResource("4_0i33x"), ExtResource("5_rlw5b")])
 face_direction = true
 TARGET_DISTANCE = 45.0
 RECALCULATION_THRESHOLD = 5.0

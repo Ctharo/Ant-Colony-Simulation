@@ -25,7 +25,6 @@ func _init() -> void:
 	
 func _ready() -> void:
 	initialize()
-
 		
 func initialize() -> bool:
 	# Setup navigation before spawning ants
@@ -301,6 +300,7 @@ func _spawn_batch(size: int) -> void:
 	_pending_spawns -= size
 	for ant in ants:
 		ant.ant_selected.connect(_on_ant_selected)
+		ant.ant_deselected.connect(_on_ant_deselected)
 
 
 func _finish_spawning() -> void:
@@ -311,6 +311,8 @@ func _finish_spawning() -> void:
 func _on_ant_selected(ant: Ant):
 	ant_info_panel.show_ant_info(ant)
 
+func _on_ant_deselected(ant: Ant):
+	ant_info_panel.deselect_current()
 
 func _on_gui_input(event: InputEvent) -> void:
 	report()

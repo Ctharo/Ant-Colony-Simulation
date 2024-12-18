@@ -12,10 +12,15 @@ const STYLE = {
 	"SELECTION_CIRCLE_COLOR": Color(1, 1, 1, 0.5),
 	"SELECTION_CIRCLE_RADIUS": 12.0,
 	"SELECTION_CIRCLE_WIDTH": 2.0,
-	"OVERALL_INFLUENCE_COLOR": Color(1.0, 1.0, 1.0),  # Keep overall influence white
-	"INFLUENCE_ARROW_LENGTH": 50.0,
-	"INFLUENCE_ARROW_WIDTH": 2.0,
-	"INFLUENCE_HEAD_SIZE": 8.0
+	"INFLUENCE_SETTINGS": {
+		"OVERALL_COLOR": Color(1.0, 1.0, 1.0),  # Keep overall influence white
+		"ARROW_LENGTH": 50.0,        # Base length for the overall influence arrow
+		"ARROW_WIDTH": 2.0,          # Base width for influence arrows
+		"ARROW_HEAD_SIZE": 8.0,      # Base size for arrow heads
+		"OVERALL_SCALE": 1.5,        # Scale factor for overall influence arrow
+		"IGNORE_TYPES": ["random"],  # Influence types to ignore in visualization
+		"MIN_WEIGHT_THRESHOLD": 0.01 # Minimum weight to show an influence
+	}
 }
 
 var _influence_colors: Dictionary = {}
@@ -65,10 +70,9 @@ func create_stylebox(color: Color) -> StyleBoxFlat:
 	return style
 
 func show_ant_info(ant: Ant) -> void:
+	deselect_current()
 	if not ant:
-		unselect_current()
 		return
-		
 	current_ant = ant
 	show()
 	
@@ -77,6 +81,8 @@ func show_ant_info(ant: Ant) -> void:
 		var current_action = ant.action_manager._actions[ant.action_manager._current_action_id]
 		if current_action is Move:
 			update_legend(current_action.influences)
+		if ant.heatmap:
+			ant.heatmap.set_debug_draw(true)
 			
 	# Update basic info
 	title_label.text = "Ant #%d" % ant.id
@@ -100,54 +106,76 @@ func clear_legend() -> void:
 	for child in influences_legend.get_children():
 		child.queue_free()
 	_influence_colors.clear()
-
-func get_influence_color(influence_name: String) -> Color:
-	if influence_name not in _influence_colors:
-		# Generate a random saturated color
-		_influence_colors[influence_name] = Color.from_hsv(
-			randf(),  # Random hue
-			0.8,      # High saturation
-			0.9       # High value/brightness
-		)
-	return _influence_colors[influence_name]
 	
+# Update the legend update function to pass weights
 func update_legend(influences: Array) -> void:
 	clear_legend()
 	
 	# Add overall influence to legend first
-	add_legend_entry("Overall", STYLE.OVERALL_INFLUENCE_COLOR)
+	add_legend_entry("Overall", STYLE.INFLUENCE_SETTINGS.OVERALL_COLOR, 1.0)
 	
 	# Add divider
 	var separator = HSeparator.new()
 	influences_legend.add_child(separator)
 	
-	# Add each influence
-	for influence: Influence in influences:
-		add_legend_entry(influence.name, get_influence_color(influence.name))
+	# Get total magnitude for relative weights
+	var influence_manager: InfluenceManager = current_ant.action_manager._states[current_ant.action_manager._current_action_id].influence_manager
+	var total_magnitude = influence_manager.calculate_weighted_direction(influences).length()
+	
+	# Add each non-ignored influence with its relative weight
+	for influence in influences:
+		var weight = influence_manager.eval_system.get_value(influence.weight)
+		var relative_weight = weight / total_magnitude if total_magnitude > 0 else 0.0
+		var color: Color = influence.color if not _should_ignore_influence(influence) else Color(Color.WHITE, 0)
+		add_legend_entry(influence.name, influence.color, relative_weight)
 
-func add_legend_entry(name: String, color: Color) -> void:
+# Modified legend entry function with weight display
+func add_legend_entry(name: String, color: Color, relative_weight: float) -> void:
 	var entry = HBoxContainer.new()
 	
-	# Color indicator
-	var color_rect = ColorRect.new()
-	color_rect.custom_minimum_size = Vector2(16, 16)
-	color_rect.color = color
-	entry.add_child(color_rect)
+	# Color indicator	
+	var influence_type = name.to_snake_case().trim_suffix("_influence")
+	if not influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
+		var color_rect = ColorRect.new()
+		color_rect.custom_minimum_size = Vector2(16, 16)
+		color_rect.color = color
+		entry.add_child(color_rect)
+	else:
+		var s = Control.new()
+		s.custom_minimum_size = Vector2(17, 0)
+		entry.add_child(s)
 	
 	# Spacing
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(5, 0)
 	entry.add_child(spacer)
 	
-	# Label
-	var label = Label.new()
-	label.text = name.capitalize()
-	entry.add_child(label)
+	# Name label
+	var name_label = Label.new()
+	name_label.text = name.trim_suffix(" influence").capitalize()
+	entry.add_child(name_label)
+	
+	# Weight label with fixed width for alignment
+	var weight_label = Label.new()
+	weight_label.custom_minimum_size.x = 70
+	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	weight_label.text = "%.1f%%" % (relative_weight * 100)
+	
+	# Add some spacing before the percentage
+	var weight_spacer = Control.new()
+	weight_spacer.custom_minimum_size = Vector2(10, 0)
+	entry.add_child(weight_spacer)
+	
+	entry.add_child(weight_label)
 	
 	influences_legend.add_child(entry)
 
-func unselect_current() -> void:
+func deselect_current() -> void:
+
+	if current_ant and current_ant.heatmap:
+		current_ant.heatmap.set_debug_draw(false)
 	current_ant = null
+
 	hide()
 	queue_redraw()
 	
@@ -177,23 +205,36 @@ func update_bar_color(bar: ProgressBar, value: float, normal_color: Color) -> vo
 		style.bg_color = STYLE.LOW_COLOR
 
 func _process(_delta: float) -> void:
-	if current_ant and is_visible():
-		update_status_bars()
-		# Update action text
-		action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
-		# Update food text
-		food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
-		# Update role text
-		role_label.text = "Role: %s" % current_ant.role
-		queue_redraw()
-		
+	_update_ui()
+	queue_redraw()
+
+func _update_ui() -> void:
+	if not (current_ant and is_visible()):
+		return
+	
+	update_status_bars()
+	# Update action text
+	action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
+	# Update food text
+	food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
+	# Update role text
+	role_label.text = "Role: %s" % current_ant.role
+	
+	
+	if Engine.get_physics_frames() % 20 != 0:
+		return
+	if current_ant.action_manager and current_ant.action_manager._current_action_id:
+		var current_action = current_ant.action_manager._actions[current_ant.action_manager._current_action_id]
+		if current_action is Move:
+			update_legend(current_action.influences)
+			
 func _on_ant_died(_ant: Ant) -> void:
-	unselect_current()
+	deselect_current()
 
 func _on_root_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
-			unselect_current()  # Right click to unselect
+			deselect_current()  # Right click to unselect
 
 func _draw() -> void:
 	if current_ant and current_ant.is_inside_tree():
@@ -217,49 +258,76 @@ func _draw() -> void:
 func draw_influences(move_action: Move) -> void:
 	var ant_pos = current_ant.global_position
 	var influence_manager = current_ant.action_manager._states[move_action.id].influence_manager
-	var influences = move_action.influences
 	
-	# First calculate total influence using the manager
-	var total_direction = influence_manager.calculate_weighted_direction(influences)
+	# Filter out ignored influence types
+	var valid_influences = move_action.influences.filter(
+		func(influence): return not _should_ignore_influence(influence)
+	)
 	
-	# Calculate individual influences and find max weight for scaling
-	var max_weight = 0.0
-	var influence_data = []  # Store calculated influences for drawing
+	# Calculate total influence first
+	var total_direction = influence_manager.calculate_weighted_direction(valid_influences)
+	var total_magnitude = total_direction.length()
 	
-	for influence in influences:
+	if total_magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+		return
+		
+	# Normalize total direction
+	total_direction = total_direction.normalized()
+	
+	# Calculate individual influences and collect data
+	var influence_data = []
+	
+	for influence in valid_influences:
 		var weight = influence_manager.eval_system.get_value(influence.weight)
+		if weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+			
 		var direction = influence_manager.eval_system.get_value(influence.direction).normalized()
-		max_weight = max(max_weight, weight)
+		
+		# Scale weight relative to total magnitude
+		var relative_weight = weight / total_magnitude
+		
 		influence_data.append({
-			"weight": weight,
+			"weight": relative_weight,  # Now relative to total
 			"direction": direction,
+			"color": influence.color,
 			"name": influence.name
 		})
 	
-	# Scale factor for arrow lengths
-	var scale_factor = STYLE.INFLUENCE_ARROW_LENGTH / max(max_weight, 0.01)
+	# Sort influences by weight/length (shortest first)
+	influence_data.sort_custom(
+		func(a, b): return a.weight < b.weight
+	)
+	
+	# Draw overall influence arrow first (on bottom)
+	var overall_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
+	draw_arrow(
+		ant_pos,
+		ant_pos + total_direction * overall_length,
+		STYLE.INFLUENCE_SETTINGS.OVERALL_COLOR,
+		STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE,
+		STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
+	)
 	
 	# Draw individual influence arrows
 	for data in influence_data:
-		var influence_vector = data.direction * data.weight * scale_factor
+		var arrow_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * data.weight * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
+		var influence_vector = data.direction * arrow_length
+		
 		draw_arrow(
 			ant_pos,
 			ant_pos + influence_vector,
-			get_influence_color(data.name),
-			STYLE.INFLUENCE_ARROW_WIDTH,
-			STYLE.INFLUENCE_HEAD_SIZE
+			data.color,
+			STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH,
+			STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE
 		)
-	
-	# Draw overall influence arrow
-	if total_direction != Vector2.ZERO:
-		draw_arrow(
-			ant_pos,
-			ant_pos + total_direction * STYLE.INFLUENCE_ARROW_LENGTH,
-			STYLE.OVERALL_INFLUENCE_COLOR,
-			STYLE.INFLUENCE_ARROW_WIDTH * 1.5,  # Slightly thicker
-			STYLE.INFLUENCE_HEAD_SIZE * 1.2     # Slightly larger head
-		)
-			
+
+		
+## Check if an influence should be ignored in visualization
+func _should_ignore_influence(influence: Influence) -> bool:
+	var influence_type = influence.name.to_snake_case().trim_suffix("_influence")
+	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
+
 func draw_arrow(start: Vector2, end: Vector2, color: Color, width: float, head_size: float) -> void:
 	# Draw main line
 	draw_line(start, end, color, width)

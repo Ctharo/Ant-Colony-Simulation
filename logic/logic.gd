@@ -44,5 +44,3 @@ func _get_property_list() -> Array:
 		"type": TYPE_DICTIONARY,
 		"usage": PROPERTY_USAGE_STORAGE
 	}]
-
-# State handling for expression evaluation

@@ -14,6 +14,8 @@ signal pheromone_sensed
 signal damaged
 signal died(ant: Ant)
 signal ant_selected(ant: Ant)
+signal ant_deselected(ant: Ant)
+
 #endregion
 
 #region Constants
@@ -52,6 +54,7 @@ var target_position: Vector2 :
 	set(value):
 		nav_agent.set_target_position(value)
 
+var heatmap: MovementHeatmap 
 
 
 ## Task update timer
@@ -99,6 +102,8 @@ func _init() -> void:
 func _ready() -> void:
 	# Initialize components
 	action_manager.initialize(self)
+	heatmap = MovementHeatmap.new()
+	add_child(heatmap)
 
 	# Initialize state
 	_initialize_state()
@@ -113,9 +118,7 @@ func _input_event(_viewport, event, _shape_idx):
 			ant_selected.emit(self)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			# Get reference to info panel (adjust the path as needed)
-			var info_panel = get_node("res://ui/ant/ant_info_panel.tscn")
-			if info_panel:
-				info_panel.unselect_current()
+			ant_deselected.emit(self)
 
 func _initialize_state() -> void:
 	energy_level = randi_range(50, energy_max)

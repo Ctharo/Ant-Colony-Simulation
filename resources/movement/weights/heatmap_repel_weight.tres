@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bu1fqvhv2mhb5"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_s0qnj"]
+
+[resource]
+script = ExtResource("1_s0qnj")
+name = "heatmap repel weight"
+expression_string = "min(1.0, heatmap.get_heat_at_position(global_position))"
+nested_expressions = Array[ExtResource("1_s0qnj")]([])
+description = ""
+type = 2

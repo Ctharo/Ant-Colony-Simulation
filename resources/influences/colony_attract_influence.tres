@@ -14,7 +14,7 @@ type = 2
 
 [resource]
 script = ExtResource("2_0s8jm")
-name = "colony influence attract"
+name = "colony attract influence"
 direction = ExtResource("1_cs0q7")
 weight = SubResource("Resource_d0i27")
-color = Color(0, 0, 0, 1)
+color = Color(1, 0, 0, 1)

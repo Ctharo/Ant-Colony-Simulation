@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://c14c2ty4as0jm"]
+
+[ext_resource type="Resource" uid="uid://l3wy8hfiuw2c" path="res://resources/movement/directions/colony_direction_away.tres" id="1_3xpjk"]
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_sie77"]
+[ext_resource type="Resource" uid="uid://drleodpwy1qvk" path="res://resources/movement/weights/colony_repel_weight.tres" id="3_ojkyx"]
+
+[resource]
+script = ExtResource("2_sie77")
+name = "colony repel influence"
+direction = ExtResource("1_3xpjk")
+weight = ExtResource("3_ojkyx")
+color = Color(1, 0, 0, 1)
