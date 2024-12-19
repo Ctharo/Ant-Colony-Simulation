@@ -31,8 +31,11 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 	var weighted_direction = Vector2.ZERO
 
 	for influence in influences:
+		if influence.id == "exploration_influence":
+			assert(false, "Follow the code to see why exploration isn't working")
 		var weight = eval_system.get_value(influence.weight)
 		var dir = eval_system.get_value(influence.direction).normalized()
+
 		total_weight += weight
 		weighted_direction += dir * weight
 

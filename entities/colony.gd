@@ -26,13 +26,9 @@ func _ready() -> void:
 	HeatmapManager.register_colony(self)
 	HeatmapManager.set_debug_draw(self, true)
 
-
 func _exit_tree() -> void:
 	HeatmapManager.unregister_colony(self)
 	
-func get_navigation_map() -> RID:
-	return NavigationServer2D.get_maps()[0]
-
 func get_ants() -> Array:
 	return AntManager.by_colony(self).as_array()
 	
