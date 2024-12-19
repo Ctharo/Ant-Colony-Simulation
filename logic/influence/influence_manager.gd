@@ -23,7 +23,7 @@ func register_influences(move_action: Move) -> void:
 
 func calculate_target_position(distance: float, influences: Array[Influence]) -> Vector2:
 	var direction = calculate_weighted_direction(influences)
-	var actual_distance = entity.rng.randfn(distance, 15)
+	var actual_distance = entity.rng.randfn(distance, distance * 0.33) # deviation from distance
 	return entity.global_position + direction * actual_distance
 
 func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
@@ -31,8 +31,8 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 	var weighted_direction = Vector2.ZERO
 
 	for influence in influences:
-		if influence.id == "exploration_influence":
-			assert(false, "Follow the code to see why exploration isn't working")
+		#if influence.id == "exploration_influence":
+			#assert(false, "Follow the code to see why exploration isn't working")
 		var weight = eval_system.get_value(influence.weight)
 		var dir = eval_system.get_value(influence.direction).normalized()
 

@@ -30,7 +30,7 @@ func _exit_tree() -> void:
 	HeatmapManager.unregister_colony(self)
 	
 func get_ants() -> Array:
-	return AntManager.by_colony(self).as_array()
+	return ants.to_array()
 	
 func _draw() -> void:
 	# Rich brown/dirt color with some transparency
