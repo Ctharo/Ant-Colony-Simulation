@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="Action" load_steps=7 format=3 uid="uid://buj2rlf8e5gux"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_0rw7r"]
+[ext_resource type="Script" path="res://logic/actions/action.gd" id="2_nhcwm"]
+[ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="2_nscr5"]
+[ext_resource type="Resource" uid="uid://cuguxwn32dx48" path="res://resources/expressions/conditions/food_in_reach.tres" id="3_ctbo0"]
+[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="4_8ajsk"]
+[ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="5_85ov0"]
+
+[resource]
+script = ExtResource("2_nhcwm")
+name = "harvest food"
+priority = 40
+description = ""
+cooldown = 0.0
+duration = 0.0
+energy_coefficient = 0.0
+params = {}
+start_condition_expression = "food_in_reach and can_work and should_work"
+stop_condition_expression = "not (can_work and should_work) or is_overloaded or not food_in_reach"
+start_nested_conditions = Array[ExtResource("1_0rw7r")]([ExtResource("3_ctbo0"), ExtResource("2_nscr5"), ExtResource("5_85ov0")])
+stop_nested_conditions = Array[ExtResource("1_0rw7r")]([ExtResource("2_nscr5"), ExtResource("5_85ov0"), ExtResource("4_8ajsk"), ExtResource("3_ctbo0")])

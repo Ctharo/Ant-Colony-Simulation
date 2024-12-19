@@ -56,8 +56,7 @@ func create_ui():
 
 	# Create buttons
 	create_button("Start Simulation", button_container)
-	create_button("Colony Editor", button_container)
-	create_button("Ant Editor", button_container)
+	create_button("Expression Editor", button_container)
 	create_button("Property Browser", button_container)
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
@@ -118,17 +117,7 @@ func animate_ui_elements():
 
 func _on_start_simulation_button_pressed():
 	_info("Start Simulation pressed")
-	transition_to_scene("sandbox")
-
-func _on_colony_editor_button_pressed():
-	_info("Colony Editor pressed")
-	_warn("Colony Editor not yet implemented")
-	#transition_to_scene("colony_editor")
-
-func _on_ant_editor_button_pressed():
-	_info("Ant Editor pressed")
-	_warn("Ant Editor not yet implemented")
-	#transition_to_scene("ant_behavior_editor")
+	transition_to_scene("sandbox","sandbox")
 
 func _on_property_browser_button_pressed():
 	# Instead of transitioning to a scene, create the PropertyBrowser directly
@@ -137,6 +126,10 @@ func _on_property_browser_button_pressed():
 	# Optional: fade out main menu
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
+
+func _on_expression_editor_button_pressed():
+	_info("Expression Editor pressed")
+	transition_to_scene("expression_editor", "expression_editor")
 
 func _on_settings_button_pressed():
 	_info("Settings pressed")
@@ -147,11 +140,12 @@ func _on_settings_button_pressed():
 func _on_quit_button_pressed():
 	get_tree().quit()
 
-func transition_to_scene(scene_name: String):
-	_trace("Transitioning to scene: %s" % scene_name if not scene_name.is_empty() else "N/A")
+func transition_to_scene(scene_name: String, in_folder: String = ""):
+	var path: String = in_folder + "/" if not in_folder.is_empty() else ""
+	_trace("Transitioning to scene: %s" %  path + scene_name if not scene_name.is_empty() else "N/A")
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(Callable(self, "_change_scene").bind(scene_name))
+	tween.tween_callback(Callable(self, "_change_scene").bind(path + scene_name))
 
 func _change_scene(scene_name: String):
 	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://drleodpwy1qvk"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_0hamu"]
+[ext_resource type="Resource" uid="uid://dnup72fdn73rb" path="res://resources/expressions/sense/proprioception/colony/distance_to_colony.tres" id="2_0ibog"]
+
+[resource]
+script = ExtResource("1_0hamu")
+name = "colony repel weight"
+expression_string = "1.25 / (1.0 + pow(distance_to_colony / 500.0, 2)) "
+nested_expressions = Array[ExtResource("1_0hamu")]([ExtResource("2_0ibog")])
+description = "Uses inverse square falloff (1/(1+d²)) which returns close to *first term* when very close to colony"
+type = 2

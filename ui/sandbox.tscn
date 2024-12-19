@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://dwotv13xethd6"]
-
-[ext_resource type="Script" path="res://ui/sandbox.gd" id="1_dcr83"]
-
-[node name="Sandbox" type="Node2D"]
-script = ExtResource("1_dcr83")

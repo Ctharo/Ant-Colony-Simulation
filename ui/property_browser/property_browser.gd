@@ -115,6 +115,7 @@ func _ready() -> void:
 	generate_content()
 	_trace("PropertyBrowser UI initialization complete")
 
+
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -212,18 +213,14 @@ func _on_path_changed(new_path: Path) -> void:
 	if new_path.is_root():
 		return
 
-	var root_node = current_ant.get_root_node(new_path.get_root_name())
+	var root_node = current_ant.get_property(new_path.get_root_name())
 	if not root_node:
 		return
 
 	var node: PropertyNode
-	if new_path.is_root():
-		node = root_node
-	else:
-		node = root_node.find_node(new_path)
-
-	if node:
-		property_manager.update_property_view(node)
+	node = current_ant.get_property(new_path)
+	assert(node)
+	property_manager.update_property_view(node)
 #endregion
 
 #region Public Interface
@@ -235,7 +232,6 @@ func create_ant_to_browse() -> void:
 
 	ant.global_position = _get_random_position()
 	colony.global_position = _get_random_position()
-	ant.foods.add_food(ant.get_property_value("storage.capacity.max"))
 
 	current_ant = ant
 	navigation_manager.set_property_access(ant)
@@ -245,18 +241,18 @@ func create_ant_to_browse() -> void:
 ## Create simulation components
 func generate_content() -> void:
 	create_ant_to_browse()
-	if foods_to_spawn + pheromones_to_spawn + ants_to_spawn > 0:
-		ui_builder.show_loading_indicator(self)
-
-	var to_create = {
-		"food": foods_to_spawn,
-		"pheromones": pheromones_to_spawn,
-		"ants": ants_to_spawn
-	}
-	_staged_creation(to_create, current_ant)
+	#if foods_to_spawn + pheromones_to_spawn + ants_to_spawn > 0:
+		#ui_builder.show_loading_indicator(self)
+#
+	#var to_create = {
+		#"food": foods_to_spawn,
+		#"pheromones": pheromones_to_spawn,
+		#"ants": ants_to_spawn
+	#}
+	#_staged_creation(to_create, current_ant)
 
 ## Create components in stages to avoid freezing
-func _staged_creation(params: Dictionary, main_ant: Ant) -> void:
+func _staged_creation(params: Dictionary, _main_ant: Ant) -> void:
 	var items_created: int = params.values().reduce(func(accum, value): return accum + value, 0)
 
 	var timer = Timer.new()

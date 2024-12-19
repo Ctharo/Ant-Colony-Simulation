@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Action" load_steps=5 format=3 uid="uid://bv5mtrpa7bnxi"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_bqhim"]
+[ext_resource type="Script" path="res://logic/actions/action.gd" id="2_e167r"]
+[ext_resource type="Resource" uid="uid://dorntljrvg8e6" path="res://resources/expressions/conditions/is_carrying_food.tres" id="3_p0q8r"]
+[ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="4_x63e1"]
+
+[resource]
+script = ExtResource("2_e167r")
+name = "store food"
+priority = 60
+description = ""
+cooldown = 0.0
+duration = 0.0
+energy_coefficient = 0.0
+params = {}
+start_condition_expression = "is_carrying_food and not can_work"
+stop_condition_expression = "not is_carrying_food or not can_work"
+start_nested_conditions = Array[ExtResource("1_bqhim")]([ExtResource("3_p0q8r"), ExtResource("4_x63e1")])
+stop_nested_conditions = Array[ExtResource("1_bqhim")]([ExtResource("3_p0q8r"), ExtResource("4_x63e1")])

@@ -60,7 +60,7 @@ func navigate_back() -> void:
 				for i in range(_node_list.item_count):
 					if _node_list.get_item_text(i) == previous.full:
 						_node_list.select(i)
-						var node = _property_access.find_property_node(previous)
+						var node = _property_access.get_property(previous)
 						if node:
 							_update_property_tree(node)
 						break
@@ -73,7 +73,7 @@ func navigate_back() -> void:
 
 ## Handles item selection (single click)
 func handle_selection(path: Path) -> void:
-	var node = _property_access.find_property_node(path)
+	var node = _property_access.get_property(path)
 	if not node:
 		return
 
@@ -86,7 +86,7 @@ func handle_selection(path: Path) -> void:
 
 ## Main method for handling activation of properties or containers
 func handle_activation(path: Path) -> void:
-	var node = _property_access.find_property_node(path)
+	var node = _property_access.get_property(path)
 	if not node:
 		return
 
@@ -148,7 +148,7 @@ func refresh_root_view() -> void:
 	var root_nodes = _property_access.get_root_names()
 	for node_name in root_nodes:
 		_node_list.add_item(node_name)
-		var node = _property_access.find_property_node(Path.parse(node_name))
+		var node = _property_access.get_property(node_name)
 		if node and node.description:
 			_node_list.set_item_tooltip(_node_list.item_count - 1, node.description)
 
@@ -164,7 +164,7 @@ func refresh_view_for_path(path: Path) -> void:
 		refresh_root_view()
 		return
 
-	var node = _property_access.find_property_node(path)
+	var node = _property_access.get_property(path)
 	if node:
 		_update_view_for_node(node, path)
 
@@ -213,7 +213,7 @@ func get_current_path() -> Path:
 #endregion
 
 #region Helper Methods
-func _add_item_with_tooltip(path: Path, node: PropertyNode) -> void:
+func _add_item_with_tooltip(_path: Path, node: PropertyNode) -> void:
 	var idx = _node_list.get_item_count() - 1
 	if idx >= 0:
 		var tooltip = ""

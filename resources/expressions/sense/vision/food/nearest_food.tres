@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://ctwly6vgk7gwo"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_4cd2k"]
+[ext_resource type="Resource" uid="uid://m3jl4m64djj5" path="res://resources/expressions/sense/vision/food/food_in_view.tres" id="2_gn4fv"]
+
+[resource]
+script = ExtResource("1_4cd2k")
+name = "nearest food"
+type = 8
+expression_string = "get_nearest_item(food_in_view)"
+nested_expressions = Array[ExtResource("1_4cd2k")]([ExtResource("2_gn4fv")])
+description = ""
+_runtime_state = {}

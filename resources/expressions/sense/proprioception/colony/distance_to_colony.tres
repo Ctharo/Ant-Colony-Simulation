@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://dnup72fdn73rb"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_d1vnn"]
+[ext_resource type="Resource" uid="uid://dhu375ct2j8ru" path="res://resources/expressions/sense/proprioception/global_pos.tres" id="2_allbc"]
+
+[resource]
+script = ExtResource("1_d1vnn")
+name = "distance to colony"
+expression_string = "global_pos.distance_to(colony.global_position)"
+nested_expressions = Array[ExtResource("1_d1vnn")]([ExtResource("2_allbc")])
+description = ""
+type = 2

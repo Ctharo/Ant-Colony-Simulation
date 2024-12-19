@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://3xn0nefy0al5"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_ma6sc"]
+[ext_resource type="Resource" uid="uid://cnhv58wx0evch" path="res://resources/expressions/stats/energy/derived/energy_percentage.tres" id="2_1sw31"]
+
+[resource]
+script = ExtResource("1_ma6sc")
+name = "full energy"
+force_recalculate = true
+type = 19
+expression_string = "energy_level == energy_max"
+nested_expressions = Array[ExtResource("1_ma6sc")]([ExtResource("2_1sw31")])
+description = ""

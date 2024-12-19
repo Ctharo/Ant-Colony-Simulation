@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://dyh7hwjxorc2u"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_cxgbl"]
+
+[resource]
+script = ExtResource("1_cxgbl")
+name = "carried_food_mass"
+force_recalculate = true
+type = 2
+expression_string = "foods.mass"
+nested_expressions = Array[ExtResource("1_cxgbl")]([])
+description = "Mass of carried foods"

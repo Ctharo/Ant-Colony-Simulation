@@ -1,3 +1,4 @@
+@icon("res://assets/entities/apple-4967157_640.png")
 class_name Food
 extends Node2D
 
@@ -7,6 +8,7 @@ var stored: bool = false
 var carried: bool = false
 var targeted: bool = false
 var is_available: bool : get = _is_available
+
 
 ## The mass of food
 var mass: float:

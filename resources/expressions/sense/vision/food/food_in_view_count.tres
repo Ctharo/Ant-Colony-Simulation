@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://bsk6l1fyed6iq"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_edkh4"]
+[ext_resource type="Resource" uid="uid://m3jl4m64djj5" path="res://resources/expressions/sense/vision/food/food_in_view.tres" id="2_8b8fe"]
+
+[resource]
+script = ExtResource("1_edkh4")
+name = "food in view count"
+type = 1
+expression_string = "food_in_view.size()"
+nested_expressions = Array[ExtResource("1_edkh4")]([ExtResource("2_8b8fe")])
+description = ""
+_runtime_state = {}

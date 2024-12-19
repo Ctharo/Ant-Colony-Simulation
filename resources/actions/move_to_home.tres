@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Move" load_steps=8 format=3 uid="uid://da52ftc75qu25"]
+
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_5jfer"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_kjxdf"]
+[ext_resource type="Script" path="res://logic/actions/move.gd" id="2_7xsp1"]
+[ext_resource type="Resource" uid="uid://boijqqsqldlym" path="res://resources/influences/colony_attract_influence.tres" id="2_c864x"]
+[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="3_hd74u"]
+[ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="4_e3y6r"]
+[ext_resource type="Resource" uid="uid://c6fh5yuhbmhyb" path="res://resources/expressions/conditions/is_in_colony.tres" id="7_qil0s"]
+
+[resource]
+script = ExtResource("2_7xsp1")
+influences = Array[ExtResource("1_5jfer")]([ExtResource("2_c864x"), ExtResource("3_hd74u")])
+face_direction = true
+TARGET_DISTANCE = 45.0
+RECALCULATION_THRESHOLD = 5.0
+name = "move to home"
+priority = 50
+description = ""
+cooldown = 0.0
+duration = 0.0
+energy_coefficient = 1.0
+params = {}
+start_condition_expression = "not can_work"
+stop_condition_expression = "is_in_colony"
+start_nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("4_e3y6r"), ExtResource("7_qil0s")])
+stop_nested_conditions = Array[ExtResource("1_kjxdf")]([ExtResource("7_qil0s")])

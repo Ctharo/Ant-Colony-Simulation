@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://broqntixdgd2i"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_jbaie"]
+[ext_resource type="Resource" uid="uid://c0bqcyotj1esu" path="res://resources/expressions/sense/vision/ant/ants_in_view_friendly.tres" id="2_25vp8"]
+
+[resource]
+script = ExtResource("1_jbaie")
+name = "nearby friendly count"
+type = 1
+expression_string = "ants_in_view_friendly.size()"
+nested_expressions = Array[ExtResource("1_jbaie")]([ExtResource("2_25vp8")])
+description = ""

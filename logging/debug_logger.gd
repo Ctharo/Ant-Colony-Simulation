@@ -14,6 +14,9 @@ enum LogLevel {
 ## Categories for different components
 enum Category {
 	TASK,           ## Task-related messages
+	LOGIC,
+	MOVEMENT,
+	INFLUENCE,
 	ACTION,         ## Action-related messages
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages
@@ -29,10 +32,13 @@ enum Category {
 
 #region Configuration
 ## Current log level
-static var log_level := LogLevel.INFO
+static var log_level := LogLevel.TRACE
 
 ## Show context in logs
 static var show_context: bool = false
+
+static var registered_logic: PackedStringArray = []
+static var parsed_expression_strings: PackedStringArray = []
 
 ## Source filtering configuration
 class SourceFilter:
@@ -49,12 +55,15 @@ static var source_filters: Dictionary = {}
 ## Enabled categories (whitelist)
 static var enabled_categories := {
 	Category.TASK: false,
+	Category.LOGIC: false,
+	Category.INFLUENCE: true,
+	Category.MOVEMENT: false,
 	Category.ACTION: false,
 	Category.BEHAVIOR: false,
 	Category.CONDITION: false,
 	Category.PROPERTY: false,
 	Category.CONTEXT: false,
-	Category.ENTITY: false,
+	Category.ENTITY: true,
 	Category.TRANSITION: false,
 	Category.HIERARCHY: false,
 	Category.UI: false,
@@ -77,6 +86,9 @@ const COLORS := {
 const CATEGORY_NAMES := {
 	Category.TASK: "TASK",
 	Category.ACTION: "ACTION",
+	Category.MOVEMENT: "MOVEMENT",
+	Category.LOGIC: "LOGIC",
+	Category.INFLUENCE: "INFLUENCE",
 	Category.BEHAVIOR: "BEHAVIOR",
 	Category.CONDITION: "CONDITION",
 	Category.PROPERTY: "PROPERTY",

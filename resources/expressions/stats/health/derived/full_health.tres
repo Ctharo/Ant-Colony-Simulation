@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://divsird6hf3dd"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_7b7s4"]
+
+[resource]
+script = ExtResource("1_7b7s4")
+name = "full health"
+force_recalculate = true
+type = 19
+expression_string = "health_level == health_max"
+nested_expressions = Array[ExtResource("1_7b7s4")]([])
+description = ""

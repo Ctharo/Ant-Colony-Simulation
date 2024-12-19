@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://dr625prqfhg1b"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_rdsx1"]
+
+[resource]
+script = ExtResource("1_rdsx1")
+name = "food pheromones sensed"
+force_recalculate = true
+type = 6
+expression_string = "get_sensed_pheromones(\"food\")"
+nested_expressions = Array[ExtResource("1_rdsx1")]([])
+description = ""
