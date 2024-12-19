@@ -5,30 +5,34 @@ extends Action
 @export var face_direction: bool = false
 @export var TARGET_DISTANCE: float = 45.0
 @export var RECALCULATION_THRESHOLD: float = 5.0 # Distance from target to trigger recalculation
+var _is_processing_tick := false
 
 var last_pos: Vector2
 
-func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
+func _execute_tick_internal(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
 	entity = entity as Ant
 	var current_pos = entity.global_position
 	var should_recalculate = false
 	
 	# Check if we need to recalculate path
 	if not entity.target_position:
-		should_recalculate = true
-	elif not entity.nav_agent.is_target_reachable():
-		should_recalculate = true
-	elif entity.nav_agent.is_target_reached():
+		print("No target position")
 		should_recalculate = true
 	elif entity.nav_agent.is_navigation_finished():
+		print("Navigation finished")
 		should_recalculate = true
 
 	# Recalculate target if needed
 	if should_recalculate:
 		var target_pos = state.influence_manager.calculate_target_position(TARGET_DISTANCE, influences)
 		entity.target_position = target_pos
+		print("Set new target: %s" % target_pos)
+		await entity.get_tree().physics_frame  # Wait for navigation to process
 		return
 		
+	var path = entity.nav_agent.get_current_navigation_path()
+	print("Current path size: %d" % path.size())
+	
 	# Get next path position and move
 	var next_pos = entity.nav_agent.get_next_path_position()
 	var direction = (next_pos - current_pos).normalized()
@@ -52,3 +56,16 @@ func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) 
 		energy_loss(entity, energy_coefficient * delta)
 	
 	last_pos = current_pos
+	_is_processing_tick = false
+
+func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
+	# If we're already processing a tick, skip this one
+	if _is_processing_tick:
+		return
+		
+	_is_processing_tick = true
+	
+	# Execute tick logic
+	await _execute_tick_internal(entity, state, delta)
+	
+	_is_processing_tick = false
