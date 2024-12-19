@@ -6,6 +6,7 @@
 [node name="Sandbox" type="Control"]
 layout_mode = 3
 anchors_preset = 0
+mouse_filter = 1
 script = ExtResource("1_dcr83")
 
 [node name="AntInfoPanel" parent="." instance=ExtResource("2_rdqfb")]
