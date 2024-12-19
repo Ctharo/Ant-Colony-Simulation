@@ -22,6 +22,20 @@ var logger: Logger
 func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
 
+func _ready() -> void:
+	HeatmapManager.register_colony(self)
+	HeatmapManager.set_debug_draw(self, true)
+
+
+func _exit_tree() -> void:
+	HeatmapManager.unregister_colony(self)
+	
+func get_navigation_map() -> RID:
+	return NavigationServer2D.get_maps()[0]
+
+func get_ants() -> Array:
+	return AntManager.by_colony(self).as_array()
+	
 func _draw() -> void:
 	# Rich brown/dirt color with some transparency
 	var dirt_color = Color(0.55, 0.27, 0.07, 0.8)  # Earthy brown

@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_s0qnj")
 name = "heatmap repel weight"
-expression_string = "min(1.0, heatmap.get_heat_at_position(global_position))"
+expression_string = "min(1.0, heatmap.get_heat_at_position(colony, global_position))"
 nested_expressions = Array[ExtResource("1_s0qnj")]([])
 description = ""
 type = 2

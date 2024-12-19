@@ -54,7 +54,7 @@ var target_position: Vector2 :
 	set(value):
 		nav_agent.set_target_position(value)
 
-var heatmap: MovementHeatmap 
+@onready var heatmap = HeatmapManager 
 
 
 ## Task update timer
@@ -75,7 +75,7 @@ var dead: bool = false :
 			died.emit(self)
 
 var vision_range: float = 50.0
-var movement_rate: float = 30.0
+var movement_rate: float = 20.0
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
@@ -102,8 +102,7 @@ func _init() -> void:
 func _ready() -> void:
 	# Initialize components
 	action_manager.initialize(self)
-	heatmap = MovementHeatmap.new()
-	add_child(heatmap)
+
 
 	# Initialize state
 	_initialize_state()

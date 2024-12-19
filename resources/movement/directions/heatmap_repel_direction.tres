@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_p4lkt")
 name = "heatmap repel direction"
-expression_string = "heatmap.get_avoidance_direction(global_position)"
+expression_string = "heatmap.get_avoidance_direction(colony, global_position)"
 nested_expressions = Array[ExtResource("1_p4lkt")]([])
 description = ""
 type = 4

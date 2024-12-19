@@ -10,7 +10,7 @@ var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 
 # Spawn control parameters
-const ANTS_TO_SPAWN = 20
+const ANTS_TO_SPAWN = 10
 const BATCH_SIZE = 1  # Number of ants to spawn per batch
 const FRAMES_BETWEEN_BATCHES = 5  # Frames to wait between batches
 
@@ -86,8 +86,8 @@ func setup_navigation() -> bool:
 
 	# Track placed obstacles to prevent overlap
 	var placed_obstacles := []
-	var num_obstacles = randi_range(5, 10)
-	var max_attempts = 50
+	var num_obstacles = randi_range(10, 20)
+	var max_attempts = 100
 	var obstacles_placed = 0
 
 	while obstacles_placed < num_obstacles and max_attempts > 0:

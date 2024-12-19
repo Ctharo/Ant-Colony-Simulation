@@ -82,7 +82,7 @@ func show_ant_info(ant: Ant) -> void:
 		if current_action is Move:
 			update_legend(current_action.influences)
 		if ant.heatmap:
-			ant.heatmap.set_debug_draw(true)
+			ant.heatmap.set_debug_draw(ant.colony, true)
 			
 	# Update basic info
 	title_label.text = "Ant #%d" % ant.id
@@ -173,7 +173,7 @@ func add_legend_entry(name: String, color: Color, relative_weight: float) -> voi
 func deselect_current() -> void:
 
 	if current_ant and current_ant.heatmap:
-		current_ant.heatmap.set_debug_draw(false)
+		current_ant.heatmap.set_debug_draw(current_ant.colony, false)
 	current_ant = null
 
 	hide()

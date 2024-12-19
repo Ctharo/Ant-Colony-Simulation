@@ -41,6 +41,14 @@ func spawn_ant(colony: Colony) -> Ant:
 	ant.died.connect(_on_ant_died)
 	return ant
 
+func by_colony(colony: Colony) -> Ants:
+	var all = AntManager.get_all()
+	var by_col: Ants = Ants.new()
+	for ant: Ant in all:
+		if ant.colony == colony:
+			by_col.append(ant)
+	return by_col
+
 func get_all() -> Ants:
 	var ants: Ants = Ants.new()
 	for ant in ants:
