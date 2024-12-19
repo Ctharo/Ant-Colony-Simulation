@@ -127,22 +127,53 @@ func _initialize_state() -> void:
 	_configure_nav_agent()
 
 func _configure_nav_agent() -> void:
-	var nav_config := {
-		"path_desired_distance": 4.0,
-		"target_desired_distance": 4.0,
-		"path_max_distance": 50.0,
-		"avoidance_enabled": true,
-		"radius": 10.0,
-		"neighbor_distance": 50.0,
-		"max_neighbors": 10
-	}
+	if not nav_agent:
+		logger.error("Navigation agent not initialized")
+		return
 
-	# Apply configuration
-	for property in nav_config:
-		if property in nav_agent:
-			nav_agent.set(property, nav_config[property])
-		else:
-			logger.warn("Navigation property not found: %s" % property)
+	# Get the navigation region from the scene tree
+	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
+	if not nav_region:
+		logger.error("No NavigationRegion2D found in scene")
+		return
+
+	# Get the map RID from the navigation region
+	var map_rid: RID = nav_region.get_navigation_map()
+	if not map_rid.is_valid():
+		logger.error("No valid navigation map found")
+		return
+		
+	# Configure the NavigationAgent2D node properties
+	nav_agent.avoidance_enabled = true
+	nav_agent.radius = 10.0  # Default matches our needs
+	nav_agent.neighbor_distance = 50.0  # More conservative than default 500
+	nav_agent.max_neighbors = 10  # Default value
+	nav_agent.max_speed = movement_rate
+	nav_agent.path_desired_distance = 20.0  # Default value
+	nav_agent.target_desired_distance = 10.0  # Default value
+	nav_agent.path_max_distance = 100.0  # Default value
+	nav_agent.time_horizon_agents = 1.0  # Default value
+	nav_agent.time_horizon_obstacles = 1.0  # Increase from 0 for obstacle avoidance
+	
+	# Path processing options
+	nav_agent.path_metadata_flags = NavigationPathQueryParameters2D.PathMetadataFlags.PATH_METADATA_INCLUDE_ALL
+	nav_agent.path_postprocessing = NavigationPathQueryParameters2D.PathPostProcessing.PATH_POSTPROCESSING_CORRIDORFUNNEL
+	nav_agent.pathfinding_algorithm = NavigationPathQueryParameters2D.PathfindingAlgorithm.PATHFINDING_ALGORITHM_ASTAR
+	
+	# Optional: Enable path simplification if needed
+	nav_agent.simplify_path = true
+	nav_agent.simplify_epsilon = 0.5  # Adjust based on needed precision
+	
+	# Set navigation layers (using default layer 1)
+	nav_agent.navigation_layers = 1
+	nav_agent.avoidance_layers = 1
+	nav_agent.avoidance_mask = 1
+	nav_agent.avoidance_priority = 1.0  # Default value
+	
+	# Set the navigation map
+	nav_agent.set_navigation_map(map_rid)
+	
+	logger.debug("Navigation agent configured with map: %s" % str(map_rid))
 
 func _load_actions() -> void:
 	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()
@@ -183,8 +214,6 @@ func get_sensed_pheromones(pheromone_type: String = "") -> Array:
 		if pheromone is Pheromone and pheromone != null:
 			if not pheromone_type or pheromone_type == pheromone.type:
 				pheromones.append(pheromone)
-	if pheromone_type == "penis":
-		return Array(["penis"])
 	return pheromones
 
 func get_ants_in_view() -> Array:
@@ -217,3 +246,7 @@ func get_nearest_item(list: Array) -> Variant:
 			nearest = item
 
 	return nearest
+
+func _exit_tree() -> void:
+	if nav_agent and nav_agent.get_rid().is_valid():
+		NavigationServer2D.free_rid(nav_agent.get_rid())

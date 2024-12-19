@@ -3,7 +3,7 @@ extends Control
 var logger: Logger
 
 @onready var ant_info_panel = $AntInfoPanel
-
+@onready var colony_info_panel = $ColonyInfoPanel
 
 # Navigation properties
 var navigation_region: NavigationRegion2D
@@ -58,6 +58,7 @@ func _spawn(delta:float) -> void:
 func setup_navigation() -> bool:
 	# Create navigation region
 	navigation_region = NavigationRegion2D.new()
+	navigation_region.add_to_group("navigation") 
 	add_child(navigation_region)
 
 	# Create navigation polygon
@@ -84,7 +85,7 @@ func setup_navigation() -> bool:
 	# Add main outline first
 	navigation_poly.add_outline(outline)
 
-	# Track placed obstacles to prevent overlap
+	# Track placed obstacles
 	var placed_obstacles := []
 	var num_obstacles = randi_range(10, 20)
 	var max_attempts = 100
@@ -135,64 +136,69 @@ func setup_navigation() -> bool:
 			})
 
 			# Create visual obstacle
-			var obstacle = StaticBody2D.new()
-			obstacle.position = center
-			obstacles_container.add_child(obstacle)
-
-			# Create collision shape
-			var collision = CollisionPolygon2D.new()
-			var local_points = PackedVector2Array()
-			for point in obstacle_points:
-				local_points.append(point - center)  # Convert to local coordinates
-			collision.polygon = local_points
-			obstacle.add_child(collision)
-
-			# Create filled rock polygon
-			var polygon = Polygon2D.new()
-			polygon.polygon = local_points
-			polygon.color = Color(0.5, 0.5, 0.5, 1.0)  # Solid gray base
-			obstacle.add_child(polygon)
-			
-			# Add darker border for depth
-			var border = Line2D.new()
-			# Create closed loop of points for border
-			var border_points = local_points.duplicate()
-			border_points.append(local_points[0])  # Add first point again to close the shape
-			border.points = border_points
-			border.width = 2.0
-			border.default_color = Color(0.3, 0.3, 0.3, 1.0)  # Darker gray border
-			obstacle.add_child(border)
-			
-			# Add some texture variation with a slightly lighter overlay
-			var texture_polygon = Polygon2D.new()
-			var smaller_points = PackedVector2Array()
-			for point in local_points:
-				smaller_points.append(point * 0.8)  # 80% size of original
-			texture_polygon.polygon = smaller_points
-			texture_polygon.color = Color(0.6, 0.6, 0.6, 0.3)  # Lighter gray with transparency
-			obstacle.add_child(texture_polygon)
-
+			create_obstacle(obstacle_points, center, obstacles_container)
 			obstacles_placed += 1
 
-	# Generate polygons from all outlines
-	navigation_poly.make_polygons_from_outlines()
-
-	# Set up the navigation region
-	navigation_region.navigation_polygon = navigation_poly
-
-	# Configure NavigationServer2D
+	# Configure base navigation polygon settings
 	NavigationServer2D.map_set_active(navigation_region.get_navigation_map(), true)
+	NavigationServer2D.map_set_cell_size(navigation_region.get_navigation_map(), 1.0)
+	NavigationServer2D.map_set_edge_connection_margin(navigation_region.get_navigation_map(), 5.0)
+	
+	# Assign the navigation polygon to the region
+	navigation_region.navigation_polygon = navigation_poly
+	
+	# Force initial map update
 	NavigationServer2D.map_force_update(navigation_region.get_navigation_map())
-
-	# Wait for nav server to sync
+	
+	# Wait for physics frames to ensure navigation updates
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 
+	# Debug visualization setup if available
 	var nav_debug = preload("res://navigation/nav_debug.gd").new()
 	add_child(nav_debug)
 
 	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
 	return true
+	
+## Create a visual obstacle with collision
+func create_obstacle(points: PackedVector2Array, center: Vector2, parent: Node) -> void:
+	var obstacle = StaticBody2D.new()
+	obstacle.position = center
+	parent.add_child(obstacle)
+
+	# Create collision shape
+	var collision = CollisionPolygon2D.new()
+	var local_points = PackedVector2Array()
+	for point in points:
+		local_points.append(point - center)  # Convert to local coordinates
+	collision.polygon = local_points
+	obstacle.add_child(collision)
+
+	# Create filled rock polygon
+	var polygon = Polygon2D.new()
+	polygon.polygon = local_points
+	polygon.color = Color(0.5, 0.5, 0.5, 1.0)  # Solid gray base
+	obstacle.add_child(polygon)
+	
+	# Add darker border for depth
+	var border = Line2D.new()
+	var border_points = local_points.duplicate()
+	border_points.append(local_points[0])
+	border.points = border_points
+	border.width = 2.0
+	border.default_color = Color(0.3, 0.3, 0.3, 1.0)
+	obstacle.add_child(border)
+	
+	# Add texture variation
+	var texture_polygon = Polygon2D.new()
+	var smaller_points = PackedVector2Array()
+	for point in local_points:
+		smaller_points.append(point * 0.8)
+	texture_polygon.polygon = smaller_points
+	texture_polygon.color = Color(0.6, 0.6, 0.6, 0.3)
+	obstacle.add_child(texture_polygon)
+
 
 ## Validate that a potential obstacle doesn't intersect with existing ones
 func validate_obstacle(points: PackedVector2Array, existing_outlines: Array) -> bool:
@@ -252,10 +258,21 @@ func _draw() -> void:
 
 ## Add an obstacle to the navigation mesh
 func add_navigation_obstacle(obstacle_points: PackedVector2Array) -> void:
+	if not navigation_poly or not navigation_region:
+		logger.error("Navigation not initialized")
+		return
+		
+	# Add outline to navigation polygon
 	navigation_poly.add_outline(obstacle_points)
-	navigation_poly.make_polygons_from_outlines()
+	
+	# Update the region with new polygon
 	navigation_region.navigation_polygon = navigation_poly
+	
+	# Force navigation update
 	NavigationServer2D.map_force_update(navigation_region.get_navigation_map())
+	
+	# Wait for changes to take effect
+	await get_tree().physics_frame
 
 ## Handle unhandled input events
 func _unhandled_input(event: InputEvent) -> void:
@@ -282,16 +299,18 @@ func _change_scene(scene_name: String) -> void:
 	if error != OK:
 		DebugLogger.error(DebugLogger.Category.PROGRAM, "Failed to load scene: " + scene_name)
 
-func spawn_colony() -> Colony:
+func spawn_colony(p_position: Vector2 = get_random_position()) -> Colony:
 	_spawn_colony = ColonyManager.spawn_colony()
-	_spawn_colony.global_position = get_viewport_rect().get_center()
+	_spawn_colony.selected.connect(_on_colony_selected)
+	_spawn_colony.deselected.connect(_on_colony_deselected)
+	_spawn_colony.global_position = p_position
 	return _spawn_colony
 
 func spawn_ants(num_to_spawn: int = 1) -> void:
 	logger.info("Spawning %s ants" % num_to_spawn)
 	_pending_spawns = num_to_spawn
 	if not _spawn_colony:
-		spawn_colony()
+		spawn_colony(get_viewport_rect().get_center())
 	_is_spawning = true
 	_frames_until_next_batch = 0
 
@@ -314,6 +333,12 @@ func _on_ant_selected(ant: Ant):
 func _on_ant_deselected(ant: Ant):
 	ant_info_panel.deselect_current()
 
+func _on_colony_selected(colony: Colony):
+	colony_info_panel.show_colony_info(colony)
+	
+func _on_colony_deselected(colony: Colony):
+	colony_info_panel.deselect_current()
+
 func _on_gui_input(event: InputEvent) -> void:
 	report()
 	if event is InputEventMouseButton and event.pressed:
@@ -329,3 +354,9 @@ func _on_mouse_entered() -> void:
 
 func _on_mouse_exited() -> void:
 	report()
+
+func get_random_position() -> Vector2:
+	var viewport_rect := get_viewport_rect()
+	var x := randf_range(0, viewport_rect.size.x)
+	var y := randf_range(0, viewport_rect.size.y)
+	return Vector2(x, y)

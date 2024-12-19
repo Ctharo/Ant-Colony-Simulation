@@ -38,5 +38,7 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 
 		total_weight += weight
 		weighted_direction += dir * weight
+		
+		logger.trace("Influence %s evaluated: Weight: %s, Direction: %s" % [influence.id, str(weight), str(dir)])
 
 	return weighted_direction if total_weight > 0 else Vector2.ZERO

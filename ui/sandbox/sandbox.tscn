@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://dwotv13xethd6"]
+[gd_scene load_steps=4 format=3 uid="uid://dwotv13xethd6"]
 
 [ext_resource type="Script" path="res://ui/sandbox/sandbox.gd" id="1_dcr83"]
 [ext_resource type="PackedScene" uid="uid://buok86obce525" path="res://ui/debug/ant/ant_info_panel.tscn" id="2_rdqfb"]
+[ext_resource type="PackedScene" uid="uid://dngmxoipygrgu" path="res://ui/debug/colony/colony_info_panel.tscn" id="3_su3sx"]
 
 [node name="Sandbox" type="Control"]
 layout_mode = 3
@@ -12,6 +13,9 @@ script = ExtResource("1_dcr83")
 [node name="AntInfoPanel" parent="." instance=ExtResource("2_rdqfb")]
 layout_mode = 0
 mouse_filter = 2
+
+[node name="ColonyInfoPanel" parent="." instance=ExtResource("3_su3sx")]
+layout_mode = 0
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="mouse_entered" from="." to="." method="_on_mouse_entered"]

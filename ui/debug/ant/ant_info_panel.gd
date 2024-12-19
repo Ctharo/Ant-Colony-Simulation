@@ -86,7 +86,7 @@ func show_ant_info(ant: Ant) -> void:
 			
 	# Update basic info
 	title_label.text = "Ant #%d" % ant.id
-	colony_label.text = "Colony: %s" % (ant.colony.name if ant.colony else "None")
+	colony_label.text = "Colony: %s" % (str(ant.colony.name) if ant.colony else "None")
 	action_label.text = "Action: %s" % (ant.action_manager._current_action_id if ant.action_manager else "None")
 	
 	# Update status bars

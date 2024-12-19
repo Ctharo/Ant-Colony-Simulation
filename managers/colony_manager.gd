@@ -70,7 +70,7 @@ func spawn_colony() -> Colony:
 		logger.warn("Cannot spawn colony - maximum of %d reached" % MAX_COLONIES)
 		return null
 		
-	var colony = Colony.new()
+	var colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
 	add_child(colony)
 	
 	# Initialize colony state

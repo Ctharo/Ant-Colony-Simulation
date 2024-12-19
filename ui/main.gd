@@ -148,7 +148,7 @@ func transition_to_scene(scene_name: String, in_folder: String = ""):
 	tween.tween_callback(Callable(self, "_change_scene").bind(path + scene_name))
 
 func _change_scene(scene_name: String):
-	var error = await get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
+	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
 		_error("Failed to load scene: " + scene_name)
 	else:

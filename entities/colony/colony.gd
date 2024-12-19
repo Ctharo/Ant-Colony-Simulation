@@ -1,6 +1,11 @@
 class_name Colony
 extends Node2D
 
+signal selected(colony: Colony)
+signal deselected(colony: Colony)
+
+@onready var collision_area: Area2D = $CollisionArea
+
 #region Member Variables
 ## Colony radius in units
 @export var radius: float = 30.0:
@@ -24,10 +29,31 @@ func _init() -> void:
 
 func _ready() -> void:
 	HeatmapManager.register_colony(self)
-	HeatmapManager.set_debug_draw(self, true)
+		
+	# Connect to input
+	collision_area.mouse_entered.connect(_on_mouse_entered)
+	collision_area.mouse_exited.connect(_on_mouse_exited)
+	collision_area.input_event.connect(_on_area_input_event)
+
+func _on_mouse_entered() -> void:
+	# Optional: Add hover effect
+	modulate = Color(1.2, 1.2, 1.2)
+
+func _on_mouse_exited() -> void:
+	modulate = Color.WHITE
+
+func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			# Select colony
+			selected.emit(self)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			# Deselect colony
+			deselected.emit(self)
 
 func _exit_tree() -> void:
 	HeatmapManager.unregister_colony(self)
+	deselected.emit(self)
 	
 func get_ants() -> Array:
 	return ants.to_array()
