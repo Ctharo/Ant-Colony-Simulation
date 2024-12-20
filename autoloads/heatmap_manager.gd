@@ -22,6 +22,8 @@ const STYLE = {
 var _nav_map: RID
 ## Dictionary mapping colony IDs to their heat grids
 var _colony_grids: Dictionary = {} # int -> Dictionary[Vector2i, float]
+
+var _ant_grids: Dictionary = {}
 ## Dictionary for debug visualization settings
 var _debug_settings: Dictionary = {} # int -> bool
 ## Array of boundary repulsion points for debug visualization
@@ -36,7 +38,7 @@ func _ready() -> void:
 		_nav_map = nav_region.navigation_map
 	else:
 		push_warning("HeatmapManager: No NavigationRegion2D found in group 'navigation'")
-		
+
 #region Colony Management
 func register_colony(colony: Colony) -> void:
 	var colony_id = colony.get_instance_id()
@@ -48,6 +50,17 @@ func unregister_colony(colony: Colony) -> void:
 	var colony_id = colony.get_instance_id()
 	_colony_grids.erase(colony_id)
 	_debug_settings.erase(colony_id)
+
+func register_ant(ant: Ant):
+	var ant_id = ant.get_instance_id()
+	if not _ant_grids.has(ant_id):
+		_ant_grids[ant_id] = {}
+		_debug_settings[ant_id] = false
+
+func unregister_ant(ant: Ant) -> void:
+	var ant_id = ant.get_instance_id()
+	_ant_grids.erase(ant_id)
+	_debug_settings.erase(ant_id)
 #endregion
 
 ## Toggle debug visualization for a specific colony
@@ -57,9 +70,15 @@ func set_debug_draw(colony: Colony, enabled: bool) -> void:
 		_debug_settings[colony_id] = enabled
 		queue_redraw()
 
+func set_ant_debug_draw(ant: Ant, enabled: bool) -> void:
+	var ant_id = ant.get_instance_id()
+	if _ant_grids.has(ant_id):
+		_debug_settings[ant_id] = enabled
+		queue_redraw()
+
 func _process(delta: float) -> void:
 	_boundary_repulsion_points.clear()
-	
+
 	# Process each colony's ants
 	for colony_id in _colony_grids.keys():
 		var colony = instance_from_id(colony_id) as Colony
@@ -68,15 +87,16 @@ func _process(delta: float) -> void:
 			_colony_grids.erase(colony_id)
 			_debug_settings.erase(colony_id)
 			continue
-		
+
 		# Update heat for all ants in the colony
 		for ant in colony.get_ants():
 			var current_pos = ant.global_position
 			_update_boundary_repulsion(colony_id, current_pos, delta)
 			_update_movement_heat(colony_id, current_pos, delta)
-		
+			_update_ant_heat(ant.get_instance_id(), current_pos, delta)
+
 		_decay_heat(colony_id, delta)
-	
+
 	if _debug_settings.values().has(true):
 		queue_redraw()
 
@@ -84,52 +104,67 @@ func _process(delta: float) -> void:
 func _update_boundary_repulsion(colony_id: int, world_pos: Vector2, delta: float) -> void:
 	var center_cell = world_to_cell(world_pos)
 	var base_heat = STYLE.HEAT_PER_SECOND * delta * STYLE.BOUNDARY_HEAT_MULTIPLIER
-	
+
 	for dx in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 		for dy in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 			var check_cell = center_cell + Vector2i(dx, dy)
 			var check_pos = cell_to_world(check_cell)
-			
+
 			if not is_cell_navigable(check_pos):
 				_create_repulsion_from_boundary(colony_id, check_cell, world_pos, base_heat)
 
 func _create_repulsion_from_boundary(colony_id: int, boundary_cell: Vector2i, ant_pos: Vector2, base_heat: float) -> void:
-   
+
 	for dx in range(-STYLE.BOUNDARY_PENETRATION_DEPTH, STYLE.BOUNDARY_PENETRATION_DEPTH + 1):
 		for dy in range(-STYLE.BOUNDARY_PENETRATION_DEPTH, STYLE.BOUNDARY_PENETRATION_DEPTH + 1):
 			var inside_cell = boundary_cell + Vector2i(dx, dy)
 			var inside_pos = cell_to_world(inside_cell)
 			var to_ant = ant_pos - inside_pos
 			var distance = to_ant.length()
-		   
+
 			if distance < STYLE.CELL_SIZE * STYLE.BOUNDARY_CHECK_RADIUS:
 				var repulsion_direction = to_ant.normalized()
 				var repulsion_strength = base_heat * (1.0 / (1.0 + distance * 0.1))
 				var repulsion_pos = inside_pos + repulsion_direction * STYLE.CELL_SIZE
 				var repulsion_cell = world_to_cell(repulsion_pos)
-			   
+
 				if is_cell_navigable(repulsion_pos):
 					_add_heat_to_cell(colony_id, repulsion_cell, repulsion_strength)
-				   
+
 					if _debug_settings[colony_id]:
 						_boundary_repulsion_points.append({
 						   "position": repulsion_pos,
 						   "strength": repulsion_strength
 					   })
-					
+
 func _update_movement_heat(colony_id: int, world_pos: Vector2, delta: float) -> void:
 	var center_cell = world_to_cell(world_pos)
 	var base_heat = STYLE.HEAT_PER_SECOND * delta
-   
+
 	for dx in range(-STYLE.HEAT_RADIUS, STYLE.HEAT_RADIUS + 1):
 		for dy in range(-STYLE.HEAT_RADIUS, STYLE.HEAT_RADIUS + 1):
 			var cell = center_cell + Vector2i(dx, dy)
 			var cell_pos = cell_to_world(cell)
 			var distance = center_cell.distance_to(cell)
-		   
+
 			if distance <= STYLE.HEAT_RADIUS and is_cell_navigable(cell_pos):
 				var heat = base_heat / (1 + distance * distance)
 				_add_heat_to_cell(colony_id, cell, heat)
+
+func _update_ant_heat(ant_id: int, world_pos: Vector2, delta: float) -> void:
+	var center_cell = world_to_cell(world_pos)
+	var base_heat = STYLE.HEAT_PER_SECOND * delta
+
+	for dx in range(-STYLE.HEAT_RADIUS, STYLE.HEAT_RADIUS + 1):
+		for dy in range(-STYLE.HEAT_RADIUS, STYLE.HEAT_RADIUS + 1):
+			var cell = center_cell + Vector2i(dx, dy)
+			var cell_pos = cell_to_world(cell)
+			var distance = center_cell.distance_to(cell)
+
+			if distance <= STYLE.HEAT_RADIUS and is_cell_navigable(cell_pos):
+				var heat = base_heat / (1 + distance * distance)
+				_add_ant_heat_to_cell(ant_id, cell, heat)
+
 #endregion
 
 #region Heat Management
@@ -138,15 +173,21 @@ func _add_heat_to_cell(colony_id: int, cell: Vector2i, amount: float) -> void:
 		_colony_grids[colony_id][cell] = 0.0
 	_colony_grids[colony_id][cell] = minf(_colony_grids[colony_id][cell] + amount, STYLE.MAX_HEAT)
 
+func _add_ant_heat_to_cell(ant_id: int, cell: Vector2i, amount: float) -> void:
+	if not _ant_grids[ant_id].has(cell):
+		_ant_grids[ant_id][cell] = 0.0
+	_ant_grids[ant_id][cell] = minf(_ant_grids[ant_id][cell] + amount, STYLE.MAX_HEAT)
+
+
 func _decay_heat(colony_id: int, delta: float) -> void:
 	var cells_to_remove = []
 	var grid = _colony_grids[colony_id]
-	
+
 	for cell in grid:
 		grid[cell] = maxf(0.0, grid[cell] - STYLE.DECAY_RATE * delta)
 		if grid[cell] <= 0.0:
 			cells_to_remove.append(cell)
-	
+
 	for cell in cells_to_remove:
 		grid.erase(cell)
 #endregion
@@ -157,56 +198,56 @@ func get_avoidance_direction(colony: Colony, world_pos: Vector2) -> Vector2:
 	var colony_id = colony.get_instance_id()
 	if not _colony_grids.has(colony_id):
 		return Vector2.ZERO
-		
+
 	var center_cell = world_to_cell(world_pos)
 	var direction = Vector2.ZERO
 	var total_weight = 0.0
-	
+
 	# Boundary repulsion
 	var boundary_direction = Vector2.ZERO
 	var boundary_weight = 0.0
-	
+
 	for dx in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 		for dy in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 			var cell = center_cell + Vector2i(dx, dy)
 			var cell_pos = cell_to_world(cell)
-			
+
 			if not is_cell_navigable(cell_pos):
 				var away_vector = (world_pos - cell_pos).normalized()
 				var distance = world_pos.distance_to(cell_pos)
 				var weight = STYLE.BOUNDARY_HEAT_MULTIPLIER / (1 + distance * 0.1)
-				
+
 				boundary_direction += away_vector * weight
 				boundary_weight += weight
-	
+
 	if boundary_weight > 0:
 		boundary_direction /= boundary_weight
 		direction += boundary_direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
 		total_weight += STYLE.BOUNDARY_HEAT_MULTIPLIER
-	
+
 	# Heat avoidance
 	var heat_direction = Vector2.ZERO
 	var heat_weight = 0.0
-	
+
 	for dx in range(-STYLE.HEAT_RADIUS, STYLE.HEAT_RADIUS + 1):
 		for dy in range(-STYLE.HEAT_RADIUS, STYLE.HEAT_RADIUS + 1):
 			var cell = center_cell + Vector2i(dx, dy)
 			var heat = _colony_grids[colony_id].get(cell, 0.0)
-			
+
 			if heat > 0:
 				var cell_pos = cell_to_world(cell)
 				var away_vector = (world_pos - cell_pos).normalized()
 				heat_direction += away_vector * heat
 				heat_weight += heat
-	
+
 	if heat_weight > 0:
 		heat_direction /= heat_weight
 		direction += heat_direction
 		total_weight += 1.0
-	
+
 	if total_weight > 0:
 		direction /= total_weight
-		
+
 	return direction
 
 ## Returns a normalized Vector2 pointing in the direction of increasing heat
@@ -217,34 +258,34 @@ func get_gradient_direction(colony: Colony, world_pos: Vector2, world_range: flo
 	var colony_id = colony.get_instance_id()
 	if not _colony_grids.has(colony_id):
 		return Vector2.ZERO
-		
+
 	var center_cell = world_to_cell(world_pos)
 	var gradient = Vector2.ZERO
 	var total_weight = 0.0
-	
+
 	for dx in range(-cell_range, cell_range + 1):
 		for dy in range(-cell_range, cell_range + 1):
 			var cell = center_cell + Vector2i(dx, dy)
 			var cell_pos = cell_to_world(cell)
-			
+
 			if not is_cell_navigable(cell_pos):
 				continue
-				
+
 			var heat = _colony_grids[colony_id].get(cell, 0.0)
 			if heat > 0:
 				var direction = (cell_pos - world_pos).normalized()
 				var distance = world_pos.distance_to(cell_pos)
 				var weight = heat / (1.0 + distance * 0.1)
-				
+
 				gradient += direction * weight
 				total_weight += weight
-	
+
 	if total_weight > 0:
 		gradient /= total_weight
 		return gradient.normalized()
-		
+
 	return Vector2.ZERO
-	
+
 ## Get current heat value at a position
 func get_heat_at_position(colony: Colony, pos: Vector2) -> float:
 	var colony_id = colony.get_instance_id()
@@ -271,32 +312,41 @@ func _draw() -> void:
 	for colony_id in _colony_grids:
 		if not _debug_settings[colony_id]:
 			continue
-			
+
 		var grid = _colony_grids[colony_id]
-		
-		# Draw heat grid
-		for cell in grid:
-			var heat = grid[cell]
-			if heat <= 0:
-				continue
-				
-			var rect = Rect2(
-				cell_to_world(cell),
-				Vector2.ONE * STYLE.CELL_SIZE
-			)
-			
-			var t = heat / STYLE.MAX_HEAT
-			var color
-			
-			if not is_cell_navigable(rect.position):
-				color = STYLE.DEBUG_COLORS.BOUNDARY
-				color.a *= t
-			else:
-				color = STYLE.DEBUG_COLORS.START.lerp(STYLE.DEBUG_COLORS.END, t)
-				
-			draw_rect(rect, color)
-		
-		# Draw repulsion points for debugging
-		for point in _boundary_repulsion_points:
-			var size = 5.0 * point.strength / STYLE.MAX_HEAT
-			draw_circle(point.position, size, STYLE.DEBUG_COLORS.REPULSION)
+		_draw_grid(grid)
+
+	for ant_id in _ant_grids:
+		if not _debug_settings[ant_id]:
+			continue
+
+		var grid = _ant_grids[ant_id]
+		_draw_grid(grid)
+
+func _draw_grid(grid):
+	# Draw heat grid
+	for cell in grid:
+		var heat = grid[cell]
+		if heat <= 0:
+			continue
+
+		var rect = Rect2(
+			cell_to_world(cell),
+			Vector2.ONE * STYLE.CELL_SIZE
+		)
+
+		var t = heat / STYLE.MAX_HEAT
+		var color
+
+		if not is_cell_navigable(rect.position):
+			color = STYLE.DEBUG_COLORS.BOUNDARY
+			color.a *= t
+		else:
+			color = STYLE.DEBUG_COLORS.START.lerp(STYLE.DEBUG_COLORS.END, t)
+
+		draw_rect(rect, color)
+
+	# Draw repulsion points for debugging
+	for point in _boundary_repulsion_points:
+		var size = 5.0 * point.strength / STYLE.MAX_HEAT
+		draw_circle(point.position, size, STYLE.DEBUG_COLORS.REPULSION)

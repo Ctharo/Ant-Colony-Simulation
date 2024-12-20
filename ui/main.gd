@@ -3,12 +3,12 @@ extends Control
 var title_label: Label
 var button_container: VBoxContainer
 
-var log_category: DebugLogger.Category
-var log_from: String
+var logger: Logger
+
 
 func _init() -> void:
-	log_category = DebugLogger.Category.PROGRAM
-	log_from = "main"
+	logger = Logger.new("main", DebugLogger.Category.PROGRAM)
+
 
 func _ready():
 	create_ui()
@@ -20,7 +20,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func create_ui():
-	_trace("Creating main UI")
+	logger.trace("Creating main UI")
 	# Create a background
 	var background = ColorRect.new()
 	background.color = Color(0.1, 0.1, 0.1)  # Dark gray background
@@ -61,7 +61,7 @@ func create_ui():
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
 
-	_trace("Main UI created")
+	logger.trace("Main UI created")
 
 
 func create_button(text: String, parent: Control) -> Button:
@@ -116,33 +116,32 @@ func animate_ui_elements():
 		i += 1
 
 func _on_start_simulation_button_pressed():
-	_info("Start Simulation pressed")
+	logger.info("Start Simulation pressed")
 	transition_to_scene("sandbox","sandbox")
 
 func _on_property_browser_button_pressed():
 	# Instead of transitioning to a scene, create the PropertyBrowser directly
 	var property_browser = load("res://ui/property_browser/property_browser.gd").new()
 	get_tree().root.add_child(property_browser)
-	# Optional: fade out main menu
+	# Fade out main menu
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
 
 func _on_logic_editor_button_pressed():
-	_info("Logic Editor pressed")
+	logger.info("Logic Editor pressed")
 	transition_to_scene("logic_editor_ui", "logic_editor")
 
 func _on_settings_button_pressed():
-	_info("Settings pressed")
-	_warn("Settings not yet implemented")
+	logger.info("Settings pressed")
+	logger.warn("Settings not yet implemented")
 
-	# Add your logic here
 
 func _on_quit_button_pressed():
 	get_tree().quit()
 
 func transition_to_scene(scene_name: String, in_folder: String = ""):
 	var path: String = in_folder + "/" if not in_folder.is_empty() else ""
-	_trace("Transitioning to scene: %s" %  path + scene_name if not scene_name.is_empty() else "N/A")
+	logger.trace("Transitioning to scene: %s" %  path + scene_name if not scene_name.is_empty() else "N/A")
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
 	tween.tween_callback(Callable(self, "_change_scene").bind(path + scene_name))
@@ -150,24 +149,6 @@ func transition_to_scene(scene_name: String, in_folder: String = ""):
 func _change_scene(scene_name: String):
 	var error = get_tree().change_scene_to_file("res://" + "ui" + "/" + scene_name + ".tscn")
 	if error != OK:
-		_error("Failed to load scene: " + scene_name)
+		logger.error("Failed to load scene: " + scene_name)
 	else:
-		_trace("Changed to scene: %s" % scene_name if not scene_name.is_empty() else "N/A")
-
-
-#region Logging Methods
-func _trace(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.trace(category, message, {"from": log_from})
-
-func _debug(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.debug(category, message, {"from": log_from})
-
-func _info(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.info(category, message, {"from": log_from})
-
-func _warn(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.warn(category, message, {"from": log_from})
-
-func _error(message: String, category: DebugLogger.Category = log_category) -> void:
-	DebugLogger.error(category, message, {"from": log_from})
-#endregion
+		logger.trace("Changed to scene: %s" % scene_name if not scene_name.is_empty() else "N/A")

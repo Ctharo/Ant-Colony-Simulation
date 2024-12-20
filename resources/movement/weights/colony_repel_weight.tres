@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_0hamu")
 name = "colony repel weight"
-expression_string = "1.25 / (1.0 + pow(distance_to_colony / 500.0, 2)) "
+expression_string = "1.25 / (1.0 + pow(distance_to_colony / 600.0, 2)) "
 nested_expressions = Array[ExtResource("1_0hamu")]([ExtResource("2_0ibog")])
 description = "Uses inverse square falloff (1/(1+d²)) which returns close to *first term* when very close to colony"
 type = 2

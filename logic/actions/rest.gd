@@ -7,7 +7,7 @@ extends Action
 ## Rate at which energy regenerates per second
 @export var energy_regen_rate: float = 15.0
 
-func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
+func execute_tick(entity: Node, state: ActionState, delta: float) -> void:
 	var current_health: float = entity.health_level
 	var max_health: float = entity.health_max
 	var current_energy: float = entity.energy_level

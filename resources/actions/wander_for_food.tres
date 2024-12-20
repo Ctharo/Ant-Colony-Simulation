@@ -25,5 +25,7 @@ energy_coefficient = 1.0
 params = {}
 start_condition_expression = "can_work and should_work"
 stop_condition_expression = "not can_work"
+interrupt_condition_expression = ""
 start_nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("3_qceye"), ExtResource("4_5k8w3")])
 stop_nested_conditions = Array[ExtResource("1_evkbf")]([ExtResource("3_qceye")])
+interrupt_nested_conditions = Array[ExtResource("1_evkbf")]([])

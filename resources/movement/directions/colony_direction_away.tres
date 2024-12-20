@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_ijpar")
 name = "colony direction away"
-type = 4
 expression_string = "-colony_direction_toward"
 nested_expressions = Array[ExtResource("1_ijpar")]([ExtResource("2_f2as0")])
 description = ""
+type = 4

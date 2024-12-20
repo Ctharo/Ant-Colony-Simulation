@@ -12,7 +12,7 @@ extends Resource
 
 @export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY",
 			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES",
-			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN") 
+			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN")
 var type: int = 19
 
 var id: String
@@ -30,7 +30,7 @@ func set_value(new_value: Variant) -> void:
 	if _last_value != new_value:
 		_last_value = new_value
 		value_changed.emit(new_value, id)
-		
+
 func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Variant:
 	var result = eval_system.get_value(self, force_update)
 	if result != _last_value:

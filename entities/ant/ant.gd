@@ -7,8 +7,6 @@ signal spawned
 signal energy_changed
 signal damaged
 signal died(ant: Ant)
-signal ant_selected(ant: Ant)
-signal ant_deselected(ant: Ant)
 
 #endregion
 
@@ -35,7 +33,6 @@ var foods: Foods :
 	set(value):
 		foods = value
 		foods.mark_as_carried()
-
 #region Managers
 var action_manager: ActionManager
 #endregion
@@ -48,7 +45,7 @@ var target_position: Vector2 :
 	set(value):
 		nav_agent.set_target_position(value)
 
-@onready var heatmap = HeatmapManager 
+@onready var heatmap = HeatmapManager
 
 
 ## Task update timer
@@ -79,7 +76,7 @@ var energy_level: float = energy_max :
 		if first != int(energy_level):
 			energy_changed.emit()
 		dead = energy_level == 0.0
-		
+
 var carry_max: float = 100
 var health_max: float = 100
 var health_level: float = health_max :
@@ -101,37 +98,29 @@ func _ready() -> void:
 	# Initialize state
 	_initialize_state()
 	_load_actions()
-	
+
 	# Setup navigation
 	configure_nav_agent()
 
-
+	heatmap.register_ant(self)
 	# Emit ready signal
 	spawned.emit()
 
-func _input_event(_viewport, event, _shape_idx):
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			ant_selected.emit(self)
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			# Get reference to info panel (adjust the path as needed)
-			ant_deselected.emit(self)
-
 func _initialize_state() -> void:
-	energy_level = randi_range(50, energy_max)
-	health_level = randi_range(50, health_max)
+	energy_level = energy_max
+	health_level = health_max
 
 func configure_nav_agent() -> void:
 	if not nav_agent:
 		logger.error("Navigation agent not initialized")
 		return
-	
+
 	# Get the navigation region from the scene tree
 	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
 	if not nav_region:
 		logger.error("No NavigationRegion2D found in scene")
 		return
-		
+
 	# Core configuration that we know works well
 	var nav_config := {
 		"path_desired_distance": 4.0,  # Keep the smaller working values
@@ -146,26 +135,26 @@ func configure_nav_agent() -> void:
 		"avoidance_layers": 1,
 		"avoidance_mask": 1
 	}
-	
+
 	# Apply core configuration
 	for property in nav_config:
 		if property in nav_agent:
 			nav_agent.set(property, nav_config[property])
 		else:
 			logger.warn("Navigation property not found: %s" % property)
-	
+
 	# Additional settings that shouldn't interfere with core functionality
 	nav_agent.path_metadata_flags = NavigationPathQueryParameters2D.PathMetadataFlags.PATH_METADATA_INCLUDE_ALL
 	nav_agent.path_postprocessing = NavigationPathQueryParameters2D.PathPostProcessing.PATH_POSTPROCESSING_CORRIDORFUNNEL
 	nav_agent.pathfinding_algorithm = NavigationPathQueryParameters2D.PathfindingAlgorithm.PATHFINDING_ALGORITHM_ASTAR
-	
+
 	# Set the navigation map
 	var map_rid = nav_region.get_navigation_map()
 	if map_rid.is_valid():
 		nav_agent.set_navigation_map(map_rid)
 	else:
 		logger.error("Invalid navigation map RID")
-		
+
 func _load_actions() -> void:
 	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()
 	action_manager.set_profile(action_profile)
@@ -203,14 +192,6 @@ func get_pheromone_direction(increasing_concentration: bool = true) -> Vector2:
 	var dir: int = 1 if increasing_concentration else -1
 	return heatmap.get_gradient_direction(colony, global_position, olfaction_range) * dir
 
-func get_sensed_pheromones(pheromone_type: String = "") -> Array:
-	var pheromones: Array = []
-	for pheromone in sight_area.get_overlapping_bodies():
-		if pheromone is Pheromone and pheromone != null:
-			if not pheromone_type or pheromone_type == pheromone.type:
-				pheromones.append(pheromone)
-	return pheromones
-
 func get_ants_in_view() -> Array:
 	var ants: Array = []
 	for ant in sight_area.get_overlapping_bodies():
@@ -242,6 +223,13 @@ func get_nearest_item(list: Array) -> Variant:
 
 	return nearest
 
+func show_influence_vectors(enabled: bool):
+	pass
+
+func show_nav_path(enabled: bool):
+	nav_agent.debug_enabled = enabled
+
 func _exit_tree() -> void:
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
+	heatmap.unregister_ant(self)

@@ -18,11 +18,10 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-PheromoneManager="*res://managers/pheromone_manager.gd"
-AntManager="*res://managers/ant_manager.gd"
-FoodManager="*res://managers/food_manager.gd"
-ColonyManager="*res://managers/colony_manager.gd"
-HeatmapManager="*res://managers/heatmap_manager.gd"
+AntManager="*res://autoloads/ant_manager.gd"
+FoodManager="*res://autoloads/food_manager.gd"
+ColonyManager="*res://autoloads/colony_manager.gd"
+HeatmapManager="*res://autoloads/heatmap_manager.gd"
 
 [display]
 

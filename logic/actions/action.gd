@@ -32,18 +32,26 @@ var id: String
 ## Expression string to evaluate stop conditions
 @export_multiline var stop_condition_expression: String
 
+## Expression string to evaluate interrupt conditions
+@export_multiline var interrupt_condition_expression: String
+
 ## Nested conditions used in start expression
 @export var start_nested_conditions: Array[Logic]
 
 ## Nested conditions used in stop expression
 @export var stop_nested_conditions: Array[Logic]
 
+## Nested conditions used in interrupt expression
+@export var interrupt_nested_conditions: Array[Logic]
+
 #region Protected
 var start_condition: Logic
 var stop_condition: Logic
+var interrupt_condition: Logic
 #endregion
 
 #region Signals
+signal action_interrupted(action: Action, entity: Node)
 #endregion
 
 func generate_conditions() -> void:
@@ -59,6 +67,12 @@ func generate_conditions() -> void:
 		stop_condition.expression_string = stop_condition_expression
 		stop_condition.nested_expressions = stop_nested_conditions.duplicate()
 
+	if interrupt_condition_expression:
+		interrupt_condition = Logic.new()
+		interrupt_condition.name = name + "_interrupt_condition"
+		interrupt_condition.expression_string = interrupt_condition_expression
+		interrupt_condition.nested_expressions = interrupt_nested_conditions.duplicate()
+
 ## Get whether conditions are met to start this action
 func can_start(entity: Node) -> bool:
 	if not start_condition:
@@ -72,13 +86,30 @@ func should_stop(entity: Node) -> bool:
 		return false
 	return stop_condition.get_value(entity.action_manager.evaluation_system)
 
+## Check if the action should be interrupted
+func should_interrupt(entity: Node) -> bool:
+	if not interrupt_condition:
+		return false
+	return interrupt_condition.get_value(entity.action_manager.evaluation_system)
+
 ## Check if the action can be executed
 func can_execute(entity: Node) -> bool:
 	return can_start(entity)
 
-# Virtual method to be implemented by subclasses
-func execute_tick(entity: Node, _state: ActionManager.ActionState, delta: float) -> void:
+func execute_tick(entity: Node, state: ActionState, delta: float) -> void:
+	# Check for interrupts first
+	if should_interrupt(entity):
+		if not state.is_interrupted:  # Only emit signal on initial interrupt
+			action_interrupted.emit(self, entity)
+		state.is_interrupted = true
+		return
+
+	# Clear interrupt state if conditions no longer met
+	if state.is_interrupted:
+		state.is_interrupted = false
+
 	energy_loss(entity, energy_coefficient * delta)
+	_update_execution(entity, state, delta)
 
 #region Protected Methods
 ## Validate action parameters (override in subclasses)
@@ -86,10 +117,9 @@ func _validate_params() -> bool:
 	return true
 
 ## Update the action execution (override in subclasses)
-func _update_execution(_entity: Node, _delta: float) -> void:
+func _update_execution(_entity: Node, _state: ActionState, _delta: float) -> void:
 	pass
-	
+
 func energy_loss(entity: Node, amount: float) -> void:
 	entity.energy_level -= amount
-
 #endregion

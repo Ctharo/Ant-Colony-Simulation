@@ -1,6 +1,6 @@
 class_name ActionProfile
 extends Resource
-	
+
 @export var name: String :
 	set(value):
 		name = value

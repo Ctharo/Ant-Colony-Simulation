@@ -1,9 +1,6 @@
 class_name Colony
 extends Node2D
 
-signal selected(colony: Colony)
-signal deselected(colony: Colony)
-
 @onready var collision_area: Area2D = $CollisionArea
 
 #region Member Variables
@@ -12,13 +9,14 @@ signal deselected(colony: Colony)
 	set(value):
 		radius = value
 		queue_redraw()  # Redraw when radius changes
-		
+
 ## Inner radius as a ratio of the main radius
 var inner_radius_ratio: float = 0.33
 ## Collection of food resources
 var foods: Foods
 ## Ants belonging to this colony
 var ants: Ants = Ants.new([])
+var is_highlighted: bool = false
 #endregion
 
 var logger: Logger
@@ -29,60 +27,38 @@ func _init() -> void:
 
 func _ready() -> void:
 	HeatmapManager.register_colony(self)
-		
-	# Connect to input
-	collision_area.mouse_entered.connect(_on_mouse_entered)
-	collision_area.mouse_exited.connect(_on_mouse_exited)
-	collision_area.input_event.connect(_on_area_input_event)
-
-func _on_mouse_entered() -> void:
-	# Optional: Add hover effect
-	modulate = Color(1.2, 1.2, 1.2)
-
-func _on_mouse_exited() -> void:
-	modulate = Color.WHITE
-
-func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			# Select colony
-			selected.emit(self)
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			# Deselect colony
-			deselected.emit(self)
 
 func _exit_tree() -> void:
 	HeatmapManager.unregister_colony(self)
-	deselected.emit(self)
-	
+
 func get_ants() -> Array:
 	return ants.to_array()
-	
+
 func _draw() -> void:
 	# Rich brown/dirt color with some transparency
 	var dirt_color = Color(0.55, 0.27, 0.07, 0.8)  # Earthy brown
 	var darker_dirt = Color(0.4, 0.2, 0.05, 0.9)   # Darker brown for depth
 	var inner_radius = radius * inner_radius_ratio
-	
+
 	# Draw the darker rim first
 	draw_arc(Vector2.ZERO, radius, 0, TAU, 32, darker_dirt, 3.0)
 	draw_arc(Vector2.ZERO, inner_radius, 0, TAU, 32, darker_dirt, 2.0)
-	
+
 	# Create points for the filled area
 	var points_outer = []
 	var points_inner = []
 	var num_points = 32
-	
+
 	# Create outer circle points
 	for i in range(num_points + 1):
 		var angle = i * TAU / num_points
 		points_outer.append(Vector2(cos(angle), sin(angle)) * radius)
-	
+
 	# Create inner circle points (in reverse order)
 	for i in range(num_points + 1):
 		var angle = (num_points - i) * TAU / num_points
 		points_inner.append(Vector2(cos(angle), sin(angle)) * inner_radius)
-	
+
 	# Combine points and draw filled polygon
 	var points = points_outer + points_inner
 	draw_colored_polygon(points, dirt_color)

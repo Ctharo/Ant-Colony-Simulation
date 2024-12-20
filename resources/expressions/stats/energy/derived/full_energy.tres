@@ -6,8 +6,7 @@
 [resource]
 script = ExtResource("1_ma6sc")
 name = "full energy"
-force_recalculate = true
-type = 19
 expression_string = "energy_level == energy_max"
 nested_expressions = Array[ExtResource("1_ma6sc")]([ExtResource("2_1sw31")])
 description = ""
+type = 19

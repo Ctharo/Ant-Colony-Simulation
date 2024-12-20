@@ -51,7 +51,7 @@ func by_colony(colony: Colony) -> Ants:
 
 func get_all() -> Ants:
 	var _ants: Ants = Ants.new()
-	for ant in _ants:
+	for ant in ants:
 		if ant != null:
 			_ants.append(ant)
 	return _ants

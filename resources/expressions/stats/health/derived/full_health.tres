@@ -5,8 +5,7 @@
 [resource]
 script = ExtResource("1_7b7s4")
 name = "full health"
-force_recalculate = true
-type = 19
 expression_string = "health_level == health_max"
 nested_expressions = Array[ExtResource("1_7b7s4")]([])
 description = ""
+type = 19

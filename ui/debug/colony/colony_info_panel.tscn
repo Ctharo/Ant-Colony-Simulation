@@ -3,9 +3,7 @@
 [ext_resource type="Script" path="res://ui/debug/colony/colony_info_panel.gd" id="1_panel"]
 
 [node name="ColonyInfoPanel" type="PanelContainer"]
-top_level = true
-offset_right = 300.0
-offset_bottom = 200.0
+size_flags_horizontal = 3
 script = ExtResource("1_panel")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -19,12 +17,20 @@ theme_override_constants/margin_bottom = 10
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "Colony #1"
-horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "×"
 
 [node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -44,3 +50,60 @@ text = "Food Collected: 0.0 units"
 unique_name_in_owner = true
 layout_mode = 2
 text = "Colony Radius: 30.0"
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="VisualizationContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/VisualizationContainer"]
+layout_mode = 2
+text = "Visualization"
+horizontal_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VisualizationContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Heatmap"
+
+[node name="HighlightAntsCheck" type="CheckButton" parent="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Highlight Ants"
+
+[node name="SpawnContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/SpawnContainer"]
+layout_mode = 2
+text = "Spawn Ants"
+horizontal_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/SpawnContainer"]
+layout_mode = 2
+
+[node name="AntCountEdit" type="SpinBox" parent="MarginContainer/VBoxContainer/SpawnContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 1000.0
+value = 10.0
+
+[node name="SpawnAntsButton" type="Button" parent="MarginContainer/VBoxContainer/SpawnContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Spawn"
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/CloseButton" to="." method="_on_close_pressed"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/ShowHeatmapCheck" to="." method="_on_show_heatmap_toggled"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/HighlightAntsCheck" to="." method="_on_highlight_ants_toggled"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/SpawnContainer/HBoxContainer/SpawnAntsButton" to="." method="_on_spawn_ants_pressed"]

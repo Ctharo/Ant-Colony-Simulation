@@ -35,12 +35,12 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 	var total_weight = 0.0
 	var weighted_direction = Vector2.ZERO
 	var evaluated_influences = []
-	
+
 	# First pass: evaluate all influences and calculate total weight
 	for influence in influences:
 		var weight = eval_system.get_value(influence.weight)
 		var dir = eval_system.get_value(influence.direction).normalized()
-		
+
 		# Store evaluated values for second pass
 		evaluated_influences.append({
 			"id": influence.id,
@@ -48,15 +48,15 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 			"direction": dir
 		})
 		total_weight += weight
-	
+
 	# Second pass: normalize weights and calculate final direction
 	if total_weight > 0:
 		for eval_influence in evaluated_influences:
 			# Normalize weight by dividing by total
 			var normalized_weight = eval_influence.weight / total_weight
 			weighted_direction += eval_influence.direction * normalized_weight
-			
-			logger.trace("Influence %s evaluated: Original Weight: %s, Normalized Weight: %s, Direction: %s" % 
+
+			logger.trace("Influence %s evaluated: Original Weight: %s, Normalized Weight: %s, Direction: %s" %
 				[eval_influence.id, str(eval_influence.weight), str(normalized_weight), str(eval_influence.direction)])
-	
+
 	return weighted_direction

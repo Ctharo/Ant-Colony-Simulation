@@ -1,15 +1,7 @@
 class_name ActionManager
 extends Node
 
-class ActionState:
-	var condition: Logic
-	var current_cooldown: float = 0.0
-	var elapsed_time: float = 0.0
-	var influence_manager: InfluenceManager
-	var was_stopped: bool = false
 
-	func _init(p_influence_manager: InfluenceManager) -> void:
-		influence_manager = p_influence_manager
 
 #region Properties
 var _states: Dictionary = {}
@@ -22,7 +14,7 @@ var influence_manager: InfluenceManager
 var entity: Node
 var logger: Logger
 var current_profile: ActionProfile : set = set_profile
-			
+
 #endregion
 
 func _init() -> void:
@@ -39,12 +31,12 @@ func set_profile(profile: ActionProfile) -> void:
 	if not profile:
 		logger.error("Attempted to load null action profile")
 		return
-		
+
 	logger.trace("Loading action profile: %s" % profile.name)
-	
+
 	# Store current profile
 	current_profile = profile
-	
+
 	# Set role title in entity
 	entity.role = current_profile.name.capitalize() if current_profile else "None"
 
@@ -53,7 +45,7 @@ func set_profile(profile: ActionProfile) -> void:
 	_action_priorities.clear()
 	_states.clear()
 	_current_action_id = ""
-	
+
 	# Track registration stats for logging
 	var registered_count := 0
 	var start_time := Time.get_ticks_msec()
@@ -64,7 +56,7 @@ func set_profile(profile: ActionProfile) -> void:
 		if not action:
 			logger.warn("Null action found in profile %s at priority %d" % [profile.name, priority])
 			continue
-			
+
 		register_action(action, priority)
 		registered_count += 1
 
@@ -80,7 +72,7 @@ func get_or_create_state(action_id: String) -> ActionState:
 	if action_id.is_empty():
 		logger.error("Attempted to get/create state with empty action ID")
 		return null
-		
+
 	if not _states.has(action_id):
 		_states[action_id] = ActionState.new(influence_manager)
 	return _states[action_id]
@@ -89,7 +81,7 @@ func register_action(action: Action, priority: int = 0) -> void:
 	if not action:
 		logger.error("Attempted to register null action")
 		return
-		
+
 	if action.name.is_empty():
 		logger.error("Attempted to register action with empty name")
 		return
@@ -97,13 +89,13 @@ func register_action(action: Action, priority: int = 0) -> void:
 	_actions[action.id] = action
 	_action_priorities[action.id] = priority
 	action.priority = priority # Set internal priority to match list
-	
+
 	var state := get_or_create_state(action.id)
 	if not state:
 		return
 
 	# Generate and register conditions
-	if action.start_condition_expression or action.stop_condition_expression:
+	if action.start_condition_expression or action.stop_condition_expression or action.interrupt_condition_expression:
 		action.generate_conditions()
 
 		if action.start_condition:
@@ -111,6 +103,9 @@ func register_action(action: Action, priority: int = 0) -> void:
 
 		if action.stop_condition:
 			evaluation_system.register_expression(action.stop_condition)
+
+		if action.interrupt_condition:
+			evaluation_system.register_expression(action.interrupt_condition)
 
 	if action is Move:
 		influence_manager.register_influences(action)
@@ -120,7 +115,7 @@ func register_action(action: Action, priority: int = 0) -> void:
 func get_next_action() -> Action:
 	# Use priorities from profile instead of action's internal priority
 	var candidates = _actions.values()
-	candidates.sort_custom(func(a: Action, b: Action): 
+	candidates.sort_custom(func(a: Action, b: Action):
 		return _action_priorities[a.id] > _action_priorities[b.id]
 	)
 
@@ -178,7 +173,7 @@ func conditions_met(action: Action) -> bool:
 	# Reset the was_stopped flag when cooldown expires
 	if state.was_stopped and state.current_cooldown <= 0:
 		state.was_stopped = false
-	
+
 	logger.debug("Checking conditions for action [b]%s[/b]" % action.id)
 	var can_start = action.can_start(entity)
 	logger.debug("Action [b]%s[/b] can_start = %s" % [action.id, can_start])

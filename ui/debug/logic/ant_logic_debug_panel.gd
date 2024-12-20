@@ -6,14 +6,14 @@ var logic_panel: LogicDebugPanel
 
 func _init(p_info_panel: AntInfoPanel) -> void:
 	info_panel = p_info_panel
-	
+
 	# Add the existing info panel
 	add_child(info_panel)
-	
+
 	# Add the new logic debug panel
 	logic_panel = LogicDebugPanel.new()
 	add_child(logic_panel)
-	
+
 	# Initialize when an ant is selected
 	info_panel.visibility_changed.connect(_on_info_panel_visibility_changed)
 

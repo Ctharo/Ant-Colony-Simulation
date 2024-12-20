@@ -8,9 +8,9 @@ var id: String
 @export var direction: Logic :
 	set(value):
 		assert(value.type == 4) ## Should return Vector2
-		direction = value 
+		direction = value
 @export var weight: Logic :
 	set(value):
 		assert(value.type == 2) ## Should return float
-		weight = value 
+		weight = value
 @export var color: Color
