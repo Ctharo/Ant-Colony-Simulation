@@ -8,6 +8,10 @@ var logger: Logger
 # Navigation properties
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
+const NAVIGATION_OBSTACLES_NUM_MIN = 15
+const NAVIGATION_OBSTACLES_NUM_MAX = 15
+const OBSTACLE_SIZE_MIN = 20.0
+const OBSTACLE_SIZE_MAX = 70.0
 
 # Spawn control parameters
 const ANTS_TO_SPAWN = 10
@@ -87,11 +91,11 @@ func setup_navigation() -> bool:
 
 	# Place obstacles
 	var placed_obstacles := []
-	var num_obstacles = randi_range(5, 10)  # Reduced number for testing
 	var max_attempts = 50
 	var obstacles_placed = 0
+	var obstacles_num = randi_range(NAVIGATION_OBSTACLES_NUM_MIN, NAVIGATION_OBSTACLES_NUM_MAX)
 
-	while obstacles_placed < num_obstacles and max_attempts > 0:
+	while obstacles_placed < obstacles_num and max_attempts > 0:
 		max_attempts -= 1
 
 		# Generate position
@@ -103,7 +107,7 @@ func setup_navigation() -> bool:
 		if center.distance_to(size / 2) < 150:
 			continue
 
-		var obstacle_size = randf_range(20, 50)
+		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
 
 		# Check overlap
 		var overlaps = false
@@ -335,9 +339,11 @@ func _finish_spawning() -> void:
 
 func _on_ant_selected(ant: Ant):
 	ant_info_panel.show_ant_info(ant)
+	ant.nav_agent.debug_enabled = true
 
 func _on_ant_deselected(ant: Ant):
 	ant_info_panel.deselect_current()
+	ant.nav_agent.debug_enabled = false
 
 func _on_colony_selected(colony: Colony):
 	colony_info_panel.show_colony_info(colony)

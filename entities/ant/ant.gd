@@ -69,7 +69,7 @@ var dead: bool = false :
 			died.emit(self)
 
 var vision_range: float = 50.0
-var movement_rate: float = 20.0
+var movement_rate: float = 25.0
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
