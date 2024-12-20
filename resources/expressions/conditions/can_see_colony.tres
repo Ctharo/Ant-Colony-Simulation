@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LogicExpression" load_steps=3 format=3 uid="uid://57tbv1m5t3pb"]
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://57tbv1m5t3pb"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_s51bw"]
 [ext_resource type="Resource" uid="uid://dnup72fdn73rb" path="res://resources/expressions/sense/proprioception/colony/distance_to_colony.tres" id="2_g5eqp"]
@@ -7,6 +7,6 @@
 script = ExtResource("1_s51bw")
 name = "can see colony"
 expression_string = "distance_to_colony < vision_range"
+nested_expressions = Array[ExtResource("1_s51bw")]([ExtResource("2_g5eqp")])
 description = ""
 type = 19
-nested_expressions = Array[ExtResource("1_s51bw")]([ExtResource("2_g5eqp")])

@@ -2,17 +2,17 @@ extends Node2D
 
 #region Constants
 const STYLE = {
-	"CELL_SIZE": 20,
+	"CELL_SIZE": 15,
 	"MAX_HEAT": 100.0,
 	"DECAY_RATE": 0.1,
 	"HEAT_RADIUS": 1,
 	"HEAT_PER_SECOND": 10.0,
 	"BOUNDARY_HEAT_MULTIPLIER": 8.0,
 	"BOUNDARY_CHECK_RADIUS": 3,
-	"BOUNDARY_PENETRATION_DEPTH": 3,
+	"BOUNDARY_PENETRATION_DEPTH": 2,
 	"DEBUG_COLORS": {
-		"START": Color(0, 1, 0, 0.3),
-		"END": Color(1, 0, 0, 0.3),
+		"START": Color(Color.LIGHT_GREEN, 0.3),
+		"END": Color(Color.RED, 0.3),
 		"BOUNDARY": Color(1, 0, 1, 0.4),
 		"REPULSION": Color(1, 0, 0, 0.6)
 	}
@@ -209,6 +209,42 @@ func get_avoidance_direction(colony: Colony, world_pos: Vector2) -> Vector2:
 		
 	return direction
 
+## Returns a normalized Vector2 pointing in the direction of increasing heat
+## within the specified range (in world units) from the given position
+func get_gradient_direction(colony: Colony, world_pos: Vector2, world_range: float = 30.0) -> Vector2:
+	# Convert world range to grid cells (rounded up to ensure coverage)
+	var cell_range := ceili(world_range / STYLE.CELL_SIZE)
+	var colony_id = colony.get_instance_id()
+	if not _colony_grids.has(colony_id):
+		return Vector2.ZERO
+		
+	var center_cell = world_to_cell(world_pos)
+	var gradient = Vector2.ZERO
+	var total_weight = 0.0
+	
+	for dx in range(-cell_range, cell_range + 1):
+		for dy in range(-cell_range, cell_range + 1):
+			var cell = center_cell + Vector2i(dx, dy)
+			var cell_pos = cell_to_world(cell)
+			
+			if not is_cell_navigable(cell_pos):
+				continue
+				
+			var heat = _colony_grids[colony_id].get(cell, 0.0)
+			if heat > 0:
+				var direction = (cell_pos - world_pos).normalized()
+				var distance = world_pos.distance_to(cell_pos)
+				var weight = heat / (1.0 + distance * 0.1)
+				
+				gradient += direction * weight
+				total_weight += weight
+	
+	if total_weight > 0:
+		gradient /= total_weight
+		return gradient.normalized()
+		
+	return Vector2.ZERO
+	
 ## Get current heat value at a position
 func get_heat_at_position(colony: Colony, pos: Vector2) -> float:
 	var colony_id = colony.get_instance_id()

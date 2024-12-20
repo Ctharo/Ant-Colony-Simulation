@@ -1,11 +1,11 @@
 [gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bu1fqvhv2mhb5"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_s0qnj"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_qkibf"]
 
 [resource]
-script = ExtResource("1_s0qnj")
-name = "heatmap repel weight"
+script = ExtResource("1_qkibf")
+name = "pheromone weight"
 expression_string = "min(1.0, heatmap.get_heat_at_position(colony, global_position))"
-nested_expressions = Array[ExtResource("1_s0qnj")]([])
+nested_expressions = Array[ExtResource("1_qkibf")]([])
 description = ""
 type = 2

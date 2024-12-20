@@ -1,0 +1,180 @@
+[gd_scene load_steps=2 format=3 uid="uid://example"]
+
+[ext_resource type="Script" path="res://ui/logic_editor/logic_editor_ui.gd" id="1_abcde"]
+
+[node name="LogicEditorUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_abcde")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeaderLarge"
+text = "Logic Editor"
+
+[node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="LoadButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Load"
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="EditorContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="MainEditor" type="VBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="NameSection" type="VBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/NameSection"]
+layout_mode = 2
+text = "Name"
+
+[node name="NameEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/NameSection"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Enter logic name..."
+
+[node name="TypeSection" type="VBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/TypeSection"]
+layout_mode = 2
+text = "Return Type"
+
+[node name="TypeOption" type="OptionButton" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/TypeSection"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ExpressionSection" type="VBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/ExpressionSection"]
+layout_mode = 2
+text = "Expression"
+
+[node name="ExpressionEdit" type="TextEdit" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/ExpressionSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+placeholder_text = "Enter expression..."
+wrap_mode = 1
+highlight_current_line = true
+
+[node name="DescriptionSection" type="VBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.5
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/DescriptionSection"]
+layout_mode = 2
+text = "Description"
+
+[node name="DescriptionEdit" type="TextEdit" parent="MarginContainer/VBoxContainer/EditorContainer/MainEditor/DescriptionSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+placeholder_text = "Enter description..."
+wrap_mode = 1
+
+[node name="NestedExpressionsPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/EditorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer"]
+layout_mode = 2
+text = "Nested Expressions"
+
+[node name="NestedExpressionsList" type="ItemList" parent="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="AddNestedButton" type="Button" parent="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add"
+
+[node name="RemoveNestedButton" type="Button" parent="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Remove"
+
+[node name="ErrorLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.921569, 0.337255, 0.337255, 1)
+horizontal_alignment = 1
+
+[node name="SaveDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Save Logic Resource"
+size = Vector2i(400, 300)
+ok_button_text = "Save"
+filters = PackedStringArray("*.tres")
+
+[node name="LoadDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Open a File"
+size = Vector2i(400, 300)
+ok_button_text = "Open"
+file_mode = 0
+filters = PackedStringArray("*.tres")
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HeaderContainer/SaveButton" to="." method="_on_save_button_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HeaderContainer/LoadButton" to="." method="_on_load_button_pressed"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/EditorContainer/MainEditor/NameSection/NameEdit" to="." method="_on_name_changed"]
+[connection signal="item_selected" from="MarginContainer/VBoxContainer/EditorContainer/MainEditor/TypeSection/TypeOption" to="." method="_on_type_selected"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/EditorContainer/MainEditor/ExpressionSection/ExpressionEdit" to="." method="_on_expression_changed"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/EditorContainer/MainEditor/DescriptionSection/DescriptionEdit" to="." method="_on_description_changed"]
+[connection signal="item_selected" from="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer/NestedExpressionsList" to="." method="_on_nested_expression_selected"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer/HBoxContainer/AddNestedButton" to="." method="_on_add_nested_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/EditorContainer/NestedExpressionsPanel/VBoxContainer/HBoxContainer/RemoveNestedButton" to="." method="_on_remove_nested_pressed"]
+[connection signal="file_selected" from="SaveDialog" to="." method="save_logic"]
+[connection signal="file_selected" from="LoadDialog" to="." method="load_logic"]

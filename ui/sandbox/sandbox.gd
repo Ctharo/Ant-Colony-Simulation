@@ -338,6 +338,7 @@ func _finish_spawning() -> void:
 	logger.info("Finished spawning all ants")
 
 func _on_ant_selected(ant: Ant):
+	ant_info_panel.deselect_current()
 	ant_info_panel.show_ant_info(ant)
 	ant.nav_agent.debug_enabled = true
 

@@ -192,6 +192,7 @@ func deselect_current() -> void:
 
 	if current_ant and current_ant.heatmap:
 		current_ant.heatmap.set_debug_draw(current_ant.colony, false)
+		current_ant.nav_agent.debug_enabled = false
 	current_ant = null
 
 	hide()

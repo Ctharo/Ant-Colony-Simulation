@@ -68,7 +68,8 @@ var dead: bool = false :
 		if dead:
 			died.emit(self)
 
-var vision_range: float = 50.0
+var vision_range: float = 50.0 # TODO: Should be tied to sight_area.radius
+var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
 var energy_max: float = 100
 var energy_level: float = energy_max :
@@ -197,6 +198,10 @@ func get_food_in_view() -> Array:
 		if food is Food and food != null and food.is_available:
 			fiv.append(food)
 	return fiv
+
+func get_pheromone_direction(increasing_concentration: bool = true) -> Vector2:
+	var dir: int = 1 if increasing_concentration else -1
+	return heatmap.get_gradient_direction(colony, global_position, olfaction_range) * dir
 
 func get_sensed_pheromones(pheromone_type: String = "") -> Array:
 	var pheromones: Array = []

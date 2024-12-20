@@ -56,7 +56,7 @@ func create_ui():
 
 	# Create buttons
 	create_button("Start Simulation", button_container)
-	create_button("Expression Editor", button_container)
+	create_button("Logic Editor", button_container)
 	create_button("Property Browser", button_container)
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
@@ -127,9 +127,9 @@ func _on_property_browser_button_pressed():
 	var tween = create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.5)
 
-func _on_expression_editor_button_pressed():
-	_info("Expression Editor pressed")
-	transition_to_scene("expression_editor", "expression_editor")
+func _on_logic_editor_button_pressed():
+	_info("Logic Editor pressed")
+	transition_to_scene("logic_editor_ui", "logic_editor")
 
 func _on_settings_button_pressed():
 	_info("Settings pressed")
