@@ -131,46 +131,39 @@ func configure_nav_agent() -> void:
 		logger.error("No NavigationRegion2D found in scene")
 		return
 		
-	# Verify and wait for navigation map
-	var map_rid: RID = nav_region.get_navigation_map()
-	if not map_rid.is_valid():
-		logger.error("No valid navigation map found")
-		return
-		
-	# Wait for navigation map to be ready
-	while not NavigationServer2D.map_is_active(map_rid):
-		await get_tree().physics_frame
+	# Core configuration that we know works well
+	var nav_config := {
+		"path_desired_distance": 4.0,  # Keep the smaller working values
+		"target_desired_distance": 4.0,
+		"path_max_distance": 50.0,
+		"avoidance_enabled": true,
+		"radius": 10.0,
+		"neighbor_distance": 50.0,
+		"max_neighbors": 10,
+		"max_speed": movement_rate,  # Add movement rate from previous version
+		"navigation_layers": 1,
+		"avoidance_layers": 1,
+		"avoidance_mask": 1
+	}
 	
-	# Configure navigation agent properties
-	nav_agent.radius = 5.0  # Reduced radius for better pathfinding
-	nav_agent.neighbor_distance = 50.0  # Reduced for more focused local awareness
-	nav_agent.max_neighbors = 10
-	nav_agent.max_speed = movement_rate
-	nav_agent.path_desired_distance = 10.0  # Shorter distance for more precise movement
-	nav_agent.target_desired_distance = 5.0  # Shorter distance to target
-	nav_agent.path_max_distance = 50.0  # Shorter max distance for more frequent path updates
+	# Apply core configuration
+	for property in nav_config:
+		if property in nav_agent:
+			nav_agent.set(property, nav_config[property])
+		else:
+			logger.warn("Navigation property not found: %s" % property)
 	
-	# Timing settings
-	nav_agent.time_horizon_agents = 1.0
-	nav_agent.time_horizon_obstacles = 0.5
-	
-	# Path processing configuration
+	# Additional settings that shouldn't interfere with core functionality
 	nav_agent.path_metadata_flags = NavigationPathQueryParameters2D.PathMetadataFlags.PATH_METADATA_INCLUDE_ALL
 	nav_agent.path_postprocessing = NavigationPathQueryParameters2D.PathPostProcessing.PATH_POSTPROCESSING_CORRIDORFUNNEL
 	nav_agent.pathfinding_algorithm = NavigationPathQueryParameters2D.PathfindingAlgorithm.PATHFINDING_ALGORITHM_ASTAR
 	
-	# Path simplification
-	nav_agent.simplify_path = true
-	nav_agent.simplify_epsilon = 0.25  # More precise path following
-	
-	# Navigation layers and masks
-	nav_agent.navigation_layers = 1
-	nav_agent.avoidance_layers = 1
-	nav_agent.avoidance_mask = 1
-	nav_agent.avoidance_priority = 1.0
-	
 	# Set the navigation map
-	nav_agent.set_navigation_map(map_rid)
+	var map_rid = nav_region.get_navigation_map()
+	if map_rid.is_valid():
+		nav_agent.set_navigation_map(map_rid)
+	else:
+		logger.error("Invalid navigation map RID")
 		
 func _load_actions() -> void:
 	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()

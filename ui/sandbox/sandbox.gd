@@ -54,18 +54,16 @@ func _spawn(delta:float) -> void:
 
 	_frames_until_next_batch = FRAMES_BETWEEN_BATCHES
 
-## Setup the navigation system for the entire sandbox
-## Setup the navigation system for the entire sandbox
 func setup_navigation() -> bool:
 	# Create navigation region
 	navigation_region = NavigationRegion2D.new()
-	navigation_region.add_to_group("navigation") 
+	navigation_region.add_to_group("navigation")
 	add_child(navigation_region)
 
 	# Create navigation polygon
 	navigation_poly = NavigationPolygon.new()
 	
-	# Create a node to hold all obstacles
+	# Create obstacles container
 	var obstacles_container = Node2D.new()
 	obstacles_container.name = "Obstacles"
 	add_child(obstacles_container)
@@ -74,7 +72,7 @@ func setup_navigation() -> bool:
 	var viewport_rect := get_viewport_rect()
 	var size := viewport_rect.size
 
-	# Create walkable area polygon (full viewport minus margin)
+	# Create walkable area
 	var margin := 40.0
 	var outline := PackedVector2Array([
 		Vector2(margin, margin),
@@ -83,30 +81,31 @@ func setup_navigation() -> bool:
 		Vector2(margin, size.y - margin)
 	])
 
-	# Add main outline first
+	# Add main outline and generate initial polygons
 	navigation_poly.add_outline(outline)
 	navigation_poly.make_polygons_from_outlines()
 
-	# Track placed obstacles
+	# Place obstacles
 	var placed_obstacles := []
-	var num_obstacles = randi_range(10, 20)
-	var max_attempts = 100
+	var num_obstacles = randi_range(5, 10)  # Reduced number for testing
+	var max_attempts = 50
 	var obstacles_placed = 0
 
 	while obstacles_placed < num_obstacles and max_attempts > 0:
 		max_attempts -= 1
 
+		# Generate position
 		var center_x = randf_range(margin * 3, size.x - margin * 3)
 		var center_y = randf_range(margin * 3, size.y - margin * 3)
 		var center = Vector2(center_x, center_y)
 
-		# Avoid placing obstacles in the center
+		# Skip if too close to center
 		if center.distance_to(size / 2) < 150:
 			continue
 
 		var obstacle_size = randf_range(20, 50)
 
-		# Check overlap with existing obstacles
+		# Check overlap
 		var overlaps = false
 		for existing in placed_obstacles:
 			if center.distance_to(existing["center"]) < (obstacle_size + existing["size"] + 20):
@@ -117,14 +116,14 @@ func setup_navigation() -> bool:
 			continue
 
 		# Generate obstacle points
-		var obstacle_points = create_obstacle_points(center, obstacle_size)
+		var obstacle_points = _create_obstacle_points(center, obstacle_size)
 		
-		# Validate obstacle placement
-		if validate_obstacle(obstacle_points, navigation_poly):
-			# Create the obstacle
-			create_obstacle(obstacle_points, center, obstacles_container)
+		# Validate obstacle
+		if _validate_obstacle(obstacle_points, navigation_poly):
+			# Create physical obstacle
+			_create_obstacle(obstacle_points, center, obstacles_container)
 			
-			# Add to navigation system
+			# Add to navigation
 			navigation_poly.add_outline(obstacle_points)
 			navigation_poly.make_polygons_from_outlines()
 			
@@ -135,46 +134,42 @@ func setup_navigation() -> bool:
 			
 			obstacles_placed += 1
 
-	# Configure NavigationServer2D settings
+	# Configure navigation
+	navigation_region.navigation_polygon = navigation_poly
+	
+	# Configure NavigationServer2D
 	var map_rid = navigation_region.get_navigation_map()
 	NavigationServer2D.map_set_active(map_rid, true)
 	NavigationServer2D.map_set_cell_size(map_rid, 1.0)
 	NavigationServer2D.map_set_edge_connection_margin(map_rid, 5.0)
-	
-	# Apply navigation settings
-	navigation_region.navigation_polygon = navigation_poly
-	navigation_region.enabled = true
-	
-	# Force update and wait for baking to complete
 	NavigationServer2D.map_force_update(map_rid)
-	navigation_region.bake_navigation_polygon()
-	await navigation_region.bake_finished
+
+	# Wait for physics update
+	await get_tree().physics_frame
+	await get_tree().physics_frame
 
 	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
 	return true
 
-## Create points for an obstacle
-func create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
+func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
 	var num_points = 8
 	var points = PackedVector2Array()
 	
 	for p in range(num_points):
 		var angle = (p / float(num_points)) * TAU
-		var random_offset = randf_range(0.8, 1.2)  # Add some randomness to shape
+		# Add randomness to both the angle and radius
+		var angle_offset = randf_range(-0.2, 0.2)  # Random angle variation
+		var radius_multiplier = randf_range(0.8, 1.2)  # Random size variation
 		var point = Vector2(
-			center.x + cos(angle) * size * random_offset,
-			center.y + sin(angle) * size * random_offset
+			center.x + cos(angle + angle_offset) * size * radius_multiplier,
+			center.y + sin(angle + angle_offset) * size * radius_multiplier
 		)
 		points.push_back(point)
 	
 	return points
 
-	
-## Create a visual obstacle with collision
-func create_obstacle(points: PackedVector2Array, center: Vector2, parent: Node) -> void:
+func _create_obstacle(points: PackedVector2Array, center: Vector2, parent: Node) -> void:
 	var obstacle = StaticBody2D.new()
-	obstacle.collision_layer = 1  # Make sure this matches your navigation layers
-	obstacle.collision_mask = 1
 	obstacle.position = center
 	parent.add_child(obstacle)
 
@@ -186,66 +181,60 @@ func create_obstacle(points: PackedVector2Array, center: Vector2, parent: Node) 
 	collision.polygon = local_points
 	obstacle.add_child(collision)
 
-	# Create visual representation
+	# Create base rock polygon
 	var polygon = Polygon2D.new()
 	polygon.polygon = local_points
-	polygon.color = Color(0.5, 0.5, 0.5, 1.0)
+	polygon.color = Color(0.5, 0.5, 0.5, 1.0)  # Base gray color
 	obstacle.add_child(polygon)
 	
-	# Add border for depth
+	# Add darker border for depth
 	var border = Line2D.new()
 	var border_points = local_points.duplicate()
 	border_points.append(local_points[0])
 	border.points = border_points
 	border.width = 2.0
-	border.default_color = Color(0.3, 0.3, 0.3, 1.0)
+	border.default_color = Color(0.3, 0.3, 0.3, 1.0)  # Darker gray border
 	obstacle.add_child(border)
+	
+	# Add texture variation with a slightly lighter overlay
+	var texture_polygon = Polygon2D.new()
+	var smaller_points = PackedVector2Array()
+	for point in local_points:
+		smaller_points.append(point * 0.8)  # 80% size of original
+	texture_polygon.polygon = smaller_points
+	texture_polygon.color = Color(0.6, 0.6, 0.6, 0.3)  # Lighter gray with transparency
+	obstacle.add_child(texture_polygon)
 
-
-
-## Validate obstacle placement
-func validate_obstacle(points: PackedVector2Array, nav_poly: NavigationPolygon) -> bool:
-	# Check if the obstacle would create invalid navigation
+func _validate_obstacle(points: PackedVector2Array, nav_poly: NavigationPolygon) -> bool:
+	# Check for minimum spacing from existing polygons
+	var min_spacing = 10.0
+	
 	for i in range(nav_poly.get_outline_count()):
 		var outline = nav_poly.get_outline(i)
-		
-		# Check for intersections with existing navigation polygons
-		for j in range(points.size()):
-			var p1 = points[j]
-			var p2 = points[(j + 1) % points.size()]
-			
-			for k in range(outline.size()):
-				var p3 = outline[k]
-				var p4 = outline[(k + 1) % outline.size()]
-				
-				if segments_intersect(p1, p2, p3, p4):
-					return false
-	
-	# Check for minimum distance from navigation edges
-	var min_distance = 20.0  # Minimum distance from navigation edges
-	for point in points:
-		for i in range(nav_poly.get_outline_count()):
-			var outline = nav_poly.get_outline(i)
+		for point in points:
 			for j in range(outline.size()):
 				var edge_start = outline[j]
 				var edge_end = outline[(j + 1) % outline.size()]
-				if point_to_line_distance(point, edge_start, edge_end) < min_distance:
+				
+				# Check distance to edge
+				var edge_vector = edge_end - edge_start
+				var point_vector = point - edge_start
+				var edge_length_sq = edge_vector.length_squared()
+				
+				if edge_length_sq == 0:
+					if point_vector.length() < min_spacing:
+						return false
+					continue
+					
+				var t = clamp(point_vector.dot(edge_vector) / edge_length_sq, 0, 1)
+				var projection = edge_start + t * edge_vector
+				
+				if point.distance_to(projection) < min_spacing:
 					return false
 	
 	return true
 	
-## Calculate point to line distance
-func point_to_line_distance(point: Vector2, line_start: Vector2, line_end: Vector2) -> float:
-	var line_vec = line_end - line_start
-	var point_vec = point - line_start
-	var line_length = line_vec.length()
-	if line_length == 0:
-		return point_vec.length()
-	
-	var t = max(0, min(1, point_vec.dot(line_vec) / (line_length * line_length)))
-	var projection = line_start + t * line_vec
-	return point.distance_to(projection)
-	
+
 ## Check if two line segments intersect
 func segments_intersect(p1: Vector2, p2: Vector2, p3: Vector2, p4: Vector2) -> bool:
 	var d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x)
