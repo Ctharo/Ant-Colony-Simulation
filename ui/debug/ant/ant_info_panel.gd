@@ -376,3 +376,4 @@ func draw_arrow(start: Vector2, end: Vector2, color: Color, width: float, head_s
 func _exit_tree() -> void:
 	if current_ant:
 		current_ant.nav_agent.debug_enabled = false
+		HeatmapManager.set_ant_debug_draw(current_ant, false)

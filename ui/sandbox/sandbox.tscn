@@ -25,6 +25,7 @@ grow_vertical = 2
 layout_mode = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/ControlPanel"]
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 
 [node name="SpawnColonyButton" type="Button" parent="VBoxContainer/ControlPanel/HBoxContainer"]
