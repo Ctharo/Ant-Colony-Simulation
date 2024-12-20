@@ -44,9 +44,6 @@ var stop_condition: Logic
 #endregion
 
 #region Signals
-signal started
-signal completed
-signal interrupted
 #endregion
 
 func generate_conditions() -> void:
@@ -80,7 +77,7 @@ func can_execute(entity: Node) -> bool:
 	return can_start(entity)
 
 # Virtual method to be implemented by subclasses
-func execute_tick(entity: Node, state: ActionManager.ActionState, delta: float) -> void:
+func execute_tick(entity: Node, _state: ActionManager.ActionState, delta: float) -> void:
 	energy_loss(entity, energy_coefficient * delta)
 
 #region Protected Methods
@@ -89,7 +86,7 @@ func _validate_params() -> bool:
 	return true
 
 ## Update the action execution (override in subclasses)
-func _update_execution(entity: Node, delta: float) -> void:
+func _update_execution(_entity: Node, _delta: float) -> void:
 	pass
 	
 func energy_loss(entity: Node, amount: float) -> void:

@@ -50,11 +50,11 @@ func by_colony(colony: Colony) -> Ants:
 	return by_col
 
 func get_all() -> Ants:
-	var ants: Ants = Ants.new()
-	for ant in ants:
+	var _ants: Ants = Ants.new()
+	for ant in _ants:
 		if ant != null:
-			ants.append(ant)
-	return ants
+			_ants.append(ant)
+	return _ants
 
 func _on_ant_died(ant: Ant) -> void:
 	if ant in ants:

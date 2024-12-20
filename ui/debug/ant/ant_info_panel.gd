@@ -118,19 +118,37 @@ func update_legend(influences: Array) -> void:
 	var separator = HSeparator.new()
 	influences_legend.add_child(separator)
 	
-	# Get total magnitude for relative weights
+	# Get influence manager
 	var influence_manager: InfluenceManager = current_ant.action_manager._states[current_ant.action_manager._current_action_id].influence_manager
-	var total_magnitude = influence_manager.calculate_weighted_direction(influences).length()
 	
-	# Add each non-ignored influence with its relative weight
+	# Calculate total weight first
+	var total_weight = 0.0
+	var weights = []
+	
+	# First pass: calculate total weight
 	for influence in influences:
 		var weight = influence_manager.eval_system.get_value(influence.weight)
-		var relative_weight = weight / total_magnitude if total_magnitude > 0 else 0.0
-		var color: Color = influence.color if not _should_ignore_influence(influence) else Color(Color.WHITE, 0)
-		add_legend_entry(influence.name, influence.color, relative_weight)
+		weights.append(weight)
+		total_weight += weight
+	
+	# Second pass: add legend entries with normalized weights
+	for i in range(influences.size()):
+		var influence = influences[i]
+		var weight = weights[i]
+		var normalized_weight = weight / total_weight if total_weight > 0 else 0.0
+		
+		# Skip influences below threshold
+		if normalized_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+			
+		add_legend_entry(
+			influence.name, 
+			influence.color if not _should_ignore_influence(influence) else Color(Color.WHITE, 0),
+			normalized_weight
+		)
 
 # Modified legend entry function with weight display
-func add_legend_entry(name: String, color: Color, relative_weight: float) -> void:
+func add_legend_entry(name: String, color: Color, normalized_weight: float) -> void:
 	var entry = HBoxContainer.new()
 	
 	# Color indicator	
@@ -159,7 +177,8 @@ func add_legend_entry(name: String, color: Color, relative_weight: float) -> voi
 	var weight_label = Label.new()
 	weight_label.custom_minimum_size.x = 70
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	weight_label.text = "%.1f%%" % (relative_weight * 100)
+	# Display percentage with one decimal place
+	weight_label.text = "%.1f%%" % (normalized_weight * 100)
 	
 	# Add some spacing before the percentage
 	var weight_spacer = Control.new()
@@ -169,7 +188,6 @@ func add_legend_entry(name: String, color: Color, relative_weight: float) -> voi
 	entry.add_child(weight_label)
 	
 	influences_legend.add_child(entry)
-
 func deselect_current() -> void:
 
 	if current_ant and current_ant.heatmap:
@@ -255,6 +273,13 @@ func _draw() -> void:
 			if current_action is Move:
 				draw_influences(current_action)
 				
+
+		
+## Check if an influence should be ignored in visualization
+func _should_ignore_influence(influence: Influence) -> bool:
+	var influence_type = influence.name.to_snake_case().trim_suffix("_influence")
+	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
+
 func draw_influences(move_action: Move) -> void:
 	var ant_pos = current_ant.global_position
 	var influence_manager = current_ant.action_manager._states[move_action.id].influence_manager
@@ -264,46 +289,52 @@ func draw_influences(move_action: Move) -> void:
 		func(influence): return not _should_ignore_influence(influence)
 	)
 	
-	# Calculate total influence first
-	var total_direction = influence_manager.calculate_weighted_direction(valid_influences)
-	var total_magnitude = total_direction.length()
-	
-	if total_magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
-		return
-		
-	# Normalize total direction
-	total_direction = total_direction.normalized()
-	
-	# Calculate individual influences and collect data
+	# First pass: Calculate total weight and collect weights
+	var total_weight = 0.0
 	var influence_data = []
 	
 	for influence in valid_influences:
 		var weight = influence_manager.eval_system.get_value(influence.weight)
-		if weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
-			continue
-			
 		var direction = influence_manager.eval_system.get_value(influence.direction).normalized()
 		
-		# Scale weight relative to total magnitude
-		var relative_weight = weight / total_magnitude
+		total_weight += weight
 		
 		influence_data.append({
-			"weight": relative_weight,  # Now relative to total
+			"raw_weight": weight,
 			"direction": direction,
 			"color": influence.color,
 			"name": influence.name
 		})
 	
-	# Sort influences by weight/length (shortest first)
+	# Early exit if total weight is negligible
+	if total_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+		return
+		
+	# Second pass: Normalize weights and calculate final vectors
+	var total_direction = Vector2.ZERO
+	
+	for data in influence_data:
+		# Calculate normalized weight
+		data.normalized_weight = data.raw_weight / total_weight if total_weight > 0 else 0.0
+		
+		# Skip negligible influences
+		if data.normalized_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+			
+		# Calculate weighted direction contribution
+		data.weighted_direction = data.direction * data.normalized_weight
+		total_direction += data.weighted_direction
+	
+	# Sort influences by normalized weight (shortest first for layering)
 	influence_data.sort_custom(
-		func(a, b): return a.weight < b.weight
+		func(a, b): return a.normalized_weight < b.normalized_weight
 	)
 	
 	# Draw overall influence arrow first (on bottom)
 	var overall_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
 	draw_arrow(
 		ant_pos,
-		ant_pos + total_direction * overall_length,
+		ant_pos + total_direction.normalized() * overall_length,
 		STYLE.INFLUENCE_SETTINGS.OVERALL_COLOR,
 		STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE,
 		STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
@@ -311,29 +342,31 @@ func draw_influences(move_action: Move) -> void:
 	
 	# Draw individual influence arrows
 	for data in influence_data:
-		var arrow_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * data.weight * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
-		var influence_vector = data.direction * arrow_length
+		if data.normalized_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+			
+		var arrow_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * data.normalized_weight * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
+		var arrow_end = ant_pos + data.direction * arrow_length
 		
 		draw_arrow(
 			ant_pos,
-			ant_pos + influence_vector,
+			arrow_end,
 			data.color,
 			STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH,
 			STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE
 		)
 
-		
-## Check if an influence should be ignored in visualization
-func _should_ignore_influence(influence: Influence) -> bool:
-	var influence_type = influence.name.to_snake_case().trim_suffix("_influence")
-	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
-
 func draw_arrow(start: Vector2, end: Vector2, color: Color, width: float, head_size: float) -> void:
 	# Draw main line
 	draw_line(start, end, color, width)
 	
-	# Calculate arrow head
-	var direction = (end - start).normalized()
+	# Only draw arrow head if there's enough length for it to be visible
+	var direction = (end - start)
+	var length = direction.length()
+	if length <= head_size:
+		return
+		
+	direction = direction.normalized()
 	var right = direction.rotated(PI * 3/4) * head_size
 	var left = direction.rotated(-PI * 3/4) * head_size
 	

@@ -146,7 +146,6 @@ func update(delta: float) -> void:
 		# Check stop condition
 		if action.should_stop(entity):
 			logger.debug("Stop condition met for action %s" % [_current_action_id])
-			action.emit_signal("interrupted")
 			state.was_stopped = true  # Mark that this action was stopped
 			_complete_current_action()
 			_select_next_action()

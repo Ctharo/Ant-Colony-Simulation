@@ -56,7 +56,7 @@ static var source_filters: Dictionary = {}
 static var enabled_categories := {
 	Category.TASK: false,
 	Category.LOGIC: false,
-	Category.INFLUENCE: true,
+	Category.INFLUENCE: false,
 	Category.MOVEMENT: false,
 	Category.ACTION: false,
 	Category.BEHAVIOR: false,

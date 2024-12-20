@@ -94,7 +94,6 @@ func _update_boundary_repulsion(colony_id: int, world_pos: Vector2, delta: float
 				_create_repulsion_from_boundary(colony_id, check_cell, world_pos, base_heat)
 
 func _create_repulsion_from_boundary(colony_id: int, boundary_cell: Vector2i, ant_pos: Vector2, base_heat: float) -> void:
-	var boundary_pos = cell_to_world(boundary_cell)
    
 	for dx in range(-STYLE.BOUNDARY_PENETRATION_DEPTH, STYLE.BOUNDARY_PENETRATION_DEPTH + 1):
 		for dy in range(-STYLE.BOUNDARY_PENETRATION_DEPTH, STYLE.BOUNDARY_PENETRATION_DEPTH + 1):

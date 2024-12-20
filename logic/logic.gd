@@ -19,7 +19,6 @@ var id: String
 var _last_value: Variant
 
 signal value_changed(new_value: Variant, expression_id: String)
-signal dependencies_changed
 
 ## If there are no nested expressions and no caching is desired,
 ## this indicates the expression should be evaluated every time

@@ -4,13 +4,7 @@ extends CharacterBody2D
 
 #region Signals
 signal spawned
-signal food_spotted
-signal ant_spotted
-signal position_changed
 signal energy_changed
-signal health_changed
-signal action_completed
-signal pheromone_sensed
 signal damaged
 signal died(ant: Ant)
 signal ant_selected(ant: Ant)
@@ -103,10 +97,13 @@ func _ready() -> void:
 	# Initialize components
 	action_manager.initialize(self)
 
-
 	# Initialize state
 	_initialize_state()
 	_load_actions()
+	
+	# Setup navigation
+	configure_nav_agent()
+
 
 	# Emit ready signal
 	spawned.emit()
@@ -123,58 +120,58 @@ func _initialize_state() -> void:
 	energy_level = randi_range(50, energy_max)
 	health_level = randi_range(50, health_max)
 
-	# Setup navigation
-	_configure_nav_agent()
-
-func _configure_nav_agent() -> void:
+func configure_nav_agent() -> void:
 	if not nav_agent:
 		logger.error("Navigation agent not initialized")
 		return
-
+	
 	# Get the navigation region from the scene tree
 	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
 	if not nav_region:
 		logger.error("No NavigationRegion2D found in scene")
 		return
-
-	# Get the map RID from the navigation region
+		
+	# Verify and wait for navigation map
 	var map_rid: RID = nav_region.get_navigation_map()
 	if not map_rid.is_valid():
 		logger.error("No valid navigation map found")
 		return
 		
-	# Configure the NavigationAgent2D node properties
-	nav_agent.avoidance_enabled = true
-	nav_agent.radius = 10.0  # Default matches our needs
-	nav_agent.neighbor_distance = 50.0  # More conservative than default 500
-	nav_agent.max_neighbors = 10  # Default value
-	nav_agent.max_speed = movement_rate
-	nav_agent.path_desired_distance = 20.0  # Default value
-	nav_agent.target_desired_distance = 10.0  # Default value
-	nav_agent.path_max_distance = 100.0  # Default value
-	nav_agent.time_horizon_agents = 1.0  # Default value
-	nav_agent.time_horizon_obstacles = 1.0  # Increase from 0 for obstacle avoidance
+	# Wait for navigation map to be ready
+	while not NavigationServer2D.map_is_active(map_rid):
+		await get_tree().physics_frame
 	
-	# Path processing options
+	# Configure navigation agent properties
+	nav_agent.radius = 5.0  # Reduced radius for better pathfinding
+	nav_agent.neighbor_distance = 50.0  # Reduced for more focused local awareness
+	nav_agent.max_neighbors = 10
+	nav_agent.max_speed = movement_rate
+	nav_agent.path_desired_distance = 10.0  # Shorter distance for more precise movement
+	nav_agent.target_desired_distance = 5.0  # Shorter distance to target
+	nav_agent.path_max_distance = 50.0  # Shorter max distance for more frequent path updates
+	
+	# Timing settings
+	nav_agent.time_horizon_agents = 1.0
+	nav_agent.time_horizon_obstacles = 0.5
+	
+	# Path processing configuration
 	nav_agent.path_metadata_flags = NavigationPathQueryParameters2D.PathMetadataFlags.PATH_METADATA_INCLUDE_ALL
 	nav_agent.path_postprocessing = NavigationPathQueryParameters2D.PathPostProcessing.PATH_POSTPROCESSING_CORRIDORFUNNEL
 	nav_agent.pathfinding_algorithm = NavigationPathQueryParameters2D.PathfindingAlgorithm.PATHFINDING_ALGORITHM_ASTAR
 	
-	# Optional: Enable path simplification if needed
+	# Path simplification
 	nav_agent.simplify_path = true
-	nav_agent.simplify_epsilon = 0.5  # Adjust based on needed precision
+	nav_agent.simplify_epsilon = 0.25  # More precise path following
 	
-	# Set navigation layers (using default layer 1)
+	# Navigation layers and masks
 	nav_agent.navigation_layers = 1
 	nav_agent.avoidance_layers = 1
 	nav_agent.avoidance_mask = 1
-	nav_agent.avoidance_priority = 1.0  # Default value
+	nav_agent.avoidance_priority = 1.0
 	
 	# Set the navigation map
 	nav_agent.set_navigation_map(map_rid)
-	
-	logger.debug("Navigation agent configured with map: %s" % str(map_rid))
-
+		
 func _load_actions() -> void:
 	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()
 	action_manager.set_profile(action_profile)
