@@ -151,13 +151,19 @@ func update(delta: float) -> void:
 		_select_next_action()
 
 func _complete_current_action() -> void:
+	var action: Action = _actions[_current_action_id]
+	var state := get_or_create_state(_current_action_id)
 	if _current_action_id:
-		var state := get_or_create_state(_current_action_id)
-		var action: Action = _actions[_current_action_id]
 		state.current_cooldown = action.cooldown
 		state.elapsed_time = 0.0
 		_current_action_id = ""
 
+func get_current_action() -> Action:
+	if not _current_action_id:
+		return null
+	var state := get_or_create_state(_current_action_id)
+	return _actions[_current_action_id]
+	
 func conditions_met(action: Action) -> bool:
 	assert(not action.name.is_empty(), "Action must have a name")
 	var state := get_or_create_state(action.id)

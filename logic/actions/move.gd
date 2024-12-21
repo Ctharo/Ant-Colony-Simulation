@@ -51,8 +51,7 @@ func execute_tick(entity: Node, state: ActionState, delta: float) -> void:
 	# Energy calculation using last_pos from state
 	var last_pos = state.get_meta("last_pos") as Vector2
 	var moved_length: float = last_pos.distance_to(current_pos)
-	if moved_length > 0:
-		energy_loss(entity, energy_coefficient * delta)
+
 
 	# Update last_pos in state
 	state.set_meta("last_pos", current_pos)

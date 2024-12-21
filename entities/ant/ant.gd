@@ -159,9 +159,17 @@ func _load_actions() -> void:
 	action_manager.set_profile(action_profile)
 
 func _physics_process(delta: float) -> void:
+	var energy_coef: float = 0.0
 	if colony:
 		action_manager.update(delta)
-
+	var current_action: Action = action_manager.get_current_action()
+	if current_action is Move:
+		energy_coef += 0.1
+	elif current_action is Rest:
+		energy_coef -= 5.0
+	energy_level -= energy_level * energy_coef * delta
+	
+	
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
 	if colony != p_colony:

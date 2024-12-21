@@ -70,7 +70,6 @@ func execute_tick(entity: Node, state: ActionState, delta: float) -> void:
 	if state.is_interrupted:
 		state.is_interrupted = false
 
-	energy_loss(entity, energy_coefficient * delta)
 	_update_execution(entity, state, delta)
 
 #region Protected Methods
@@ -81,7 +80,4 @@ func _validate_params() -> bool:
 ## Update the action execution (override in subclasses)
 func _update_execution(_entity: Node, _state: ActionState, _delta: float) -> void:
 	pass
-
-func energy_loss(entity: Node, amount: float) -> void:
-	entity.energy_level -= amount
 #endregion
