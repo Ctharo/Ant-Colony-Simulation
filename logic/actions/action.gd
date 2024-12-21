@@ -26,58 +26,20 @@ var id: String
 ## Parameters required for this action
 @export var params: Dictionary = {}
 
-## Expression string to evaluate start conditions
-@export_multiline var start_condition_expression: String
-
-## Expression string to evaluate stop conditions
-@export_multiline var stop_condition_expression: String
-
-## Expression string to evaluate interrupt conditions
-@export_multiline var interrupt_condition_expression: String
-
-## Nested conditions used in start expression
-@export var start_nested_conditions: Array[Logic]
-
-## Nested conditions used in stop expression
-@export var stop_nested_conditions: Array[Logic]
-
-## Nested conditions used in interrupt expression
-@export var interrupt_nested_conditions: Array[Logic]
-
 #region Protected
-var start_condition: Logic
-var stop_condition: Logic
-var interrupt_condition: Logic
+@export var start_condition: Logic
+@export var stop_condition: Logic
+@export var interrupt_condition: Logic
 #endregion
 
 #region Signals
 signal action_interrupted(action: Action, entity: Node)
 #endregion
 
-func generate_conditions() -> void:
-	if start_condition_expression:
-		start_condition = Logic.new()
-		start_condition.name = name + "_start_condition"
-		start_condition.expression_string = start_condition_expression
-		start_condition.nested_expressions = start_nested_conditions.duplicate()
-
-	if stop_condition_expression:
-		stop_condition = Logic.new()
-		stop_condition.name = name + "_stop_condition"
-		stop_condition.expression_string = stop_condition_expression
-		stop_condition.nested_expressions = stop_nested_conditions.duplicate()
-
-	if interrupt_condition_expression:
-		interrupt_condition = Logic.new()
-		interrupt_condition.name = name + "_interrupt_condition"
-		interrupt_condition.expression_string = interrupt_condition_expression
-		interrupt_condition.nested_expressions = interrupt_nested_conditions.duplicate()
-
 ## Get whether conditions are met to start this action
 func can_start(entity: Node) -> bool:
 	if not start_condition:
-		assert(start_condition, "Should always have a start condition?")
-		return true
+		return false
 	return start_condition.get_value(entity.action_manager.evaluation_system)
 
 ## Get whether the action should be stopped

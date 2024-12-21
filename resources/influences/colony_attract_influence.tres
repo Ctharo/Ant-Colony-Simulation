@@ -11,6 +11,9 @@ expression_string = "2.0"
 nested_expressions = Array[ExtResource("3_5ak01")]([])
 description = ""
 type = 2
+min_eval_interval = 0.05
+change_threshold = 0.0
+evaluation_group = 0
 
 [resource]
 script = ExtResource("2_0s8jm")

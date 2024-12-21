@@ -10,3 +10,6 @@ expression_string = "foods_in_reach.size() > 0"
 nested_expressions = Array[ExtResource("1_y0i2v")]([ExtResource("2_cmy5x")])
 description = ""
 type = 19
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0

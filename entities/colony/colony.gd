@@ -26,10 +26,10 @@ func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
-	HeatmapManager.register_colony(self)
+	HeatmapManager.register_entity(self)
 
 func _exit_tree() -> void:
-	HeatmapManager.unregister_colony(self)
+	HeatmapManager.unregister_entity(self)
 
 func get_ants() -> Array:
 	return ants.to_array()

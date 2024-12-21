@@ -101,10 +101,6 @@ func _on_spawn_ants_pressed() -> void:
 	if current_colony:
 		start_spawning(ant_count_edit.value)
 
-func _on_show_heatmap_toggled(enabled: bool) -> void:
-	if current_colony:
-		HeatmapManager.set_debug_draw(current_colony, enabled)
-
 func _on_highlight_ants_toggled(enabled: bool) -> void:
 	queue_redraw()
 
@@ -131,7 +127,7 @@ func _handle_spawning(delta: float) -> void:
 	_frames_until_next_batch = FRAMES_BETWEEN_BATCHES
 
 func _spawn_batch(size: int) -> void:
-	var ants = current_colony.spawn_ants(size, true)
+	var _ants = current_colony.spawn_ants(size, true)
 	_pending_spawns -= size
 
 func _finish_spawning() -> void:
@@ -140,10 +136,14 @@ func _finish_spawning() -> void:
 func _on_close_pressed() -> void:
 	queue_free()
 
+func _on_show_heatmap_toggled(enabled: bool) -> void:
+	if current_colony:
+		HeatmapManager.debug_draw(current_colony, enabled)
+
 func _exit_tree() -> void:
 	if current_colony:
-		HeatmapManager.set_debug_draw(current_colony, false)
-		current_colony.is_highlighted = false
+		HeatmapManager.debug_draw(current_colony, false)
+
 	current_colony = null
 	show_heatmap_check.button_pressed = false
 	highlight_ants_check.button_pressed = false

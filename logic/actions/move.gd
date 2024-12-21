@@ -3,7 +3,7 @@ extends Action
 
 @export var influences: Array[Influence]
 @export var face_direction: bool = false
-@export var TARGET_DISTANCE: float = 45.0
+@export var TARGET_DISTANCE: float = 100.0
 @export var RECALCULATION_THRESHOLD: float = 5.0 # Distance from target to trigger recalculation
 
 func execute_tick(entity: Node, state: ActionState, delta: float) -> void:

@@ -18,7 +18,6 @@ const OBSTACLE_SIZE_MAX = 70.0
 
 # States
 var _awaiting_colony_placement: bool = false
-var _last_selected_ant: Ant = null
 
 func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
@@ -147,7 +146,7 @@ func setup_navigation() -> bool:
 
 	# Get viewport boundaries
 	var viewport_rect := get_viewport_rect()
-	var size := viewport_rect.size
+	var _size := viewport_rect.size
 
 	# Create walkable area - account for control panel
 	var side_margin := 40.0
@@ -155,9 +154,9 @@ func setup_navigation() -> bool:
 	var bottom_margin := 40.0
 	var outline := PackedVector2Array([
 		Vector2(side_margin, top_margin),
-		Vector2(size.x - side_margin, top_margin),
-		Vector2(size.x - side_margin, size.y - bottom_margin),
-		Vector2(side_margin, size.y - bottom_margin)
+		Vector2(_size.x - side_margin, top_margin),
+		Vector2(_size.x - side_margin, _size.y - bottom_margin),
+		Vector2(side_margin, _size.y - bottom_margin)
 	])
 
 	# Add main outline and generate initial polygons
@@ -174,12 +173,12 @@ func setup_navigation() -> bool:
 		max_attempts -= 1
 
 		# Generate position - use correct margins
-		var center_x = randf_range(side_margin * 3, size.x - side_margin * 3)
-		var center_y = randf_range(top_margin * 2, size.y - bottom_margin * 3)
+		var center_x = randf_range(side_margin * 3, _size.x - side_margin * 3)
+		var center_y = randf_range(top_margin * 2, _size.y - bottom_margin * 3)
 		var center = Vector2(center_x, center_y)
 
 		# Skip if too close to center
-		if center.distance_to(size / 2) < 150:
+		if center.distance_to(_size / 2) < 150:
 			continue
 
 		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
@@ -226,6 +225,8 @@ func setup_navigation() -> bool:
 	# Wait for physics update
 	await get_tree().physics_frame
 	await get_tree().physics_frame
+
+	HeatmapManager.setup_navigation(navigation_region)
 
 	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
 	return true

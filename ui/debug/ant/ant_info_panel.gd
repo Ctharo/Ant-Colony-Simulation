@@ -183,11 +183,8 @@ func add_legend_entry(name: String, color: Color, normalized_weight: float) -> v
 
 	influences_legend.add_child(entry)
 
-func _on_show_heatmap_toggled(enabled: bool) -> void:
-	if current_ant:
-		HeatmapManager.set_ant_debug_draw(current_ant, enabled)
 
-func _on_show_influence_vectors_check_toggled(toggled_on: bool) -> void:
+func _on_show_influence_vectors_check_toggled(_toggled_on: bool) -> void:
 	queue_redraw()
 
 func _on_show_nav_path_check_toggled(toggled_on: bool) -> void:
@@ -291,7 +288,8 @@ func draw_influences(move_action: Move) -> void:
 		var weight = influence_manager.eval_system.get_value(influence.weight)
 		var direction = influence_manager.eval_system.get_value(influence.direction).normalized()
 
-		total_weight += weight
+		if weight:
+			total_weight += weight
 
 		influence_data.append({
 			"raw_weight": weight,
@@ -373,7 +371,14 @@ func draw_arrow(start: Vector2, end: Vector2, color: Color, width: float, head_s
 	# Draw arrow head
 	draw_colored_polygon(arrow_points, color)
 
+func _on_show_heatmap_toggled(enabled: bool) -> void:
+	if current_ant:
+		if enabled:
+			HeatmapManager.debug_draw(current_ant, true)
+		else:
+			HeatmapManager.debug_draw(current_ant, false)
+
 func _exit_tree() -> void:
 	if current_ant:
 		current_ant.nav_agent.debug_enabled = false
-		HeatmapManager.set_ant_debug_draw(current_ant, false)
+		HeatmapManager.debug_draw(current_ant, false)

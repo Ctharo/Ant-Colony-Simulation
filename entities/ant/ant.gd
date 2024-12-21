@@ -101,8 +101,7 @@ func _ready() -> void:
 
 	# Setup navigation
 	configure_nav_agent()
-
-	heatmap.register_ant(self)
+	HeatmapManager.register_entity(self)
 	# Emit ready signal
 	spawned.emit()
 
@@ -188,9 +187,11 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
-func get_pheromone_direction(increasing_concentration: bool = true) -> Vector2:
-	var dir: int = 1 if increasing_concentration else -1
-	return heatmap.get_gradient_direction(colony, global_position, olfaction_range) * dir
+func get_pheromone_direction(follow_concentration: bool = true) -> Vector2:
+	# When follow_concentration is true, move towards higher concentrations
+	# When false, move away from high concentrations
+	var dir: int = -1 if follow_concentration else 1
+	return heatmap.get_heat_direction(colony, global_position) * dir
 
 func get_ants_in_view() -> Array:
 	var ants: Array = []
@@ -232,4 +233,4 @@ func show_nav_path(enabled: bool):
 func _exit_tree() -> void:
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
-	heatmap.unregister_ant(self)
+	HeatmapManager.unregister_entity(self)

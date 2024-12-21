@@ -94,18 +94,14 @@ func register_action(action: Action, priority: int = 0) -> void:
 	if not state:
 		return
 
-	# Generate and register conditions
-	if action.start_condition_expression or action.stop_condition_expression or action.interrupt_condition_expression:
-		action.generate_conditions()
+	if action.start_condition:
+		evaluation_system.register_expression(action.start_condition)
 
-		if action.start_condition:
-			evaluation_system.register_expression(action.start_condition)
+	if action.stop_condition:
+		evaluation_system.register_expression(action.stop_condition)
 
-		if action.stop_condition:
-			evaluation_system.register_expression(action.stop_condition)
-
-		if action.interrupt_condition:
-			evaluation_system.register_expression(action.interrupt_condition)
+	if action.interrupt_condition:
+		evaluation_system.register_expression(action.interrupt_condition)
 
 	if action is Move:
 		influence_manager.register_influences(action)

@@ -6,6 +6,13 @@ extends Node
 var _states: Dictionary = {}
 ## Evaluation cache system
 var _cache: EvaluationCache
+## Track last evaluation time for expressions
+var _last_eval_time: Dictionary = {}
+## Track last significant change time for expressions
+var _last_change_time: Dictionary = {}
+## Minimum time between forced evaluations (in seconds)
+var min_eval_interval: float = 0.05  # 50ms minimum between forced evaluations
+
 ## Cache statistics tracker
 var _stats: Dictionary = {}
 ## Entity for evaluations
@@ -114,43 +121,78 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 
 	logger.trace("Getting value for [b]%s[/b]" % expression.id)
 
-	# For always_evaluate expressions (no nested dependencies)
-	if expression.always_evaluate:
-		logger.trace("- Direct always_evaluate expression")
-		var result = _calculate(expression.id)
-		var old_value = _cache.get_value(expression.id)
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var last_time = _last_eval_time.get(expression.id, 0.0)
+	var last_change = _last_change_time.get(expression.id, 0.0)
 
-		if old_value != result:
-			logger.trace("- Value changed: %s -> %s" % [old_value, result])
-			_cache.set_value(expression.id, result)
-		return result
+	# Check if we have a cached value that's recent enough
+	if _cache.has_value(expression.id):
+		var time_since_eval = current_time - last_time
+		var time_since_change = current_time - last_change
 
-	# Check if this expression has any always_evaluate dependencies
-	var has_always_eval_dep = _has_always_evaluate_dependency(expression)
-	if has_always_eval_dep:
-		logger.trace("- Has always_evaluate dependency, forcing calculation")
-		var result = _calculate(expression.id)
+		# If it's an always_evaluate expression or has such dependencies
+		if expression.always_evaluate or _has_always_evaluate_dependency(expression):
+			if time_since_eval < expression.min_eval_interval:
+				logger.trace("- Using cached value (%.3fs since last eval)" % time_since_eval)
+				return _cache.get_value(expression.id)
+		else:
+			# For normal expressions, use cache if either:
+			# 1. Force update not requested AND time threshold not met, OR
+			# 2. No significant changes in dependencies since last eval
+			if (not force_update and time_since_eval < expression.min_eval_interval) or \
+			   (not _have_dependencies_changed(expression, last_change)):
+				logger.trace("- Using cached value (no significant changes)")
+				return _cache.get_value(expression.id)
+
+	# Calculate new value
+	_last_eval_time[expression.id] = current_time
+	var result = _calculate(expression.id)
+
+	# Only update cache and change time if value actually changed significantly
+	var old_value = _cache.get_value(expression.id)
+	if expression._is_significant_change(old_value, result):
+		_last_change_time[expression.id] = current_time
 		_cache.set_value(expression.id, result)
-		return result
+		logger.trace("- Value changed significantly")
+	else:
+		_cache.set_value(expression.id, result, false)  # Update without triggering dependencies
+		logger.trace("- Value updated (not significant)")
 
-	# Regular cached evaluation
-	if force_update or _cache.needs_evaluation(expression.id):
-		var result = _calculate(expression.id)
-		_cache.set_value(expression.id, result)
-		return result
+	return result
 
-	return _cache.get_value(expression.id)
+func _have_dependencies_changed(expression: Logic, since_time: float) -> bool:
+	for nested in expression.nested_expressions:
+		var dep_last_change = _last_change_time.get(nested.id, 0.0)
+		if dep_last_change > since_time:
+			logger.trace("- Dependency [b]%s[/b] changed since last eval" % nested.id)
+			return true
+	return false
 
 func _has_always_evaluate_dependency(expression: Logic) -> bool:
 	logger.trace("Checking for always_evaluate dependencies in [b]%s[/b]" % expression.id)
+
+	# Cache the result for this frame
+	var cache_key = "_always_eval_deps_" + expression.id
+	if _cache.has_value(cache_key):
+		return _cache.get_value(cache_key)
+
+	var has_always_eval = false
 	for nested in expression.nested_expressions:
 		if nested.always_evaluate:
 			logger.trace("- Found always_evaluate dependency: [b]%s[/b]" % nested.id)
-			return true
+			has_always_eval = true
+			break
 		if _has_always_evaluate_dependency(nested):
 			logger.trace("- Found nested always_evaluate dependency in [b]%s[/b]" % nested.id)
-			return true
-	return false
+			has_always_eval = true
+			break
+
+	if not has_always_eval:
+		logger.trace("- No nested always_evaluate dependency found in [b]%s[/b]" % expression.id)
+
+	# Cache the result
+	_cache.set_value(cache_key, has_always_eval)
+	return has_always_eval
 
 func _parse_expression(expression: Logic) -> void:
 	var state := get_or_create_state(expression)
@@ -193,7 +235,6 @@ func _calculate(expression_id: String) -> Variant:
 	var bindings = []
 	for nested in state.logic.nested_expressions:
 		logger.trace("- Getting nested value for [b]%s[/b]" % nested.id)
-		# Pass force_update=true if this is an always_evaluate expression
 		var force = nested.always_evaluate
 		var value = get_value(nested, force)
 		bindings.append(value)

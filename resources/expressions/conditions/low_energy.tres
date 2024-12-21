@@ -10,3 +10,6 @@ expression_string = "energy_percentage < 33"
 nested_expressions = Array[ExtResource("1_og0tp")]([ExtResource("2_tggi3")])
 description = ""
 type = 19
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0
