@@ -102,6 +102,7 @@ func remove_colony(colony: Colony) -> Result:
 	colony_removed.emit(colony)
 
 	# Clean up node
+	colony.delete_all()
 	colony.queue_free()
 
 	logger.debug("Removed colony: %s" % colony.name)
@@ -128,9 +129,12 @@ func get_colony_by_name(colony_name: String) -> Colony:
 	return null
 #endregion
 
+func delete_all() -> void:
+	for colony in colonies.duplicate():  # Duplicate array to avoid modification during iteration
+		remove_colony(colony)
+
 #region Cleanup
 func _exit_tree() -> void:
 	# Clean up all colonies when manager is removed
-	for colony in colonies.duplicate():  # Duplicate array to avoid modification during iteration
-		remove_colony(colony)
+	delete_all()
 #endregion

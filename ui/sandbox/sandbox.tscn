@@ -28,6 +28,10 @@ layout_mode = 2
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 
+[node name="BackButton" type="Button" parent="VBoxContainer/ControlPanel/HBoxContainer"]
+layout_mode = 2
+text = "Back"
+
 [node name="SpawnColonyButton" type="Button" parent="VBoxContainer/ControlPanel/HBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2

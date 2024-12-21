@@ -36,6 +36,11 @@ size_flags_horizontal = 3
 theme_type_variation = &"HeaderLarge"
 text = "Logic Editor"
 
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Back"
+
 [node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -167,6 +172,7 @@ ok_button_text = "Open"
 file_mode = 0
 filters = PackedStringArray("*.tres")
 
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HeaderContainer/BackButton" to="." method="_on_back_button_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HeaderContainer/SaveButton" to="." method="_on_save_button_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HeaderContainer/LoadButton" to="." method="_on_load_button_pressed"]
 [connection signal="text_changed" from="MarginContainer/VBoxContainer/EditorContainer/MainEditor/NameSection/NameEdit" to="." method="_on_name_changed"]

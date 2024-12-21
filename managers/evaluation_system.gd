@@ -19,8 +19,15 @@ var _stats: Dictionary = {}
 var entity: Node
 ## Logger instance
 var logger: Logger
+## Cached trace enabled state
+var _trace_enabled: bool = false
+## Performance monitoring enabled state
+var _perf_monitor_enabled := false
+## Threshold for logging slow evaluations (ms)
+var _slow_threshold_ms := 1.0
 
 #endregion
+
 class ExpressionState:
 	var expression: Expression
 	var compiled_expression: String
@@ -67,16 +74,17 @@ class ExpressionStats:
 
 #region Initialization
 func _init() -> void:
-	logger = Logger.new("evaluation_system", DebugLogger.Category.LOGIC)
+	pass  # Logger initialized in initialize()
 
 func initialize(p_entity: Node) -> void:
 	entity = p_entity
-	logger = Logger.new("evaluation_system][" + entity.name, DebugLogger.Category.LOGIC)
+	logger = Logger.new("eval." + entity.name, DebugLogger.Category.LOGIC)
+	_trace_enabled = logger.is_trace_enabled()
 	_cache = EvaluationCache.new(entity.name)
 
 func get_or_create_state(expression: Logic) -> ExpressionState:
 	if expression.id.is_empty():
-		push_error("Expression has empty ID: %s" % expression)
+		logger.error("Expression has empty ID: %s" % expression)
 		return null
 
 	if not _states.has(expression.id):
@@ -87,12 +95,16 @@ func get_or_create_state(expression: Logic) -> ExpressionState:
 func register_expression(expression: Logic) -> void:
 	if expression.id.is_empty():
 		expression.id = str(expression.get_instance_id())
-
-	logger.debug("=== Registering expression [b]%s[/b] ===" % expression.id)
-	logger.trace("- Expression string: %s" % expression.expression_string)
-	logger.trace("- Always evaluate: %s" % expression.always_evaluate)
-	logger.trace("- Nested expressions: %s" % str(expression.nested_expressions))
-
+		
+	logger.info("Registering expression: %s" % expression.id)
+	
+	if _trace_enabled:
+		logger.trace("Expression details: string=%s, always_eval=%s, nested=%s" % [
+			expression.expression_string,
+			expression.always_evaluate,
+			expression.nested_expressions
+		])
+		
 	# Create and parse state
 	var state := get_or_create_state(expression)
 	if not state:
@@ -104,22 +116,25 @@ func register_expression(expression: Logic) -> void:
 	# Register nested expressions and dependencies
 	for nested in expression.nested_expressions:
 		if nested == null:
-			push_error("Cannot register null nested expression")
+			logger.error("Cannot register null nested expression")
 			return
 
-		logger.trace("- Registering nested expression [b]%s[/b] for [b]%s[/b]" % [
-			nested.id,
-			expression.id
-		])
+		if _trace_enabled:
+			logger.trace("Registering nested expression %s for %s" % [
+				nested.id,
+				expression.id
+			])
 		register_expression(nested)
 		_cache.add_dependency(expression.id, nested.id)
 
-	logger.debug("=== Completed registration of [b]%s[/b] ===" % expression.id)
+	if _trace_enabled:
+		logger.trace("Completed registration of %s" % expression.id)
 
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	assert(expression != null and not expression.id.is_empty())
-
-	logger.trace("Getting value for [b]%s[/b]" % expression.id)
+	
+	if _trace_enabled:
+		logger.trace("Getting value: id=%s force=%s" % [expression.id, force_update])
 
 	var current_time = Time.get_ticks_msec() / 1000.0
 	var last_time = _last_eval_time.get(expression.id, 0.0)
@@ -133,7 +148,8 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 		# If it's an always_evaluate expression or has such dependencies
 		if expression.always_evaluate or _has_always_evaluate_dependency(expression):
 			if time_since_eval < expression.min_eval_interval:
-				logger.trace("- Using cached value (%.3fs since last eval)" % time_since_eval)
+				if _trace_enabled:
+					logger.trace("Using cached value (%.3fs since last eval)" % time_since_eval)
 				return _cache.get_value(expression.id)
 		else:
 			# For normal expressions, use cache if either:
@@ -141,7 +157,8 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 			# 2. No significant changes in dependencies since last eval
 			if (not force_update and time_since_eval < expression.min_eval_interval) or \
 			   (not _have_dependencies_changed(expression, last_change)):
-				logger.trace("- Using cached value (no significant changes)")
+				if _trace_enabled:
+					logger.trace("Using cached value (no significant changes)")
 				return _cache.get_value(expression.id)
 
 	# Calculate new value
@@ -153,10 +170,12 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	if expression._is_significant_change(old_value, result):
 		_last_change_time[expression.id] = current_time
 		_cache.set_value(expression.id, result)
-		logger.trace("- Value changed significantly")
+		if _trace_enabled:
+			logger.trace("Value changed significantly")
 	else:
 		_cache.set_value(expression.id, result, false)  # Update without triggering dependencies
-		logger.trace("- Value updated (not significant)")
+		if _trace_enabled:
+			logger.trace("Value updated (not significant)")
 
 	return result
 
@@ -164,12 +183,14 @@ func _have_dependencies_changed(expression: Logic, since_time: float) -> bool:
 	for nested in expression.nested_expressions:
 		var dep_last_change = _last_change_time.get(nested.id, 0.0)
 		if dep_last_change > since_time:
-			logger.trace("- Dependency [b]%s[/b] changed since last eval" % nested.id)
+			if _trace_enabled:
+				logger.trace("Dependency %s changed since last eval" % nested.id)
 			return true
 	return false
 
 func _has_always_evaluate_dependency(expression: Logic) -> bool:
-	logger.trace("Checking for always_evaluate dependencies in [b]%s[/b]" % expression.id)
+	if _trace_enabled:
+		logger.trace("Checking for always_evaluate dependencies in %s" % expression.id)
 
 	# Cache the result for this frame
 	var cache_key = "_always_eval_deps_" + expression.id
@@ -179,16 +200,18 @@ func _has_always_evaluate_dependency(expression: Logic) -> bool:
 	var has_always_eval = false
 	for nested in expression.nested_expressions:
 		if nested.always_evaluate:
-			logger.trace("- Found always_evaluate dependency: [b]%s[/b]" % nested.id)
+			if _trace_enabled:
+				logger.trace("Found always_evaluate dependency: %s" % nested.id)
 			has_always_eval = true
 			break
 		if _has_always_evaluate_dependency(nested):
-			logger.trace("- Found nested always_evaluate dependency in [b]%s[/b]" % nested.id)
+			if _trace_enabled:
+				logger.trace("Found nested always_evaluate dependency in %s" % nested.id)
 			has_always_eval = true
 			break
 
-	if not has_always_eval:
-		logger.trace("- No nested always_evaluate dependency found in [b]%s[/b]" % expression.id)
+	if not has_always_eval and _trace_enabled:
+		logger.trace("No nested always_evaluate dependency found in %s" % expression.id)
 
 	# Cache the result
 	_cache.set_value(cache_key, has_always_eval)
@@ -202,50 +225,68 @@ func _parse_expression(expression: Logic) -> void:
 	var variable_names = []
 	for nested in expression.nested_expressions:
 		if nested.name.is_empty():
-			push_error("Nested expression missing name: %s" % nested)
+			logger.error("Nested expression missing name: %s" % nested)
 			return
 		if nested.id.is_empty():
-			push_error("Nested expression missing ID (should be generated from name): %s" % nested)
+			logger.error("Nested expression missing ID (should be generated from name): %s" % nested)
 			return
 		variable_names.append(nested.id)
 
 	if expression.id not in DebugLogger.parsed_expression_strings:
-		DebugLogger.debug(
-			DebugLogger.Category.LOGIC,
-			"Parsing expression [b]%s[/b]%s" % [
+		if logger.is_debug_enabled():
+			logger.debug("Parsing expression %s%s" % [
 				expression.id,
 				" with variables: %s" % str(variable_names) if variable_names else ""
-			]
-		)
+			])
 		DebugLogger.parsed_expression_strings.append(expression.id)
 
 	var error = state.parse(PackedStringArray(variable_names))
 	if error != OK:
-		push_error('Failed to parse expression "%s": %s' % [expression.name, expression.expression_string])
+		logger.error('Failed to parse expression "%s": %s' % [expression.name, expression.expression_string])
 		return
 
 func _calculate(expression_id: String) -> Variant:
+	var start_time := 0.0
+	if _perf_monitor_enabled and logger.is_debug_enabled():
+		start_time = Time.get_ticks_usec()
+		
 	var state: ExpressionState = _states[expression_id]
 	if not state.is_parsed:
 		return null
 
-	logger.trace("Calculating [b]%s[/b]" % expression_id)
+	if _trace_enabled:
+		logger.trace("Calculating %s" % expression_id)
 
 	# Get values from nested expressions
 	var bindings = []
 	for nested in state.logic.nested_expressions:
-		logger.trace("- Getting nested value for [b]%s[/b]" % nested.id)
+		if _trace_enabled:
+			logger.trace("Getting nested value for %s" % nested.id)
 		var force = nested.always_evaluate
 		var value = get_value(nested, force)
 		bindings.append(value)
-		logger.trace("- Nested [b]%s[/b] = %s" % [nested.id, value])
+		if _trace_enabled:
+			logger.trace("Nested %s = %s" % [nested.id, value])
 
 	var result = state.execute(bindings, entity)
 	if state.has_error():
-		push_error('Failed to execute expression: "%s"' % state.compiled_expression)
+		logger.error('Expression execution failed: id=%s expr="%s"' % [
+			expression_id,
+			state.compiled_expression
+		])
 		return null
-
-	logger.debug("- Final result for [b]%s[/b] = %s" % [expression_id, result])
+		
+	if _perf_monitor_enabled and logger.is_debug_enabled():
+		var duration = (Time.get_ticks_usec() - start_time) / 1000.0
+		if duration > _slow_threshold_ms:
+			logger.warn("Slow expression calculation: id=%s duration=%.2fms" % [
+				expression_id, 
+				duration
+			])
+			
+	if logger.is_debug_enabled():
+		logger.debug("Final result for %s = %s" % [expression_id, result])
+	
 	return result
 
 ## Get cache statistics for a specific expression

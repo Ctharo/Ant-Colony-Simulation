@@ -229,14 +229,18 @@ func _update_ui() -> void:
 		return
 
 	update_status_bars()
-	# Update action text
-	action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
-	# Update food text
-	food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
-	# Update role text
-	role_label.text = "Role: %s" % current_ant.role
-
-
+	if current_ant and current_ant != null:
+		# Update action text
+		action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
+		# Update food text
+		food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
+		# Update role text
+		role_label.text = "Role: %s" % current_ant.role
+	else:
+		action_label.text = ""
+		food_label.text = ""
+		role_label.text = ""
+		
 	if Engine.get_physics_frames() % 20 != 0:
 		return
 	if current_ant.action_manager and current_ant.action_manager._current_action_id:

@@ -7,6 +7,9 @@ var colony_info_panel: ColonyInfoPanel
 @onready var info_panels_container = %InfoPanelsContainer
 @onready var spawn_colony_button = %SpawnColonyButton
 
+var _active_context_menu: BaseContextMenu = null
+
+
 # Navigation properties
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
@@ -77,6 +80,75 @@ func _on_spawn_colony_pressed() -> void:
 	_awaiting_colony_placement = true
 	spawn_colony_button.disabled = true
 
+func _show_colony_context_menu(colony: Colony) -> void:
+	_active_context_menu = ColonyContextMenu.new()
+	add_child(_active_context_menu)
+	
+	_active_context_menu.spawn_ants_requested.connect(_on_spawn_ants_requested)
+	_active_context_menu.show_info_requested.connect(_on_show_colony_info_requested)
+	_active_context_menu.destroy_colony_requested.connect(_on_destroy_colony_requested)
+	
+	_active_context_menu.show_for_colony(colony.global_position, colony)
+
+func _show_ant_context_menu(ant: Ant) -> void:
+	_active_context_menu = AntContextMenu.new()
+	add_child(_active_context_menu)
+	
+	_active_context_menu.show_info_requested.connect(_on_show_ant_info_requested)
+	_active_context_menu.destroy_ant_requested.connect(_on_destroy_ant_requested)
+	
+	_active_context_menu.show_for_ant(ant.global_position, ant)
+
+func _show_empty_context_menu(pos: Vector2) -> void:
+	_active_context_menu = EmptyContextMenu.new()
+	add_child(_active_context_menu)
+	
+	_active_context_menu.spawn_colony_requested.connect(_on_spawn_colony_requested)
+	_active_context_menu.show_at_position(pos)
+
+func _on_show_ant_info_requested(ant: Ant) -> void:
+	show_ant_info(ant)
+
+func _on_destroy_ant_requested(ant: Ant) -> void:
+	AntManager.remove_ant(ant)
+
+func _on_spawn_colony_requested(pos: Vector2) -> void:
+	spawn_colony(pos)
+
+func _on_show_colony_info_requested(colony: Colony) -> void:
+	show_colony_info(colony)
+
+func _on_spawn_ants_requested(colony: Colony) -> void:
+	colony.spawn_ants(10, true)
+
+func _on_destroy_colony_requested(colony: Colony) -> void:
+	ColonyManager.remove_colony(colony)
+
+# Update the _check_selections function
+func _check_selections() -> void:
+	var mouse_pos = get_global_mouse_position()
+
+	if _awaiting_colony_placement:
+		spawn_colony(mouse_pos)
+		_awaiting_colony_placement = false
+		spawn_colony_button.disabled = false
+		return
+
+	if _active_context_menu and _active_context_menu != null:
+		_active_context_menu.close()
+		_active_context_menu = null
+
+	# Check for colony selection first
+	var closest_colony = _find_closest_colony(mouse_pos)
+	var closest_ant = _find_closest_ant(mouse_pos)
+	
+	if closest_colony and _is_within_colony_distance(closest_colony, mouse_pos):
+		_show_colony_context_menu(closest_colony)
+	elif closest_ant and _is_within_selection_distance(closest_ant, mouse_pos):
+		_show_ant_context_menu(closest_ant)
+	else:
+		_show_empty_context_menu(mouse_pos)
+
 func spawn_colony(p_position: Vector2) -> Colony:
 	var colony = ColonyManager.spawn_colony()
 	colony.global_position = p_position
@@ -86,7 +158,12 @@ func spawn_colony(p_position: Vector2) -> Colony:
 #region Input Handling
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		_on_close_pressed()
+		if ant_info_panel and ant_info_panel != null:
+			ant_info_panel._on_close_pressed()
+		elif colony_info_panel and colony_info_panel != null:
+			colony_info_panel._on_close_pressed()
+		else:
+			_on_close_pressed()
 		get_viewport().set_input_as_handled()
 #endregion
 
@@ -379,29 +456,11 @@ func _on_gui_input(event: InputEvent) -> void:
 		_on_close_pressed()
 		get_viewport().set_input_as_handled()
 
-func _check_selections() -> void:
-	var mouse_pos = get_global_mouse_position()
-
-	if _awaiting_colony_placement:
-		spawn_colony(mouse_pos)
-		_awaiting_colony_placement = false
-		spawn_colony_button.disabled = false
-		return
-
-	# Check for colony selection first (colonies should have priority)
-	var closest_colony = _find_closest_colony(mouse_pos)
-	var closest_ant = _find_closest_ant(mouse_pos)
-	if closest_colony and _is_within_colony_distance(closest_colony, mouse_pos):
-		show_colony_info(closest_colony)
-	# If no colony selected, try selecting an ant
-	elif closest_ant and _is_within_selection_distance(closest_ant, mouse_pos):
-		show_ant_info(closest_ant)
-	else:
-		# If clicking empty space, close both panels
-		deselect_all()
-
 func deselect_all():
 	if ant_info_panel and ant_info_panel != null:
 		ant_info_panel.queue_free()
 	if colony_info_panel and colony_info_panel != null:
 		colony_info_panel.queue_free()
+
+func _exit_tree() -> void:
+	ColonyManager.delete_all()

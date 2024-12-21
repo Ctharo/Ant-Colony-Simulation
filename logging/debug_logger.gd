@@ -8,7 +8,7 @@ enum LogLevel {
 	WARN = 2,    ## Warnings and errors
 	INFO = 3,    ## General information
 	DEBUG = 4,   ## Detailed debug information
-	TRACE = 5    ## Most verbose logging
+	TRACE = 5,   ## Most verbose logging
 }
 
 ## Categories for different components
@@ -201,6 +201,12 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 	# Add color end tag just once at the end
 	formatted_message += "[/color]"
 
+	# Also utilize built-in methods 
+	if level == LogLevel.ERROR:
+		push_error(formatted_message)
+	if level == LogLevel.WARN:
+		push_warning(formatted_message)
+		
 	print_rich(formatted_message)
 
 #endregion
@@ -216,8 +222,16 @@ static func info(category: Category, message: String, context: Dictionary = {}) 
 	DebugLogger.log(LogLevel.INFO, category, message, context)
 
 static func debug(category: Category, message: String, context: Dictionary = {}) -> void:
-	DebugLogger.log(LogLevel.DEBUG, category, message, context)
+	if DebugLogger.is_debug_enabled():
+		DebugLogger.log(LogLevel.DEBUG, category, message, context)
 
 static func trace(category: Category, message: String, context: Dictionary = {}) -> void:
-	DebugLogger.log(LogLevel.TRACE, category, message, context)
+	if DebugLogger.is_trace_enabled():
+		DebugLogger.log(LogLevel.TRACE, category, message, context)
 #endregion
+
+static func is_trace_enabled() -> bool:
+	return LogLevel.TRACE <= log_level
+	
+static func is_debug_enabled() -> bool:
+	return LogLevel.DEBUG <= log_level

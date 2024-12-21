@@ -30,6 +30,12 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	HeatmapManager.unregister_entity(self)
+	delete_all()
+
+func delete_all():
+	for ant in ants:
+		if ant != null:
+			AntManager.remove_ant(ant)
 
 func get_ants() -> Array:
 	return ants.to_array()
@@ -80,4 +86,6 @@ func spawn_ants(num: int, physics_at_spawn: bool = false) -> Array[Ant]:
 		var wiggle_y: float = randf_range(-15,15)
 		ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
 	return _ants
+	
+
 #endregion

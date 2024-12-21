@@ -1,5 +1,9 @@
 extends Node
+
+signal ant_removed(ant: Ant)
+
 var logger: Logger
+
 var ants: Array = []
 var current_ant_count: int :
 	get:
@@ -30,15 +34,15 @@ func spawn_ants(colony: Colony, num: int = 1, physics_at_spawn: bool = false) ->
 func spawn_ant(colony: Colony) -> Ant:
 	var ant: Ant = preload("res://entities/ant/ant.tscn").instantiate() as Ant
 	ant.set_colony(colony)
-	ants_created += 1
-	ant.id = ants_created
+	AntManager.ants_created += 1
+	ant.id = AntManager.ants_created
 	ant.name = "Ant" + str(ant.id)
 	add_child(ant)
 	ant.set_physics_process(false)
 	ant.set_process(false)
-	ants.append(ant)
+	AntManager.ants.append(ant)
 	ant.add_to_group("ant")
-	ant.died.connect(_on_ant_died)
+	ant.died.connect(AntManager._on_ant_died)
 	return ant
 
 func by_colony(colony: Colony) -> Ants:
@@ -51,11 +55,47 @@ func by_colony(colony: Colony) -> Ants:
 
 func get_all() -> Ants:
 	var _ants: Ants = Ants.new()
-	for ant in ants:
+	for ant in AntManager.ants:
 		if ant != null:
 			_ants.append(ant)
 	return _ants
 
 func _on_ant_died(ant: Ant) -> void:
-	if ant in ants:
-		ants.erase(ant)
+	AntManager.remove_ant(ant)
+
+func start_ant(ant: Ant, enable: bool = true) -> void:
+	if not ant:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant is null")
+
+	if not AntManager.ants.has(ant):
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant not managed by this manager")
+
+	ant.set_physics_process(enable)
+	ant.set_process(enable)
+
+	logger.debug("Ant %s %s" % [ant.name, "started" if enable else "stopped"])
+	return Result.new()
+
+func remove_ant(ant: Ant) -> void:
+	if not ant:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant is null")
+
+	if not ants.has(ant):
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant not managed by this manager")
+
+	# Stop ant processing
+	AntManager.start_ant(ant, false)
+
+	# Remove from tracking
+	AntManager.ants.erase(ant)
+	AntManager.ant_removed.emit(ant)
+
+	# Clean up node
+	ant.queue_free()
+
+	logger.debug("Removed ant: %s" % ant.name)
+	return Result.new()
+
+func delete_all() -> void:
+	for ant in AntManager.ants.duplicate():  # Duplicate array to avoid modification during iteration
+		remove_ant(ant)

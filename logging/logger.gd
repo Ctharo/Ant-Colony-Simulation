@@ -16,10 +16,17 @@ func _configure_logger() -> void:
 	var categories = [_log_category] as Array[DebugLogger.Category]
 	categories.append_array(_additional_log_categories)
 	DebugLogger.configure_source(_log_from, true, categories)
-
+	
+static func is_trace_enabled() -> bool:
+	return DebugLogger.is_trace_enabled()
+	
+static func is_debug_enabled() -> bool:
+	return DebugLogger.is_debug_enabled()
+	
 #region Logging Methods
 func trace(message: String, category: DebugLogger.Category = _log_category) -> void:
-	DebugLogger.trace(category, message, {"from": _log_from})
+	if DebugLogger.log_level >= DebugLogger.LogLevel.TRACE:
+		DebugLogger.trace(category, message, {"from": _log_from})
 
 func debug(message: String, category: DebugLogger.Category = _log_category) -> void:
 	DebugLogger.debug(category, message, {"from": _log_from})

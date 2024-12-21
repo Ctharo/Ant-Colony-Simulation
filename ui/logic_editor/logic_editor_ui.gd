@@ -112,8 +112,6 @@ func _update_ui_from_logic() -> void:
 	type_option.selected = current_logic.type
 	description_edit.text = current_logic.description
 	_update_nested_expressions_list()
-
-
 #endregion
 
 #region Validation Methods
@@ -259,6 +257,15 @@ func _on_nested_expression_selected(index: int) -> void:
 	if index >= 0 and index < current_logic.nested_expressions.size():
 		var selected_logic := current_logic.nested_expressions[index]
 		_show_nested_expression_editor(selected_logic)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):  # Escape key
+		_on_back_button_pressed()
+		if is_inside_tree():
+			get_viewport().set_input_as_handled()
+
+func _on_back_button_pressed() -> void:
+	get_tree().change_scene_to_file("res://ui/main.tscn")
 
 func _on_save_button_pressed() -> void:
 	if not current_logic or current_logic.name.is_empty():

@@ -133,12 +133,11 @@ func _on_logic_editor_button_pressed():
 
 func _on_settings_button_pressed():
 	logger.info("Settings pressed")
-	logger.warn("Settings not yet implemented")
-
+	transition_to_scene("debug_settings", "debug")
 
 func _on_quit_button_pressed():
 	get_tree().quit()
-
+	
 func transition_to_scene(scene_name: String, in_folder: String = ""):
 	var path: String = in_folder + "/" if not in_folder.is_empty() else ""
 	logger.trace("Transitioning to scene: %s" %  path + scene_name if not scene_name.is_empty() else "N/A")
