@@ -32,6 +32,10 @@ func setup(p_camera: Camera2D) -> void:
 	camera = p_camera
 
 func _process(_delta: float) -> void:
+	if tracked_ant and is_instance_valid(tracked_ant):
+		position = camera.get_canvas_transform() * tracked_ant.global_position
+	elif tracked_colony and is_instance_valid(tracked_colony):
+		position = camera.get_canvas_transform() * tracked_colony.global_position
 	queue_redraw()
 
 func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> Button:
