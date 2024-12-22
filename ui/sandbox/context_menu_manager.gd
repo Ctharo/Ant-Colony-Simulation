@@ -38,8 +38,25 @@ func _get_world_position(screen_pos: Vector2) -> Vector2:
 func _get_screen_position(world_pos: Vector2) -> Vector2:
 	return camera.get_viewport().get_canvas_transform() * world_pos
 
+
+
+## Shows context menu for ant
+func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
+	if active_context_menu and is_instance_valid(active_context_menu):
+		active_context_menu.close()
+
+	active_context_menu = AntContextMenu.new()
+	active_context_menu.setup(camera)
+	_ui_layer.add_child(active_context_menu)
+
+	active_context_menu.show_info_requested.connect(func(a): show_ant_info_requested.emit(a))
+	active_context_menu.destroy_ant_requested.connect(func(a): destroy_ant_requested.emit(a))
+
+	var screen_position = _get_screen_position(world_pos)
+	active_context_menu.show_for_ant(screen_position, ant)
+
 ## Shows context menu for colony
-func show_colony_context_menu(colony: Colony) -> void:
+func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	if active_context_menu and is_instance_valid(active_context_menu):
 		active_context_menu.close()
 
@@ -51,23 +68,8 @@ func show_colony_context_menu(colony: Colony) -> void:
 	active_context_menu.show_info_requested.connect(func(col): show_colony_info_requested.emit(col))
 	active_context_menu.destroy_colony_requested.connect(func(col): destroy_colony_requested.emit(col))
 
-	var screen_position = _get_screen_position(colony.global_position)
+	var screen_position = _get_screen_position(world_pos)
 	active_context_menu.show_for_colony(screen_position, colony)
-
-## Shows context menu for ant
-func show_ant_context_menu(ant: Ant) -> void:
-	if active_context_menu and is_instance_valid(active_context_menu):
-		active_context_menu.close()
-
-	active_context_menu = AntContextMenu.new()
-	active_context_menu.setup(camera)
-	_ui_layer.add_child(active_context_menu)
-
-	active_context_menu.show_info_requested.connect(func(a): show_ant_info_requested.emit(a))
-	active_context_menu.destroy_ant_requested.connect(func(a): destroy_ant_requested.emit(a))
-
-	var screen_position = _get_screen_position(ant.global_position)
-	active_context_menu.show_for_ant(screen_position, ant)
 
 ## Shows context menu for empty space
 func show_empty_context_menu(world_pos: Vector2) -> void:
@@ -75,6 +77,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 		active_context_menu.close()
 
 	active_context_menu = EmptyContextMenu.new()
+	active_context_menu.setup(camera)
 	_ui_layer.add_child(active_context_menu)
 
 	# When the menu requests colony spawn, emit the original world position

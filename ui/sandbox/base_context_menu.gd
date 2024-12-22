@@ -32,16 +32,6 @@ func setup(p_camera: Camera2D) -> void:
 	camera = p_camera
 
 func _process(_delta: float) -> void:
-	if tracked_ant and is_instance_valid(tracked_ant):
-		# Convert world position to screen position
-		var screen_pos = _get_screen_position(tracked_ant.global_position)
-		selected_position = screen_pos
-		position = screen_pos
-	elif tracked_colony and is_instance_valid(tracked_colony):
-		# Convert world position to screen position
-		var screen_pos = _get_screen_position(tracked_colony.global_position)
-		selected_position = screen_pos
-		position = screen_pos
 	queue_redraw()
 
 func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> Button:
@@ -70,28 +60,29 @@ func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> 
 
 func _get_screen_position(world_pos: Vector2) -> Vector2:
 	if camera:
-		return camera.get_viewport().get_canvas_transform() * world_pos
+		return camera.get_screen_to_canvas(world_pos)
 	return world_pos
 
 func show_at(pos: Vector2, circle_radius: float = 12.0) -> void:
 	# pos should already be in screen coordinates when called from context menu manager
-	selected_position = pos
+	selected_position = Vector2.ZERO  # Local coordinates
 	selection_radius = circle_radius
-	position = pos
+	position = pos  # Screen coordinates
 	show()
 	_animate_open()
 
 func _draw() -> void:
-	if selection_radius > 0:
-		# selected_position is already in screen coordinates
+	if selection_radius > 0 and camera:
+		# Scale the radius by camera zoom to maintain visual size
+		var scaled_radius = selection_radius * camera.zoom.x
 		draw_arc(
 			Vector2.ZERO,  # Draw relative to control's position
-			selection_radius,
+			scaled_radius,
 			0,
 			TAU,
 			32,
 			SELECTION_STYLE.CIRCLE_COLOR,
-			SELECTION_STYLE.CIRCLE_WIDTH
+			SELECTION_STYLE.CIRCLE_WIDTH * camera.zoom.x
 		)
 
 

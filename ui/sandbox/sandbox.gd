@@ -174,23 +174,14 @@ func _check_selections() -> void:
 	var closest_ant = _find_closest_ant(mouse_pos)
 
 	if closest_colony and _is_within_colony_distance(closest_colony, mouse_pos):
-		_context_menu_manager.show_colony_context_menu(closest_colony)
+		_context_menu_manager.show_colony_context_menu(closest_colony, closest_colony.position)
 	elif closest_ant and _is_within_selection_distance(closest_ant, mouse_pos):
-		_context_menu_manager.show_ant_context_menu(closest_ant)
+		_context_menu_manager.show_ant_context_menu(closest_ant, closest_ant.position)
 	else:
 		_context_menu_manager.show_empty_context_menu(mouse_pos)
 
-# Update get_world_mouse_position to ensure correct coordinate transformation
 func get_world_mouse_position() -> Vector2:
-	# Get the viewport and its center
-	var viewport = get_viewport()
-	var viewport_size = viewport.get_visible_rect().size
-
-	# Get mouse position relative to viewport center
-	var mouse_pos = get_local_mouse_position() - viewport_size / 2
-
-	# Apply camera transform
-	return mouse_pos / camera.zoom + camera.position
+	return get_local_mouse_position()
 
 func _get_object_at_position(position: Vector2) -> Node2D:
 	# Implementation depends on how you're storing and checking for objects
