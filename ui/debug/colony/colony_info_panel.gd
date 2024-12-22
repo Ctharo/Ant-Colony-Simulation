@@ -71,16 +71,6 @@ func _draw() -> void:
 	if not current_colony or not current_colony.is_inside_tree():
 		return
 
-	# Draw colony selection circle
-	draw_arc(
-		current_colony.global_position - global_position,
-		current_colony.radius,
-		0,
-		TAU,
-		32,
-		STYLE.SELECTION_CIRCLE_COLOR,
-		STYLE.SELECTION_CIRCLE_WIDTH
-	)
 
 	# Draw ant highlights if enabled
 	if highlight_ants_check.button_pressed:

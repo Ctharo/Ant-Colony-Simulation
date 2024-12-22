@@ -249,16 +249,6 @@ func _update_ui() -> void:
 
 func _draw() -> void:
 	if current_ant and current_ant.is_inside_tree():
-		# Draw selection circle
-		draw_arc(
-			current_ant.global_position - global_position,
-			STYLE.SELECTION_CIRCLE_RADIUS,
-			0,
-			TAU,
-			32,
-			STYLE.SELECTION_CIRCLE_COLOR,
-			STYLE.SELECTION_CIRCLE_WIDTH
-		)
 
 		# Draw influence arrows if ant has an action manager and is moving
 		if %ShowInfluenceVectorsCheck.button_pressed:
