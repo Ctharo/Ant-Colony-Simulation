@@ -13,7 +13,7 @@ func _init() -> void:
 	var spawn = add_button("Spawn Ants", preload("res://ui/styles/spawn_normal.tres"), preload("res://ui/styles/spawn_hover.tres"))
 	var info = add_button("Info", preload("res://ui/styles/info_normal.tres"), preload("res://ui/styles/info_hover.tres"))
 	var destroy = add_button("Destroy", preload("res://ui/styles/destroy_normal.tres"), preload("res://ui/styles/destroy_hover.tres"))
-	
+
 	spawn.pressed.connect(_on_spawn_pressed)
 	info.pressed.connect(_on_info_pressed)
 	destroy.pressed.connect(_on_destroy_pressed)

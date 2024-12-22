@@ -1,0 +1,43 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://autoloads/ant_manager.gd" id="1_1tyuu"]
+[ext_resource type="Script" path="res://autoloads/food_manager.gd" id="2_7382l"]
+[ext_resource type="Script" path="res://autoloads/colony_manager.gd" id="3_81fhs"]
+[ext_resource type="Script" path="res://autoloads/heatmap_manager.gd" id="4_58hng"]
+[ext_resource type="PackedScene" path="res://ui/sandbox/sandbox.tscn" id="5_3hx3e"]
+
+[sub_resource type="World3D" id="World3D_4j5cy"]
+
+[node name="root" type="Window"]
+process_mode = 1
+auto_translate_mode = 1
+world_3d = SubResource("World3D_4j5cy")
+canvas_item_default_texture_filter = 0
+audio_listener_enable_2d = true
+audio_listener_enable_3d = true
+physics_object_picking = true
+gui_embed_subwindows = true
+positional_shadow_atlas_size = 4096
+title = "Ant Colony Simulation"
+position = Vector2i(210, 70)
+size = Vector2i(1500, 900)
+min_size = Vector2i(64, 64)
+content_scale_size = Vector2i(1500, 900)
+content_scale_mode = 1
+content_scale_aspect = 4
+
+[node name="AntManager" type="Node" parent="."]
+script = ExtResource("1_1tyuu")
+
+[node name="FoodManager" type="Node" parent="."]
+script = ExtResource("2_7382l")
+
+[node name="ColonyManager" type="Node" parent="."]
+script = ExtResource("3_81fhs")
+
+[node name="HeatmapManager" type="Node2D" parent="."]
+script = ExtResource("4_58hng")
+
+[node name="Sandbox" parent="." instance=ExtResource("5_3hx3e")]
+
+[node name="_Node_254" type="Node" parent="Sandbox"]

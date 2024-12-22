@@ -1,21 +1,22 @@
+
+
 extends Control
 
 var logger: Logger
+var _context_menu_manager: ContextMenuManager
+var source_geometry: NavigationMeshSourceGeometryData2D
 
 var ant_info_panel: AntInfoPanel
 var colony_info_panel: ColonyInfoPanel
 @onready var info_panels_container = %InfoPanelsContainer
-@onready var spawn_colony_button = %SpawnColonyButton
-
-var _active_context_menu: BaseContextMenu = null
-
+@onready var world = %World
+@onready var camera = $World/Camera2D
 
 # Navigation properties
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 
-const NAVIGATION_OBSTACLES_NUM_MIN = 15
-const NAVIGATION_OBSTACLES_NUM_MAX = 15
+const NAVIGATION_OBSTACLES_DENSITY = 1
 const OBSTACLE_SIZE_MIN = 20.0
 const OBSTACLE_SIZE_MAX = 70.0
 
@@ -27,24 +28,32 @@ func _init() -> void:
 
 func _ready() -> void:
 	initialize()
-	_setup_ui()
+	_setup_context_menu_manager()
+
+func _setup_context_menu_manager() -> void:
+	var camera = %World/Camera2D
+	var ui_layer = $UI
+	_context_menu_manager = ContextMenuManager.new(camera, ui_layer)
+	add_child(_context_menu_manager)
+
+	# Connect context menu signals to local methods
+	_context_menu_manager.spawn_ants_requested.connect(_on_spawn_ants_requested)
+	_context_menu_manager.show_colony_info_requested.connect(_on_show_colony_info_requested)
+	_context_menu_manager.destroy_colony_requested.connect(_on_destroy_colony_requested)
+	_context_menu_manager.show_ant_info_requested.connect(_on_show_ant_info_requested)
+	_context_menu_manager.destroy_ant_requested.connect(_on_destroy_ant_requested)
+	_context_menu_manager.spawn_colony_requested.connect(_on_spawn_colony_requested)
 
 func initialize() -> bool:
 	# Setup navigation before spawning ants
 	var result = await setup_navigation()
 	return result
 
-func _setup_ui() -> void:
-	# Connect UI signals
-	spawn_colony_button.pressed.connect(_on_spawn_colony_pressed)
-
-
 #region Selection Logic
 func _find_closest_colony(pos: Vector2) -> Colony:
 	var closest_colony: Colony = null
 	var closest_distance: float = 100.0  # Maximum selection distance for colonies
 
-	# Get all colonies in the scene
 	for colony in ColonyManager.get_all().to_array():
 		var distance = colony.global_position.distance_to(pos)
 		if distance < closest_distance:
@@ -53,17 +62,10 @@ func _find_closest_colony(pos: Vector2) -> Colony:
 
 	return closest_colony
 
-func _is_within_colony_distance(colony: Colony, pos: Vector2) -> bool:
-	return colony.global_position.distance_to(pos) <= colony.radius  # Use colony radius for selection
-
-func _is_within_selection_distance(ant: Ant, pos: Vector2) -> bool:
-	return ant.global_position.distance_to(pos) <= 20.0  # Selection radius
-
 func _find_closest_ant(pos: Vector2) -> Ant:
 	var closest_ant: Ant = null
 	var closest_distance: float = 100.0  # Maximum selection distance
 
-	# Get all ants in the scene
 	for ant in AntManager.get_all().to_array():
 		var distance = ant.global_position.distance_to(pos)
 		if distance < closest_distance:
@@ -72,46 +74,15 @@ func _find_closest_ant(pos: Vector2) -> Ant:
 
 	return closest_ant
 
+func _is_within_colony_distance(colony: Colony, pos: Vector2) -> bool:
+	return colony.global_position.distance_to(pos) <= colony.radius
 
+func _is_within_selection_distance(ant: Ant, pos: Vector2) -> bool:
+	return ant.global_position.distance_to(pos) <= 20.0
 #endregion
 
-#region Colony Management
-func _on_spawn_colony_pressed() -> void:
-	_awaiting_colony_placement = true
-	spawn_colony_button.disabled = true
 
-func _show_colony_context_menu(colony: Colony) -> void:
-	_active_context_menu = ColonyContextMenu.new()
-	add_child(_active_context_menu)
-	
-	_active_context_menu.spawn_ants_requested.connect(_on_spawn_ants_requested)
-	_active_context_menu.show_info_requested.connect(_on_show_colony_info_requested)
-	_active_context_menu.destroy_colony_requested.connect(_on_destroy_colony_requested)
-	
-	_active_context_menu.show_for_colony(colony.global_position, colony)
-
-func _show_ant_context_menu(ant: Ant) -> void:
-	_active_context_menu = AntContextMenu.new()
-	add_child(_active_context_menu)
-	
-	_active_context_menu.show_info_requested.connect(_on_show_ant_info_requested)
-	_active_context_menu.destroy_ant_requested.connect(_on_destroy_ant_requested)
-	
-	_active_context_menu.show_for_ant(ant.global_position, ant)
-
-func _show_empty_context_menu(pos: Vector2) -> void:
-	_active_context_menu = EmptyContextMenu.new()
-	add_child(_active_context_menu)
-	
-	_active_context_menu.spawn_colony_requested.connect(_on_spawn_colony_requested)
-	_active_context_menu.show_at_position(pos)
-
-func _on_show_ant_info_requested(ant: Ant) -> void:
-	show_ant_info(ant)
-
-func _on_destroy_ant_requested(ant: Ant) -> void:
-	AntManager.remove_ant(ant)
-
+#region Context Menu Callbacks
 func _on_spawn_colony_requested(pos: Vector2) -> void:
 	spawn_colony(pos)
 
@@ -122,49 +93,15 @@ func _on_spawn_ants_requested(colony: Colony) -> void:
 	colony.spawn_ants(10, true)
 
 func _on_destroy_colony_requested(colony: Colony) -> void:
+	logger.info("Destroyed colony " % colony.name)
 	ColonyManager.remove_colony(colony)
 
-# Update the _check_selections function
-func _check_selections() -> void:
-	var mouse_pos = get_global_mouse_position()
+func _on_show_ant_info_requested(ant: Ant) -> void:
+	show_ant_info(ant)
 
-	if _awaiting_colony_placement:
-		spawn_colony(mouse_pos)
-		_awaiting_colony_placement = false
-		spawn_colony_button.disabled = false
-		return
-
-	if _active_context_menu and _active_context_menu != null:
-		_active_context_menu.close()
-		_active_context_menu = null
-
-	# Check for colony selection first
-	var closest_colony = _find_closest_colony(mouse_pos)
-	var closest_ant = _find_closest_ant(mouse_pos)
-	
-	if closest_colony and _is_within_colony_distance(closest_colony, mouse_pos):
-		_show_colony_context_menu(closest_colony)
-	elif closest_ant and _is_within_selection_distance(closest_ant, mouse_pos):
-		_show_ant_context_menu(closest_ant)
-	else:
-		_show_empty_context_menu(mouse_pos)
-
-func spawn_colony(p_position: Vector2) -> Colony:
-	var colony = ColonyManager.spawn_colony()
-	colony.global_position = p_position
-	return colony
-#endregion
-
-#region Input Handling
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		if ant_info_panel and ant_info_panel != null:
-			ant_info_panel._on_close_pressed()
-		elif colony_info_panel and colony_info_panel != null:
-			colony_info_panel._on_close_pressed()
-		else:
-			_on_close_pressed()
-		get_viewport().set_input_as_handled()
+func _on_destroy_ant_requested(ant: Ant) -> void:
+	logger.info("Destroyed ant " % ant.name)
+	AntManager.remove_ant(ant)
 #endregion
 
 #region Panel Management
@@ -190,12 +127,83 @@ func show_colony_info(colony: Colony) -> void:
 	colony_info_panel.show_colony_info(colony)
 	colony_info_panel.show()
 
+func deselect_all() -> void:
+	if ant_info_panel and ant_info_panel != null:
+		ant_info_panel.queue_free()
+	if colony_info_panel and colony_info_panel != null:
+		colony_info_panel.queue_free()
+#endregion
+
+#region Colony Management
+func spawn_colony(p_position: Vector2) -> Colony:
+	var colony = ColonyManager.spawn_colony()
+	colony.global_position = p_position
+	logger.info("Spawned new colony %s at position %s" % [colony.name, str(colony.global_position)])
+	return colony
+#endregion
+
+
+
+#region Colony Management
+func _on_spawn_colony_pressed() -> void:
+	_awaiting_colony_placement = true
+
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_check_selections()
+			get_viewport().set_input_as_handled()
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			deselect_all()
+	elif event.is_action_pressed("ui_cancel"):
+		_on_back_button_pressed()
+		get_viewport().set_input_as_handled()
+
+func _check_selections() -> void:
+	var mouse_pos = get_world_mouse_position()
+
+	if _awaiting_colony_placement:
+		spawn_colony(mouse_pos)
+		_awaiting_colony_placement = false
+		return
+
+	_context_menu_manager.clear_active_menu()
+
+	# Check for colony selection first
+	var closest_colony = _find_closest_colony(mouse_pos)
+	var closest_ant = _find_closest_ant(mouse_pos)
+
+	if closest_colony and _is_within_colony_distance(closest_colony, mouse_pos):
+		_context_menu_manager.show_colony_context_menu(closest_colony)
+	elif closest_ant and _is_within_selection_distance(closest_ant, mouse_pos):
+		_context_menu_manager.show_ant_context_menu(closest_ant)
+	else:
+		_context_menu_manager.show_empty_context_menu(mouse_pos)
+
+# Update get_world_mouse_position to ensure correct coordinate transformation
+func get_world_mouse_position() -> Vector2:
+	# Get the viewport and its center
+	var viewport = get_viewport()
+	var viewport_size = viewport.get_visible_rect().size
+
+	# Get mouse position relative to viewport center
+	var mouse_pos = get_local_mouse_position() - viewport_size / 2
+
+	# Apply camera transform
+	return mouse_pos / camera.zoom + camera.position
+
+func _get_object_at_position(position: Vector2) -> Node2D:
+	# Implementation depends on how you're storing and checking for objects
+	# Example implementation:
+	var world = %World
+	for child in world.get_children():
+		if child is Colony or child is Ant:
+			if position.distance_to(child.global_position) <= child.radius:
+				return child
+	return null
 #endregion
 
 #region Scene Management
-func _on_close_pressed() -> void:
-	transition_to_scene("main")
-
 func transition_to_scene(scene_name: String) -> void:
 	create_tween().tween_callback(Callable(self, "_change_scene").bind(scene_name))
 
@@ -210,57 +218,74 @@ func setup_navigation() -> bool:
 	# Create navigation region
 	navigation_region = NavigationRegion2D.new()
 	navigation_region.add_to_group("navigation")
-	add_child(navigation_region)
+	world.add_child(navigation_region)
 
-	# Create navigation polygon
+	# Create navigation polygon and source geometry data
 	navigation_poly = NavigationPolygon.new()
+	source_geometry = NavigationMeshSourceGeometryData2D.new()
+
+	# Configure navigation polygon to match ant agent settings
+	navigation_poly.agent_radius = 10.0  # Match the ant's nav_agent radius
+	navigation_poly.cell_size = 1.0  # Match the NavigationServer cell size
 
 	# Create obstacles container
 	var obstacles_container = Node2D.new()
 	obstacles_container.name = "Obstacles"
-	add_child(obstacles_container)
-	move_child(obstacles_container, 0)
+	world.add_child(obstacles_container)
+	world.move_child(obstacles_container, 0)
 
 	# Get viewport boundaries
 	var viewport_rect := get_viewport_rect()
-	var _size := viewport_rect.size
+	var _size := viewport_rect.size * 4
 
-	# Create walkable area - account for control panel
-	var side_margin := 40.0
-	var top_margin := 70.0  # Increased to account for control panel
-	var bottom_margin := 40.0
+	# Define margins
+	var side_margin := 160.0
+	var top_margin := 280.0
+	var bottom_margin := 160.0
+
+	# Define the navigation boundary points
+	var nav_left := -_size.x/2 + side_margin
+	var nav_right := _size.x/2 - side_margin
+	var nav_top := -_size.y/2 + top_margin
+	var nav_bottom := _size.y/2 - bottom_margin
+
+	# Calculate safe area for obstacle placement (inset from navigation bounds)
+	var safe_left := nav_left + OBSTACLE_SIZE_MAX
+	var safe_right := nav_right - OBSTACLE_SIZE_MAX
+	var safe_top := nav_top + OBSTACLE_SIZE_MAX
+	var safe_bottom := nav_bottom - OBSTACLE_SIZE_MAX
+
+	# Add main traversable outline
 	var outline := PackedVector2Array([
-		Vector2(side_margin, top_margin),
-		Vector2(_size.x - side_margin, top_margin),
-		Vector2(_size.x - side_margin, _size.y - bottom_margin),
-		Vector2(side_margin, _size.y - bottom_margin)
+		Vector2(nav_left, nav_top),
+		Vector2(nav_right, nav_top),
+		Vector2(nav_right, nav_bottom),
+		Vector2(nav_left, nav_bottom)
 	])
+	source_geometry.add_traversable_outline(outline)
 
-	# Add main outline and generate initial polygons
-	navigation_poly.add_outline(outline)
-	navigation_poly.make_polygons_from_outlines()
+	# Calculate number of obstacles based on viewport size
+	var obstacles_num = floori(NAVIGATION_OBSTACLES_DENSITY * viewport_rect.size.length())
 
 	# Place obstacles
 	var placed_obstacles := []
 	var max_attempts = 50
 	var obstacles_placed = 0
-	var obstacles_num = randi_range(NAVIGATION_OBSTACLES_NUM_MIN, NAVIGATION_OBSTACLES_NUM_MAX)
 
 	while obstacles_placed < obstacles_num and max_attempts > 0:
 		max_attempts -= 1
 
-		# Generate position - use correct margins
-		var center_x = randf_range(side_margin * 3, _size.x - side_margin * 3)
-		var center_y = randf_range(top_margin * 2, _size.y - bottom_margin * 3)
+		var center_x = randf_range(safe_left, safe_right)
+		var center_y = randf_range(safe_top, safe_bottom)
 		var center = Vector2(center_x, center_y)
 
-		# Skip if too close to center
-		if center.distance_to(_size / 2) < 150:
+		# Skip if too close to center of map
+		if center.distance_to(Vector2.ZERO) < 150:
 			continue
 
 		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
 
-		# Check overlap
+		# Check overlap with existing obstacles
 		var overlaps = false
 		for existing in placed_obstacles:
 			if center.distance_to(existing["center"]) < (obstacle_size + existing["size"] + 20):
@@ -273,26 +298,37 @@ func setup_navigation() -> bool:
 		# Generate obstacle points
 		var obstacle_points = _create_obstacle_points(center, obstacle_size)
 
-		# Validate obstacle
-		if _validate_obstacle(obstacle_points, navigation_poly):
-			# Create physical obstacle
-			_create_obstacle(obstacle_points, center, obstacles_container)
+		# Validate obstacle is within navigation bounds
+		var is_valid = true
+		for point in obstacle_points:
+			if point.x < nav_left or point.x > nav_right or \
+			   point.y < nav_top or point.y > nav_bottom:
+				is_valid = false
+				break
 
-			# Add to navigation
-			navigation_poly.add_outline(obstacle_points)
-			navigation_poly.make_polygons_from_outlines()
+		if not is_valid:
+			continue
 
-			placed_obstacles.append({
-				"center": center,
-				"size": obstacle_size
-			})
+		# Create physical obstacle
+		_create_obstacle(obstacle_points, center, obstacles_container)
 
-			obstacles_placed += 1
+		# Add obstacle outline to source geometry
+		source_geometry.add_obstruction_outline(obstacle_points)
+
+		placed_obstacles.append({
+			"center": center,
+			"size": obstacle_size
+		})
+
+		obstacles_placed += 1
+
+	# Parse and bake navigation mesh
+	await _parse_and_bake_navigation(navigation_poly, source_geometry)
 
 	# Configure navigation
 	navigation_region.navigation_polygon = navigation_poly
 
-	# Configure NavigationServer2D
+	# Configure NavigationServer2D to match ant agent settings
 	var map_rid = navigation_region.get_navigation_map()
 	NavigationServer2D.map_set_active(map_rid, true)
 	NavigationServer2D.map_set_cell_size(map_rid, 1.0)
@@ -304,9 +340,35 @@ func setup_navigation() -> bool:
 	await get_tree().physics_frame
 
 	HeatmapManager.setup_navigation(navigation_region)
+	queue_redraw()
 
 	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
 	return true
+
+func _parse_and_bake_navigation(nav_poly: NavigationPolygon, source_geometry: NavigationMeshSourceGeometryData2D) -> void:
+	# Create callbacks for async operations
+	var baking_done = func():
+		logger.debug("Navigation baking completed")
+
+	var parsing_done = func():
+		logger.debug("Navigation parsing completed")
+		# After parsing is done, proceed with baking
+		NavigationServer2D.bake_from_source_geometry_data_async(
+			nav_poly,
+			source_geometry,
+			baking_done
+		)
+
+	# Parse the source geometry using self (current node) as root
+	NavigationServer2D.parse_source_geometry_data(
+		nav_poly,
+		source_geometry,
+		self,  # Use current node as root for parsing
+		parsing_done
+	)
+
+	# Wait for both operations to complete
+	await get_tree().physics_frame
 
 func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
 	var num_points = 8
@@ -421,19 +483,33 @@ func add_navigation_obstacle(obstacle_points: PackedVector2Array) -> void:
 
 #region Debug Visualization
 func _draw() -> void:
-	if navigation_poly:
-		# Draw main outline
-		var outline = navigation_poly.get_outline(0)
+	if not source_geometry:
+		return
+
+	# Draw traversable outlines in green
+	var traversable_outlines = source_geometry.get_traversable_outlines()
+	for outline in traversable_outlines:
 		var closed_outline = PackedVector2Array(outline)
 		closed_outline.append(outline[0])  # Add first point to close the shape
 		draw_polyline(closed_outline, Color.GREEN, 2.0)
 
-		# Draw obstacles
-		for i in range(1, navigation_poly.get_outline_count()):
-			var obstacle = navigation_poly.get_outline(i)
-			var closed_obstacle = PackedVector2Array(obstacle)
-			closed_obstacle.append(obstacle[0])  # Add first point to close the shape
-			draw_polyline(closed_obstacle, Color.RED, 2.0)
+	# Draw obstruction outlines in red
+	var obstruction_outlines = source_geometry.get_obstruction_outlines()
+	for outline in obstruction_outlines:
+		var closed_outline = PackedVector2Array(outline)
+		closed_outline.append(outline[0])  # Add first point to close the shape
+		draw_polyline(closed_outline, Color.RED, 2.0)
+
+	# Optionally draw the final navigation polygons in a different color
+	if navigation_poly:
+		var vertices = navigation_poly.vertices
+		for polygon_idx in range(navigation_poly.get_polygon_count()):
+			var indices = navigation_poly.get_polygon(polygon_idx)
+			var points = PackedVector2Array()
+			for idx in indices:
+				points.append(vertices[idx])
+			points.append(points[0])  # Close the polygon
+			draw_polyline(points, Color(0.5, 0.5, 1.0, 0.5), 1.0)  # Light blue for final navmesh
 #endregion
 
 #region Utils
@@ -444,23 +520,9 @@ func get_random_position() -> Vector2:
 	return Vector2(x, y)
 #endregion
 
-
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			_check_selections()
-			get_viewport().set_input_as_handled()
-		if event.button_index == MOUSE_BUTTON_RIGHT:
-			deselect_all()
-	elif event.is_action_pressed("ui_cancel"):
-		_on_close_pressed()
-		get_viewport().set_input_as_handled()
-
-func deselect_all():
-	if ant_info_panel and ant_info_panel != null:
-		ant_info_panel.queue_free()
-	if colony_info_panel and colony_info_panel != null:
-		colony_info_panel.queue_free()
-
 func _exit_tree() -> void:
 	ColonyManager.delete_all()
+
+
+func _on_back_button_pressed() -> void:
+	transition_to_scene("main")

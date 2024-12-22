@@ -85,7 +85,8 @@ func spawn_ants(num: int, physics_at_spawn: bool = false) -> Array[Ant]:
 		var wiggle_x: float = randf_range(-15,15)
 		var wiggle_y: float = randf_range(-15,15)
 		ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
+	logger.info("Spawned %s %s from %s" % [_ants.size(), "ant" if _ants.size() == 1 else "ants", name])
 	return _ants
-	
+
 
 #endregion

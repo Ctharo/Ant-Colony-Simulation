@@ -32,7 +32,7 @@ enum Category {
 
 #region Configuration
 ## Current log level
-static var log_level := LogLevel.DEBUG
+static var log_level := LogLevel.INFO
 
 ## Show context in logs
 static var show_context: bool = false
@@ -122,12 +122,12 @@ static func set_category_enabled(category: Category, enabled: bool = true, from:
 
 ## Set the global log level
 static func set_log_level(level: LogLevel, from: String = "") -> void:
-	log_level = level
+	DebugLogger.log_level = level
 	info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], {"from": from if from else "debug_logger"})
 
 ## Enable or disable context print
 static func set_show_context(enabled: bool = true, from: String = "") -> void:
-	show_context = enabled
+	DebugLogger.show_context = enabled
 	info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], {"from": from if from else "debug_logger"})
 #endregion
 
@@ -135,14 +135,14 @@ static func set_show_context(enabled: bool = true, from: String = "") -> void:
 ## Determine if a message should be logged based on source and category
 static func should_log(source: String, category: Category) -> bool:
 	# First check if the category is enabled globally
-	if not enabled_categories.get(category, false):
+	if not DebugLogger.enabled_categories.get(category, false):
 		return false
 
 	# If no source filter exists, allow logging
-	if not source_filters.has(source):
+	if not DebugLogger.source_filters.has(source):
 		return true
 
-	var filter: SourceFilter = source_filters[source]
+	var filter: SourceFilter = DebugLogger.source_filters[source]
 
 	# If source is disabled, block logging
 	if not filter.enabled:
@@ -157,13 +157,13 @@ static func should_log(source: String, category: Category) -> bool:
 ## Log a message with specified level and category
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:
 	# Check log level first
-	if level > log_level:
+	if level > DebugLogger.log_level:
 		return
 
 	var source = context.get("from", "")
 
 	# Check if this combination of source and category should be logged
-	if not should_log(source, category):
+	if not DebugLogger.should_log(source, category):
 		return
 
 	var timestamp = Time.get_datetime_string_from_system()
@@ -201,12 +201,12 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 	# Add color end tag just once at the end
 	formatted_message += "[/color]"
 
-	# Also utilize built-in methods 
+	# Also utilize built-in methods
 	if level == LogLevel.ERROR:
 		push_error(formatted_message)
 	if level == LogLevel.WARN:
 		push_warning(formatted_message)
-		
+
 	print_rich(formatted_message)
 
 #endregion
@@ -232,6 +232,6 @@ static func trace(category: Category, message: String, context: Dictionary = {})
 
 static func is_trace_enabled() -> bool:
 	return LogLevel.TRACE <= log_level
-	
+
 static func is_debug_enabled() -> bool:
 	return LogLevel.DEBUG <= log_level

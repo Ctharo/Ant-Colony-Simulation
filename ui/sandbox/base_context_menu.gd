@@ -22,25 +22,33 @@ var selection_radius := 12.0  # Default radius, can be overridden
 var tracked_ant: Ant = null
 var tracked_colony: Colony = null
 
+var camera: Camera2D
+
 func _ready() -> void:
 	modulate.a = 0
 	scale = Vector2.ZERO
 
-func _process(delta: float) -> void:
-	# Update position if tracking something
+func setup(p_camera: Camera2D) -> void:
+	camera = p_camera
+
+func _process(_delta: float) -> void:
 	if tracked_ant and is_instance_valid(tracked_ant):
-		selected_position = tracked_ant.global_position
-		position = selected_position
+		# Convert world position to screen position
+		var screen_pos = _get_screen_position(tracked_ant.global_position)
+		selected_position = screen_pos
+		position = screen_pos
 	elif tracked_colony and is_instance_valid(tracked_colony):
-		selected_position = tracked_colony.global_position
-		position = selected_position
+		# Convert world position to screen position
+		var screen_pos = _get_screen_position(tracked_colony.global_position)
+		selected_position = screen_pos
+		position = screen_pos
 	queue_redraw()
 
 func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> Button:
 	var container = Control.new()
 	container.custom_minimum_size = Vector2(BUTTON_ARC_WIDTH, BUTTON_ARC_HEIGHT)
 	add_child(container)
-	
+
 	var button = Button.new()
 	button.custom_minimum_size = container.custom_minimum_size
 	button.add_theme_stylebox_override("normal", style_normal)
@@ -48,20 +56,25 @@ func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> 
 	button.pivot_offset = Vector2(BUTTON_ARC_WIDTH/2, BUTTON_ARC_HEIGHT/2)
 	button.position = Vector2(-BUTTON_ARC_WIDTH/2, -BUTTON_ARC_HEIGHT/2)
 	container.add_child(button)
-	
+
 	var label = Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.size = button.custom_minimum_size
 	button.add_child(label)
-	
+
 	containers.append(container)
 	buttons.append(button)
 	return button
 
+func _get_screen_position(world_pos: Vector2) -> Vector2:
+	if camera:
+		return camera.get_viewport().get_canvas_transform() * world_pos
+	return world_pos
 
 func show_at(pos: Vector2, circle_radius: float = 12.0) -> void:
+	# pos should already be in screen coordinates when called from context menu manager
 	selected_position = pos
 	selection_radius = circle_radius
 	position = pos
@@ -70,8 +83,9 @@ func show_at(pos: Vector2, circle_radius: float = 12.0) -> void:
 
 func _draw() -> void:
 	if selection_radius > 0:
+		# selected_position is already in screen coordinates
 		draw_arc(
-			selected_position - global_position,
+			Vector2.ZERO,  # Draw relative to control's position
 			selection_radius,
 			0,
 			TAU,
@@ -84,31 +98,31 @@ func _draw() -> void:
 func _animate_open() -> void:
 	if is_open:
 		return
-	
+
 	is_open = true
-	
+
 	var num_buttons = containers.size()
 	var angle_per_button = (TAU - (BUTTON_GAP * num_buttons)) / num_buttons
-	
+
 	var tween = create_tween()
 	tween.set_parallel(true)
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_BACK)
-	
+
 	tween.tween_property(self, "modulate:a", 1.0, ANIMATION_DURATION)
 	tween.tween_property(self, "scale", Vector2.ONE, ANIMATION_DURATION)
-	
+
 	for i in range(num_buttons):
 		var container = containers[i]
 		var button = buttons[i]
-		
+
 		# Calculate position along arc
 		var angle = -PI/2 + i * (angle_per_button + BUTTON_GAP)
 		var target_pos = Vector2(cos(angle), sin(angle)) * RADIUS
-		
+
 		# Position container
 		tween.tween_property(container, "position", target_pos, ANIMATION_DURATION)
-		
+
 		# Rotate container to follow arc but keep text upright
 		var target_rotation = angle + PI/2
 		tween.tween_property(container, "rotation", target_rotation, ANIMATION_DURATION)
@@ -124,22 +138,22 @@ func close() -> void:
 func _animate_close() -> void:
 	if not is_open:
 		return
-	
+
 	is_open = false
-	
+
 	var tween = create_tween()
 	tween.set_parallel(true)
 	tween.set_ease(Tween.EASE_IN)
 	tween.set_trans(Tween.TRANS_BACK)
-	
+
 	tween.tween_property(self, "modulate:a", 0.0, ANIMATION_DURATION)
 	tween.tween_property(self, "scale", Vector2.ZERO, ANIMATION_DURATION)
-	
+
 	for i in range(containers.size()):
 		var container = containers[i]
 		var button = buttons[i]
 		tween.tween_property(container, "position", Vector2.ZERO, ANIMATION_DURATION)
 		tween.tween_property(container, "rotation", 0.0, ANIMATION_DURATION)
 		tween.tween_property(button.get_child(0), "rotation", 0.0, ANIMATION_DURATION)
-	
+
 	tween.tween_callback(queue_free)

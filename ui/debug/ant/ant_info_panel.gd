@@ -8,14 +8,14 @@ const STYLE = {
 	"BAR_BG_COLOR": Color(0.2, 0.2, 0.2),
 	"HEALTH_COLOR": Color(0.2, 0.8, 0.2),
 	"ENERGY_COLOR": Color(0.2, 0.2, 0.8),
-	"LOW_COLOR": Color(0.8, 0.2, 0.2),
-	"MED_COLOR": Color(0.8, 0.8, 0.2),
+	"LOW_COLOR": Color.RED,
+	"MED_COLOR": Color.CORAL,
 	"PANEL_SIZE": Vector2(300, 400),
-	"SELECTION_CIRCLE_COLOR": Color(1, 1, 1, 0.5),
+	"SELECTION_CIRCLE_COLOR": Color(Color.WHITE, 0.5),
 	"SELECTION_CIRCLE_RADIUS": 12.0,
 	"SELECTION_CIRCLE_WIDTH": 2.0,
 	"INFLUENCE_SETTINGS": {
-		"OVERALL_COLOR": Color(1.0, 1.0, 1.0),  # Keep overall influence white
+		"OVERALL_COLOR": Color.WHITE,  # Keep overall influence white
 		"ARROW_LENGTH": 50.0,        # Base length for the overall influence arrow
 		"ARROW_WIDTH": 2.0,          # Base width for influence arrows
 		"ARROW_HEAD_SIZE": 8.0,      # Base size for arrow heads
@@ -240,7 +240,7 @@ func _update_ui() -> void:
 		action_label.text = ""
 		food_label.text = ""
 		role_label.text = ""
-		
+
 	if Engine.get_physics_frames() % 20 != 0:
 		return
 	if current_ant.action_manager and current_ant.action_manager._current_action_id:

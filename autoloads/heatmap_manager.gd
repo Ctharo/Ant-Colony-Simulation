@@ -141,9 +141,9 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 ## Updates heat for an entity at the given position
-func update_entity_heat(entity: Node2D, position: Vector2, delta: float) -> void:
+func update_entity_heat(entity: Node2D, _position: Vector2, delta: float) -> void:
 	var entity_id = entity.get_instance_id()
-	var center_cell = world_to_cell(position)
+	var center_cell = world_to_cell(_position)
 	var base_heat = STYLE.HEAT_PER_SECOND * delta
 
 	# Update regular heat

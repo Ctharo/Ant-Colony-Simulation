@@ -95,16 +95,14 @@ func get_or_create_state(expression: Logic) -> ExpressionState:
 func register_expression(expression: Logic) -> void:
 	if expression.id.is_empty():
 		expression.id = str(expression.get_instance_id())
-		
-	logger.info("Registering expression: %s" % expression.id)
-	
+
 	if _trace_enabled:
 		logger.trace("Expression details: string=%s, always_eval=%s, nested=%s" % [
 			expression.expression_string,
 			expression.always_evaluate,
 			expression.nested_expressions
 		])
-		
+
 	# Create and parse state
 	var state := get_or_create_state(expression)
 	if not state:
@@ -132,7 +130,7 @@ func register_expression(expression: Logic) -> void:
 
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	assert(expression != null and not expression.id.is_empty())
-	
+
 	if _trace_enabled:
 		logger.trace("Getting value: id=%s force=%s" % [expression.id, force_update])
 
@@ -249,7 +247,7 @@ func _calculate(expression_id: String) -> Variant:
 	var start_time := 0.0
 	if _perf_monitor_enabled and logger.is_debug_enabled():
 		start_time = Time.get_ticks_usec()
-		
+
 	var state: ExpressionState = _states[expression_id]
 	if not state.is_parsed:
 		return null
@@ -275,18 +273,18 @@ func _calculate(expression_id: String) -> Variant:
 			state.compiled_expression
 		])
 		return null
-		
+
 	if _perf_monitor_enabled and logger.is_debug_enabled():
 		var duration = (Time.get_ticks_usec() - start_time) / 1000.0
 		if duration > _slow_threshold_ms:
 			logger.warn("Slow expression calculation: id=%s duration=%.2fms" % [
-				expression_id, 
+				expression_id,
 				duration
 			])
-			
+
 	if logger.is_debug_enabled():
 		logger.debug("Final result for %s = %s" % [expression_id, result])
-	
+
 	return result
 
 ## Get cache statistics for a specific expression

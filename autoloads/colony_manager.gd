@@ -83,7 +83,6 @@ func spawn_colony() -> Colony:
 	colony_spawned.emit(colony)
 	colony.add_to_group("colony")
 
-	logger.debug("Spawned new colony: %s" % colony.name)
 	return colony
 
 ## Remove a colony and clean up its resources

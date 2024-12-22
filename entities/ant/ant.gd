@@ -168,10 +168,10 @@ func _physics_process(delta: float) -> void:
 	elif current_action is Rest:
 		energy_coef -= 5.0
 	energy_level -= energy_coef * delta
-	
 
 
-	
+
+
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
 	if colony != p_colony:
