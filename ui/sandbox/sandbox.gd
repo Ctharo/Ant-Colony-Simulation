@@ -160,7 +160,7 @@ func _on_gui_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _check_selections() -> void:
-	var mouse_pos = get_world_mouse_position()
+	var mouse_pos = get_local_mouse_position()
 
 	if _awaiting_colony_placement:
 		spawn_colony(mouse_pos)
@@ -179,9 +179,6 @@ func _check_selections() -> void:
 		_context_menu_manager.show_ant_context_menu(closest_ant, closest_ant.position)
 	else:
 		_context_menu_manager.show_empty_context_menu(mouse_pos)
-
-func get_world_mouse_position() -> Vector2:
-	return get_local_mouse_position()
 
 func _get_object_at_position(position: Vector2) -> Node2D:
 	# Implementation depends on how you're storing and checking for objects

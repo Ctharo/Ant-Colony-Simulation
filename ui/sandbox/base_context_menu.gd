@@ -33,9 +33,9 @@ func setup(p_camera: Camera2D) -> void:
 
 func _process(_delta: float) -> void:
 	if tracked_ant and is_instance_valid(tracked_ant):
-		position = camera.get_canvas_transform() * tracked_ant.global_position
+		position = camera.get_screen_to_canvas(tracked_ant.global_position)
 	elif tracked_colony and is_instance_valid(tracked_colony):
-		position = camera.get_canvas_transform() * tracked_colony.global_position
+		position = camera.get_screen_to_canvas(tracked_colony.global_position)
 	queue_redraw()
 
 func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> Button:
@@ -61,11 +61,6 @@ func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> 
 	containers.append(container)
 	buttons.append(button)
 	return button
-
-func _get_screen_position(world_pos: Vector2) -> Vector2:
-	if camera:
-		return camera.get_screen_to_canvas(world_pos)
-	return world_pos
 
 func show_at(pos: Vector2, circle_radius: float = 12.0) -> void:
 	# pos should already be in screen coordinates when called from context menu manager
