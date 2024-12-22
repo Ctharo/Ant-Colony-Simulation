@@ -164,6 +164,10 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 
 	# Check if this combination of source and category should be logged
 	if not DebugLogger.should_log(source, category):
+		if level == LogLevel.ERROR:
+			push_error(message)
+		if level == LogLevel.WARN:
+			push_warning(message)
 		return
 
 	var timestamp = Time.get_datetime_string_from_system()

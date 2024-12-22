@@ -30,8 +30,10 @@ func _ready() -> void:
 	initialize()
 	_setup_context_menu_manager()
 
+
+
 func _setup_context_menu_manager() -> void:
-	var camera = %World/Camera2D
+	camera = %World/Camera2D
 	var ui_layer = $UI
 	_context_menu_manager = ContextMenuManager.new(camera, ui_layer)
 	add_child(_context_menu_manager)
@@ -48,6 +50,7 @@ func initialize() -> bool:
 	# Setup navigation before spawning ants
 	var result = await setup_navigation()
 	return result
+
 
 #region Selection Logic
 func _find_closest_colony(pos: Vector2) -> Colony:
@@ -93,7 +96,7 @@ func _on_spawn_ants_requested(colony: Colony) -> void:
 	colony.spawn_ants(10, true)
 
 func _on_destroy_colony_requested(colony: Colony) -> void:
-	logger.info("Destroyed colony " % colony.name)
+	logger.info("Destroyed colony " % str(colony.name))
 	ColonyManager.remove_colony(colony)
 
 func _on_show_ant_info_requested(ant: Ant) -> void:
@@ -180,13 +183,13 @@ func _check_selections() -> void:
 	else:
 		_context_menu_manager.show_empty_context_menu(mouse_pos)
 
-func _get_object_at_position(position: Vector2) -> Node2D:
+func _get_object_at_position(p_position: Vector2) -> Node2D:
 	# Implementation depends on how you're storing and checking for objects
 	# Example implementation:
-	var world = %World
-	for child in world.get_children():
+	var p_world = %World
+	for child in p_world.get_children():
 		if child is Colony or child is Ant:
-			if position.distance_to(child.global_position) <= child.radius:
+			if p_position.distance_to(child.global_position) <= child.radius:
 				return child
 	return null
 #endregion
@@ -206,25 +209,17 @@ func setup_navigation() -> bool:
 	# Create navigation region
 	navigation_region = NavigationRegion2D.new()
 	navigation_region.add_to_group("navigation")
-	world.add_child(navigation_region)
+	add_child(navigation_region)
 
-	# Create navigation polygon and source geometry data
+	# Create navigation polygon
 	navigation_poly = NavigationPolygon.new()
-	source_geometry = NavigationMeshSourceGeometryData2D.new()
+	var vertex_array = PackedVector2Array()
+	var vertices_map = {}  # To map Vector2 positions to vertex indices
+	var vertex_index = 0
 
-	# Configure navigation polygon to match ant agent settings
-	navigation_poly.agent_radius = 10.0  # Match the ant's nav_agent radius
-	navigation_poly.cell_size = 1.0  # Match the NavigationServer cell size
-
-	# Create obstacles container
-	var obstacles_container = Node2D.new()
-	obstacles_container.name = "Obstacles"
-	world.add_child(obstacles_container)
-	world.move_child(obstacles_container, 0)
-
-	# Get viewport boundaries
+	# Get viewport size
 	var viewport_rect := get_viewport_rect()
-	var _size := viewport_rect.size * 4
+	var viewport_size := viewport_rect.size * 4
 
 	# Define margins
 	var side_margin := 160.0
@@ -232,33 +227,47 @@ func setup_navigation() -> bool:
 	var bottom_margin := 160.0
 
 	# Define the navigation boundary points
-	var nav_left := -_size.x/2 + side_margin
-	var nav_right := _size.x/2 - side_margin
-	var nav_top := -_size.y/2 + top_margin
-	var nav_bottom := _size.y/2 - bottom_margin
+	var nav_left := -viewport_size.x/2 + side_margin
+	var nav_right := viewport_size.x/2 - side_margin
+	var nav_top := -viewport_size.y/2 + top_margin
+	var nav_bottom := viewport_size.y/2 - bottom_margin
 
-	# Calculate safe area for obstacle placement (inset from navigation bounds)
+	# Add main boundary vertices
+	var main_vertices = [
+		Vector2(nav_left, nav_top),      # 0
+		Vector2(nav_left, nav_bottom),   # 1
+		Vector2(nav_right, nav_bottom),  # 2
+		Vector2(nav_right, nav_top)      # 3
+	]
+
+	# Add main vertices and store their indices
+	for vertex in main_vertices:
+		vertex_array.push_back(vertex)
+		vertices_map[vertex] = vertex_index
+		vertex_index += 1
+
+	# Set vertices in navigation polygon
+	navigation_poly.set_vertices(vertex_array)
+
+	# Add main boundary polygon
+	var main_polygon = PackedInt32Array([0, 1, 2, 3])
+	navigation_poly.add_polygon(main_polygon)
+
+	logger.info("Added main boundary - Vertices: %d, Polygons: %d" % [
+		navigation_poly.get_vertices().size(),
+		navigation_poly.get_polygon_count()
+	])
+
+	# Calculate safe area for obstacle placement
 	var safe_left := nav_left + OBSTACLE_SIZE_MAX
 	var safe_right := nav_right - OBSTACLE_SIZE_MAX
 	var safe_top := nav_top + OBSTACLE_SIZE_MAX
 	var safe_bottom := nav_bottom - OBSTACLE_SIZE_MAX
 
-	# Add main traversable outline
-	var outline := PackedVector2Array([
-		Vector2(nav_left, nav_top),
-		Vector2(nav_right, nav_top),
-		Vector2(nav_right, nav_bottom),
-		Vector2(nav_left, nav_bottom)
-	])
-	source_geometry.add_traversable_outline(outline)
-
 	# Calculate number of obstacles based on viewport size
 	var obstacles_num = floori(NAVIGATION_OBSTACLES_DENSITY * viewport_rect.size.length())
-
-	# Place obstacles
-	var placed_obstacles := []
-	var max_attempts = 50
 	var obstacles_placed = 0
+	var max_attempts = 50
 
 	while obstacles_placed < obstacles_num and max_attempts > 0:
 		max_attempts -= 1
@@ -267,98 +276,155 @@ func setup_navigation() -> bool:
 		var center_y = randf_range(safe_top, safe_bottom)
 		var center = Vector2(center_x, center_y)
 
-		# Skip if too close to center of map
+		# Skip if too close to center
 		if center.distance_to(Vector2.ZERO) < 150:
 			continue
 
 		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
 
-		# Check overlap with existing obstacles
-		var overlaps = false
-		for existing in placed_obstacles:
-			if center.distance_to(existing["center"]) < (obstacle_size + existing["size"] + 20):
-				overlaps = true
-				break
+		# Create obstacle vertices
+		var start_idx = vertex_array.size()
+		var obstacle_vertices = [
+			center + Vector2(-obstacle_size, -obstacle_size),
+			center + Vector2(obstacle_size, -obstacle_size),
+			center + Vector2(obstacle_size, obstacle_size),
+			center + Vector2(-obstacle_size, obstacle_size)
+		]
 
-		if overlaps:
-			continue
+		# Add obstacle vertices
+		for vertex in obstacle_vertices:
+			vertex_array.push_back(vertex)
 
-		# Generate obstacle points
-		var obstacle_points = _create_obstacle_points(center, obstacle_size)
+		# Update vertices in navigation polygon
+		navigation_poly.set_vertices(vertex_array)
 
-		# Validate obstacle is within navigation bounds
-		var is_valid = true
-		for point in obstacle_points:
-			if point.x < nav_left or point.x > nav_right or \
-			   point.y < nav_top or point.y > nav_bottom:
-				is_valid = false
-				break
-
-		if not is_valid:
-			continue
-
-		# Create physical obstacle
-		_create_obstacle(obstacle_points, center, obstacles_container)
-
-		# Add obstacle outline to source geometry
-		source_geometry.add_obstruction_outline(obstacle_points)
-
-		placed_obstacles.append({
-			"center": center,
-			"size": obstacle_size
-		})
+		# Add obstacle polygon (note: clockwise winding for obstacles)
+		var obstacle_indices = PackedInt32Array([
+			start_idx,
+			start_idx + 1,
+			start_idx + 2,
+			start_idx + 3
+		])
+		navigation_poly.add_polygon(obstacle_indices)
 
 		obstacles_placed += 1
 
-	# Parse and bake navigation mesh
-	await _parse_and_bake_navigation(navigation_poly, source_geometry)
+	logger.info("Added %d obstacles - Final vertices: %d, Polygons: %d" % [
+		obstacles_placed,
+		navigation_poly.get_vertices().size(),
+		navigation_poly.get_polygon_count()
+	])
 
-	# Configure navigation
+	# Set the navigation polygon
 	navigation_region.navigation_polygon = navigation_poly
 
-	# Configure NavigationServer2D to match ant agent settings
+	# Configure NavigationServer2D
 	var map_rid = navigation_region.get_navigation_map()
-	NavigationServer2D.map_set_active(map_rid, true)
-	NavigationServer2D.map_set_cell_size(map_rid, 1.0)
-	NavigationServer2D.map_set_edge_connection_margin(map_rid, 5.0)
-	NavigationServer2D.map_force_update(map_rid)
+	if map_rid.is_valid():
+		NavigationServer2D.map_set_active(map_rid, true)
+		NavigationServer2D.map_set_cell_size(map_rid, 1.0)
+		NavigationServer2D.map_set_edge_connection_margin(map_rid, 5.0)
+		NavigationServer2D.map_force_update(map_rid)
 
-	# Wait for physics update
+	# Enable debug visualization
+	NavigationServer2D.set_debug_enabled(true)
+
 	await get_tree().physics_frame
-	await get_tree().physics_frame
 
-	HeatmapManager.setup_navigation(navigation_region)
-	queue_redraw()
-
-	logger.debug("Navigation system initialized with %d obstacles" % obstacles_placed)
 	return true
 
-func _parse_and_bake_navigation(nav_poly: NavigationPolygon, source_geometry: NavigationMeshSourceGeometryData2D) -> void:
-	# Create callbacks for async operations
-	var baking_done = func():
-		logger.debug("Navigation baking completed")
+func _validate_outline(outline: PackedVector2Array) -> bool:
+	if outline.size() < 3:
+		logger.error("Outline validation failed: Less than 3 points")
+		return false
 
-	var parsing_done = func():
-		logger.debug("Navigation parsing completed")
-		# After parsing is done, proceed with baking
-		NavigationServer2D.bake_from_source_geometry_data_async(
-			nav_poly,
-			source_geometry,
-			baking_done
-		)
+	# Check for clockwise winding order for traversable areas
+	var area = 0.0
+	for i in range(outline.size()):
+		var j = (i + 1) % outline.size()
+		area += outline[i].x * outline[j].y - outline[j].x * outline[i].y
 
-	# Parse the source geometry using self (current node) as root
+	if area == 0:
+		logger.error("Outline validation failed: Zero area")
+		return false
+
+	if area > 0:  # For traversable areas, we want clockwise winding (negative area)
+		logger.warn("Outline has counter-clockwise winding order, reversing points")
+		outline.reverse()
+
+	# Log outline details
+	logger.info("Outline validation passed - Points: %d, Area: %f" % [outline.size(), area])
+	return true
+
+func _parse_and_bake_navigation(nav_poly: NavigationPolygon, p_source_geometry: NavigationMeshSourceGeometryData2D) -> void:
+	logger.info("Starting navigation mesh generation")
+
+	var parsing_completed := false
+	var baking_completed := false
+	var timeout_frames := 300  # Add a safety timeout
+	var frames := 0
+
+	# Log initial state
+	var initial_traversable = p_source_geometry.get_traversable_outlines()
+	logger.info("Initial traversable outlines count: %d" % initial_traversable.size())
+	if not initial_traversable.is_empty():
+		logger.info("First traversable outline points: %s" % initial_traversable[0])
+
+	# Parse the source geometry
 	NavigationServer2D.parse_source_geometry_data(
 		nav_poly,
-		source_geometry,
-		self,  # Use current node as root for parsing
-		parsing_done
+		p_source_geometry,
+		self
 	)
 
-	# Wait for both operations to complete
-	await get_tree().physics_frame
+	# Use synchronous baking
+	NavigationServer2D.bake_from_source_geometry_data(
+		nav_poly,
+		p_source_geometry
+	)
 
-func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
+	# Wait a few frames to ensure processing is complete
+	for i in range(3):
+		await get_tree().physics_frame
+
+  # Wait a few frames to ensure processing is complete
+	for i in range(3):
+		await get_tree().physics_frame
+
+	# Verify the navigation polygon has data
+	var outline_count = nav_poly.get_outline_count()
+	logger.info("Navigation polygon generated with %d outlines" % outline_count)
+
+	if outline_count == 0:
+		# If no outlines, let's verify our source geometry
+		var traversable = p_source_geometry.get_traversable_outlines()
+		var obstructions = p_source_geometry.get_obstruction_outlines()
+		logger.error("Source geometry check - Traversable outlines: %d, Obstructions: %d" % [
+			traversable.size(),
+			obstructions.size()
+		])
+ 		# Try to print the first traversable outline if it exists
+		if not traversable.is_empty():
+			logger.error("First traversable outline: %s" % traversable[0])
+
+	logger.info("Navigation baking process finished completely")
+
+func validate_source_geometry(p_source_geometry: NavigationMeshSourceGeometryData2D) -> bool:
+	# Verify we have at least one traversable outline
+	var outlines = p_source_geometry.get_traversable_outlines()
+	if outlines.is_empty():
+		logger.error("No traversable outlines in source geometry")
+		return false
+
+	# Verify obstacle outlines if any were added
+	var obstacles = p_source_geometry.get_obstruction_outlines()
+	if not obstacles.is_empty():
+		logger.info("Found %d obstacles in source geometry" % obstacles.size())
+
+	return true
+
+
+func _create_obstacle_points(center: Vector2, _size: float) -> PackedVector2Array:
 	var num_points = 8
 	var points = PackedVector2Array()
 
@@ -368,8 +434,8 @@ func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array
 		var angle_offset = randf_range(-0.2, 0.2)  # Random angle variation
 		var radius_multiplier = randf_range(0.8, 1.2)  # Random size variation
 		var point = Vector2(
-			center.x + cos(angle + angle_offset) * size * radius_multiplier,
-			center.y + sin(angle + angle_offset) * size * radius_multiplier
+			center.x + cos(angle + angle_offset) * _size * radius_multiplier,
+			center.y + sin(angle + angle_offset) * _size * radius_multiplier
 		)
 		points.push_back(point)
 

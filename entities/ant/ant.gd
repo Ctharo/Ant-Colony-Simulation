@@ -125,7 +125,7 @@ func configure_nav_agent() -> void:
 		"path_desired_distance": 4.0,  # Keep the smaller working values
 		"target_desired_distance": 4.0,
 		"path_max_distance": 50.0,
-		"avoidance_enabled": true,
+		"avoidance_enabled": false,
 		"radius": 10.0,
 		"neighbor_distance": 50.0,
 		"max_neighbors": 10,
@@ -168,8 +168,6 @@ func _physics_process(delta: float) -> void:
 	elif current_action is Rest:
 		energy_coef -= 5.0
 	energy_level -= energy_coef * delta
-
-
 
 
 #region Colony Management
@@ -234,7 +232,7 @@ func get_nearest_item(list: Array) -> Variant:
 
 	return nearest
 
-func show_influence_vectors(enabled: bool):
+func show_influence_vectors(_enabled: bool):
 	pass
 
 func show_nav_path(enabled: bool):

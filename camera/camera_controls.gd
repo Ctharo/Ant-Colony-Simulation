@@ -29,7 +29,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		position -= delta
 		last_mouse_position = event.position
 
-func _handle_zoom(zoom_factor: float, mouse_position: Vector2) -> void:
+func _handle_zoom(zoom_factor: float, _mouse_position: Vector2) -> void:
 
 	# Update zoom level
 	var new_zoom = Vector2.ONE * clamp(

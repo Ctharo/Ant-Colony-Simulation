@@ -161,7 +161,7 @@ func _complete_current_action() -> void:
 func get_current_action() -> Action:
 	if not _current_action_id:
 		return null
-	var state := get_or_create_state(_current_action_id)
+	var _state := get_or_create_state(_current_action_id)
 	return _actions[_current_action_id]
 
 func conditions_met(action: Action) -> bool:

@@ -6,7 +6,7 @@ extends Action
 @export var TARGET_DISTANCE: float = 100.0
 @export var RECALCULATION_THRESHOLD: float = 5.0 # Distance from target to trigger recalculation
 
-func execute_tick(entity: Node, state: ActionState, delta: float) -> void:
+func execute_tick(entity: Node, state: ActionState, _delta: float) -> void:
 	entity = entity as Ant
 	var current_pos = entity.global_position
 	var should_recalculate = false
@@ -47,11 +47,6 @@ func execute_tick(entity: Node, state: ActionState, delta: float) -> void:
 		entity.set_global_rotation(angle)
 
 	entity.move_and_slide()
-
-	# Energy calculation using last_pos from state
-	var last_pos = state.get_meta("last_pos") as Vector2
-	var moved_length: float = last_pos.distance_to(current_pos)
-
 
 	# Update last_pos in state
 	state.set_meta("last_pos", current_pos)

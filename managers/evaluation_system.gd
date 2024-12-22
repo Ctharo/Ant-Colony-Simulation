@@ -141,7 +141,6 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	# Check if we have a cached value that's recent enough
 	if _cache.has_value(expression.id):
 		var time_since_eval = current_time - last_time
-		var time_since_change = current_time - last_change
 
 		# If it's an always_evaluate expression or has such dependencies
 		if expression.always_evaluate or _has_always_evaluate_dependency(expression):

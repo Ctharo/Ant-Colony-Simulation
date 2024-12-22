@@ -1,7 +1,6 @@
 class_name AntInfoPanel
 extends PanelContainer
 
-signal ant_closed
 
 # Custom styling
 const STYLE = {
@@ -142,11 +141,11 @@ func update_legend(influences: Array) -> void:
 		)
 
 # Modified legend entry function with weight display
-func add_legend_entry(name: String, color: Color, normalized_weight: float) -> void:
+func add_legend_entry(p_name: String, color: Color, normalized_weight: float) -> void:
 	var entry = HBoxContainer.new()
 
 	# Color indicator
-	var influence_type = name.to_snake_case().trim_suffix("_influence")
+	var influence_type = p_name.to_snake_case().trim_suffix("_influence")
 	if not influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
 		var color_rect = ColorRect.new()
 		color_rect.custom_minimum_size = Vector2(16, 16)
@@ -164,7 +163,7 @@ func add_legend_entry(name: String, color: Color, normalized_weight: float) -> v
 
 	# Name label
 	var name_label = Label.new()
-	name_label.text = name.trim_suffix(" influence").capitalize()
+	name_label.text = p_name.trim_suffix(" influence").capitalize()
 	entry.add_child(name_label)
 
 	# Weight label with fixed width for alignment

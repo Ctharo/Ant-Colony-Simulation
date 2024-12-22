@@ -32,7 +32,6 @@ var _frames_until_next_batch: int = 0
 var _is_spawning: bool = false
 #endregion
 
-signal colony_closed
 
 ## Current colony being displayed
 var current_colony: Colony
@@ -99,9 +98,9 @@ func _draw() -> void:
 
 func _on_spawn_ants_pressed() -> void:
 	if current_colony:
-		start_spawning(ant_count_edit.value)
+		start_spawning(int(ant_count_edit.value))
 
-func _on_highlight_ants_toggled(enabled: bool) -> void:
+func _on_highlight_ants_toggled(_enabled: bool) -> void:
 	queue_redraw()
 
 func start_spawning(num_to_spawn: int) -> void:
@@ -109,7 +108,7 @@ func start_spawning(num_to_spawn: int) -> void:
 	_is_spawning = true
 	_frames_until_next_batch = 0
 
-func _handle_spawning(delta: float) -> void:
+func _handle_spawning(_delta: float) -> void:
 	if not _is_spawning:
 		return
 
@@ -126,9 +125,9 @@ func _handle_spawning(delta: float) -> void:
 
 	_frames_until_next_batch = FRAMES_BETWEEN_BATCHES
 
-func _spawn_batch(size: int) -> void:
-	var _ants = current_colony.spawn_ants(size, true)
-	_pending_spawns -= size
+func _spawn_batch(p_size: int) -> void:
+	var _ants = current_colony.spawn_ants(p_size, true)
+	_pending_spawns -= p_size
 
 func _finish_spawning() -> void:
 	_is_spawning = false
