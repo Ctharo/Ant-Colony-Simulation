@@ -57,7 +57,7 @@ static var enabled_categories := {
 	Category.TASK: false,
 	Category.LOGIC: true,
 	Category.INFLUENCE: false,
-	Category.MOVEMENT: false,
+	Category.MOVEMENT: true,
 	Category.ACTION: true,
 	Category.BEHAVIOR: false,
 	Category.CONDITION: false,

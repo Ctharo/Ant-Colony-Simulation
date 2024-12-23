@@ -1,6 +1,8 @@
 class_name ColonyInfoPanel
 extends PanelContainer
 
+signal highlight_ants(colony: Colony, enable: bool)
+
 #region Constants
 const STYLE = {
 	"PANEL_SIZE": Vector2(300, 300),
@@ -22,6 +24,7 @@ const ANT_HIGHLIGHT_COLOR = Color(Color.WHITE, 0.5)
 @onready var show_heatmap_check: CheckButton = %ShowHeatmapCheck
 @onready var highlight_ants_check: CheckButton = %HighlightAntsCheck
 
+var heatmap: HeatmapManager
 # Spawning parameters
 const BATCH_SIZE = 10  # Number of ants to spawn per batch
 const FRAMES_BETWEEN_BATCHES = 5  # Frames to wait between batches
@@ -39,7 +42,7 @@ var current_colony: Colony
 func _ready() -> void:
 	custom_minimum_size = STYLE.PANEL_SIZE
 	hide()  # Start hidden
-
+	heatmap = get_tree().get_first_node_in_group("heatmap")
 func _process(delta: float) -> void:
 	update_colony_info()
 	_handle_spawning(delta)
@@ -67,31 +70,14 @@ func update_colony_info() -> void:
 	food_collected_label.text = "Food Collected: %.1f units" % (current_colony.foods.mass if current_colony.foods else 0.0)
 	radius_label.text = "Colony Radius: %.1f" % current_colony.radius
 
-func _draw() -> void:
-	if not current_colony or not current_colony.is_inside_tree():
-		return
-
-
-	# Draw ant highlights if enabled
-	if highlight_ants_check.button_pressed:
-		for ant in current_colony.ants:
-			if ant and ant.is_inside_tree():
-				draw_arc(
-					ant.global_position - global_position,
-					ANT_HIGHLIGHT_RADIUS,
-					0,
-					TAU,
-					16,  # Less segments for better performance
-					ANT_HIGHLIGHT_COLOR,
-					2.0
-				)
 
 func _on_spawn_ants_pressed() -> void:
 	if current_colony:
 		start_spawning(int(ant_count_edit.value))
 
-func _on_highlight_ants_toggled(_enabled: bool) -> void:
-	queue_redraw()
+func _on_highlight_ants_toggled(enabled: bool) -> void:
+	if current_colony != null:
+		highlight_ants.emit(current_colony, enabled)
 
 func start_spawning(num_to_spawn: int) -> void:
 	_pending_spawns = num_to_spawn
@@ -127,11 +113,11 @@ func _on_close_pressed() -> void:
 
 func _on_show_heatmap_toggled(enabled: bool) -> void:
 	if current_colony:
-		HeatmapManager.debug_draw(current_colony, enabled)
+		heatmap.debug_draw(current_colony, enabled)
 
 func _exit_tree() -> void:
 	if current_colony:
-		HeatmapManager.debug_draw(current_colony, false)
+		heatmap.debug_draw(current_colony, false)
 
 	current_colony = null
 	show_heatmap_check.button_pressed = false

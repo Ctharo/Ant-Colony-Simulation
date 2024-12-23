@@ -15,6 +15,7 @@ var colony_info_panel: ColonyInfoPanel
 # Navigation properties
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
+var heatmap_manager: HeatmapManager
 
 const NAVIGATION_OBSTACLES_DENSITY = 1
 const OBSTACLE_SIZE_MIN = 20.0
@@ -35,9 +36,9 @@ func _ready() -> void:
 	_setup_context_menu_manager()
 
 
-
 func _setup_context_menu_manager() -> void:
 	camera = %World/Camera2D
+	camera.add_to_group("camera")
 	var ui_layer = $UI
 	_context_menu_manager = ContextMenuManager.new(camera, ui_layer)
 	add_child(_context_menu_manager)
@@ -48,7 +49,7 @@ func _setup_context_menu_manager() -> void:
 	_context_menu_manager.destroy_colony_requested.connect(_on_destroy_colony_requested)
 	_context_menu_manager.show_ant_info_requested.connect(_on_show_ant_info_requested)
 	_context_menu_manager.destroy_ant_requested.connect(_on_destroy_ant_requested)
-	_context_menu_manager.spawn_colony_requested.connect(_on_spawn_colony_requested)
+	_context_menu_manager.spawn_colony_requested.connect(spawn_colony)
 
 func initialize() -> bool:
 	# Setup navigation before spawning ants
@@ -57,43 +58,33 @@ func initialize() -> bool:
 	if not navigation_region:
 		return false
 	navigation_poly = navigation_region.navigation_polygon
-	var outline = navigation_poly.get_outline(0)
-	size = get_outer_bounds(outline)
-	
-	HeatmapManager.setup_camera(camera)
-	
+	heatmap_manager = HeatmapManager.new()
+	heatmap_manager.setup_navigation(navigation_region)
+	heatmap_manager.add_to_group("heatmap")
+	heatmap_manager.setup_camera(camera)
+	add_child(heatmap_manager)
 	return result
-
-func get_outer_bounds(outline: PackedVector2Array) -> Vector2:
-	var min_pos = Vector2.ZERO
-	var max_pos = Vector2.ZERO
-	for point in outline:
-		min_pos.x = min(min_pos.x, point.x)
-		min_pos.y = min(min_pos.y, point.y)
-		max_pos.x = max(max_pos.x, point.x)
-		max_pos.y = max(max_pos.y, point.y)
-	return max_pos - min_pos
 
 
 #region Selection Logic
-func _find_closest_colony(pos: Vector2) -> Colony:
+func _find_closest_colony(world_pos: Vector2) -> Colony:
 	var closest_colony: Colony = null
 	var closest_distance: float = 100.0  # Maximum selection distance for colonies
 
 	for colony in ColonyManager.get_all().to_array():
-		var distance = colony.global_position.distance_to(pos)
+		var distance = colony.global_position.distance_to(world_pos)
 		if distance < closest_distance:
 			closest_distance = distance
 			closest_colony = colony
 
 	return closest_colony
 
-func _find_closest_ant(pos: Vector2) -> Ant:
+func _find_closest_ant(world_pos: Vector2) -> Ant:
 	var closest_ant: Ant = null
 	var closest_distance: float = 100.0  # Maximum selection distance
 
 	for ant in AntManager.get_all().to_array():
-		var distance = ant.global_position.distance_to(pos)
+		var distance = ant.global_position.distance_to(world_pos)
 		if distance < closest_distance:
 			closest_distance = distance
 			closest_ant = ant
@@ -109,8 +100,7 @@ func _is_within_selection_distance(ant: Ant, pos: Vector2) -> bool:
 
 
 #region Context Menu Callbacks
-func _on_spawn_colony_requested(pos: Vector2) -> void:
-	spawn_colony(pos)
+
 
 func _on_show_colony_info_requested(colony: Colony) -> void:
 	show_colony_info(colony)
@@ -161,9 +151,20 @@ func deselect_all() -> void:
 #endregion
 
 #region Colony Management
-func spawn_colony(p_position: Vector2) -> Colony:
+func spawn_colony(ui_position: Vector2) -> Colony:
+	logger.debug("Spawn colony pipeline started")
+	logger.debug("Input UI position: %s" % str(ui_position))
+	
 	var colony = ColonyManager.spawn_colony()
-	colony.global_position = p_position
+	var global_pos = camera.ui_to_global(ui_position)
+	logger.debug("Converted UI to global position: %s" % str(global_pos))
+	
+	var camera_zoom = camera.zoom
+	logger.debug("Current camera zoom: %s" % str(camera_zoom))
+	
+	colony.global_position = global_pos
+	logger.debug("Set colony global position: %s" % str(colony.global_position))
+	
 	logger.info("Spawned new colony %s at position %s" % [colony.name, str(colony.global_position)])
 	return colony
 #endregion
@@ -185,11 +186,15 @@ func _on_gui_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _check_selections() -> void:
-	var mouse_pos = get_local_mouse_position()
+	
+	var mouse_pos = get_global_mouse_position()
 
 	if _awaiting_colony_placement:
 		spawn_colony(mouse_pos)
 		_awaiting_colony_placement = false
+		return
+		
+	if not _context_menu_manager:
 		return
 
 	_context_menu_manager.clear_active_menu()
@@ -203,11 +208,9 @@ func _check_selections() -> void:
 	elif closest_ant and _is_within_selection_distance(closest_ant, mouse_pos):
 		_context_menu_manager.show_ant_context_menu(closest_ant, closest_ant.position)
 	else:
-		_context_menu_manager.show_empty_context_menu(mouse_pos)
+		_context_menu_manager.show_empty_context_menu(camera.global_to_ui(mouse_pos))
 
 func _get_object_at_position(p_position: Vector2) -> Node2D:
-	# Implementation depends on how you're storing and checking for objects
-	# Example implementation:
 	var p_world = %World
 	for child in p_world.get_children():
 		if child is Colony or child is Ant:
@@ -228,44 +231,12 @@ func _change_scene(scene_name: String) -> void:
 
 #region Navigation Setup
 func setup_navigation() -> bool:
-	var nav_generator: = MapGenerator.new()
-	
-	# Create navigation with custom margins if needed
-	var margin_config := {
-		"side": 160.0,
-		"top": 280.0,
-		"bottom": 160.0
-	}
-	
-	navigation_region = nav_generator.generate_navigation(get_viewport_rect(), margin_config)
-	add_child(navigation_region)
-	
-	await get_tree().physics_frame
+	var map_gen = MapGenerator.new()
+	add_child(map_gen)
+	navigation_region = await map_gen.generate_navigation(get_viewport_rect())
+	navigation_poly = navigation_region.navigation_polygon
 	return true
-#endregion
-
-#region Debug Visualization
-func _draw() -> void:
-	if not Engine.is_editor_hint() and navigation_region:
-		var nav_poly = navigation_region.navigation_polygon
-		if nav_poly:
-			var main_outline = nav_poly.get_outline(0)
-			draw_colored_polygon(main_outline, Color.TRANSPARENT)
-			
-			# Draw outer boundary lines
-			for i in range(main_outline.size()):
-				var start = main_outline[i]
-				var end = main_outline[(i + 1) % main_outline.size()]
-				draw_line(start, end, Color(0.0, 1.0, 0.0, 0.8), 2.0)  # Green lines
-			
-			for i in range(1, nav_poly.get_outline_count()):
-				var obstacle = nav_poly.get_outline(i)
-				draw_colored_polygon(obstacle, Color(0.5, 0.5, 0.5, 0.7))
-				
-				for j in range(obstacle.size()):
-					var start = obstacle[j]
-					var end = obstacle[(j + 1) % obstacle.size()]
-					draw_line(start, end, Color(0.3, 0.3, 0.3, 0.8), 2.0)
+	
 #endregion
 
 #region Utils

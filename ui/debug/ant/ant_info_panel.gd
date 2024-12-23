@@ -25,7 +25,8 @@ const STYLE = {
 }
 
 var _influence_colors: Dictionary = {}
-
+@onready var influence_renderer: InfluenceRenderer
+var heatmap: HeatmapManager
 
 # UI Components
 @onready var title_label: Label = %TitleLabel
@@ -49,6 +50,39 @@ func _ready() -> void:
 	hide()  # Start hidden
 	setup_styling()
 	clear_legend()
+	# Initialize influence renderer
+	influence_renderer = InfluenceRenderer.new()
+	add_child(influence_renderer)
+	heatmap = get_tree().get_first_node_in_group("heatmap")
+
+
+func _process(_delta: float) -> void:
+	_update_ui()
+	queue_redraw()
+
+func _update_ui() -> void:
+	if not (current_ant and is_visible()):
+		return
+
+	update_status_bars()
+	if current_ant and current_ant != null:
+		# Update action text
+		action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
+		# Update food text
+		food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
+		# Update role text
+		role_label.text = "Role: %s" % current_ant.role
+	else:
+		action_label.text = ""
+		food_label.text = ""
+		role_label.text = ""
+
+	if Engine.get_physics_frames() % 20 != 0:
+		return
+	if current_ant.action_manager and current_ant.action_manager._current_action_id:
+		var current_action = current_ant.action_manager._actions[current_ant.action_manager._current_action_id]
+		if current_action is Move:
+			update_legend(current_action.influences)
 
 
 func setup_styling() -> void:
@@ -74,6 +108,9 @@ func show_ant_info(ant: Ant) -> void:
 		return
 	current_ant = ant
 	show()
+	
+	influence_renderer.set_ant(ant)
+	influence_renderer.set_enabled(%ShowInfluenceVectorsCheck.button_pressed)
 
 	# If ant has a move action, update the legend with its influences
 	if ant.action_manager and ant.action_manager._current_action_id:
@@ -183,8 +220,8 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 	influences_legend.add_child(entry)
 
 
-func _on_show_influence_vectors_check_toggled(_toggled_on: bool) -> void:
-	queue_redraw()
+func _on_show_influence_vectors_check_toggled(enabled: bool) -> void:
+	influence_renderer.set_enabled(enabled)
 
 func _on_show_nav_path_check_toggled(toggled_on: bool) -> void:
 	if current_ant:
@@ -192,7 +229,6 @@ func _on_show_nav_path_check_toggled(toggled_on: bool) -> void:
 
 func _on_close_pressed() -> void:
 	queue_free()
-
 
 func update_status_bars() -> void:
 	if not current_ant:
@@ -219,159 +255,20 @@ func update_bar_color(bar: ProgressBar, value: float, normal_color: Color) -> vo
 	else:
 		style.bg_color = STYLE.LOW_COLOR
 
-func _process(_delta: float) -> void:
-	_update_ui()
-	queue_redraw()
-
-func _update_ui() -> void:
-	if not (current_ant and is_visible()):
-		return
-
-	update_status_bars()
-	if current_ant and current_ant != null:
-		# Update action text
-		action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
-		# Update food text
-		food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
-		# Update role text
-		role_label.text = "Role: %s" % current_ant.role
-	else:
-		action_label.text = ""
-		food_label.text = ""
-		role_label.text = ""
-
-	if Engine.get_physics_frames() % 20 != 0:
-		return
-	if current_ant.action_manager and current_ant.action_manager._current_action_id:
-		var current_action = current_ant.action_manager._actions[current_ant.action_manager._current_action_id]
-		if current_action is Move:
-			update_legend(current_action.influences)
-
-func _draw() -> void:
-	if current_ant and current_ant.is_inside_tree():
-
-		# Draw influence arrows if ant has an action manager and is moving
-		if %ShowInfluenceVectorsCheck.button_pressed:
-			if current_ant.action_manager and current_ant.action_manager._current_action_id:
-				var current_action = current_ant.action_manager._actions[current_ant.action_manager._current_action_id]
-				if current_action is Move:
-					draw_influences(current_action)
-
-
 
 ## Check if an influence should be ignored in visualization
 func _should_ignore_influence(influence: Influence) -> bool:
 	var influence_type = influence.name.to_snake_case().trim_suffix("_influence")
 	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
 
-func draw_influences(move_action: Move) -> void:
-	var ant_pos = current_ant.global_position - global_position
-	var influence_manager = current_ant.action_manager._states[move_action.id].influence_manager
-
-	# Filter out ignored influence types
-	var valid_influences = move_action.influences.filter(
-		func(influence): return not _should_ignore_influence(influence)
-	)
-
-	# First pass: Calculate total weight and collect weights
-	var total_weight = 0.0
-	var influence_data = []
-
-	for influence in valid_influences:
-		var weight = influence_manager.eval_system.get_value(influence.weight)
-		var direction = influence_manager.eval_system.get_value(influence.direction).normalized()
-
-		if weight:
-			total_weight += weight
-
-		influence_data.append({
-			"raw_weight": weight,
-			"direction": direction,
-			"color": influence.color,
-			"name": influence.name
-		})
-
-	# Early exit if total weight is negligible
-	if total_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
-		return
-
-	# Second pass: Normalize weights and calculate final vectors
-	var total_direction = Vector2.ZERO
-
-	for data in influence_data:
-		# Calculate normalized weight
-		data.normalized_weight = data.raw_weight / total_weight if total_weight > 0 else 0.0
-
-		# Skip negligible influences
-		if data.normalized_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
-			continue
-
-		# Calculate weighted direction contribution
-		data.weighted_direction = data.direction * data.normalized_weight
-		total_direction += data.weighted_direction
-
-	# Sort influences by normalized weight (shortest first for layering)
-	influence_data.sort_custom(
-		func(a, b): return a.normalized_weight < b.normalized_weight
-	)
-
-	# Draw overall influence arrow first (on bottom)
-	var overall_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
-	draw_arrow(
-		ant_pos,
-		ant_pos + total_direction.normalized() * overall_length,
-		STYLE.INFLUENCE_SETTINGS.OVERALL_COLOR,
-		STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE,
-		STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
-	)
-
-	# Draw individual influence arrows
-	for data in influence_data:
-		if data.normalized_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
-			continue
-
-		var arrow_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * data.normalized_weight * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
-		var arrow_end = ant_pos + data.direction * arrow_length
-
-		draw_arrow(
-			ant_pos,
-			arrow_end,
-			data.color,
-			STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH,
-			STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE
-		)
-
-func draw_arrow(start: Vector2, end: Vector2, color: Color, width: float, head_size: float) -> void:
-	# Draw main line
-	draw_line(start, end, color, width)
-
-	# Only draw arrow head if there's enough length for it to be visible
-	var direction = (end - start)
-	var length = direction.length()
-	if length <= head_size:
-		return
-
-	direction = direction.normalized()
-	var right = direction.rotated(PI * 3/4) * head_size
-	var left = direction.rotated(-PI * 3/4) * head_size
-
-	var arrow_points = PackedVector2Array([
-		end,
-		end + right,
-		end + left
-	])
-
-	# Draw arrow head
-	draw_colored_polygon(arrow_points, color)
-
 func _on_show_heatmap_toggled(enabled: bool) -> void:
 	if current_ant:
 		if enabled:
-			HeatmapManager.debug_draw(current_ant, true)
+			heatmap.debug_draw(current_ant, true)
 		else:
-			HeatmapManager.debug_draw(current_ant, false)
+			heatmap.debug_draw(current_ant, false)
 
 func _exit_tree() -> void:
 	if current_ant:
 		current_ant.nav_agent.debug_enabled = false
-		HeatmapManager.debug_draw(current_ant, false)
+		heatmap.debug_draw(current_ant, false)

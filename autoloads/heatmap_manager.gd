@@ -1,11 +1,12 @@
+class_name HeatmapManager
 extends Node2D
 
 #region Constants
 const STYLE = {
 	"CELL_SIZE": 15,
-	"CHUNK_SIZE": 16,  # New: Size of each chunk in cells
+	"CHUNK_SIZE": 16,
 	"MAX_HEAT": 100.0,
-	"DECAY_RATE": 0.1,
+	"DECAY_RATE": 0.05,
 	"HEAT_RADIUS": 1,
 	"HEAT_PER_SECOND": 10.0,
 	"BOUNDARY_HEAT_MULTIPLIER": 8.0,
@@ -18,27 +19,19 @@ const STYLE = {
 		"REPULSION": Color(1, 0, 0, 0.6)
 	}
 }
-#endregion
 
 ## Shared navigation map RID for all entities
 var _nav_map: RID
-
 var camera: Camera2D
-## Dictionary mapping chunk coordinates to heat data
-## Structure: Dict[Vector2i, HeatChunk]
 var _chunks: Dictionary = {}
-
-## Dictionary for debug visualization settings
 var _debug_settings: Dictionary = {}
-
-## Array of boundary repulsion points for debug visualization
 var _boundary_repulsion_points: Array[Dictionary] = []
+var logger: Logger
 
 #region Custom Classes
-## Class to store heat information for a single cell
 class HeatCell:
 	var heat: float = 0.0
-	var sources: Dictionary = {}  # Dict[int, float] mapping entity_id to heat contribution
+	var sources: Dictionary = {}
 
 	func add_heat(entity_id: int, amount: float) -> void:
 		if not sources.has(entity_id):
@@ -64,9 +57,8 @@ class HeatCell:
 		for contribution in sources.values():
 			heat += contribution
 
-## Class to manage a chunk of the heat grid
 class HeatChunk:
-	var cells: Dictionary = {}  # Dict[Vector2i, HeatCell]
+	var cells: Dictionary = {}
 	var active_cells: int = 0
 
 	func get_or_create_cell(local_pos: Vector2i) -> HeatCell:
@@ -88,73 +80,117 @@ class HeatChunk:
 			cells.erase(pos)
 
 		return active_cells > 0
-#endregion
 
-## Sets up the navigation map. Should be called by the main scene once navigation is ready.
+func _init() -> void:
+	name = "HeatmapManager"
+	logger = Logger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
+	top_level = true  # Make sure transforms are in global space
+
+#region Setup Functions
 func setup_navigation(nav_region: Node2D) -> void:
 	if nav_region:
 		_nav_map = nav_region.get_navigation_map()
+		logger.info("Set navigation map")
 	else:
-		push_warning("HeatmapManager: Invalid NavigationRegion2D provided")
+		logger.warn("Invalid NavigationRegion2D provided")
+
+func setup_camera(p_camera: Camera2D) -> void:
+	camera = p_camera
 
 #region Entity Management
 func register_entity(entity: Node2D) -> void:
 	var entity_id = entity.get_instance_id()
 	if not _debug_settings.has(entity_id):
 		_debug_settings[entity_id] = false
+		logger.debug("Registered entity %s" % entity.name)
 
 func unregister_entity(entity: Node2D) -> void:
 	var entity_id = entity.get_instance_id()
-	# Remove heat contributions from all chunks
 	for chunk in _chunks.values():
 		for cell in chunk.cells.values():
 			cell.remove_source(entity_id)
 	_debug_settings.erase(entity_id)
+	logger.debug("Unregistered entity %s" % entity.name)
 
 func debug_draw(entity: Node2D, enabled: bool) -> void:
 	var entity_id = entity.get_instance_id()
 	_debug_settings[entity_id] = enabled
-	queue_redraw()  # Request redraw when debug visibility changes
-#endregion
+	queue_redraw()
 
-#region Heat Updates
+#region Process and Draw
 func _process(delta: float) -> void:
-	# Update heat for ALL entities regardless of debug state
 	for entity_id in _debug_settings:
 		var entity = instance_from_id(entity_id)
-		if entity:  # Check if entity still exists
+		if entity:
 			update_entity_heat(entity, entity.global_position, delta)
 
 	_boundary_repulsion_points.clear()
 	var chunks_to_remove = []
 
-	# Update all chunks
 	for chunk_pos in _chunks:
 		if not _chunks[chunk_pos].update(delta):
 			chunks_to_remove.append(chunk_pos)
 
-	# Remove empty chunks
 	for chunk_pos in chunks_to_remove:
 		_chunks.erase(chunk_pos)
 
-	# Only redraw if any debug visualization is enabled
 	if _debug_settings.values().has(true):
 		queue_redraw()
 
-func setup_camera(p_camera: Camera2D) -> void:
-	camera = p_camera
+func _draw() -> void:
+	if not camera:
+		return
+		
+	for chunk_pos in _chunks:
+		var chunk = _chunks[chunk_pos]
+		for local_pos in chunk.cells:
+			var cell = chunk.cells[local_pos]
+			var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
+			
+			var visible_heat = _calculate_visible_heat(cell)
+			if visible_heat <= 0:
+				continue
+				
+			var world_pos = cell_to_world(world_cell)
+			var draw_pos = world_pos
+			
+			var rect = Rect2(
+				draw_pos,
+				Vector2.ONE * STYLE.CELL_SIZE
+			)
+			
+			var t = visible_heat / STYLE.MAX_HEAT
+			var color = _get_cell_color(t, world_pos)
+			draw_rect(rect, color)
 
-## Updates heat for an entity at the given position
-func update_entity_heat(entity: Node2D, _position: Vector2, delta: float) -> void:
+func _calculate_visible_heat(cell: HeatCell) -> float:
+	var visible_heat = 0.0
+	for source_id in cell.sources:
+		var entity = instance_from_id(source_id)
+		if not entity:
+			continue
+		if entity is Ant:
+			var colony = entity.colony
+			if colony and (_debug_settings.get(source_id, false) or _debug_settings.get(colony.get_instance_id(), false)):
+				visible_heat += cell.sources[source_id]
+	return visible_heat
+
+func _get_cell_color(t: float, pos: Vector2) -> Color:
+	if not is_cell_navigable(pos):
+		var color = STYLE.DEBUG_COLORS.BOUNDARY
+		color.a *= t
+		return color
+	return STYLE.DEBUG_COLORS.START.lerp(STYLE.DEBUG_COLORS.END, t)
+
+#region Heat Updates
+func update_entity_heat(entity: Node2D, position: Vector2, delta: float) -> void:
 	var entity_id = entity.get_instance_id()
-	var center_cell = world_to_cell(_position)
+	var center_cell = world_to_cell(position)
 	var base_heat = STYLE.HEAT_PER_SECOND * delta
 
-	# Update regular heat
 	_update_movement_heat(entity_id, center_cell, base_heat)
 
-	# Update boundary repulsion
-	if entity is Colony:  # Only apply boundary repulsion for colony members
+	if entity is Colony:
 		_update_boundary_repulsion(entity_id, center_cell, base_heat * STYLE.BOUNDARY_HEAT_MULTIPLIER)
 
 func _update_movement_heat(entity_id: int, center_cell: Vector2i, base_heat: float) -> void:
@@ -199,53 +235,6 @@ func _create_repulsion_from_boundary(entity_id: int, boundary_cell: Vector2i, an
 							"position": repulsion_pos,
 							"strength": repulsion_strength
 						})
-#endregion
-
-#region Heat Management
-func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> void:
-	var chunk_pos = world_to_chunk(world_cell)
-	var local_pos = world_to_local_cell(world_cell)
-
-	if not _chunks.has(chunk_pos):
-		_chunks[chunk_pos] = HeatChunk.new()
-
-	var cell: HeatCell = _chunks[chunk_pos].get_or_create_cell(local_pos)
-	cell.add_heat(entity_id, amount)
-
-## Get total heat at a world position for a specific entity's colony
-## Excludes heat from other colonies and entities
-func get_heat_at_position(entity: Node2D, pos: Vector2) -> float:
-	var colony_id = entity.colony.get_instance_id() if entity is Ant else entity.get_instance_id()
-	var world_cell = world_to_cell(pos)
-	var chunk_pos = world_to_chunk(world_cell)
-	var local_pos = world_to_local_cell(world_cell)
-
-	if not _chunks.has(chunk_pos):
-		return 0.0
-
-	var chunk = _chunks[chunk_pos]
-	if not chunk.cells.has(local_pos):
-		return 0.0
-
-	var cell = chunk.cells[local_pos]
-
-	# Sum up heat only from the specified colony
-	var total_heat = 0.0
-	for source_id in cell.sources:
-		var source = instance_from_id(source_id)
-		if source:
-			# Check if the source belongs to the same colony
-			var source_colony_id = source.colony.get_instance_id() if source is Ant else source.get_instance_id()
-			if source_colony_id == colony_id:
-				total_heat += cell.sources[source_id]
-
-	return total_heat
-#endregion
-
-#region Navigation and Avoidance
-## Returns a normalized direction vector based on heat concentration
-## The vector points away from high concentration areas
-## For attraction behavior, multiply the result by -1
 func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	var entity_id = entity.get_instance_id()
 	var center_cell = world_to_cell(world_pos)
@@ -253,7 +242,7 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	var total_weight = 0.0
 
 	# Boundary repulsion
-	if entity is Colony:  # Only apply boundary repulsion for colony members
+	if entity is Colony:
 		var boundary_result = _calculate_boundary_repulsion(center_cell, world_pos)
 		direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
 		total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
@@ -307,7 +296,6 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 			var cell_pos = cell_to_world(cell)
 			var cell_obj = chunk.cells[local_pos]
 
-			# Calculate heat excluding the current entity
 			var heat = 0.0
 			for source_id in cell_obj.sources:
 				if source_id != exclude_entity_id:
@@ -322,33 +310,30 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 		direction /= total_weight
 
 	return {"direction": direction, "weight": total_weight}
-#endregion
-
-#region Utility Functions
-func is_cell_navigable(pos: Vector2) -> bool:
-	if _nav_map == RID():
-		return true
-	return NavigationServer2D.map_get_closest_point(_nav_map, pos).distance_to(pos) < STYLE.CELL_SIZE
-
+#region Coordinate Conversions
 func world_to_cell(world_pos: Vector2) -> Vector2i:
-	var screen_pos = camera.get_screen_to_canvas(world_pos)
-	return Vector2i(screen_pos / STYLE.CELL_SIZE)
+	return Vector2i(world_pos / STYLE.CELL_SIZE)
 
 func cell_to_world(cell: Vector2i) -> Vector2:
-	var local_pos = Vector2(cell * STYLE.CELL_SIZE)
-	return camera.get_screen_to_canvas(local_pos)
-	
+	return Vector2(cell * STYLE.CELL_SIZE)
+
 func world_to_chunk(world_cell: Vector2i) -> Vector2i:
-	return Vector2i(
-		floori(float(world_cell.x) / STYLE.CHUNK_SIZE),
-		floori(float(world_cell.y) / STYLE.CHUNK_SIZE)
-	)
+	var x = world_cell.x
+	var y = world_cell.y
+	if x < 0:
+		x = x - STYLE.CHUNK_SIZE + 1
+	if y < 0:
+		y = y - STYLE.CHUNK_SIZE + 1
+	return Vector2i(x / STYLE.CHUNK_SIZE, y / STYLE.CHUNK_SIZE)
 
 func world_to_local_cell(world_cell: Vector2i) -> Vector2i:
-	return Vector2i(
-		world_cell.x % STYLE.CHUNK_SIZE,
-		world_cell.y % STYLE.CHUNK_SIZE
-	)
+	var x = world_cell.x
+	var y = world_cell.y
+	if x < 0:
+		x = STYLE.CHUNK_SIZE + (x % STYLE.CHUNK_SIZE)
+	if y < 0:
+		y = STYLE.CHUNK_SIZE + (y % STYLE.CHUNK_SIZE)
+	return Vector2i(x % STYLE.CHUNK_SIZE, y % STYLE.CHUNK_SIZE)
 
 func chunk_to_world_cell(chunk_pos: Vector2i, local_pos: Vector2i) -> Vector2i:
 	return Vector2i(
@@ -356,54 +341,52 @@ func chunk_to_world_cell(chunk_pos: Vector2i, local_pos: Vector2i) -> Vector2i:
 		chunk_pos.y * STYLE.CHUNK_SIZE + local_pos.y
 	)
 
+#region Utility Functions
+func is_cell_navigable(pos: Vector2) -> bool:
+	if _nav_map == RID():
+		return true
+	return NavigationServer2D.map_get_closest_point(_nav_map, pos).distance_to(pos) < STYLE.CELL_SIZE
+
 func _get_neighboring_chunks(chunk_pos: Vector2i) -> Array:
-	var neighbors = [chunk_pos]  # Include current chunk
+	var neighbors = [chunk_pos]
 	for dx in [-1, 0, 1]:
 		for dy in [-1, 0, 1]:
 			if dx == 0 and dy == 0:
 				continue
 			neighbors.append(chunk_pos + Vector2i(dx, dy))
 	return neighbors
-#endregion
 
-#region Debug Drawing
-func _draw() -> void:
-	for chunk_pos in _chunks:
-		var chunk = _chunks[chunk_pos]
-		for local_pos in chunk.cells:
-			var cell = chunk.cells[local_pos]
-			var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
+func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> void:
+	var chunk_pos = world_to_chunk(world_cell)
+	var local_pos = world_to_local_cell(world_cell)
 
-			# Calculate visible heat based on debug settings
-			var visible_heat = 0.0
-			for source_id in cell.sources:
-				var entity = instance_from_id(source_id)
-				if not entity:
-					continue
+	if not _chunks.has(chunk_pos):
+		_chunks[chunk_pos] = HeatChunk.new()
 
-				if entity is Ant:
-					# Show ant's heat if either:
-					# 1. The ant's debug is enabled directly
-					# 2. The ant's colony's debug is enabled
-					var colony = entity.colony
-					if colony and (_debug_settings.get(source_id, false) or _debug_settings.get(colony.get_instance_id(), false)):
-						visible_heat += cell.sources[source_id]
+	var cell = _chunks[chunk_pos].get_or_create_cell(local_pos)
+	cell.add_heat(entity_id, amount)
 
-			if visible_heat <= 0:
-				continue
+func get_heat_at_position(entity: Node2D, pos: Vector2) -> float:
+	var colony_id = entity.colony.get_instance_id() if entity is Ant else entity.get_instance_id()
+	var world_cell = world_to_cell(pos)
+	var chunk_pos = world_to_chunk(world_cell)
+	var local_pos = world_to_local_cell(world_cell)
 
-			var rect = Rect2(
-				cell_to_world(world_cell),
-				Vector2.ONE * STYLE.CELL_SIZE
-			)
+	if not _chunks.has(chunk_pos):
+		return 0.0
 
-			var t = visible_heat / STYLE.MAX_HEAT
-			var color
+	var chunk = _chunks[chunk_pos]
+	if not chunk.cells.has(local_pos):
+		return 0.0
 
-			if not is_cell_navigable(rect.position):
-				color = STYLE.DEBUG_COLORS.BOUNDARY
-				color.a *= t
-			else:
-				color = STYLE.DEBUG_COLORS.START.lerp(STYLE.DEBUG_COLORS.END, t)
+	var cell = chunk.cells[local_pos]
+	var total_heat = 0.0
 
-			draw_rect(rect, color)
+	for source_id in cell.sources:
+		var source = instance_from_id(source_id)
+		if source:
+			var source_colony_id = source.colony.get_instance_id() if source is Ant else source.get_instance_id()
+			if source_colony_id == colony_id:
+				total_heat += cell.sources[source_id]
+
+	return total_heat

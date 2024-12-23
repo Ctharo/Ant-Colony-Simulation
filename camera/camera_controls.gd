@@ -42,5 +42,10 @@ func _handle_zoom(zoom_factor: float, _mouse_position: Vector2) -> void:
 	# Adjust position to keep mouse over the same world position
 	position += zoom
 
-func get_screen_to_canvas(screen_position: Vector2) -> Vector2:
-	return get_canvas_transform() * screen_position
+func ui_to_global(screen_position: Vector2) -> Vector2:
+	var relative_pos = screen_position - get_viewport_rect().size / 2
+	var scaled_pos = relative_pos / zoom
+	return position + scaled_pos
+
+func global_to_ui(p_global_position: Vector2) -> Vector2:
+	return get_canvas_transform() * p_global_position

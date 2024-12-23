@@ -34,7 +34,7 @@ func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	active_context_menu.show_info_requested.connect(func(a): show_ant_info_requested.emit(a))
 	active_context_menu.destroy_ant_requested.connect(func(a): destroy_ant_requested.emit(a))
 
-	active_context_menu.show_for_ant(camera.get_screen_to_canvas(world_pos), ant)
+	active_context_menu.show_for_ant(world_pos, ant)
 
 ## Shows context menu for colony
 func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
@@ -48,8 +48,8 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu.spawn_ants_requested.connect(func(col): spawn_ants_requested.emit(col))
 	active_context_menu.show_info_requested.connect(func(col): show_colony_info_requested.emit(col))
 	active_context_menu.destroy_colony_requested.connect(func(col): destroy_colony_requested.emit(col))
-
-	active_context_menu.show_for_colony(camera.get_screen_to_canvas(world_pos), colony)
+	
+	active_context_menu.show_for_colony(world_pos, colony)
 
 ## Shows context menu for empty space
 func show_empty_context_menu(world_pos: Vector2) -> void:
@@ -60,12 +60,8 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 	active_context_menu.setup(camera)
 	_ui_layer.add_child(active_context_menu)
 
-	# When the menu requests colony spawn, emit the original world position
-	active_context_menu.spawn_colony_requested.connect(func(_screen_pos):
-		spawn_colony_requested.emit(world_pos)
-	)
-
-	active_context_menu.show_at_position(camera.get_screen_to_canvas(world_pos))
+	active_context_menu.spawn_colony_requested.connect(func(pos): spawn_colony_requested.emit(pos))
+	active_context_menu.show_at_position(world_pos)
 
 ## Clean up active context menu
 func clear_active_menu() -> void:

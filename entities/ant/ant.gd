@@ -101,7 +101,8 @@ func _ready() -> void:
 
 	# Setup navigation
 	configure_nav_agent()
-	HeatmapManager.register_entity(self)
+	heatmap = get_tree().get_first_node_in_group("heatmap")
+	heatmap.register_entity(self)
 	# Emit ready signal
 	spawned.emit()
 
@@ -241,4 +242,4 @@ func show_nav_path(enabled: bool):
 func _exit_tree() -> void:
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
-	HeatmapManager.unregister_entity(self)
+	heatmap.unregister_entity(self)

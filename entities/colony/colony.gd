@@ -2,6 +2,8 @@ class_name Colony
 extends Node2D
 
 @onready var collision_area: Area2D = $CollisionArea
+@export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
+@export var darker_dirt = Color(Color.BROWN, 0.9)   # Darker brown for depth
 
 #region Member Variables
 ## Colony radius in units
@@ -20,16 +22,18 @@ var is_highlighted: bool = false
 #endregion
 
 var logger: Logger
-
+var heatmap: HeatmapManager
 #region Initialization
 func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
-	HeatmapManager.register_entity(self)
+	heatmap = get_tree().get_first_node_in_group("heatmap")
+	heatmap.register_entity(self)
+
 
 func _exit_tree() -> void:
-	HeatmapManager.unregister_entity(self)
+	heatmap.unregister_entity(self)
 	delete_all()
 
 func delete_all():
