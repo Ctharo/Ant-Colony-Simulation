@@ -3,13 +3,7 @@
 [ext_resource type="Script" path="res://ui/sandbox/sandbox.gd" id="1_dcr83"]
 [ext_resource type="Script" path="res://camera/camera_controls.gd" id="2_wv2im"]
 
-[node name="Sandbox" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="Sandbox" type="Node2D"]
 script = ExtResource("1_dcr83")
 
 [node name="World" type="Node2D" parent="."]
@@ -50,5 +44,4 @@ grow_horizontal = 0
 theme_override_constants/separation = 10
 alignment = 2
 
-[connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="UI/ControlPanel/HBoxContainer/BackButton" to="." method="_on_back_button_pressed"]
