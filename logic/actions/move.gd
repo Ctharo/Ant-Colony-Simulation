@@ -11,10 +11,6 @@ func execute_tick(entity: Node, state: ActionState, _delta: float) -> void:
 	var current_pos = entity.global_position
 	var should_recalculate = false
 
-	# Ensure last_pos is initialized in state
-	if not state.has_meta("last_pos"):
-		state.set_meta("last_pos", current_pos)
-
 	# Simplified recalculation checks
 	if not entity.target_position:
 		should_recalculate = true
@@ -26,11 +22,6 @@ func execute_tick(entity: Node, state: ActionState, _delta: float) -> void:
 	# Quick recalculation without complex validation
 	if should_recalculate:
 		var target_pos = state.influence_manager.calculate_target_position(TARGET_DISTANCE, influences)
-		# Basic navigation validation
-		var nav_region = entity.get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
-		if nav_region:
-			var map_rid = nav_region.get_navigation_map()
-			target_pos = NavigationServer2D.map_get_closest_point(map_rid, target_pos)
 		entity.target_position = target_pos
 		return
 
@@ -47,6 +38,3 @@ func execute_tick(entity: Node, state: ActionState, _delta: float) -> void:
 		entity.set_global_rotation(angle)
 
 	entity.move_and_slide()
-
-	# Update last_pos in state
-	state.set_meta("last_pos", current_pos)
