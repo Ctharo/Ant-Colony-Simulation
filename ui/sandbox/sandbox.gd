@@ -54,12 +54,11 @@ func _setup_context_menu_manager() -> void:
 func initialize() -> bool:
 	# Setup navigation before spawning ants
 	var result: bool = await setup_navigation()
-	navigation_region = get_tree().get_first_node_in_group("navigation")
-	if not navigation_region:
+	if not result:
+		logger.error("Problem setting up navigation")
 		return false
-	navigation_poly = navigation_region.navigation_polygon
 	heatmap_manager = HeatmapManager.new()
-	heatmap_manager.setup_navigation(navigation_region)
+	heatmap_manager.setup_navigation()
 	heatmap_manager.add_to_group("heatmap")
 	heatmap_manager.setup_camera(camera)
 	add_child(heatmap_manager)
@@ -166,6 +165,7 @@ func spawn_colony(ui_position: Vector2) -> Colony:
 	logger.debug("Set colony global position: %s" % str(colony.global_position))
 	
 	logger.info("Spawned new colony %s at position %s" % [colony.name, str(colony.global_position)])
+	colony.spawn_ants(10, true)
 	return colony
 #endregion
 
@@ -233,8 +233,7 @@ func _change_scene(scene_name: String) -> void:
 func setup_navigation() -> bool:
 	var map_gen = MapGenerator.new()
 	add_child(map_gen)
-	navigation_region = await map_gen.generate_navigation(get_viewport_rect())
-	navigation_poly = navigation_region.navigation_polygon
+	await map_gen.generate_navigation(get_viewport_rect())
 	return true
 	
 #endregion
