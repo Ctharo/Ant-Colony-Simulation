@@ -23,6 +23,7 @@ const STYLE = {
 ## Shared navigation map RID for all entities
 var _nav_map: RID
 
+var camera: Camera2D
 ## Dictionary mapping chunk coordinates to heat data
 ## Structure: Dict[Vector2i, HeatChunk]
 var _chunks: Dictionary = {}
@@ -139,6 +140,9 @@ func _process(delta: float) -> void:
 	# Only redraw if any debug visualization is enabled
 	if _debug_settings.values().has(true):
 		queue_redraw()
+
+func setup_camera(p_camera: Camera2D) -> void:
+	camera = p_camera
 
 ## Updates heat for an entity at the given position
 func update_entity_heat(entity: Node2D, _position: Vector2, delta: float) -> void:
@@ -327,11 +331,13 @@ func is_cell_navigable(pos: Vector2) -> bool:
 	return NavigationServer2D.map_get_closest_point(_nav_map, pos).distance_to(pos) < STYLE.CELL_SIZE
 
 func world_to_cell(world_pos: Vector2) -> Vector2i:
-	return Vector2i(world_pos / STYLE.CELL_SIZE)
+	var screen_pos = camera.get_screen_to_canvas(world_pos)
+	return Vector2i(screen_pos / STYLE.CELL_SIZE)
 
 func cell_to_world(cell: Vector2i) -> Vector2:
-	return Vector2(cell * STYLE.CELL_SIZE)
-
+	var local_pos = Vector2(cell * STYLE.CELL_SIZE)
+	return camera.get_screen_to_canvas(local_pos)
+	
 func world_to_chunk(world_cell: Vector2i) -> Vector2i:
 	return Vector2i(
 		floori(float(world_cell.x) / STYLE.CHUNK_SIZE),
