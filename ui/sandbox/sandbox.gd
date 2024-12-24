@@ -1,6 +1,6 @@
 
 
-extends Node2D
+extends Control
 
 var logger: Logger
 var _context_menu_manager: ContextMenuManager
@@ -12,6 +12,7 @@ var colony_info_panel: ColonyInfoPanel
 @onready var camera = $World/Camera2D
 
 # Navigation properties
+@onready var world: World2D = World2D.new()
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 var heatmap_manager: HeatmapManager

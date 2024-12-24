@@ -1,5 +1,5 @@
 class_name MapGenerator
-extends Node2D
+extends Control
 
 #region Properties
 ## Logger instance for debugging
@@ -26,8 +26,6 @@ const BORDER_WIDTH = 2.0
 
 func _init() -> void:
 	logger = Logger.new("map_generator", DebugLogger.Category.PROGRAM)
-	
-func _ready() -> void:
 	nav_map = get_world_2d().navigation_map
 	NavigationServer2D.map_set_cell_size(nav_map, 1.0)
 	NavigationServer2D.map_set_edge_connection_margin(nav_map, 5.0)
