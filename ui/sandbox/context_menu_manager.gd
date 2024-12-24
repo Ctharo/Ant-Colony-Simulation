@@ -54,7 +54,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 	active_context_menu.show_at_position(world_pos)
 
 func _on_spawn_colony_requested(position: Vector2) -> void:
-	var colony = colony_manager.spawn_colony_at(position)
+	var colony = colony_manager.spawn_colony_at(camera.ui_to_global(position))
 	world.add_child(colony)
 	colony.spawn_ants(10)
 

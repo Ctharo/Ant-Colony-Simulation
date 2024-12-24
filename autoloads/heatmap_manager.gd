@@ -118,6 +118,7 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 
 #region Process and Draw
 func _process(delta: float) -> void:
+	queue_redraw()
 	for entity_id in _debug_settings:
 		var entity = instance_from_id(entity_id)
 		if entity:

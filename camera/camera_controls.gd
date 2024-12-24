@@ -40,6 +40,7 @@ func _handle_keyboard_input(delta: float) -> void:
 		position += input_dir.normalized() * KEYBOARD_PAN_SPEED * delta
 
 func _process(delta: float) -> void:
+	queue_redraw()
 	if not is_instance_valid(self):
 		return
 		
@@ -139,4 +140,14 @@ func global_to_ui(p_global_position: Vector2) -> Vector2:
 	if not is_instance_valid(self):
 		return Vector2.ZERO
 		
-	return get_canvas_transform() * p_global_position
+	return get_global_transform_with_canvas() * to_local(p_global_position)
+
+func _draw() -> void:
+	draw_arc(
+	   get_local_mouse_position(),
+	   8,
+	   0,          # Start angle (radians) 
+	   TAU,        # End angle (full circle)
+	   32,         # Number of points
+	   Color.WHITE # Circle color
+	)

@@ -11,7 +11,6 @@ var navigation_region: NavigationRegion2D
 const NAVIGATION_OBSTACLES_DENSITY = 0.03
 const OBSTACLE_SIZE_MIN = 20.0
 const OBSTACLE_SIZE_MAX = 70.0
-const MAP_SIZE_COEF = 4.0
 
 ## Drawing colors
 const BACKGROUND_COLOR = Color(Color.LIGHT_GREEN, 0.2)
@@ -23,8 +22,10 @@ const BORDER_WIDTH = 2.0
 func _init() -> void:
 	logger = Logger.new("map_generator", DebugLogger.Category.PROGRAM)
 
+
+
 ## Creates a navigation setup for the given viewport
-func generate_navigation(viewport_rect: Rect2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
+func generate_navigation(viewport_rect: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
 	# Create navigation polygon
 	var nav_poly = NavigationPolygon.new()
 	var vertex_array = PackedVector2Array()
@@ -32,8 +33,8 @@ func generate_navigation(viewport_rect: Rect2, _margin_config: Dictionary = {}) 
 	var vertex_index = 0
 
 	# Get viewport size
-	viewport_size = viewport_rect.size
-	var map_size: Vector2 = viewport_size * MAP_SIZE_COEF
+	viewport_size = viewport_rect
+	var map_size: Vector2 = viewport_size
 
 	# Define margins
 	var side_margin := viewport_size.x * 0.1  # 10% of viewport width
