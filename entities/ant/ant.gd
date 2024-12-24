@@ -39,10 +39,14 @@ var action_manager: ActionManager
 
 ## The navigation agent for this ant
 <<<<<<< HEAD
+<<<<<<< HEAD
 @onready var nav_agent: NavigationAgent2D
 =======
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 >>>>>>> parent of b667fb8 (Some changes, using NavigationServer2D)
+=======
+@onready var nav_agent: NavigationAgent2D 
+>>>>>>> parent of a3b5ced (d)
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position

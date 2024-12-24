@@ -108,7 +108,7 @@ func show_ant_info(ant: Ant) -> void:
 		return
 	current_ant = ant
 	show()
-
+	
 	influence_renderer.set_ant(ant)
 	influence_renderer.set_enabled(%ShowInfluenceVectorsCheck.button_pressed)
 
