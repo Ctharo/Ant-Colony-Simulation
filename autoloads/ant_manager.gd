@@ -37,7 +37,6 @@ func spawn_ant(colony: Colony) -> Ant:
 	AntManager.ants_created += 1
 	ant.id = AntManager.ants_created
 	ant.name = "Ant" + str(ant.id)
-	add_child(ant)
 	ant.set_physics_process(false)
 	ant.set_process(false)
 	AntManager.ants.append(ant)

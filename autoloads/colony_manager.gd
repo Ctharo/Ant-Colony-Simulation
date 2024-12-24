@@ -71,7 +71,6 @@ func spawn_colony() -> Colony:
 		return null
 
 	var colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
-	add_child(colony)
 
 	# Initialize colony state
 	colony.set_physics_process(false)

@@ -13,13 +13,7 @@ var colony_info_panel: ColonyInfoPanel
 @onready var camera = $World/Camera2D
 
 # Navigation properties
-var navigation_region: NavigationRegion2D
-var navigation_poly: NavigationPolygon
 var heatmap_manager: HeatmapManager
-
-const NAVIGATION_OBSTACLES_DENSITY = 1
-const OBSTACLE_SIZE_MIN = 20.0
-const OBSTACLE_SIZE_MAX = 70.0
 
 # States
 var _awaiting_colony_placement: bool = false
@@ -54,15 +48,10 @@ func _setup_context_menu_manager() -> void:
 func initialize() -> bool:
 	# Setup navigation before spawning ants
 	var result: bool = await setup_navigation()
-	navigation_region = get_tree().get_first_node_in_group("navigation")
-	if not navigation_region:
-		return false
-	navigation_poly = navigation_region.navigation_polygon
 	heatmap_manager = HeatmapManager.new()
-	heatmap_manager.setup_navigation(navigation_region)
+	%World.add_child(heatmap_manager)
 	heatmap_manager.add_to_group("heatmap")
 	heatmap_manager.setup_camera(camera)
-	add_child(heatmap_manager)
 	return result
 
 
@@ -154,18 +143,12 @@ func deselect_all() -> void:
 func spawn_colony(ui_position: Vector2) -> Colony:
 	logger.debug("Spawn colony pipeline started")
 	logger.debug("Input UI position: %s" % str(ui_position))
-	
 	var colony = ColonyManager.spawn_colony()
+	%World.add_child(colony)
 	var global_pos = camera.ui_to_global(ui_position)
-	logger.debug("Converted UI to global position: %s" % str(global_pos))
-	
-	var camera_zoom = camera.zoom
-	logger.debug("Current camera zoom: %s" % str(camera_zoom))
-	
 	colony.global_position = global_pos
-	logger.debug("Set colony global position: %s" % str(colony.global_position))
-	
 	logger.info("Spawned new colony %s at position %s" % [colony.name, str(colony.global_position)])
+	colony.spawn_ants(10, true)
 	return colony
 #endregion
 
@@ -186,14 +169,12 @@ func _on_gui_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _check_selections() -> void:
-	
 	var mouse_pos = get_global_mouse_position()
-
 	if _awaiting_colony_placement:
 		spawn_colony(mouse_pos)
 		_awaiting_colony_placement = false
 		return
-		
+
 	if not _context_menu_manager:
 		return
 
@@ -232,11 +213,10 @@ func _change_scene(scene_name: String) -> void:
 #region Navigation Setup
 func setup_navigation() -> bool:
 	var map_gen = MapGenerator.new()
-	add_child(map_gen)
-	navigation_region = await map_gen.generate_navigation(get_viewport_rect())
-	navigation_poly = navigation_region.navigation_polygon
+	%World.add_child(map_gen)
+	await map_gen.generate_navigation(get_viewport_rect())
 	return true
-	
+
 #endregion
 
 #region Utils

@@ -100,7 +100,6 @@ func _ready() -> void:
 	_load_actions()
 
 	# Setup navigation
-	configure_nav_agent()
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
 	# Emit ready signal
@@ -109,51 +108,6 @@ func _ready() -> void:
 func _initialize_state() -> void:
 	energy_level = energy_max
 	health_level = health_max
-
-func configure_nav_agent() -> void:
-	if not nav_agent:
-		logger.error("Navigation agent not initialized")
-		return
-
-	# Get the navigation region from the scene tree
-	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
-	if not nav_region:
-		logger.error("No NavigationRegion2D found in scene")
-		return
-
-	# Core configuration that we know works well
-	var nav_config := {
-		"path_desired_distance": 4.0,  # Keep the smaller working values
-		"target_desired_distance": 4.0,
-		"path_max_distance": 50.0,
-		"avoidance_enabled": false,
-		"radius": 10.0,
-		"neighbor_distance": 50.0,
-		"max_neighbors": 10,
-		"max_speed": movement_rate,  # Add movement rate from previous version
-		"navigation_layers": 1,
-		"avoidance_layers": 1,
-		"avoidance_mask": 1
-	}
-
-	# Apply core configuration
-	for property in nav_config:
-		if property in nav_agent:
-			nav_agent.set(property, nav_config[property])
-		else:
-			logger.warn("Navigation property not found: %s" % property)
-
-	# Additional settings that shouldn't interfere with core functionality
-	nav_agent.path_metadata_flags = NavigationPathQueryParameters2D.PathMetadataFlags.PATH_METADATA_INCLUDE_ALL
-	nav_agent.path_postprocessing = NavigationPathQueryParameters2D.PathPostProcessing.PATH_POSTPROCESSING_CORRIDORFUNNEL
-	nav_agent.pathfinding_algorithm = NavigationPathQueryParameters2D.PathfindingAlgorithm.PATHFINDING_ALGORITHM_ASTAR
-
-	# Set the navigation map
-	var map_rid = nav_region.get_navigation_map()
-	if map_rid.is_valid():
-		nav_agent.set_navigation_map(map_rid)
-	else:
-		logger.error("Invalid navigation map RID")
 
 func _load_actions() -> void:
 	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()

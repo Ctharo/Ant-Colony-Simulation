@@ -78,6 +78,7 @@ func add_ant(ant: Ant) -> Result:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
 	ants.append(ant)
 	ant.set_colony(self)
+	add_child(ant)
 	return Result.new()
 
 func spawn_ants(num: int, physics_at_spawn: bool = false) -> Array[Ant]:
