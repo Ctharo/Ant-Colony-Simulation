@@ -50,10 +50,11 @@ func initialize() -> void:
 	# Setup navigation before spawning ants
 	await setup_navigation()
 	heatmap_manager = HeatmapManager.new()
+	add_child(heatmap_manager)
+
 	heatmap_manager.setup_navigation()
 	heatmap_manager.add_to_group("heatmap")
 	heatmap_manager.setup_camera(camera)
-	add_child(heatmap_manager)
 
 
 
