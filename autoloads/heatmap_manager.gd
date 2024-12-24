@@ -140,25 +140,25 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if not camera:
 		return
-		
+
 	for chunk_pos in _chunks:
 		var chunk = _chunks[chunk_pos]
 		for local_pos in chunk.cells:
 			var cell = chunk.cells[local_pos]
 			var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
-			
+
 			var visible_heat = _calculate_visible_heat(cell)
 			if visible_heat <= 0:
 				continue
-				
+
 			var world_pos = cell_to_world(world_cell)
 			var draw_pos = world_pos
-			
+
 			var rect = Rect2(
 				draw_pos,
 				Vector2.ONE * STYLE.CELL_SIZE
 			)
-			
+
 			var t = visible_heat / STYLE.MAX_HEAT
 			var color = _get_cell_color(t, world_pos)
 			draw_rect(rect, color)
