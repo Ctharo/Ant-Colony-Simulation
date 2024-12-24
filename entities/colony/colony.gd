@@ -79,7 +79,7 @@ func add_ant(ant: Ant) -> Result:
 	add_child(ant)
 	return Result.new()
 
-func spawn_ants(num: int, physics_at_spawn: bool = false) -> Array[Ant]:
+func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	var _ants: Array[Ant] = AntManager.spawn_ants(self, num, physics_at_spawn)
 	for ant in _ants:
 		randomize()

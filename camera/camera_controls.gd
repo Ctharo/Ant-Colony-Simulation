@@ -2,72 +2,66 @@ class_name CameraController
 extends Camera2D
 
 #region Camera Constants
-## Minimum zoom level allowed for the camera
 const MIN_ZOOM := 0.1
-
-## Maximum zoom level allowed for the camera
 const MAX_ZOOM := 3.0
-
-## Speed at which the camera zooms in/out
 const ZOOM_SPEED := 0.1
-
-## Base speed for camera panning
 const PAN_SPEED := 800.0
-
-## Dampening factor for smooth camera movement
+const KEYBOARD_PAN_SPEED := 500.0
 const SMOOTHING_FACTOR := 0.85
-
-const TRACKING_SPEED := 0.1
 #endregion
 
 #region Camera State Variables
-## Flag to track if camera is currently being panned
 var is_panning := false
-
-## Stores the last known mouse position for pan calculations
 var last_mouse_position := Vector2.ZERO
-
-## Target position for smooth camera movement
 var target_position := Vector2.ZERO
-
-## Current velocity of the camera movement
 var current_velocity := Vector2.ZERO
-
 var tracked_entity: Node2D
-
 #endregion
 
 func _ready() -> void:
-	# Initialize camera position and settings
 	target_position = position
-	
-	# Ensure drag is enabled for proper panning
 	set_process_input(true)
 	set_process(true)
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_left") or \
+	   event.is_action_pressed("ui_right") or \
+	   event.is_action_pressed("ui_up") or \
+	   event.is_action_pressed("ui_down"):
+		stop_tracking()
+
+func _handle_keyboard_input(delta: float) -> void:
+	var input_dir := Vector2.ZERO
+	input_dir.x = Input.get_axis("ui_left", "ui_right")
+	input_dir.y = Input.get_axis("ui_up", "ui_down")
+	
+	if input_dir != Vector2.ZERO:
+		stop_tracking()
+		position += input_dir.normalized() * KEYBOARD_PAN_SPEED * delta
 
 func _process(delta: float) -> void:
 	if not is_instance_valid(self):
 		return
 		
-	if is_instance_valid(tracked_entity):
-		target_position = global_to_ui(tracked_entity.global_position)
+	_handle_keyboard_input(delta)
 	
-	if not is_panning:
+	if is_instance_valid(tracked_entity):
+		target_position = tracked_entity.global_position
 		position = position.lerp(target_position, SMOOTHING_FACTOR)
 		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
-
+	elif is_panning:
+		position = position.lerp(target_position, SMOOTHING_FACTOR)
+		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_instance_valid(event):
 		return
 		
-	# Handle mouse wheel zoom
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event)
-	# Handle mouse motion for panning
 	elif event is InputEventMouseMotion:
 		_handle_mouse_motion(event)
-
+		
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	match event.button_index:
 		MOUSE_BUTTON_WHEEL_UP:
@@ -75,21 +69,8 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
 		MOUSE_BUTTON_WHEEL_DOWN:
 			_handle_zoom(-ZOOM_SPEED, event.position)
 		MOUSE_BUTTON_MIDDLE:
+			stop_tracking()  # Stop tracking when manual movement starts
 			_handle_pan_start(event)
-
-func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
-	if not is_panning:
-		return
-		
-	var delta := event.position - last_mouse_position
-	var scaled_delta := delta * zoom
-	
-	# Update camera position with momentum
-	current_velocity = scaled_delta * PAN_SPEED * get_process_delta_time()
-	target_position -= current_velocity
-	position -= current_velocity
-	
-	last_mouse_position = event.position
 
 func _handle_pan_start(event: InputEventMouseButton) -> void:
 	is_panning = event.pressed
@@ -122,8 +103,21 @@ func _handle_zoom(zoom_factor: float, mouse_position: Vector2) -> void:
 	var mouse_world_pos := ui_to_global(mouse_position)
 	position += (mouse_world_pos - position) * (1 - new_zoom.x / old_zoom.x)
 
+func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
+	if not is_panning:
+		return
+		
+	var delta := event.position - last_mouse_position
+	
+	# Update camera position with momentum
+	current_velocity = delta * PAN_SPEED * get_process_delta_time()
+	target_position -= current_velocity
+	position -= current_velocity
+	
+	last_mouse_position = event.position
+
 func track_entity(entity: Node2D) -> void:
-	position = global_to_ui(entity.global_position)
+	stop_tracking()  # Clear previous tracking first
 	tracked_entity = entity
 	
 func stop_tracking() -> void:

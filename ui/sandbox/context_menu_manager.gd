@@ -56,6 +56,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 func _on_spawn_colony_requested(position: Vector2) -> void:
 	var colony = colony_manager.spawn_colony_at(position)
 	world.add_child(colony)
+	colony.spawn_ants(10)
 
 func clear_active_menu() -> void:
 	if is_instance_valid(active_context_menu):
