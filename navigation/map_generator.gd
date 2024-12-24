@@ -22,10 +22,8 @@ const BORDER_WIDTH = 2.0
 func _init() -> void:
 	logger = Logger.new("map_generator", DebugLogger.Category.PROGRAM)
 
-
-
 ## Creates a navigation setup for the given viewport
-func generate_navigation(viewport_rect: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
+func generate_navigation(viewport_size: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
 	# Create navigation polygon
 	var nav_poly = NavigationPolygon.new()
 	var vertex_array = PackedVector2Array()
@@ -33,7 +31,6 @@ func generate_navigation(viewport_rect: Vector2, _margin_config: Dictionary = {}
 	var vertex_index = 0
 
 	# Get viewport size
-	viewport_size = viewport_rect
 	var map_size: Vector2 = viewport_size
 
 	# Define margins
@@ -42,10 +39,10 @@ func generate_navigation(viewport_rect: Vector2, _margin_config: Dictionary = {}
 	var bottom_margin := viewport_size.y * 0.1  # 10% of viewport height
 
 	# Define the navigation boundary points
-	var nav_left := -map_size.x/2 + side_margin
-	var nav_right := map_size.x/2 - side_margin
-	var nav_top := -map_size.y/2 + top_margin
-	var nav_bottom := map_size.y/2 - bottom_margin
+	var nav_left := -map_size.x/2 
+	var nav_right := map_size.x/2
+	var nav_top := -map_size.y/2 
+	var nav_bottom := map_size.y/2
 
 	# Add main boundary vertices
 	var main_vertices = [

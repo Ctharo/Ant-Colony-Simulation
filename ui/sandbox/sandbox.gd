@@ -3,10 +3,11 @@
 extends Control
 
 const MAP_SIZE_COEF = 4.0
-var map_size
+var map_generator: MapGenerator
 var logger: Logger
 var _context_menu_manager: ContextMenuManager
 var source_geometry: NavigationMeshSourceGeometryData2D
+var loading_overlay: ColorRect
 
 var ant_info_panel: AntInfoPanel
 var colony_info_panel: ColonyInfoPanel
@@ -20,25 +21,29 @@ var heatmap_manager: HeatmapManager
 # States
 var _awaiting_colony_placement: bool = false
 
-var generating_map: bool = false
+var initializing: bool = false
 
 func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
 
 func _ready() -> void:
 	_setup_context_menu_manager()
-	set_deferred("size", get_viewport_rect().size * MAP_SIZE_COEF)
-	call_deferred("generate_map")
+	call_deferred("initialize")
 	
-func generate_map() -> void:
-	generating_map = true
-	var result = await initialize()
-	if not result:
-		logger.error("Problem initializing map")
-	else:
-		generating_map = false
-		logger.info("Map initialized")
-		
+func setup_loading_overlay() -> void:
+	loading_overlay = ColorRect.new()
+	loading_overlay.color = Color(0, 0, 0, 0.5)
+	loading_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	var label = Label.new()
+	label.text = "Initializing..."
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	loading_overlay.add_child(label)
+	add_child(loading_overlay)
+
 func _setup_context_menu_manager() -> void:
 	camera = %World/Camera2D
 	camera.add_to_group("camera")
@@ -55,12 +60,22 @@ func _setup_context_menu_manager() -> void:
 
 
 func initialize() -> bool:
+	logger.info("Initializing sandbox...")
+	size = get_viewport_rect().size * MAP_SIZE_COEF
 	# Setup navigation before spawning ants
-	var result: bool = await setup_navigation()
-	heatmap_manager = HeatmapManager.new()
-	%World.add_child(heatmap_manager)
-	heatmap_manager.add_to_group("heatmap")
-	heatmap_manager.setup_camera(camera)
+	var result: bool = await generate_map()
+	if not result:
+		logger.error("Problem generating map")
+		return false
+	logger.info("Map generation complete")
+	result = setup_heatmap()
+	if not result:
+		logger.error("Problem setting up heatmap")
+		return false
+	logger.info("Heatmap setup complete")
+	%World.position = size/2
+	logger.info("Sandbox initialized")
+	initializing = false
 	return result
 
 
@@ -111,7 +126,7 @@ func deselect_all() -> void:
 #endregion
 
 func _on_gui_input(event: InputEvent) -> void:
-	if generating_map:
+	if initializing:
 		return
 	if not event is InputEventMouseButton or not event.pressed:
 		if event.is_action_pressed("ui_cancel"):
@@ -141,12 +156,19 @@ func _change_scene(scene_name: String) -> void:
 #endregion
 
 #region Navigation Setup
-func setup_navigation() -> bool:
-	var map_gen = MapGenerator.new()
-	%World.add_child(map_gen)
-	await map_gen.generate_navigation(size)
+func generate_map() -> bool:
+	map_generator = MapGenerator.new()
+	%World.add_child(map_generator)
+	await map_generator.generate_navigation(size)
 	return true
 
+func setup_heatmap() -> bool:
+	heatmap_manager = HeatmapManager.new()
+	%World.add_child(heatmap_manager)
+	heatmap_manager.add_to_group("heatmap")
+	heatmap_manager.setup_camera(camera)
+	return true
+	
 #endregion
 
 func _exit_tree() -> void:
@@ -155,3 +177,6 @@ func _exit_tree() -> void:
 
 func _on_back_button_pressed() -> void:
 	transition_to_scene("main")
+
+func _draw() -> void:
+	draw_rect(get_rect(), Color.RED, false) 

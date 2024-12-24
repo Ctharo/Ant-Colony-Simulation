@@ -5,7 +5,7 @@ extends BaseContextMenu
 signal spawn_ants_requested(colony: Colony)
 signal show_info_requested(colony: Colony)
 signal destroy_colony_requested(colony: Colony)
-signal spawn_scout_requested(colony: Colony)
+signal heatmap_requested(colony: Colony)
 #endregion
 
 
@@ -18,6 +18,10 @@ func _init() -> void:
 		preload("res://ui/styles/info_normal.tres"),
 		preload("res://ui/styles/info_hover.tres"))
 		
+	var heatmap = add_button("Heatmap",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
+		
 	var destroy = add_button("Destroy",
 		preload("res://ui/styles/destroy_normal.tres"),
 		preload("res://ui/styles/destroy_hover.tres"))
@@ -25,6 +29,7 @@ func _init() -> void:
 	spawn.pressed.connect(_on_spawn_pressed)
 	info.pressed.connect(_on_info_pressed)
 	destroy.pressed.connect(_on_destroy_pressed)
+	heatmap.pressed.connect(_on_heatmap_pressed)
 
 func show_for_colony(pos: Vector2, p_colony: Colony) -> void:
 	if not is_instance_valid(p_colony):
@@ -46,4 +51,9 @@ func _on_info_pressed() -> void:
 func _on_destroy_pressed() -> void:
 	if is_instance_valid(tracked_colony):
 		destroy_colony_requested.emit(tracked_colony)
+	close()
+	
+func _on_heatmap_pressed() -> void:
+	if is_instance_valid(tracked_colony):
+		heatmap_requested.emit(tracked_colony)
 	close()

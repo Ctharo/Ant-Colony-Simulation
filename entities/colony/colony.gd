@@ -19,6 +19,11 @@ var foods: Foods
 ## Ants belonging to this colony
 var ants: Ants = Ants.new([])
 var is_highlighted: bool = false
+var heatmap_enabled: bool = false :
+	set(value):
+		heatmap_enabled = value
+		heatmap.debug_draw(self, value)
+
 #endregion
 
 var logger: Logger
@@ -30,7 +35,7 @@ func _init() -> void:
 func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
-
+	heatmap_enabled = true
 
 func _exit_tree() -> void:
 	heatmap.unregister_entity(self)
@@ -90,6 +95,4 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 		ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
 	logger.info("Spawned %s %s from %s" % [_ants.size(), "ant" if _ants.size() == 1 else "ants", name])
 	return _ants
-
-
 #endregion

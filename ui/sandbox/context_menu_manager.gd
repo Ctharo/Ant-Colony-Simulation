@@ -43,6 +43,7 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu.spawn_ants_requested.connect(_on_colony_spawn_ants_requested)
 	active_context_menu.show_info_requested.connect(_on_colony_info_requested)
 	active_context_menu.destroy_colony_requested.connect(_on_colony_destroy_requested)
+	active_context_menu.heatmap_requested.connect(_on_colony_heatmap_requested)
 	active_context_menu.show_for_colony(world_pos, colony)
 
 func show_empty_context_menu(world_pos: Vector2) -> void:
@@ -75,6 +76,10 @@ func _on_colony_info_requested(colony: Colony) -> void:
 func _on_colony_destroy_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony_manager.remove_colony(colony)
+		
+func _on_colony_heatmap_requested(colony: Colony) -> void:
+	if is_instance_valid(colony):
+		colony.heatmap_enabled = !colony.heatmap_enabled
 #endregion
 
 func handle_click(world_position: Vector2) -> void:

@@ -113,12 +113,9 @@ func _on_close_pressed() -> void:
 
 func _on_show_heatmap_toggled(enabled: bool) -> void:
 	if current_colony:
-		heatmap.debug_draw(current_colony, enabled)
+		current_colony.heatmap_enabled = enabled
 
 func _exit_tree() -> void:
-	if current_colony:
-		heatmap.debug_draw(current_colony, false)
-
 	current_colony = null
 	show_heatmap_check.button_pressed = false
 	highlight_ants_check.button_pressed = false
