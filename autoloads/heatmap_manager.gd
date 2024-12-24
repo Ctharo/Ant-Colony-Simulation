@@ -88,7 +88,7 @@ func _init() -> void:
 
 #region Setup Functions
 func setup_navigation() -> void:
-	_nav_map = NavigationServer2D.get_maps()[0]
+	_nav_map = get_world_2d().navigation_map
 
 
 func setup_camera(p_camera: Camera2D) -> void:

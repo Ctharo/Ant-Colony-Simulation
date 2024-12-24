@@ -64,16 +64,16 @@ func generate_navigation(viewport_rect: Rect2, margin_config: Dictionary = {}) -
 	
 	nav_poly.add_outline(PackedVector2Array(main_vertices))
 	NavigationServer2D.region_set_navigation_polygon(nav_region, nav_poly)
-	NavigationServer2D.region_set_map(nav_region, nav_map)
-	NavigationServer2D.map_set_active(nav_map, true)
+	NavigationServer2D.region_set_map(nav_region, get_world_2d().navigation_map)
+	NavigationServer2D.map_set_active(get_world_2d().navigation_map, true)
 	# Generate obstacles
 	_generate_obstacles(boundaries)
 	logger.info("Generated %d obstacles" % obstacles.size())
 	await get_tree().physics_frame
-	if not NavigationServer2D.map_is_active(nav_map):
+	if not NavigationServer2D.map_is_active(get_world_2d().navigation_map):
 		logger.error("Problem generating map")
 		return
-	var obstacle_count: int = NavigationServer2D.map_get_obstacles(nav_map).size()
+	var obstacle_count: int = NavigationServer2D.map_get_obstacles(get_world_2d().navigation_map).size()
 	logger.info("Navigation map setup complete with %d obstacles registered" % obstacle_count)
 
 ## Generate navigation obstacles
