@@ -48,13 +48,32 @@ func generate_navigation(viewport_rect: Rect2, margin_config: Dictionary = {}) -
 	
 	# Calculate margins and boundaries
 	var boundaries = _calculate_boundaries(map_size)
+	
+	# Create and configure navigation region
+	nav_region = NavigationServer2D.region_create()
+	NavigationServer2D.region_set_transform(nav_region, Transform2D.IDENTITY)
+	
+	# Create navigation polygon for main boundary
+	var nav_poly = NavigationPolygon.new()
+	var main_vertices = [
+		Vector2(boundaries.left, boundaries.top),
+		Vector2(boundaries.left, boundaries.bottom),
+		Vector2(boundaries.right, boundaries.bottom),
+		Vector2(boundaries.right, boundaries.top)
+	]
+	
+	nav_poly.add_outline(PackedVector2Array(main_vertices))
+	NavigationServer2D.region_set_navigation_polygon(nav_region, nav_poly)
+	NavigationServer2D.region_set_map(nav_region, get_world_2d().navigation_map)
+	NavigationServer2D.map_set_active(get_world_2d().navigation_map, true)
 	# Generate obstacles
 	_generate_obstacles(boundaries)
 	logger.info("Generated %d obstacles" % obstacles.size())
-	for obstacle in obstacles:
-		NavigationServer2D.obstacle_set_map(obstacle, get_world_2d().get_navigation_map())
 	await get_tree().physics_frame
-	var obstacle_count: int = NavigationServer2D.map_get_obstacles(get_world_2d().get_navigation_map()).size()
+	if not NavigationServer2D.map_is_active(get_world_2d().navigation_map):
+		logger.error("Problem generating map")
+		return
+	var obstacle_count: int = NavigationServer2D.map_get_obstacles(get_world_2d().navigation_map).size()
 	logger.info("Navigation map setup complete with %d obstacles registered" % obstacle_count)
 
 ## Generate navigation obstacles
@@ -80,7 +99,9 @@ func _generate_obstacles(boundaries: Dictionary) -> void:
 		# Create and configure obstacle
 		var obstacle = NavigationServer2D.obstacle_create()
 		NavigationServer2D.obstacle_set_vertices(obstacle, obstacle_points)
+		NavigationServer2D.obstacle_set_map(obstacle, nav_map)
 		NavigationServer2D.obstacle_set_avoidance_layers(obstacle, 1)
+		
 		obstacles.push_back(obstacle)
 		obstacles_placed += 1
 		
@@ -122,8 +143,20 @@ func _create_obstacle_points(center: Vector2, p_size: float) -> PackedVector2Arr
 	return points
 
 func _draw() -> void:
+	if not nav_map.is_valid():
+		return
+		
+	# Draw main navigable area
+	var regions = NavigationServer2D.map_get_regions(nav_map)
+	#if regions.size() > 0:
+		#var nav_poly = NavigationServer2D.region_get_navigation_polygon(regions[0])
+		#if nav_poly:
+			#var outline = nav_poly.get_outline(0)
+			#if outline.size() >= 3:
+				#draw_colored_polygon(outline, BACKGROUND_COLOR)
+	#
 	# Draw obstacles
-	for obstacle in NavigationServer2D.map_get_obstacles(get_world_2d().get_navigation_map()):
+	for obstacle in obstacles:
 		var vertices = NavigationServer2D.obstacle_get_vertices(obstacle)
 		if vertices.size() >= 3:
 			draw_colored_polygon(vertices, OBSTACLE_FILL_COLOR)
