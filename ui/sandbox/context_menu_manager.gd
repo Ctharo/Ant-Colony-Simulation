@@ -9,6 +9,7 @@ var active_context_menu: BaseContextMenu
 ## UI layer reference 
 var ui_layer: CanvasLayer
 
+const DEFAULT_SPAWN_NUM = 5
 #region Managers
 var colony_manager = ColonyManager
 var ant_manager = AntManager
@@ -57,7 +58,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 func _on_spawn_colony_requested(position: Vector2) -> void:
 	var colony = colony_manager.spawn_colony_at(camera.ui_to_global(position))
 	world.add_child(colony)
-	colony.spawn_ants(5)
+	colony.spawn_ants(DEFAULT_SPAWN_NUM)
 
 func clear_active_menu() -> void:
 	if is_instance_valid(active_context_menu):
@@ -67,7 +68,7 @@ func clear_active_menu() -> void:
 #region Colony Handlers
 func _on_colony_spawn_ants_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
-		colony.spawn_ants(5)
+		colony.spawn_ants(DEFAULT_SPAWN_NUM)
 
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
