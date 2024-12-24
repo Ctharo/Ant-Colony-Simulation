@@ -48,7 +48,7 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu.spawn_ants_requested.connect(func(col): spawn_ants_requested.emit(col))
 	active_context_menu.show_info_requested.connect(func(col): show_colony_info_requested.emit(col))
 	active_context_menu.destroy_colony_requested.connect(func(col): destroy_colony_requested.emit(col))
-	
+
 	active_context_menu.show_for_colony(world_pos, colony)
 
 ## Shows context menu for empty space

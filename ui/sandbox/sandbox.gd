@@ -153,17 +153,17 @@ func deselect_all() -> void:
 func spawn_colony(ui_position: Vector2) -> Colony:
 	logger.debug("Spawn colony pipeline started")
 	logger.debug("Input UI position: %s" % str(ui_position))
-	
+
 	var colony = ColonyManager.spawn_colony()
 	var global_pos = camera.ui_to_global(ui_position)
 	logger.debug("Converted UI to global position: %s" % str(global_pos))
-	
+
 	var camera_zoom = camera.zoom
 	logger.debug("Current camera zoom: %s" % str(camera_zoom))
-	
+
 	colony.global_position = global_pos
 	logger.debug("Set colony global position: %s" % str(colony.global_position))
-	
+
 	logger.info("Spawned new colony %s at position %s" % [colony.name, str(colony.global_position)])
 	colony.spawn_ants(10, true)
 	return colony
@@ -186,14 +186,14 @@ func _on_gui_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _check_selections() -> void:
-	
+
 	var mouse_pos = get_global_mouse_position()
 
 	if _awaiting_colony_placement:
 		spawn_colony(mouse_pos)
 		_awaiting_colony_placement = false
 		return
-		
+
 	if not _context_menu_manager:
 		return
 
@@ -235,7 +235,7 @@ func setup_navigation() -> bool:
 	add_child(map_gen)
 	await map_gen.generate_navigation(get_viewport_rect())
 	return true
-	
+
 #endregion
 
 #region Utils

@@ -38,7 +38,7 @@ var action_manager: ActionManager
 #endregion
 
 ## The navigation agent for this ant
-@onready var nav_agent: NavigationAgent2D 
+@onready var nav_agent: NavigationAgent2D
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position
