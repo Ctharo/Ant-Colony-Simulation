@@ -31,6 +31,7 @@ func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
 
+
 func _exit_tree() -> void:
 	heatmap.unregister_entity(self)
 	delete_all()

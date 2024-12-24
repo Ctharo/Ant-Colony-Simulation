@@ -48,7 +48,7 @@ func _should_ignore_influence(influence: Influence) -> bool:
 	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
 
 func draw_influences(move_action: Move) -> void:
-	var ant_pos = camera.global_to_ui(_current_ant.global_position)
+	var ant_pos = camera.get_screen_to_canvas(_current_ant.position)
 	var influence_manager = _current_ant.action_manager._states[move_action.id].influence_manager
 
 	var valid_influences = move_action.influences.filter(
