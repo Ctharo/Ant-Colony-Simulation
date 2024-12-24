@@ -87,9 +87,12 @@ func _init() -> void:
 	top_level = true  # Make sure transforms are in global space
 
 #region Setup Functions
-func setup_navigation() -> void:
-	_nav_map = NavigationServer2D.get_maps()[0]
-
+func setup_navigation(nav_region: Node2D) -> void:
+	if nav_region:
+		_nav_map = nav_region.get_navigation_map()
+		logger.info("Set navigation map")
+	else:
+		logger.warn("Invalid NavigationRegion2D provided")
 
 func setup_camera(p_camera: Camera2D) -> void:
 	camera = p_camera
