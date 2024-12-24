@@ -11,3 +11,6 @@ expression_string = "nearby_unfriendly_count > nearby_friendly_count * 1.25"
 nested_expressions = Array[ExtResource("1_nk8l4")]([ExtResource("2_4c832"), ExtResource("3_1rwk5")])
 description = ""
 type = 19
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0

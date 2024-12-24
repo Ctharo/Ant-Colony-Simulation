@@ -10,3 +10,6 @@ expression_string = "filter_friendly_ants(ants_in_view, true)"
 nested_expressions = Array[ExtResource("1_vhbki")]([ExtResource("2_2x005")])
 description = ""
 type = 6
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0

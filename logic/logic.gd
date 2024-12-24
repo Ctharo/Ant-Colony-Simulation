@@ -17,7 +17,7 @@ extends Resource
 var type: int = 19
 
 ## Minimum evaluation interval (in seconds). Default 0.05 (50ms)
-@export_range(0.01, 1.0, 0.01, "or_greater") var min_eval_interval: float = 0.05:
+@export_range(0.01, 1.0, 0.01, "or_greater") var min_eval_interval: float = 0.5:
 	set(value):
 		min_eval_interval = max(0.01, value)
 

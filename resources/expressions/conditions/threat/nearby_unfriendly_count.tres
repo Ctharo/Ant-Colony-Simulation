@@ -10,3 +10,6 @@ expression_string = "ants_in_view_unfriendly.size()"
 nested_expressions = Array[ExtResource("1_efs0a")]([ExtResource("2_h0bij")])
 description = ""
 type = 1
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0

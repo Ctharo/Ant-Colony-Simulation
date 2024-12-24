@@ -6,9 +6,9 @@
 [ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="3_dcild"]
 [ext_resource type="Resource" uid="uid://c14c2ty4as0jm" path="res://resources/influences/colony_repel_influence.tres" id="4_0i33x"]
 [ext_resource type="Resource" uid="uid://b5yij3nkbk2v" path="res://resources/influences/pheromone_decreasing_influence.tres" id="5_ms6d6"]
-[ext_resource type="Resource" uid="uid://crefxcf2hx30o" path="res://resources/expressions/conditions/wander_for_food/wander_for_food_interrupt_condition.tres" id="6_sle4u"]
-[ext_resource type="Resource" uid="uid://dgmtws8x2dliw" path="res://resources/expressions/conditions/wander_for_food/wander_for_food_start_condition.tres" id="8_wimhm"]
-[ext_resource type="Resource" uid="uid://d4gww6s1dnj1x" path="res://resources/expressions/conditions/wander_for_food/wander_for_food_stop_conditon.tres" id="9_d4vgc"]
+[ext_resource type="Resource" uid="uid://crefxcf2hx30o" path="res://resources/expressions/conditions/action/wander_for_food/wander_for_food_interrupt_condition.tres" id="6_uk0ya"]
+[ext_resource type="Resource" uid="uid://dgmtws8x2dliw" path="res://resources/expressions/conditions/action/wander_for_food/wander_for_food_start_condition.tres" id="8_uflp2"]
+[ext_resource type="Resource" uid="uid://d4gww6s1dnj1x" path="res://resources/expressions/conditions/action/wander_for_food/wander_for_food_stop_conditon.tres" id="9_kfnm0"]
 
 [resource]
 script = ExtResource("2_um3s7")
@@ -23,6 +23,6 @@ cooldown = 0.0
 duration = 0.0
 energy_coefficient = 1.0
 params = {}
-start_condition = ExtResource("8_wimhm")
-stop_condition = ExtResource("9_d4vgc")
-interrupt_condition = ExtResource("6_sle4u")
+start_condition = ExtResource("8_uflp2")
+stop_condition = ExtResource("9_kfnm0")
+interrupt_condition = ExtResource("6_uk0ya")

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=4 format=3 uid="uid://sv0sfcr277nh"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_a5oab"]
+[ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="2_mb28d"]
+[ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="3_d7idf"]
+
+[resource]
+script = ExtResource("1_a5oab")
+name = "move to home start condition"
+expression_string = "not (can_work and should_work)"
+nested_expressions = Array[ExtResource("1_a5oab")]([ExtResource("2_mb28d"), ExtResource("3_d7idf")])
+description = ""
+type = 19
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0

@@ -10,3 +10,6 @@ expression_string = "distance_to_colony < colony.radius"
 nested_expressions = Array[ExtResource("1_pymsc")]([ExtResource("2_32dt2")])
 description = ""
 type = 0
+min_eval_interval = 0.5
+change_threshold = 0.0
+evaluation_group = 0
