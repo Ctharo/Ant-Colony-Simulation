@@ -28,7 +28,11 @@ func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
 
 func _ready() -> void:
-	initialize()
+	var result = await initialize()
+	if not result:
+		logger.error("Problem initializing map")
+	else:
+		logger.info("Map initialized")
 	_setup_context_menu_manager()
 
 
@@ -47,15 +51,18 @@ func _setup_context_menu_manager() -> void:
 	_context_menu_manager.destroy_ant_requested.connect(_on_destroy_ant_requested)
 	_context_menu_manager.spawn_colony_requested.connect(spawn_colony)
 
-func initialize() -> void:
+func initialize() -> bool:
 	# Setup navigation before spawning ants
-	await setup_navigation()
+	var result: bool = await setup_navigation()
+	if not result:
+		logger.error("Problem setting up navigation")
+		return false
 	heatmap_manager = HeatmapManager.new()
 	heatmap_manager.setup_navigation()
 	heatmap_manager.add_to_group("heatmap")
 	heatmap_manager.setup_camera(camera)
 	add_child(heatmap_manager)
-
+	return result
 
 
 #region Selection Logic

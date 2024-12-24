@@ -27,6 +27,7 @@ const BORDER_WIDTH = 2.0
 func _init() -> void:
 	logger = Logger.new("map_generator", DebugLogger.Category.PROGRAM)
 	nav_map = NavigationServer2D.map_create()
+	NavigationServer2D.map_set_active(nav_map, true)
 	NavigationServer2D.map_set_cell_size(nav_map, 1.0)
 	NavigationServer2D.map_set_edge_connection_margin(nav_map, 5.0)
 
@@ -45,10 +46,11 @@ func generate_navigation(viewport_rect: Rect2, margin_config: Dictionary = {}) -
 	var map_size: Vector2 = viewport_size * MAP_SIZE_COEF
 	
 	# Calculate margins and boundaries
-	var boundaries = _calculate_boundaries(map_size)
+	var boundaries = _calculate_boundaries(viewport_size)
 	
 	# Create and configure navigation region
 	nav_region = NavigationServer2D.region_create()
+	NavigationServer2D.region_set_map(nav_region, nav_map)
 	NavigationServer2D.region_set_transform(nav_region, Transform2D.IDENTITY)
 	
 	# Create navigation polygon for main boundary
@@ -62,17 +64,17 @@ func generate_navigation(viewport_rect: Rect2, margin_config: Dictionary = {}) -
 	
 	nav_poly.add_outline(PackedVector2Array(main_vertices))
 	NavigationServer2D.region_set_navigation_polygon(nav_region, nav_poly)
-	NavigationServer2D.region_set_map(nav_region, nav_map)
-	NavigationServer2D.map_set_active(nav_map, true)
+	
 	# Generate obstacles
 	_generate_obstacles(boundaries)
-	logger.info("Generated %d obstacles" % obstacles.size())
+	
+	# Force update the navigation map
+	NavigationServer2D.map_force_update(nav_map)
+	
 	await get_tree().physics_frame
-	if not NavigationServer2D.map_is_active(nav_map):
-		logger.error("Problem generating map")
-		return
+	
 	var obstacle_count: int = NavigationServer2D.map_get_obstacles(nav_map).size()
-	logger.info("Navigation map setup complete with %d obstacles registered" % obstacle_count)
+	logger.info("Navigation generation complete with %d obstacles" % obstacle_count)
 
 ## Generate navigation obstacles
 func _generate_obstacles(boundaries: Dictionary) -> void:

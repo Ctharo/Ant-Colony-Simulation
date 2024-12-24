@@ -207,9 +207,9 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 
 	# Also utilize built-in methods
 	if level == LogLevel.ERROR:
-		push_error(message)
+		push_error(formatted_message)
 	if level == LogLevel.WARN:
-		push_warning(message)
+		push_warning(formatted_message)
 
 	print_rich(formatted_message)
 
