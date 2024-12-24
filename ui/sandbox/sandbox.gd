@@ -9,10 +9,10 @@ var source_geometry: NavigationMeshSourceGeometryData2D
 var ant_info_panel: AntInfoPanel
 var colony_info_panel: ColonyInfoPanel
 @onready var info_panels_container = %InfoPanelsContainer
+@onready var world = %World
 @onready var camera = $World/Camera2D
 
 # Navigation properties
-@onready var world: World2D = World2D.new()
 var navigation_region: NavigationRegion2D
 var navigation_poly: NavigationPolygon
 var heatmap_manager: HeatmapManager
