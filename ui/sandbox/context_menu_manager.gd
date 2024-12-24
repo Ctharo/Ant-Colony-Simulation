@@ -1,70 +1,144 @@
 class_name ContextMenuManager
 extends Node
 
-## Camera node reference for coordinate transformations
-var camera: Camera2D
-
-## Currently active context menu instance
+var world: Node2D
+## Camera node reference
+var camera: CameraController
+## Active context menu
 var active_context_menu: BaseContextMenu
+## UI layer reference 
+var ui_layer: CanvasLayer
 
-## UI layer node reference
-var _ui_layer: CanvasLayer
+#region Managers
+var colony_manager = ColonyManager
+var ant_manager = AntManager
+#endregion
 
-# Signals
-signal spawn_ants_requested(colony: Colony)
-signal show_colony_info_requested(colony: Colony)
-signal destroy_colony_requested(colony: Colony)
-signal show_ant_info_requested(ant: Ant)
-signal destroy_ant_requested(ant: Ant)
-signal spawn_colony_requested(position: Vector2)
+#region Signals for UI Updates
+signal info_panel_requested(entity: Node)
+signal info_panel_closed(entity: Node)
+#endregion
 
 func _init(p_camera: Camera2D, p_ui_layer: CanvasLayer) -> void:
 	camera = p_camera
-	_ui_layer = p_ui_layer
+	ui_layer = p_ui_layer
 
-## Shows context menu for ant
 func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
-	if active_context_menu and is_instance_valid(active_context_menu):
-		active_context_menu.close()
-
+	clear_active_menu()
 	active_context_menu = AntContextMenu.new()
 	active_context_menu.setup(camera)
-	_ui_layer.add_child(active_context_menu)
-
-	active_context_menu.show_info_requested.connect(func(a): show_ant_info_requested.emit(a))
-	active_context_menu.destroy_ant_requested.connect(func(a): destroy_ant_requested.emit(a))
-
+	ui_layer.add_child(active_context_menu)
+	
+	active_context_menu.show_info_requested.connect(_on_ant_info_requested)
+	active_context_menu.destroy_ant_requested.connect(_on_ant_destroy_requested)
+	active_context_menu.track_ant_requested.connect(_on_ant_track_requested)
 	active_context_menu.show_for_ant(world_pos, ant)
 
-## Shows context menu for colony
 func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
-	if active_context_menu and is_instance_valid(active_context_menu):
-		active_context_menu.close()
-
+	clear_active_menu()
 	active_context_menu = ColonyContextMenu.new()
 	active_context_menu.setup(camera)
-	_ui_layer.add_child(active_context_menu)
-
-	active_context_menu.spawn_ants_requested.connect(func(col): spawn_ants_requested.emit(col))
-	active_context_menu.show_info_requested.connect(func(col): show_colony_info_requested.emit(col))
-	active_context_menu.destroy_colony_requested.connect(func(col): destroy_colony_requested.emit(col))
-
+	ui_layer.add_child(active_context_menu)
+	
+	active_context_menu.spawn_ants_requested.connect(_on_colony_spawn_ants_requested)
+	active_context_menu.show_info_requested.connect(_on_colony_info_requested)
+	active_context_menu.destroy_colony_requested.connect(_on_colony_destroy_requested)
 	active_context_menu.show_for_colony(world_pos, colony)
 
-## Shows context menu for empty space
 func show_empty_context_menu(world_pos: Vector2) -> void:
-	if active_context_menu and is_instance_valid(active_context_menu):
-		active_context_menu.close()
-
+	clear_active_menu()
 	active_context_menu = EmptyContextMenu.new()
 	active_context_menu.setup(camera)
-	_ui_layer.add_child(active_context_menu)
-
-	active_context_menu.spawn_colony_requested.connect(func(pos): spawn_colony_requested.emit(pos))
+	ui_layer.add_child(active_context_menu)
+	active_context_menu.spawn_colony_requested.connect(_on_spawn_colony_requested)
 	active_context_menu.show_at_position(world_pos)
 
-## Clean up active context menu
+func _on_spawn_colony_requested(position: Vector2) -> void:
+	var colony = colony_manager.spawn_colony_at(position)
+	world.add_child(colony)
+
 func clear_active_menu() -> void:
-	if active_context_menu and is_instance_valid(active_context_menu):
+	if is_instance_valid(active_context_menu):
 		active_context_menu.close()
 		active_context_menu = null
+
+#region Colony Handlers
+func _on_colony_spawn_ants_requested(colony: Colony) -> void:
+	if is_instance_valid(colony):
+		colony.spawn_ants(10, true)
+
+func _on_colony_info_requested(colony: Colony) -> void:
+	if is_instance_valid(colony):
+		info_panel_requested.emit(colony)
+
+func _on_colony_destroy_requested(colony: Colony) -> void:
+	if is_instance_valid(colony):
+		colony_manager.remove_colony(colony)
+#endregion
+
+func handle_click(world_position: Vector2) -> void:
+	clear_active_menu()
+	
+	var closest_colony := _find_closest_colony(world_position)
+	var closest_ant := _find_closest_ant(world_position)
+	
+	if closest_colony and _is_within_radius(closest_colony, world_position):
+		show_colony_context_menu(closest_colony, closest_colony.position)
+	elif closest_ant and _is_within_radius(closest_ant, world_position):
+		show_ant_context_menu(closest_ant, closest_ant.position)
+	else:
+		show_empty_context_menu(camera.global_to_ui(world_position))
+
+func _find_closest_colony(position: Vector2) -> Colony:
+	var colonies := get_tree().get_nodes_in_group("colony")
+	var closest: Colony
+	var closest_distance := INF
+	
+	for colony in colonies:
+		if not is_instance_valid(colony):
+			continue
+			
+		var distance := position.distance_to(colony.global_position)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest = colony
+			
+	return closest
+
+func _find_closest_ant(position: Vector2) -> Ant:
+	var ants := get_tree().get_nodes_in_group("ant")
+	var closest: Ant
+	var closest_distance := INF
+	
+	for ant in ants:
+		if not is_instance_valid(ant):
+			continue
+			
+		var distance := position.distance_to(ant.global_position)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest = ant
+			
+	return closest
+
+func _is_within_radius(entity: Node2D, position: Vector2) -> bool:
+	if entity is Colony:
+		return position.distance_to(entity.global_position) <= entity.radius
+	else:
+		return position.distance_to(entity.global_position) <= 50.0
+#region Ant Handlers
+func _on_ant_info_requested(ant: Ant) -> void:
+	if is_instance_valid(ant):
+		info_panel_requested.emit(ant)
+
+func _on_ant_destroy_requested(ant: Ant) -> void:
+	if is_instance_valid(ant):
+		ant_manager.remove_ant(ant)
+
+func _on_ant_track_requested(ant: Ant) -> void:
+	if is_instance_valid(ant):
+		if is_instance_valid(camera.tracked_entity) and ant == camera.tracked_entity:
+			camera.stop_tracking()
+			return
+		camera.track_entity(ant)
+#endregion

@@ -1,3 +1,4 @@
+class_name CameraController
 extends Camera2D
 
 #region Camera Constants
@@ -15,6 +16,8 @@ const PAN_SPEED := 800.0
 
 ## Dampening factor for smooth camera movement
 const SMOOTHING_FACTOR := 0.85
+
+const TRACKING_SPEED := 0.1
 #endregion
 
 #region Camera State Variables
@@ -29,6 +32,9 @@ var target_position := Vector2.ZERO
 
 ## Current velocity of the camera movement
 var current_velocity := Vector2.ZERO
+
+var tracked_entity: Node2D
+
 #endregion
 
 func _ready() -> void:
@@ -43,10 +49,13 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(self):
 		return
 		
-	# Smooth camera movement
+	if is_instance_valid(tracked_entity):
+		target_position = global_to_ui(tracked_entity.global_position)
+	
 	if not is_panning:
 		position = position.lerp(target_position, SMOOTHING_FACTOR)
 		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_instance_valid(event):
@@ -112,6 +121,13 @@ func _handle_zoom(zoom_factor: float, mouse_position: Vector2) -> void:
 	# Adjust position to zoom towards mouse cursor
 	var mouse_world_pos := ui_to_global(mouse_position)
 	position += (mouse_world_pos - position) * (1 - new_zoom.x / old_zoom.x)
+
+func track_entity(entity: Node2D) -> void:
+	position = global_to_ui(entity.global_position)
+	tracked_entity = entity
+	
+func stop_tracking() -> void:
+	tracked_entity = null
 
 func ui_to_global(screen_position: Vector2) -> Vector2:
 	if not is_instance_valid(self):
