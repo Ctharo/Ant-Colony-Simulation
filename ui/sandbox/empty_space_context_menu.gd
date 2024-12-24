@@ -1,6 +1,6 @@
 class_name EmptyContextMenu
 extends BaseContextMenu
-
+@warning_ignore("unused_signal")
 signal spawn_colony_requested(position: Vector2)
 
 var spawn_position: Vector2

@@ -18,7 +18,9 @@ var camera: Camera2D
 var _current_ant: Ant
 var _enabled: bool = false
 
+
 func _ready() -> void:
+	top_level = true
 	camera = get_tree().get_first_node_in_group("camera")
 
 func _process(_delta: float) -> void:
@@ -48,9 +50,8 @@ func _should_ignore_influence(influence: Influence) -> bool:
 	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
 
 func draw_influences(move_action: Move) -> void:
-	var ant_pos = camera.get_screen_to_canvas(_current_ant.position)
+	var ant_pos = camera.global_to_ui(_current_ant.global_position)
 	var influence_manager = _current_ant.action_manager._states[move_action.id].influence_manager
-
 	var valid_influences = move_action.influences.filter(
 		func(influence): return not _should_ignore_influence(influence)
 	)

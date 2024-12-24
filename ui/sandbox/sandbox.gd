@@ -164,6 +164,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			deselect_all()
+			_context_menu_manager.clear_active_menu()
 	elif event.is_action_pressed("ui_cancel"):
 		_on_back_button_pressed()
 		get_viewport().set_input_as_handled()

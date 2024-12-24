@@ -1,8 +1,9 @@
 # Ant Context Menu
 class_name AntContextMenu
 extends BaseContextMenu
-
+@warning_ignore("unused_signal")
 signal show_info_requested(ant: Ant)
+@warning_ignore("unused_signal")
 signal destroy_ant_requested(ant: Ant)
 
 

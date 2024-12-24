@@ -46,8 +46,6 @@ func get_ants() -> Array:
 
 func _draw() -> void:
 	# Rich brown/dirt color with some transparency
-	var dirt_color = Color(0.55, 0.27, 0.07, 0.8)  # Earthy brown
-	var darker_dirt = Color(0.4, 0.2, 0.05, 0.9)   # Darker brown for depth
 	var inner_radius = radius * inner_radius_ratio
 
 	# Draw the darker rim first

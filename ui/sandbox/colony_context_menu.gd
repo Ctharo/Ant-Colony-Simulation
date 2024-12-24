@@ -1,9 +1,11 @@
 # Colony Context Menu
 class_name ColonyContextMenu
 extends BaseContextMenu
-
+@warning_ignore("unused_signal")
 signal spawn_ants_requested(colony: Colony)
+@warning_ignore("unused_signal")
 signal show_info_requested(colony: Colony)
+@warning_ignore("unused_signal")
 signal destroy_colony_requested(colony: Colony)
 
 

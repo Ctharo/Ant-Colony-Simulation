@@ -182,9 +182,9 @@ func _get_cell_color(t: float, pos: Vector2) -> Color:
 	return STYLE.DEBUG_COLORS.START.lerp(STYLE.DEBUG_COLORS.END, t)
 
 #region Heat Updates
-func update_entity_heat(entity: Node2D, position: Vector2, delta: float) -> void:
+func update_entity_heat(entity: Node2D, p_position: Vector2, delta: float) -> void:
 	var entity_id = entity.get_instance_id()
-	var center_cell = world_to_cell(position)
+	var center_cell = world_to_cell(p_position)
 	var base_heat = STYLE.HEAT_PER_SECOND * delta
 
 	_update_movement_heat(entity_id, center_cell, base_heat)
@@ -323,6 +323,7 @@ func world_to_chunk(world_cell: Vector2i) -> Vector2i:
 		x = x - STYLE.CHUNK_SIZE + 1
 	if y < 0:
 		y = y - STYLE.CHUNK_SIZE + 1
+	@warning_ignore("integer_division")
 	return Vector2i(x / STYLE.CHUNK_SIZE, y / STYLE.CHUNK_SIZE)
 
 func world_to_local_cell(world_cell: Vector2i) -> Vector2i:
@@ -332,6 +333,7 @@ func world_to_local_cell(world_cell: Vector2i) -> Vector2i:
 		x = STYLE.CHUNK_SIZE + (x % STYLE.CHUNK_SIZE)
 	if y < 0:
 		y = STYLE.CHUNK_SIZE + (y % STYLE.CHUNK_SIZE)
+	@warning_ignore("integer_division")
 	return Vector2i(x % STYLE.CHUNK_SIZE, y % STYLE.CHUNK_SIZE)
 
 func chunk_to_world_cell(chunk_pos: Vector2i, local_pos: Vector2i) -> Vector2i:

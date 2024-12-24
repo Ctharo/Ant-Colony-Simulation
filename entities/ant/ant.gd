@@ -5,6 +5,7 @@ extends CharacterBody2D
 #region Signals
 signal spawned
 signal energy_changed
+@warning_ignore("unused_signal")
 signal damaged
 signal died(ant: Ant)
 
