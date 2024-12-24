@@ -1,0 +1,74 @@
+[gd_scene load_steps=2 format=3 uid="uid://c3f4uw56m7kpc"]
+
+[ext_resource type="Script" path="res://ui/ant/ant_info.gd" id="1_h4yu2"]
+
+[node name="AntInfo" type="PanelContainer"]
+offset_right = 250.0
+offset_bottom = 160.0
+script = ExtResource("1_h4yu2")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="MainContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/MainContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/MainContainer/HeaderContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ant #0"
+
+[node name="ExpandButton" type="Button" parent="MarginContainer/MainContainer/HeaderContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+text = "▶"
+
+[node name="StatsContainer" type="VBoxContainer" parent="MarginContainer/MainContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HealthBar" type="ProgressBar" parent="MarginContainer/MainContainer/StatsContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/MainContainer/StatsContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="FoodLabel" type="Label" parent="MarginContainer/MainContainer/StatsContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Carried Food: 0.0 units"
+
+[node name="ActionLabel" type="Label" parent="MarginContainer/MainContainer/StatsContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Action: None"
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/MainContainer"]
+layout_mode = 2
+
+[node name="InfluencesContainer" type="VBoxContainer" parent="MarginContainer/MainContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="InfluencesHeader" type="Label" parent="MarginContainer/MainContainer/InfluencesContainer"]
+layout_mode = 2
+text = "Active Influences"
+horizontal_alignment = 1
