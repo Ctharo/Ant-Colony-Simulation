@@ -27,7 +27,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func setup_log_levels() -> void:
 	if logger.is_trace_enabled():
 		logger.trace("Setting up log level options")
-	
+
 	log_level_option.clear()
 	for level in DebugLogger.LogLevel.keys():
 		log_level_option.add_item(level, DebugLogger.LogLevel[level])
@@ -35,7 +35,7 @@ func setup_log_levels() -> void:
 func setup_categories() -> void:
 	if logger.is_trace_enabled():
 		logger.trace("Setting up category checkboxes")
-		
+
 	for category in DebugLogger.Category.keys():
 		var check = CheckBox.new()
 		check.text = category
@@ -46,15 +46,15 @@ func setup_categories() -> void:
 func setup_signals() -> void:
 	if logger.is_trace_enabled():
 		logger.trace("Setting up UI signals")
-		
+
 	log_level_option.item_selected.connect(_on_log_level_changed)
 	show_context_check.toggled.connect(_on_show_context_toggled)
-	
+
 	for check in category_grid.get_children():
 		if check is CheckBox:
 			var category = DebugLogger.Category[check.text]
 			check.toggled.connect(_on_category_toggled.bind(category))
-	
+
 	$MarginContainer/ScrollContainer/VBoxContainer/ButtonContainer/BackButton.pressed.connect(_on_back_button_pressed)
 
 #endregion
@@ -63,13 +63,13 @@ func setup_signals() -> void:
 func _load_current_settings() -> void:
 	if logger.is_trace_enabled():
 		logger.trace("Loading current debug settings")
-		
+
 	# Set current log level
 	log_level_option.selected = DebugLogger.log_level
-	
+
 	# Set show context checkbox
 	show_context_check.set_pressed_no_signal(DebugLogger.show_context)
-	
+
 	# Set category checkboxes
 	for check in category_grid.get_children():
 		if check is CheckBox:
