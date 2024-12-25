@@ -121,7 +121,7 @@ func _on_info_panel_closed(entity: Node) -> void:
 func deselect_all() -> void:
 	if ant_info_panel:
 		ant_info_panel.queue_free()
-	if colony_info_panel:
+	if is_instance_valid(colony_info_panel):
 		colony_info_panel.queue_free()
 #endregion
 
