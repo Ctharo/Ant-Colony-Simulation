@@ -29,7 +29,7 @@ func _init() -> void:
 func _ready() -> void:
 	_setup_context_menu_manager()
 	call_deferred("initialize")
-	
+
 func setup_loading_overlay() -> void:
 	loading_overlay = ColorRect.new()
 	loading_overlay.color = Color(0, 0, 0, 0.5)
@@ -49,11 +49,11 @@ func _setup_context_menu_manager() -> void:
 	camera.add_to_group("camera")
 
 	var ui_layer = $UI
-	
+
 	_context_menu_manager = ContextMenuManager.new(camera, ui_layer)
 	add_child(_context_menu_manager)
 	_context_menu_manager.world = %World
-	
+
 	# Connect info panel signals
 	_context_menu_manager.info_panel_requested.connect(_on_info_panel_requested)
 	_context_menu_manager.info_panel_closed.connect(_on_info_panel_closed)
@@ -82,33 +82,33 @@ func initialize() -> bool:
 #region Panel Management
 func _on_info_panel_requested(entity: Node) -> void:
 	var panel: Control
-	
+
 	if entity is Colony:
 		if colony_info_panel and colony_info_panel.current_colony == entity:
 			colony_info_panel.queue_free()
 			return
-			
+
 		if colony_info_panel:
 			colony_info_panel.queue_free()
-			
+
 		colony_info_panel = preload("res://ui/debug/colony/colony_info_panel.tscn").instantiate()
 		info_panels_container.add_child(colony_info_panel)
 		colony_info_panel.show_colony_info(entity)
 		panel = colony_info_panel
-		
+
 	elif entity is Ant:
 		if ant_info_panel and ant_info_panel.current_ant == entity:
 			ant_info_panel.queue_free()
 			return
-			
+
 		if ant_info_panel:
 			ant_info_panel.queue_free()
-			
+
 		ant_info_panel = preload("res://ui/debug/ant/ant_info_panel.tscn").instantiate()
 		info_panels_container.add_child(ant_info_panel)
 		ant_info_panel.show_ant_info(entity)
 		panel = ant_info_panel
-	
+
 	if panel:
 		panel.show()
 
@@ -119,7 +119,7 @@ func _on_info_panel_closed(entity: Node) -> void:
 		ant_info_panel.queue_free()
 
 func deselect_all() -> void:
-	if ant_info_panel:
+	if is_instance_valid(ant_info_panel):
 		ant_info_panel.queue_free()
 	if is_instance_valid(colony_info_panel):
 		colony_info_panel.queue_free()
@@ -133,16 +133,17 @@ func _on_gui_input(event: InputEvent) -> void:
 			_on_back_button_pressed()
 			get_viewport().set_input_as_handled()
 		return
-		
+
 	match event.button_index:
 		MOUSE_BUTTON_LEFT:
-			var mouse_pos := get_global_mouse_position() 
+			var mouse_pos := get_global_mouse_position()
 			_context_menu_manager.handle_click(mouse_pos)
 			get_viewport().set_input_as_handled()
-			
+
 		MOUSE_BUTTON_RIGHT:
 			deselect_all()
 			_context_menu_manager.clear_active_menu()
+			_context_menu_manager.close_ant_info()
 #endregion
 
 #region Scene Management
@@ -168,7 +169,7 @@ func setup_heatmap() -> bool:
 	heatmap_manager.add_to_group("heatmap")
 	heatmap_manager.setup_camera(camera)
 	return true
-	
+
 #endregion
 
 func _exit_tree() -> void:
@@ -179,4 +180,4 @@ func _on_back_button_pressed() -> void:
 	transition_to_scene("main")
 
 func _draw() -> void:
-	draw_rect(get_rect(), Color.RED, false) 
+	draw_rect(get_rect(), Color.RED, false)

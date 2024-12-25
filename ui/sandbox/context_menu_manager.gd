@@ -6,7 +6,9 @@ var world: Node2D
 var camera: CameraController
 ## Active context menu
 var active_context_menu: BaseContextMenu
-## UI layer reference 
+## Active ant info
+var active_ant_info: AntInfo
+## UI layer reference
 var ui_layer: CanvasLayer
 
 const DEFAULT_SPAWN_NUM = 5
@@ -24,22 +26,40 @@ func _init(p_camera: Camera2D, p_ui_layer: CanvasLayer) -> void:
 	camera = p_camera
 	ui_layer = p_ui_layer
 
+func handle_click(world_position: Vector2) -> void:
+	clear_active_menu()
+
+	var closest_colony := _find_closest_colony(world_position)
+	var closest_ant := _find_closest_ant(world_position)
+
+	if closest_colony and _is_within_radius(closest_colony, world_position):
+		show_colony_context_menu(closest_colony, closest_colony.position)
+	elif closest_ant and _is_within_radius(closest_ant, world_position):
+		show_ant_info(closest_ant)
+	else:
+		close_ant_info()
+		show_empty_context_menu(camera.global_to_ui(world_position))
+
 func show_ant_info(ant: Ant) -> void:
+	close_ant_info()
 	if not is_instance_valid(ant):
 		return
-	var info: AntInfo = load("res://ui/ant/ant_info.tscn").instantiate()
-	info.top_level = true
-	ant.add_child(info)
+	var info: AntInfo = preload("res://ui/ant/ant_info.tscn").instantiate()
+	add_child(info)
 	info.show_ant_info(ant)
-	info.position = ant.position + Vector2(0, 20) # Below ant
-	
-	
+	active_ant_info = info
+
+func close_ant_info() -> void:
+	if is_instance_valid(active_ant_info):
+		active_ant_info.queue_free()
+	active_ant_info = null
+
 func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	clear_active_menu()
 	active_context_menu = AntContextMenu.new()
 	active_context_menu.setup(camera)
 	ui_layer.add_child(active_context_menu)
-	
+
 	active_context_menu.show_info_requested.connect(_on_ant_info_requested)
 	active_context_menu.destroy_ant_requested.connect(_on_ant_destroy_requested)
 	active_context_menu.track_ant_requested.connect(_on_ant_track_requested)
@@ -50,7 +70,7 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu = ColonyContextMenu.new()
 	active_context_menu.setup(camera)
 	ui_layer.add_child(active_context_menu)
-	
+
 	active_context_menu.spawn_ants_requested.connect(_on_colony_spawn_ants_requested)
 	active_context_menu.show_info_requested.connect(_on_colony_info_requested)
 	active_context_menu.destroy_colony_requested.connect(_on_colony_destroy_requested)
@@ -87,56 +107,43 @@ func _on_colony_info_requested(colony: Colony) -> void:
 func _on_colony_destroy_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony_manager.remove_colony(colony)
-		
+
 func _on_colony_heatmap_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony.heatmap_enabled = !colony.heatmap_enabled
 #endregion
 
-func handle_click(world_position: Vector2) -> void:
-	clear_active_menu()
-	
-	var closest_colony := _find_closest_colony(world_position)
-	var closest_ant := _find_closest_ant(world_position)
-	
-	if closest_colony and _is_within_radius(closest_colony, world_position):
-		show_colony_context_menu(closest_colony, closest_colony.position)
-	elif closest_ant and _is_within_radius(closest_ant, world_position):
-		show_ant_info(closest_ant)
-		#show_ant_context_menu(closest_ant, closest_ant.position)
-	else:
-		show_empty_context_menu(camera.global_to_ui(world_position))
 
 func _find_closest_colony(position: Vector2) -> Colony:
 	var colonies := get_tree().get_nodes_in_group("colony")
 	var closest: Colony
 	var closest_distance := INF
-	
+
 	for colony in colonies:
 		if not is_instance_valid(colony):
 			continue
-			
+
 		var distance := position.distance_to(colony.global_position)
 		if distance < closest_distance:
 			closest_distance = distance
 			closest = colony
-			
+
 	return closest
 
 func _find_closest_ant(position: Vector2) -> Ant:
 	var ants := get_tree().get_nodes_in_group("ant")
 	var closest: Ant
 	var closest_distance := INF
-	
+
 	for ant in ants:
 		if not is_instance_valid(ant):
 			continue
-			
+
 		var distance := position.distance_to(ant.global_position)
 		if distance < closest_distance:
 			closest_distance = distance
 			closest = ant
-			
+
 	return closest
 
 func _is_within_radius(entity: Node2D, position: Vector2) -> bool:

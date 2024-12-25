@@ -87,7 +87,7 @@ func spawn_colony_at(position: Vector2) -> Colony:
 	var colony = spawn_colony()
 	colony.global_position = position
 	return colony
-	
+
 ## Remove a colony and clean up its resources
 func remove_colony(colony: Colony) -> Result:
 	if not colony:

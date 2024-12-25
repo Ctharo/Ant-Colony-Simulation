@@ -1,11 +1,9 @@
 [gd_scene load_steps=2 format=3 uid="uid://c3f4uw56m7kpc"]
 
-[ext_resource type="Script" path="res://ui/ant/ant_info.gd" id="1_h4yu2"]
+[ext_resource type="Script" path="res://ui/ant/ant_info.gd" id="1_xxxxx"]
 
 [node name="AntInfo" type="PanelContainer"]
-offset_right = 250.0
-offset_bottom = 160.0
-script = ExtResource("1_h4yu2")
+script = ExtResource("1_xxxxx")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 2
@@ -14,61 +12,97 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="MainContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/MainContainer"]
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/MainContainer/HeaderContainer"]
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Ant #0"
 
-[node name="StatsContainer" type="VBoxContainer" parent="MarginContainer/MainContainer"]
+[node name="ButtonContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HeaderContainer"]
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 4
 
-[node name="HealthBar" type="ProgressBar" parent="MarginContainer/MainContainer/StatsContainer"]
+[node name="DestroyButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer/ButtonContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-value = 100.0
-show_percentage = false
+text = "×"
 
-[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/MainContainer/StatsContainer"]
+[node name="TrackButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer/ButtonContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
-value = 100.0
-show_percentage = false
+text = "👁"
 
-[node name="FoodLabel" type="Label" parent="MarginContainer/MainContainer/StatsContainer"]
+[node name="InfluenceButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer/ButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "↗"
+
+[node name="ExpandButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer/ButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "▶"
+
+[node name="HealthContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/HealthContainer"]
+layout_mode = 2
+text = "Health:"
+
+[node name="HealthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/HealthContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+
+[node name="HealthLabel" type="Label" parent="MarginContainer/VBoxContainer/HealthContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "100/100"
+
+[node name="EnergyContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/EnergyContainer"]
+layout_mode = 2
+text = "Energy:"
+
+[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/EnergyContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+
+[node name="EnergyLabel" type="Label" parent="MarginContainer/VBoxContainer/EnergyContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "100/100"
+
+[node name="FoodLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Carried Food: 0.0 units"
 
-[node name="ActionLabel" type="Label" parent="MarginContainer/MainContainer/StatsContainer"]
+[node name="ActionLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Action: None"
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/MainContainer"]
-layout_mode = 2
-
-[node name="ExpandButton" type="Button" parent="MarginContainer/MainContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(24, 24)
-layout_mode = 2
-text = "▶"
-
-[node name="InfluencesContainer" type="VBoxContainer" parent="MarginContainer/MainContainer"]
+[node name="InfluencesContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="InfluencesHeader" type="Label" parent="MarginContainer/MainContainer/InfluencesContainer"]
+[node name="Header" type="Label" parent="MarginContainer/VBoxContainer/InfluencesContainer"]
 layout_mode = 2
-text = "Active Influences"
+text = "Active Influences:"
 horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer/InfluencesContainer"]
+layout_mode = 2

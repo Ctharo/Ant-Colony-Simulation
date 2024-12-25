@@ -39,9 +39,9 @@ func generate_navigation(viewport_size: Vector2, _margin_config: Dictionary = {}
 	var bottom_margin := viewport_size.y * 0.1  # 10% of viewport height
 
 	# Define the navigation boundary points
-	var nav_left := -map_size.x/2 
+	var nav_left := -map_size.x/2
 	var nav_right := map_size.x/2
-	var nav_top := -map_size.y/2 
+	var nav_top := -map_size.y/2
 	var nav_bottom := map_size.y/2
 
 	# Add main boundary vertices
@@ -83,36 +83,36 @@ func generate_navigation(viewport_size: Vector2, _margin_config: Dictionary = {}
 		var center_x = randf_range(safe_left, safe_right)
 		var center_y = randf_range(safe_top, safe_bottom)
 		var center = Vector2(center_x, center_y)
-		
+
 		if center.distance_to(Vector2.ZERO) < 150:
 			continue
-			
+
 		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
 		var obstacle_points = _create_obstacle_points(center, obstacle_size)
-		
+
 		# Check for overlaps with minimum distance of OBSTACLE_SIZE_MIN
 		if _check_obstacle_overlap(obstacle_points, existing_obstacles, OBSTACLE_SIZE_MIN):
 			continue
-			
+
 		# Add vertices and update navigation polygon
 		var start_idx = vertex_array.size()
 		for vertex in obstacle_points:
 			vertex_array.push_back(vertex)
-			
+
 		if is_outline_counterclockwise(obstacle_points):
 			obstacle_points.reverse()
-			
+
 		nav_poly.add_outline(obstacle_points)
 		nav_poly.set_vertices(vertex_array)
-		
+
 		var obstacle_indices = PackedInt32Array()
 		for i in range(obstacle_points.size()):
 			obstacle_indices.push_back(start_idx + i)
-		
+
 		nav_poly.add_polygon(obstacle_indices)
 		existing_obstacles.append(obstacle_points)
 		obstacles_placed += 1
-		
+
 	logger.info("Added %d obstacles - Final vertices: %d, Polygons: %d" % [
 		obstacles_placed,
 		nav_poly.get_vertices().size(),
@@ -143,19 +143,19 @@ func _check_obstacle_overlap(obstacle_points: PackedVector2Array, existing_obsta
 			for i in range(existing.size()):
 				var segment_start := existing[i]
 				var segment_end := existing[(i + 1) % existing.size()]
-				
+
 				# Check distance to line segment
 				var closest := _get_closest_point_on_segment(point, segment_start, segment_end)
 				if point.distance_to(closest) < min_distance:
 					return true
-	
+
 	return false
 
 func _get_closest_point_on_segment(point: Vector2, segment_start: Vector2, segment_end: Vector2) -> Vector2:
 	var segment := segment_end - segment_start
 	if segment.length_squared() == 0:
 		return segment_start
-		
+
 	var t: float = max(0, min(1, (point - segment_start).dot(segment) / segment.length_squared()))
 	return segment_start + segment * t
 
@@ -201,24 +201,24 @@ func _draw() -> void:
 func _draw_navigation_mesh() -> void:
 	var nav_poly = navigation_region.navigation_polygon
 	var outline_count := nav_poly.get_outline_count()
-	
-	
+
+
 	if outline_count == 0:
 		logger.error("No outlines found in navigation polygon")
 		return
-		
+
 	var main_outline := nav_poly.get_outline(0)
 	if main_outline.size() >= 3:
 		draw_colored_polygon(main_outline, BACKGROUND_COLOR)
 	else:
 		logger.error("Main outline has insufficient points: %d" % main_outline.size())
-	
+
 	# Draw inner obstacles
 	for i in range(1, outline_count):
 		var obstacle := nav_poly.get_outline(i)
 		if obstacle.size() >= 3:
 			draw_colored_polygon(obstacle, OBSTACLE_FILL_COLOR)
-			
+
 			# Draw obstacle borders
 			for j in range(obstacle.size()):
 				var start := obstacle[j]
