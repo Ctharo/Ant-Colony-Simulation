@@ -55,7 +55,6 @@ func _on_gui_input(event: InputEvent) -> void:
 func handle_click(screen_position: Vector2) -> void:
 	clear_active_menu()
 	var world_position: Vector2 = camera.ui_to_global(screen_position)
-	print("handling click at screen position %s and world position %s" % [screen_position, world_position])
 	var closest_colony := _find_closest_colony(world_position)
 	var closest_ant := _find_closest_ant(world_position)
 
@@ -197,11 +196,8 @@ func deselect_all() -> void:
 #region Colony Handlers
 func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
-	print("sending colony spawn request, converting screen_position to world position %s -> %s" % [screen_position, world_position])
 	var colony = colony_manager.spawn_colony_at(world_position)
-	print("colony spawn request filled. Colony spawned at global world position %s" % colony.global_position)
 	sandbox.add_child(colony)
-	print("Colony added to sandbox with a global world position %s" % colony.global_position)
 	colony.spawn_ants(DEFAULT_SPAWN_NUM)
 
 func _on_colony_spawn_ants_requested(colony: Colony) -> void:
