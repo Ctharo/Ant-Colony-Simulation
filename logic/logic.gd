@@ -30,10 +30,7 @@ var type: int = 19
 			_cumulative_change = 0.0
 			_cumulative_vector_change = Vector2.ZERO
 
-## Group ID for coordinating evaluation timing across related expressions
-@export var evaluation_group: int = 0:
-	set(value):
-		evaluation_group = max(0, value)  # Group 0 means no group
+
 
 var id: String
 var _last_value: Variant
@@ -88,11 +85,6 @@ func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Var
 	return result
 
 func should_evaluate(current_time: float) -> bool:
-	# If in a group, let evaluation system coordinate timing
-	if evaluation_group > 0:
-		return false  # Let evaluation system handle group timing
-
-	# Otherwise check local timing
 	return (current_time - _last_eval_time) >= min_eval_interval
 
 func mark_evaluated() -> void:

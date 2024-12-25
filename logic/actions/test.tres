@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Action" load_steps=3 format=3 uid="uid://nojbtmsj6y75"]
+
+[ext_resource type="Script" path="res://logic/actions/action.gd" id="1_lwnae"]
+[ext_resource type="Script" path="res://logic/state.gd" id="2_chvxw"]
+
+[resource]
+script = ExtResource("1_lwnae")
+name = ""
+priority = 0
+description = ""
+cooldown = 0.0
+duration = 0.0
+energy_coefficient = 0.0
+params = {}
+transitions = Array[ExtResource("2_chvxw")]([])

@@ -27,6 +27,7 @@ var id: String
 @export var params: Dictionary = {}
 
 #region Protected
+@export var transitions: Array[Transition] = []
 @export var start_condition: Logic
 @export var stop_condition: Logic
 @export var interrupt_condition: Logic
