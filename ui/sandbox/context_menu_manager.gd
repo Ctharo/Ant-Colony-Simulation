@@ -24,6 +24,16 @@ func _init(p_camera: Camera2D, p_ui_layer: CanvasLayer) -> void:
 	camera = p_camera
 	ui_layer = p_ui_layer
 
+func show_ant_info(ant: Ant) -> void:
+	if not is_instance_valid(ant):
+		return
+	var info: AntInfo = load("res://ui/ant/ant_info.tscn").instantiate()
+	info.top_level = true
+	ant.add_child(info)
+	info.show_ant_info(ant)
+	info.position = ant.position + Vector2(0, 20) # Below ant
+	
+	
 func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	clear_active_menu()
 	active_context_menu = AntContextMenu.new()
@@ -92,7 +102,8 @@ func handle_click(world_position: Vector2) -> void:
 	if closest_colony and _is_within_radius(closest_colony, world_position):
 		show_colony_context_menu(closest_colony, closest_colony.position)
 	elif closest_ant and _is_within_radius(closest_ant, world_position):
-		show_ant_context_menu(closest_ant, closest_ant.position)
+		show_ant_info(closest_ant)
+		#show_ant_context_menu(closest_ant, closest_ant.position)
 	else:
 		show_empty_context_menu(camera.global_to_ui(world_position))
 
