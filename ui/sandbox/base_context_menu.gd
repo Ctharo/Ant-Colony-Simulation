@@ -16,8 +16,18 @@ var is_open := false
 var containers: Array[Control] = []  # Store containers
 var buttons: Array[Button] = []      # Store actual buttons
 
-var selected_position := Vector2.ZERO  # Position of selected entity
-var selection_radius := 12.0  # Default radius, can be overridden
+
+#region Public Properties
+@onready var screen_position: Vector2:
+	get: return _screen_position
+
+@onready var world_position: Vector2:
+	get: return camera.ui_to_global(_screen_position)
+
+#region Private Variables
+var _screen_position: Vector2
+var _selection_radius := 12.0
+#endregion
 
 var tracked_ant: Ant = null
 var tracked_colony: Colony = null
@@ -33,9 +43,11 @@ func setup(p_camera: Camera2D) -> void:
 
 func _process(_delta: float) -> void:
 	if tracked_ant and is_instance_valid(tracked_ant):
-		position = camera.global_to_ui(tracked_ant.global_position)
+		_screen_position = camera.global_to_ui(tracked_ant.global_position)
 	elif tracked_colony and is_instance_valid(tracked_colony):
-		position = camera.global_to_ui(tracked_colony.global_position)
+		_screen_position = camera.global_to_ui(tracked_colony.global_position)
+
+	position = screen_position
 	queue_redraw()
 
 func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> Button:
@@ -63,17 +75,16 @@ func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> 
 	return button
 
 func show_at(pos: Vector2, circle_radius: float = 12.0) -> void:
-	# pos should already be in screen coordinates when called from context menu manager
-	selected_position = Vector2.ZERO  # Local coordinates
-	selection_radius = circle_radius
-	position = pos  # Screen coordinates
+	_screen_position = pos
+	_selection_radius = circle_radius
+	position = pos
 	show()
 	_animate_open()
 
 func _draw() -> void:
-	if selection_radius > 0 and camera:
+	if _selection_radius > 0 and camera:
 		# Scale the radius by camera zoom to maintain visual size
-		var scaled_radius = selection_radius * camera.zoom.x
+		var scaled_radius = _selection_radius * camera.zoom.x
 		draw_arc(
 			Vector2.ZERO,  # Draw relative to control's position
 			scaled_radius,

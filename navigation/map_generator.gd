@@ -5,7 +5,7 @@ extends Node2D
 var logger: Logger
 
 ## Navigation and viewport properties
-var viewport_size: Vector2
+var map_size: Vector2
 var navigation_region: NavigationRegion2D
 ## Constants for navigation mesh generation
 const NAVIGATION_OBSTACLES_DENSITY = 0.03
@@ -23,26 +23,21 @@ func _init() -> void:
 	logger = Logger.new("map_generator", DebugLogger.Category.PROGRAM)
 
 ## Creates a navigation setup for the given viewport
-func generate_navigation(viewport_size: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
+func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
 	# Create navigation polygon
 	var nav_poly = NavigationPolygon.new()
 	var vertex_array = PackedVector2Array()
 	var vertices_map = {}  # To map Vector2 positions to vertex indices
 	var vertex_index = 0
 
-	# Get viewport size
-	var map_size: Vector2 = viewport_size
-
-	# Define margins
-	var side_margin := viewport_size.x * 0.1  # 10% of viewport width
-	var top_margin := viewport_size.y * 0.15   # 15% of viewport height
-	var bottom_margin := viewport_size.y * 0.1  # 10% of viewport height
+	# Get map size
+	map_size = p_map_size
 
 	# Define the navigation boundary points
-	var nav_left := -map_size.x/2
-	var nav_right := map_size.x/2
-	var nav_top := -map_size.y/2
-	var nav_bottom := map_size.y/2
+	var nav_left := 0
+	var nav_right := map_size.x
+	var nav_top := 0
+	var nav_bottom := map_size.y
 
 	# Add main boundary vertices
 	var main_vertices = [
@@ -64,7 +59,8 @@ func generate_navigation(viewport_size: Vector2, _margin_config: Dictionary = {}
 	nav_poly.set_vertices(vertex_array)
 	nav_poly.add_polygon(PackedInt32Array([0, 1, 2, 3]))
 
-	logger.info("Main outline points: %s" % [main_vertices])
+	if logger.is_debug_enabled():
+		logger.debug("Main outline points: %s" % [main_vertices])
 
 	# Calculate safe area for obstacle placement
 	var safe_left := nav_left + OBSTACLE_SIZE_MAX
@@ -111,13 +107,18 @@ func generate_navigation(viewport_size: Vector2, _margin_config: Dictionary = {}
 
 		nav_poly.add_polygon(obstacle_indices)
 		existing_obstacles.append(obstacle_points)
-		obstacles_placed += 1
 
-	logger.info("Added %d obstacles - Final vertices: %d, Polygons: %d" % [
-		obstacles_placed,
-		nav_poly.get_vertices().size(),
-		nav_poly.get_polygon_count()
-	])
+		obstacles_placed += 1
+		if logger.is_trace_enabled():
+			logger.trace("Added obstacle %s with size %s" % [obstacles_placed, obstacle_size])
+
+	if logger.is_debug_enabled():
+		logger.debug("Added %d obstacles - Final vertices: %d, Polygons: %d" % [
+			obstacles_placed,
+			nav_poly.get_vertices().size(),
+			nav_poly.get_polygon_count()
+		])
+
 	# Create navigation region
 	navigation_region = NavigationRegion2D.new()
 	# Set the navigation polygon

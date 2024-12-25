@@ -14,5 +14,6 @@ func show_at_position(pos: Vector2) -> void:
 	show_at(pos)
 
 func _on_spawn_pressed() -> void:
+	print("colony spawn requested at point %s" % str(spawn_position))
 	emit_signal("spawn_colony_requested", spawn_position)
 	close()

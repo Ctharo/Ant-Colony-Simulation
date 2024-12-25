@@ -24,6 +24,8 @@ var is_expanded: bool = false
 
 ## Selection circle instance
 var selection_circle: Node2D
+
+var camera: Camera2D
 #endregion
 
 #region Onready Variables
@@ -44,10 +46,11 @@ var selection_circle: Node2D
 
 #region Lifecycle Methods
 func _ready() -> void:
+	top_level = true
+	influences_container.hide()
 	custom_minimum_size = STYLE.PANEL_SIZE
 	setup_styling()
 	setup_selection_circle()
-	influences_container.hide()
 
 	# Connect signals
 	expand_button.pressed.connect(_on_expand_pressed)
@@ -71,17 +74,23 @@ func _process(_delta: float) -> void:
 	if current_ant and is_instance_valid(current_ant):
 		_update_display()
 		_update_selection_circle()
+	else:
+		queue_free()
+		return
 #endregion
 
 #region Public Methods
 ## Display info for the given ant
-func show_ant_info(ant: Ant) -> void:
+func show_ant_info(ant: Ant, p_camera: Camera2D) -> void:
+	camera = p_camera
 	current_ant = ant
 	if not is_instance_valid(ant):
 		return
 
 	title_label.text = "Ant #%d" % ant.id
-	influence_renderer = ant.get_node_or_null("InfluenceRenderer")
+	influence_renderer = InfluenceRenderer.new()
+	influence_renderer.set_ant(ant)
+	influence_renderer.camera = camera
 	selection_circle.show()
 	show()
 	_update_display()
@@ -152,8 +161,6 @@ func _update_selection_circle() -> void:
 
 ## Update the display with current ant info
 func _update_display() -> void:
-	if not current_ant:
-		return
 
 	# Update bars
 	var health_percent = (current_ant.health_level / current_ant.health_max) * 100.0
@@ -174,7 +181,7 @@ func _update_display() -> void:
 	if is_expanded:
 		_update_influences()
 
-	global_position = current_ant.global_position + Vector2(-size.x/2, 20)
+	global_position = camera.global_to_ui(current_ant.global_position) + Vector2(-size.x/2, 20)
 
 ## Update the color of a progress bar based on value
 func _update_bar_color(bar: ProgressBar, value: float, normal_color: Color) -> void:
@@ -256,6 +263,9 @@ func _on_destroy_pressed() -> void:
 func _on_track_pressed() -> void:
 	if current_ant and is_instance_valid(current_ant):
 		var camera = get_tree().get_first_node_in_group("camera")
+		if not is_instance_valid(camera):
+			push_error("Cannot track -> camera not valid")
+			return
 		if camera and camera.tracked_entity == current_ant:
 			camera.stop_tracking()
 		else:

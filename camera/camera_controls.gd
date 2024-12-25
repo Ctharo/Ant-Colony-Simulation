@@ -13,13 +13,14 @@ const SMOOTHING_FACTOR := 0.85
 #region Camera State Variables
 var is_panning := false
 var last_mouse_position := Vector2.ZERO
-var target_position := Vector2.ZERO
+var target_position := Vector2.ZERO :
+	set(value):
+		target_position = value
 var current_velocity := Vector2.ZERO
 var tracked_entity: Node2D
 #endregion
 
 func _ready() -> void:
-	target_position = position
 	set_process_input(true)
 	set_process(true)
 
@@ -53,6 +54,8 @@ func _process(delta: float) -> void:
 	elif is_panning:
 		position = position.lerp(target_position, SMOOTHING_FACTOR)
 		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
+	else:
+		position = position.lerp(target_position, SMOOTHING_FACTOR)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_instance_valid(event):

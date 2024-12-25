@@ -84,6 +84,7 @@ func spawn_colony() -> Colony:
 	return colony
 
 func spawn_colony_at(position: Vector2) -> Colony:
+	print("colony spawn request received for world position %s" % position)
 	var colony = spawn_colony()
 	colony.global_position = position
 	return colony
