@@ -237,11 +237,3 @@ func _on_ant_track_requested(ant: Ant) -> void:
 			return
 		camera.track_entity(ant)
 #endregion
-
-func _draw() -> void:
-	draw_rect(
-		get_viewport_rect(),
-		Color.RED,
-		false,
-		5
-	)
