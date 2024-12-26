@@ -2,12 +2,13 @@
 
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_5jfer"]
 [ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influences/forward_influence.tres" id="2_0k63v"]
-[ext_resource type="Script" path="res://logic/actions/move.gd" id="2_7xsp1"]
+[ext_resource type="Script" path="res://actions/move.gd" id="2_7xsp1"]
 [ext_resource type="Resource" uid="uid://boijqqsqldlym" path="res://resources/influences/colony_attract_influence.tres" id="2_c864x"]
 [ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="3_hd74u"]
 [ext_resource type="Resource" uid="uid://b5yij3nkbk2v" path="res://resources/influences/pheromone_decreasing_influence.tres" id="4_onqwj"]
 [ext_resource type="Resource" uid="uid://sv0sfcr277nh" path="res://resources/expressions/conditions/action/move_to_home/move_to_home_start_condition.tres" id="7_3yd0q"]
 [ext_resource type="Resource" uid="uid://ctcik6mtv250r" path="res://resources/expressions/conditions/action/move_to_home/move_to_home_stop_condition.tres" id="8_6epeb"]
+
 
 [resource]
 script = ExtResource("2_7xsp1")

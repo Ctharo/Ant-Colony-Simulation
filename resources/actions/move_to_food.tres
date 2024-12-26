@@ -3,10 +3,11 @@
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_7blcf"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_xv0ox"]
 [ext_resource type="Resource" uid="uid://b6jri4s7ybdvb" path="res://resources/expressions/conditions/can_see_food.tres" id="2_6dch2"]
-[ext_resource type="Script" path="res://logic/actions/move.gd" id="2_qf7xk"]
+[ext_resource type="Script" path="res://actions/move.gd" id="2_qf7xk"]
 [ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="3_jv3po"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="3_wl1yv"]
 [ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="7_31ed4"]
+
 
 [resource]
 script = ExtResource("2_qf7xk")

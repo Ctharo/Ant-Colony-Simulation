@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="ActionProfile" load_steps=5 format=3 uid="uid://2c6hoc2bo2vq"]
 
-[ext_resource type="Script" path="res://logic/actions/action_profile.gd" id="1_aarxr"]
+[ext_resource type="Script" path="res://actions/action_profile.gd" id="1_aarxr"]
 [ext_resource type="Resource" uid="uid://dhqlu84b60xip" path="res://resources/actions/wander_for_food.tres" id="1_e4nae"]
 [ext_resource type="Resource" uid="uid://da52ftc75qu25" path="res://resources/actions/move_to_home.tres" id="2_ir0ae"]
 [ext_resource type="Resource" uid="uid://c4um3m3kuutcr" path="res://resources/actions/rest_in_home.tres" id="3_j554w"]
+
 
 [resource]
 script = ExtResource("1_aarxr")
