@@ -10,3 +10,5 @@ expression_string = "global_pos.distance_to(colony.global_position)"
 nested_expressions = Array[ExtResource("1_d1vnn")]([ExtResource("2_allbc")])
 description = ""
 type = 2
+min_eval_interval = 0.5
+change_threshold = 0.0
