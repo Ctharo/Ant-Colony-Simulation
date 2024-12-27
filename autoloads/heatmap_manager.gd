@@ -26,6 +26,8 @@ var camera: Camera2D
 var _chunks: Dictionary = {}
 var _debug_settings: Dictionary = {}
 var _boundary_repulsion_points: Array[Dictionary] = []
+var update_timer: float = 0.0
+var update_interval: float = 1.0
 var logger: Logger
 
 #region Custom Classes
@@ -118,24 +120,27 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 
 #region Process and Draw
 func _process(delta: float) -> void:
-	queue_redraw()
-	for entity_id in _debug_settings:
-		var entity = instance_from_id(entity_id)
-		if entity:
-			update_entity_heat(entity, entity.global_position, delta)
-
-	_boundary_repulsion_points.clear()
-	var chunks_to_remove = []
-
-	for chunk_pos in _chunks:
-		if not _chunks[chunk_pos].update(delta):
-			chunks_to_remove.append(chunk_pos)
-
-	for chunk_pos in chunks_to_remove:
-		_chunks.erase(chunk_pos)
-
-	if _debug_settings.values().has(true):
+	update_timer += delta
+	if update_timer > update_interval:
 		queue_redraw()
+		for entity_id in _debug_settings:
+			var entity = instance_from_id(entity_id)
+			if entity:
+				update_entity_heat(entity, entity.global_position, delta)
+
+		_boundary_repulsion_points.clear()
+		var chunks_to_remove = []
+
+		for chunk_pos in _chunks:
+			if not _chunks[chunk_pos].update(delta):
+				chunks_to_remove.append(chunk_pos)
+
+		for chunk_pos in chunks_to_remove:
+			_chunks.erase(chunk_pos)
+
+		if _debug_settings.values().has(true):
+			queue_redraw()
+		update_timer = 0.0
 
 func _draw() -> void:
 	if not camera:
