@@ -262,7 +262,8 @@ func _on_destroy_pressed() -> void:
 
 func _on_track_pressed() -> void:
 	if current_ant and is_instance_valid(current_ant):
-		var camera = get_tree().get_first_node_in_group("camera")
+		if not camera:
+			camera = get_tree().get_first_node_in_group("camera")
 		if not is_instance_valid(camera):
 			push_error("Cannot track -> camera not valid")
 			return

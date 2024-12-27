@@ -38,6 +38,8 @@ func initialize() -> bool:
 	if not result:
 		logger.error("Problem setting up heatmap")
 		return false
+		
+	heatmap_manager.map_size = map_size
 
 	# Center both camera position and target
 
