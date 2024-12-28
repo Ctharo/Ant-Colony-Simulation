@@ -74,13 +74,12 @@ class ExpressionStats:
 
 #region Initialization
 func _init() -> void:
-	pass  # Logger initialized in initialize()
+	logger = Logger.new("eval", DebugLogger.Category.LOGIC)
+	_cache = EvaluationCache.new()
 
 func initialize(p_entity: Node) -> void:
 	entity = p_entity
-	logger = Logger.new("eval." + entity.name, DebugLogger.Category.LOGIC)
 	_trace_enabled = logger.is_trace_enabled()
-	_cache = EvaluationCache.new(entity.name)
 
 func get_or_create_state(expression: Logic) -> ExpressionState:
 	if expression.id.is_empty():
@@ -161,7 +160,8 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	# Calculate new value
 	_last_eval_time[expression.id] = current_time
 	var result = _calculate(expression.id)
-
+	if result and expression.id.contains("critical"):
+		pass
 	# Only update cache and change time if value actually changed significantly
 	var old_value = _cache.get_value(expression.id)
 	if expression._is_significant_change(old_value, result):
@@ -266,6 +266,7 @@ func _calculate(expression_id: String) -> Variant:
 			logger.trace("Nested %s = %s" % [nested.id, value])
 
 	var result = state.execute(bindings, entity)
+
 	if state.has_error():
 		logger.error('Expression execution failed: id=%s expr="%s"' % [
 			expression_id,

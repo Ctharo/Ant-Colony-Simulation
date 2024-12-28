@@ -35,8 +35,10 @@ var foods: Foods :
 		foods = value
 		foods.mark_as_carried()
 #region Managers
-var action_manager: ActionManager
+@onready var influence_manager: InfluenceManager = $InfluenceManager
+@onready var evaluation_system: EvaluationSystem = $InfluenceManager/EvaluationSystem
 #endregion
+@export var influences: Array[Influence]
 
 ## The navigation agent for this ant
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
@@ -69,6 +71,12 @@ var dead: bool = false :
 var vision_range: float = 50.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
+const ENERGY_DRAIN_FACTOR = 0.000005
+var energy_drain: float :
+	get:
+		return ENERGY_DRAIN_FACTOR * (foods.mass + ant_mass) * pow(movement_rate, 1.2)
+
+var ant_mass: float = 10.0
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
@@ -90,40 +98,127 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
-	action_manager = ActionManager.new()
 
 func _ready() -> void:
 	# Initialize components
-	action_manager.initialize(self)
 
 	# Initialize state
 	_initialize_state()
-	_load_actions()
 
+	influence_manager.initialize(self)
+	influence_manager.add_profile(load("res://resources/influences/profiles/look_for_food.tres").duplicate())
+	influence_manager.add_profile(load("res://resources/influences/profiles/go_home.tres").duplicate())
 	# Setup navigation
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
+
 	# Emit ready signal
 	spawned.emit()
 
 func _initialize_state() -> void:
 	energy_level = energy_max
 	health_level = health_max
-
-func _load_actions() -> void:
-	var action_profile := load("res://resources/actions/profiles/harvester.tres").duplicate()
-	action_manager.set_profile(action_profile)
+	foods.add_food(75)
 
 func _physics_process(delta: float) -> void:
-	var energy_coef: float = 0.0
-	if colony:
-		action_manager.update(delta)
-	var current_action: Action = action_manager.get_current_action()
-	if current_action is Move:
-		energy_coef += 0.333
-	elif current_action is Rest:
-		energy_coef -= 5.0
-	energy_level -= energy_coef * delta
+	task_update_timer += delta
+	# Don't process movement if dead
+	if dead:
+		return
+
+	# Energy consumption
+	if energy_level > 0:
+		var energy_cost = calculate_energy_cost(delta)
+		energy_level -= energy_cost
+
+	_process_movement(delta)
+
+#region Movement Processing
+func _process_movement(delta: float) -> void:
+	var current_pos = global_position
+
+	# Check if we need a new target
+	if _should_recalculate_target():
+		var new_target = _calculate_new_target()
+		if new_target:
+			nav_agent.set_target_position(new_target)
+			if logger.is_trace_enabled():
+				logger.trace("New target calculated: %s" % new_target)
+
+	# If we have no valid path, stop moving
+	if not nav_agent.is_target_reachable():
+		velocity = Vector2.ZERO
+		return
+
+	# Calculate movement
+	var next_pos = nav_agent.get_next_path_position()
+	var move_direction = (next_pos - current_pos).normalized()
+
+	var target_velocity = move_direction * (movement_rate)
+
+
+	if nav_agent.avoidance_enabled:
+		# Let the navigation agent handle avoidance
+		nav_agent.set_velocity(target_velocity)
+	else:
+		target_velocity = velocity.lerp(target_velocity, 0.15)
+		velocity = target_velocity
+
+		move_and_slide()
+	if target_velocity.length() > 0.0:
+		var target_angle = target_velocity.angle()
+		# Could add smooth rotation here if desired
+		global_rotation = target_angle
+
+
+func _should_recalculate_target() -> bool:
+	if not target_position:
+		return true
+
+	if nav_agent.is_navigation_finished():
+		return true
+
+	# Add additional conditions for recalculation
+	# e.g., if target becomes invalid or unreachable
+	if not nav_agent.is_target_reachable():
+		return true
+
+	return false
+
+func _calculate_new_target() -> Vector2:
+	const TARGET_DISTANCE = 50.0
+
+	# Get new target from influence system
+	var target_pos = influence_manager.calculate_target_position(TARGET_DISTANCE)
+
+	# Validate target is within navigation bounds
+	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
+	if nav_region:
+		var map_rid = nav_region.get_navigation_map()
+		target_pos = NavigationServer2D.map_get_closest_point(map_rid, target_pos)
+
+	return target_pos
+
+
+func calculate_energy_cost(delta: float) -> float:
+	var movement_cost = energy_drain * velocity.length()
+	return movement_cost * delta
+#endregion
+
+#region Navigation Agent Callbacks
+func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
+	velocity = safe_velocity
+	move_and_slide()
+
+func _on_navigation_agent_2d_target_reached() -> void:
+	# Could emit a signal or trigger next behavior
+	pass
+
+func _on_navigation_agent_2d_path_changed() -> void:
+	# Could update path visualization here
+	if nav_agent.debug_enabled:
+		show_nav_path(true)
+#endregion
 
 
 #region Colony Management
@@ -198,8 +293,3 @@ func _exit_tree() -> void:
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
 	heatmap.unregister_entity(self)
-
-
-func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
-	velocity = safe_velocity
-	move_and_slide()

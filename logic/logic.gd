@@ -11,10 +11,7 @@ extends Resource
 @export var nested_expressions: Array[Logic]
 @export var description: String
 
-@export_enum("BOOL", "INT", "FLOAT", "STRING", "VECTOR2", "VECTOR3", "ARRAY", "DICTIONARY",
-			 "FOOD", "ANT", "COLONY", "PHEROMONE", "ITERATOR", "FOODS", "PHEROMONES",
-			 "COLONIES", "ANTS", "OBJECT", "UNKNOWN")
-var type: int = 19
+@export var type: Variant.Type = TYPE_BOOL
 
 ## Minimum evaluation interval (in seconds). Default 0.05 (50ms)
 @export_range(0.01, 1.0, 0.01, "or_greater") var min_eval_interval: float = 0.5:

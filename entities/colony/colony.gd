@@ -12,6 +12,7 @@ extends Node2D
 		radius = value
 		queue_redraw()  # Redraw when radius changes
 
+var ants_in_colony: Array[Ant] = []
 ## Inner radius as a ratio of the main radius
 var inner_radius_ratio: float = 0.33
 ## Collection of food resources
@@ -36,6 +37,11 @@ func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
 	heatmap_enabled = true
+
+func _physics_process(delta: float) -> void:
+	for ant in ants_in_colony:
+		if ant.energy_level < ant.energy_max:
+			ant.energy_level += 10 * delta
 
 func _exit_tree() -> void:
 	heatmap.unregister_entity(self)
@@ -96,3 +102,13 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	logger.info("Spawned %s %s from %s" % [_ants.size(), "ant" if _ants.size() == 1 else "ants", name])
 	return _ants
 #endregion
+
+
+func _on_collision_area_body_entered(body: Node2D) -> void:
+	if body is Ant and body.colony == self:
+		ants_in_colony.append(body)
+
+
+func _on_collision_area_body_exited(body: Node2D) -> void:
+	if body is Ant and body.colony == self and body in ants_in_colony:
+		ants_in_colony.erase(body)

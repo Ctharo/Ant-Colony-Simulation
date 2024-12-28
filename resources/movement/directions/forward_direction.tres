@@ -9,4 +9,6 @@ name = "forward_influence_direction"
 expression_string = "Vector2(1,0).rotated(global_rot)"
 nested_expressions = Array[ExtResource("1_kmk4y")]([ExtResource("2_ifdxs")])
 description = ""
-type = 4
+type = 5
+min_eval_interval = 0.5
+change_threshold = 0.0

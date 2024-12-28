@@ -12,4 +12,3 @@ description = ""
 type = 6
 min_eval_interval = 0.5
 change_threshold = 0.0
-evaluation_group = 0

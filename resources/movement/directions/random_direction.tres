@@ -8,4 +8,6 @@ name = "random direction"
 expression_string = "Vector2(1, 0).rotated(global_rotation + randf_range(-PI, PI))"
 nested_expressions = Array[ExtResource("1_s0orc")]([])
 description = ""
-type = 4
+type = 5
+min_eval_interval = 0.5
+change_threshold = 0.0

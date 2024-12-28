@@ -13,4 +13,3 @@ description = "Bare essentials to be able to work"
 type = 19
 min_eval_interval = 0.5
 change_threshold = 0.0
-evaluation_group = 0

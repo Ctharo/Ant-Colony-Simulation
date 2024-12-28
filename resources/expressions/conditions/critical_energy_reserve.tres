@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://i24bwdsx8uto"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_rrugo"]
+[ext_resource type="Resource" uid="uid://dnup72fdn73rb" path="res://resources/expressions/sense/proprioception/colony/distance_to_colony.tres" id="3_5fkrr"]
+
+[resource]
+script = ExtResource("1_rrugo")
+name = "critical energy reserve"
+expression_string = "energy_level  < (distance_to_colony * energy_drain * 1.1) "
+nested_expressions = Array[ExtResource("1_rrugo")]([ExtResource("3_5fkrr")])
+description = ""
+type = 1
+min_eval_interval = 0.5
+change_threshold = 0.0

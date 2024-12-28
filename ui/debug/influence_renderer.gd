@@ -39,23 +39,17 @@ func _draw() -> void:
 	if not (_current_ant and _current_ant.is_inside_tree() and _enabled):
 		return
 
-	if _current_ant.action_manager and _current_ant.action_manager._current_action_id:
-		var current_action = _current_ant.action_manager._actions[_current_ant.action_manager._current_action_id]
-		if current_action is Move:
-			draw_influences(current_action)
+	draw_influences()
 
 ## Check if an influence should be ignored in visualization
 func _should_ignore_influence(influence: Influence) -> bool:
 	var influence_type = influence.name.to_snake_case().trim_suffix("_influence")
 	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
 
-func draw_influences(move_action: Move) -> void:
+func draw_influences() -> void:
 	var ant_pos = camera.global_to_ui(_current_ant.global_position)
-	var influence_manager = _current_ant.action_manager._states[move_action.id].influence_manager
-	var valid_influences = move_action.influences.filter(
-		func(influence): return not _should_ignore_influence(influence)
-	)
-
+	var influence_manager = _current_ant.influence_manager
+	var valid_influences = _current_ant.influence_manager.current_profile.influences
 	var total_weight = 0.0
 	var influence_data = []
 

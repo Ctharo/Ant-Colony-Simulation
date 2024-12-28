@@ -17,8 +17,8 @@ var _changed_this_frame: Dictionary = {}
 var _reverse_dependencies: Dictionary = {}
 var logger: Logger
 
-func _init(entity_name: String) -> void:
-	logger = Logger.new("evaluation_cache][" + entity_name, DebugLogger.Category.LOGIC)
+func _init() -> void:
+	logger = Logger.new("evaluation_cache", DebugLogger.Category.LOGIC)
 
 func set_value(expression_id: String, value: Variant, trigger_dependencies: bool = true) -> void:
 	var old_value = _values.get(expression_id)

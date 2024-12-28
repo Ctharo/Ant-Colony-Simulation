@@ -9,4 +9,6 @@ name = "colony direction toward"
 expression_string = "global_pos.direction_to(colony.global_position)"
 nested_expressions = Array[ExtResource("1_80mmx")]([ExtResource("2_oqcvm")])
 description = ""
-type = 4
+type = 5
+min_eval_interval = 0.5
+change_threshold = 0.0

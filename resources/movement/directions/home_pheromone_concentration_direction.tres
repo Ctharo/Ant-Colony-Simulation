@@ -4,9 +4,10 @@
 
 [resource]
 script = ExtResource("1_qx8lv")
-type = 4
+name = ""
 expression_string = ""
 nested_expressions = Array[ExtResource("1_qx8lv")]([])
 description = ""
-_runtime_state = {}
-name = ""
+type = 5
+min_eval_interval = 0.5
+change_threshold = 0.0

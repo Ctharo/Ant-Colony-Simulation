@@ -79,10 +79,7 @@ func _update_ui() -> void:
 
 	if Engine.get_physics_frames() % 20 != 0:
 		return
-	if current_ant.action_manager and current_ant.action_manager._current_action_id:
-		var current_action = current_ant.action_manager._actions[current_ant.action_manager._current_action_id]
-		if current_action is Move:
-			update_legend(current_action.influences)
+	update_legend(current_ant.influence_manager.active_profile.influences)
 
 
 func setup_styling() -> void:
@@ -112,11 +109,6 @@ func show_ant_info(ant: Ant) -> void:
 	influence_renderer.set_ant(ant)
 	influence_renderer.set_enabled(%ShowInfluenceVectorsCheck.button_pressed)
 
-	# If ant has a move action, update the legend with its influences
-	if ant.action_manager and ant.action_manager._current_action_id:
-		var current_action = ant.action_manager._actions[ant.action_manager._current_action_id]
-		if current_action is Move:
-			update_legend(current_action.influences)
 
 	# Update basic info
 	title_label.text = "Ant #%d" % ant.id

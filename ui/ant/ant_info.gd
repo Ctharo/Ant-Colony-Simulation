@@ -35,7 +35,7 @@ var camera: Camera2D
 @onready var energy_bar: ProgressBar = %EnergyBar
 @onready var energy_label: Label = %EnergyLabel
 @onready var food_label: Label = %FoodLabel
-@onready var action_label: Label = %ActionLabel
+@onready var profile_label: Label = %ActionLabel
 @onready var expand_button: Button = %ExpandButton
 @onready var influences_container: VBoxContainer = %InfluencesContainer
 @onready var destroy_button: Button = %DestroyButton
@@ -175,8 +175,7 @@ func _update_display() -> void:
 
 	# Update labels
 	food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
-	action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
-
+	profile_label.text = "Active Profile: %s" % current_ant.influence_manager.active_profile.name
 	# Update influences if expanded
 	if is_expanded:
 		_update_influences()
@@ -200,18 +199,13 @@ func _update_influences() -> void:
 		if child is HBoxContainer:  # Skip the header
 			child.queue_free()
 
-	if not current_ant or not current_ant.action_manager:
+	if not current_ant:
 		return
 
-	var current_action = current_ant.action_manager._actions.get(
-		current_ant.action_manager._current_action_id
-	)
-
-	if not current_action or not current_action is Move:
-		return
+	var active_profile = current_ant.influence_manager.active_profile
 
 	# Add influence entries
-	for influence in current_action.influences:
+	for influence in active_profile.influences:
 		_add_influence_entry(influence)
 
 ## Add a single influence entry to the influences container
@@ -231,7 +225,7 @@ func _add_influence_entry(influence: Influence) -> void:
 
 	# Weight percentage label
 	var weight_label = Label.new()
-	var weight = 0.0
+	var weight = influence.weight.get_value(current_ant.evaluation_system)
 	weight_label.text = "%.1f%%" % (weight * 100)
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weight_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL

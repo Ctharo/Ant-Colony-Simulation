@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=5 format=3 uid="uid://58ocb4u00nd1"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_r3mu2"]
+[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="2_0w8rt"]
+[ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="4_x50xy"]
+[ext_resource type="Resource" uid="uid://i24bwdsx8uto" path="res://resources/expressions/conditions/critical_energy_reserve.tres" id="5_05p50"]
+
+[resource]
+script = ExtResource("1_r3mu2")
+name = "should return home"
+expression_string = "is_overloaded or not should_work or critical_energy_reserve"
+nested_expressions = Array[ExtResource("1_r3mu2")]([ExtResource("2_0w8rt"), ExtResource("4_x50xy"), ExtResource("5_05p50")])
+description = ""
+type = 1
+min_eval_interval = 0.5
+change_threshold = 0.0

@@ -1,16 +1,34 @@
 class_name Influence
 extends Resource
-@export var name: String :
+
+#region Properties
+## Name of the influence
+@export var name: String:
 	set(value):
 		name = value
-		id = name.to_snake_case()
+		id = name.to_snake_case() if name else ""
+
+## Unique identifier for this influence
 var id: String
-@export var direction: Logic :
+
+## Direction logic expression (must return Vector2)
+@export var direction: Logic:
 	set(value):
-		assert(value.type == 4) ## Should return Vector2
 		direction = value
-@export var weight: Logic :
+
+## Weight logic expression (must return float)
+@export var weight: Logic:
 	set(value):
-		assert(value.type == 2) ## Should return float
 		weight = value
+
+## Debug visualization color
 @export var color: Color
+#endregion
+
+func _init():
+	# Ensure resource has a unique name
+	resource_name = "Influence"
+
+	# Set default color if none provided
+	if not color:
+		color = Color.WHITE

@@ -1,7 +1,9 @@
-[gd_scene load_steps=7 format=3 uid="uid://csrvvfq3x0u3r"]
+[gd_scene load_steps=9 format=3 uid="uid://csrvvfq3x0u3r"]
 
 [ext_resource type="Script" path="res://entities/ant/ant.gd" id="1_6htid"]
+[ext_resource type="Script" path="res://managers/influence_manager.gd" id="2_2mgsy"]
 [ext_resource type="Texture2D" uid="uid://djfp7c852qxaq" path="res://entities/ant/Ant.svg" id="2_wmt1h"]
+[ext_resource type="Script" path="res://managers/evaluation_system.gd" id="3_iddyu"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ikxuy"]
 radius = 2.57142
@@ -25,12 +27,11 @@ input_pickable = true
 motion_mode = 1
 script = ExtResource("1_6htid")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-unique_name_in_owner = true
-visible = false
-rotation = 1.5708
-shape = SubResource("CapsuleShape2D_ikxuy")
-debug_color = Color(0.552941, 0.752941, 0, 0.419608)
+[node name="InfluenceManager" type="Node2D" parent="."]
+script = ExtResource("2_2mgsy")
+
+[node name="EvaluationSystem" type="Node2D" parent="InfluenceManager"]
+script = ExtResource("3_iddyu")
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
 unique_name_in_owner = true
@@ -38,7 +39,15 @@ path_desired_distance = 15.0
 target_desired_distance = 5.0
 path_max_distance = 50.0
 navigation_layers = 3
+avoidance_enabled = true
 avoidance_layers = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+unique_name_in_owner = true
+visible = false
+rotation = 1.5708
+shape = SubResource("CapsuleShape2D_ikxuy")
+debug_color = Color(0.552941, 0.752941, 0, 0.419608)
 
 [node name="SenseArea" type="Area2D" parent="."]
 unique_name_in_owner = true
