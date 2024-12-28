@@ -17,7 +17,7 @@ var mass: float:
 	get:
 		return _mass
 
-func _init(initial_mass: float = 0.0) -> void:
+func _init(initial_mass: float = 5.0) -> void:
 	mass = initial_mass
 	add_to_group("food")
 

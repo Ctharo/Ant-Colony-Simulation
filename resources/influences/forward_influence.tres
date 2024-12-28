@@ -4,19 +4,19 @@
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_ignkq"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="3_dev3j"]
 
-[sub_resource type="Resource" id="Resource_oe8f0"]
+[sub_resource type="Resource" id="Resource_yoim4"]
 script = ExtResource("3_dev3j")
 name = "forward influence weight"
 expression_string = "1.5"
 nested_expressions = Array[ExtResource("3_dev3j")]([])
 description = ""
-type = 3
+type = 1
 min_eval_interval = 0.5
 change_threshold = 0.0
 
 [resource]
 script = ExtResource("2_ignkq")
 name = "forward influence"
-direction = ExtResource("1_ebnwc")
-weight = SubResource("Resource_oe8f0")
+direction_logic = ExtResource("1_ebnwc")
+weight_logic = SubResource("Resource_yoim4")
 color = Color(0, 0, 0, 1)

@@ -7,6 +7,6 @@
 [resource]
 script = ExtResource("2_sie77")
 name = "colony repel influence"
-direction = ExtResource("1_3xpjk")
-weight = ExtResource("3_ojkyx")
+direction_logic = ExtResource("1_3xpjk")
+weight_logic = ExtResource("3_ojkyx")
 color = Color(1, 0, 0, 1)

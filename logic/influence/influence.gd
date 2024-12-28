@@ -12,14 +12,14 @@ extends Resource
 var id: String
 
 ## Direction logic expression (must return Vector2)
-@export var direction: Logic:
+@export var direction_logic: Logic:
 	set(value):
-		direction = value
+		direction_logic = value
 
 ## Weight logic expression (must return float)
-@export var weight: Logic:
+@export var weight_logic: Logic:
 	set(value):
-		weight = value
+		weight_logic = value
 
 ## Debug visualization color
 @export var color: Color

@@ -1,14 +1,15 @@
 extends Node
 
 
-func spawn_foods(num: int) -> void:
+func spawn_foods(num: int) -> Array[Food]:
+	var foods: Array[Food]
 	for i in range(num):
-		spawn_food()
+		foods.append(spawn_food())
+	return foods
 
 func spawn_food() -> Food:
 	var food := Food.new()
 	food.add_to_group("food")
-	add_child(food)
 	return food
 
 func get_all() -> Foods:

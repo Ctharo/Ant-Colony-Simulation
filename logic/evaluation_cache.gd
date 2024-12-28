@@ -1,5 +1,5 @@
 class_name EvaluationCache
-extends Resource
+extends Node2D
 
 signal value_invalidated(expression_id: String)
 

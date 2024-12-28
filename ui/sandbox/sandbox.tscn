@@ -82,5 +82,7 @@ text = "Initializing..."
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="FoodContainer" type="Node2D" parent="."]
+
 [connection signal="gui_input" from="CanvasLayer/UI" to="CanvasLayer/UI" method="_on_gui_input"]
 [connection signal="pressed" from="CanvasLayer/UI/ControlPanel/HBoxContainer/BackButton" to="." method="_on_back_button_pressed"]

@@ -7,6 +7,6 @@
 [resource]
 script = ExtResource("1_nxqpj")
 name = "pheromone increasing influence"
-direction = ExtResource("1_whn3h")
-weight = ExtResource("3_schx8")
+direction_logic = ExtResource("1_whn3h")
+weight_logic = ExtResource("3_schx8")
 color = Color(0, 0, 0.831373, 1)

@@ -1,9 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://csrvvfq3x0u3r"]
+[gd_scene load_steps=11 format=3 uid="uid://csrvvfq3x0u3r"]
 
 [ext_resource type="Script" path="res://entities/ant/ant.gd" id="1_6htid"]
 [ext_resource type="Script" path="res://managers/influence_manager.gd" id="2_2mgsy"]
 [ext_resource type="Texture2D" uid="uid://djfp7c852qxaq" path="res://entities/ant/Ant.svg" id="2_wmt1h"]
-[ext_resource type="Script" path="res://managers/evaluation_system.gd" id="3_iddyu"]
+[ext_resource type="Script" path="res://logic/evaluation_system.gd" id="3_iddyu"]
+[ext_resource type="Script" path="res://logic/evaluation_controller.gd" id="4_2cjl2"]
+[ext_resource type="Script" path="res://logic/evaluation_cache.gd" id="5_757gv"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ikxuy"]
 radius = 2.57142
@@ -32,6 +34,12 @@ script = ExtResource("2_2mgsy")
 
 [node name="EvaluationSystem" type="Node2D" parent="InfluenceManager"]
 script = ExtResource("3_iddyu")
+
+[node name="EvaluationController" type="Node2D" parent="InfluenceManager/EvaluationSystem"]
+script = ExtResource("4_2cjl2")
+
+[node name="EvaluationCache" type="Node2D" parent="InfluenceManager/EvaluationSystem"]
+script = ExtResource("5_757gv")
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
 unique_name_in_owner = true

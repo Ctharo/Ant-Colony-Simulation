@@ -118,7 +118,7 @@ func _ready() -> void:
 func _initialize_state() -> void:
 	energy_level = energy_max
 	health_level = health_max
-	foods.add_food(75)
+
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta

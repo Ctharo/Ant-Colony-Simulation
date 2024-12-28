@@ -1,5 +1,5 @@
 class_name InfluenceManager
-extends Node
+extends Node2D
 
 
 signal profile_changed
@@ -104,9 +104,9 @@ func _register_profile_influences(profile: InfluenceProfile) -> void:
 		eval_system.register_expression(condition)
 
 	for influence in profile.influences:
-		if influence and influence.direction and influence.weight:
-			eval_system.register_expression(influence.direction)
-			eval_system.register_expression(influence.weight)
+		if influence and influence.direction_logic and influence.weight_logic:
+			eval_system.register_expression(influence.direction_logic)
+			eval_system.register_expression(influence.weight_logic)
 
 
 func _unregister_profile_influences(profile: InfluenceProfile) -> void:
@@ -128,7 +128,7 @@ func calculate_target_position(distance: float) -> Vector2:
 		return Vector2.ZERO
 
 	var direction = calculate_weighted_direction(active_profile.influences)
-	var actual_distance = entity.rng.randfn(distance, distance * 0.33) # deviation from distance
+	var actual_distance = distance #entity.rng.randfn(distance, distance * 0.33) # deviation from distance
 	return entity.global_position + direction * actual_distance
 
 ## Calculates the weighted direction from all influences
@@ -145,10 +145,10 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 		if not influence:
 			continue
 
-		var weight = eval_system.get_value(influence.weight)
+		var weight = eval_system.get_value(influence.weight_logic)
 		weight = weight if weight != null else 0.0
 
-		var dir = eval_system.get_value(influence.direction)
+		var dir = eval_system.get_value(influence.direction_logic)
 		dir = dir.normalized() if dir else Vector2.ZERO
 
 		# Store evaluated values for second pass

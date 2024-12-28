@@ -22,7 +22,11 @@ var ant_manager = AntManager
 var sandbox: Node2D
 #endregion
 
+#region Default Spawn Values
 const DEFAULT_SPAWN_NUM = 5
+const DEFAULT_FOOD_SPAWN_NUM = 150
+#endregion
+
 var initializing: bool = true :
 	set(value):
 		initializing = value
@@ -131,6 +135,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
 	active_context_menu.spawn_colony_requested.connect(_on_spawn_colony_requested)
+	active_context_menu.spawn_foods_requested.connect(_on_spawn_food_requested)
 	active_context_menu.show_at_position(world_pos)
 
 func clear_active_menu() -> void:
@@ -232,4 +237,14 @@ func _on_ant_track_requested(ant: Ant) -> void:
 			camera.stop_tracking()
 			return
 		camera.track_entity(ant)
+#endregion
+
+#region Food Handlers
+func _on_spawn_food_requested(screen_position: Vector2) -> void:
+	var world_position = camera.ui_to_global(screen_position)
+	var foods = FoodManager.spawn_foods(DEFAULT_FOOD_SPAWN_NUM)
+	for food: Food in foods:
+		var wiggle: Vector2 = Vector2(randf_range(-15, 15), randf_range(-15, 15))
+		$"../../FoodContainer".add_child(food)
+		food.global_position = world_position + wiggle
 #endregion

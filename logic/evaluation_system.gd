@@ -1,11 +1,15 @@
 class_name EvaluationSystem
-extends Node
+extends Node2D
 
 #region Properties
+## Evaluation controller for batching and rate limiting
+@onready var controller: EvaluationController = $EvaluationController
+## Expression evaluation priorities
+@export var high_priority_threshold: float = 0.1  # Expressions updating more frequently than this are high priority
 ## Map of expression resource ID to entity to state
 var _states: Dictionary = {}
 ## Evaluation cache system
-var _cache: EvaluationCache
+@onready var _cache: EvaluationCache = $EvaluationCache
 ## Track last evaluation time for expressions
 var _last_eval_time: Dictionary = {}
 ## Track last significant change time for expressions
@@ -75,7 +79,6 @@ class ExpressionStats:
 #region Initialization
 func _init() -> void:
 	logger = Logger.new("eval", DebugLogger.Category.LOGIC)
-	_cache = EvaluationCache.new()
 
 func initialize(p_entity: Node) -> void:
 	entity = p_entity
