@@ -41,18 +41,18 @@ var _is_quitting: bool = false
 class HeatCell:
 	var heat: float = 0.0
 	var sources: Dictionary = {}
-	
+
 	func add_heat(entity_id: int, amount: float) -> void:
 		if not sources.has(entity_id):
 			sources[entity_id] = 0.0
 		sources[entity_id] = minf(sources[entity_id] + amount, STYLE.MAX_HEAT)
 		_update_total_heat()
-	
+
 	func remove_source(entity_id: int) -> void:
 		if sources.has(entity_id):
 			sources.erase(entity_id)
 			_update_total_heat()
-	
+
 	func decay(delta: float) -> bool:
 		var any_active = false
 		for entity_id in sources:
@@ -61,7 +61,7 @@ class HeatCell:
 				any_active = true
 		_update_total_heat()
 		return any_active
-	
+
 	func _update_total_heat() -> void:
 		heat = 0.0
 		for contribution in sources.values():
@@ -71,25 +71,25 @@ class HeatChunk:
 	var cells: Dictionary = {}
 	var active_cells: int = 0
 	var last_update_time: int = 0
-	
+
 	func get_or_create_cell(local_pos: Vector2i) -> HeatCell:
 		if not cells.has(local_pos):
 			cells[local_pos] = HeatCell.new()
 		return cells[local_pos]
-	
+
 	func update(delta: float) -> bool:
 		active_cells = 0
 		var cells_to_remove: Array = []
-		
+
 		for pos in cells:
 			if not cells[pos].decay(delta):
 				cells_to_remove.append(pos)
 			else:
 				active_cells += 1
-		
+
 		for pos in cells_to_remove:
 			cells.erase(pos)
-		
+
 		last_update_time = Time.get_ticks_msec()
 		return active_cells > 0
 #endregion
@@ -120,13 +120,13 @@ func _update_heatmap_thread() -> void:
 	while not _is_quitting:
 		update_lock.lock()
 		var current_time: int = Time.get_ticks_msec()
-		
+
 		for chunk_pos in _chunks.keys():
 			var chunk: HeatChunk = _chunks[chunk_pos]
 			if current_time - chunk.last_update_time >= update_interval * 1000:
 				if not chunk.update(update_interval):
 					_chunks.erase(chunk_pos)
-		
+
 		update_lock.unlock()
 		OS.delay_msec(int(update_interval * 1000))
 
@@ -138,7 +138,7 @@ func _cleanup_thread() -> void:
 	if update_thread and update_thread.is_started():
 		_is_quitting = true
 		update_thread.wait_to_finish()
-		
+
 #endregion
 
 #region Setup Functions
@@ -176,42 +176,42 @@ func _process(delta: float) -> void:
 	update_timer += delta
 	if update_timer <= update_interval:
 		return
-	
+
 	update_lock.lock()
 	_spatial_index.clear()
-	
+
 	for chunk_pos in _chunks:
 		var chunk: HeatChunk = _chunks[chunk_pos]
 		for local_pos in chunk.cells:
 			var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
 			var world_pos = cell_to_world(world_cell)
 			var cell = chunk.cells[local_pos]
-			
+
 			_spatial_index.insert(world_pos, {
 				"chunk_pos": chunk_pos,
 				"local_pos": local_pos,
 				"heat": cell.heat
 			})
-	
+
 	for entity_id in _debug_settings:
 		var entity: Node2D = instance_from_id(entity_id)
 		if is_instance_valid(entity):
 			update_entity_heat(entity, entity.global_position, delta)
-	
+
 	_boundary_repulsion_points.clear()
 	update_lock.unlock()
-	
+
 	if _debug_settings.values().has(true):
 		queue_redraw()
 	update_timer = 0.0
-	
+
 func _draw() -> void:
 	if not camera:
 		return
-		
+
 	var viewport_rect: Rect2 = camera.get_viewport_rect()
 	update_lock.lock()
-	
+
 	for chunk_pos in _chunks:
 		var chunk: HeatChunk = _chunks[chunk_pos]
 		var chunk_rect: Rect2 = Rect2(
@@ -221,40 +221,40 @@ func _draw() -> void:
 		#
 		#if not viewport_rect.intersects(chunk_rect):
 			#continue
-			
+
 		for local_pos in chunk.cells:
 			var cell: HeatCell = chunk.cells[local_pos]
 			var world_cell: Vector2i = chunk_to_world_cell(chunk_pos, local_pos)
 			var visible_heat: float = _calculate_visible_heat(cell)
-			
+
 			if visible_heat <= 0:
 				continue
-			
+
 			var world_pos: Vector2 = cell_to_world(world_cell)
 			var rect: Rect2 = Rect2(
 				world_pos,
 				Vector2.ONE * STYLE.CELL_SIZE
 			)
-			
+
 			var t: float = visible_heat / STYLE.MAX_HEAT
 			var color: Color = _get_cell_color(t, world_pos)
 			draw_rect(rect, color)
-	
+
 	update_lock.unlock()
-	
+
 func _calculate_visible_heat(cell: HeatCell) -> float:
 	var visible_heat: float = 0.0
 	for source_id in cell.sources:
 		var entity: Node2D = instance_from_id(source_id)
 		if not is_instance_valid(entity):
 			continue
-			
+
 		if entity is Ant:
 			var colony: Node2D = entity.colony
 			if colony and (_debug_settings.get(source_id, false) or _debug_settings.get(colony.get_instance_id(), false)):
 				visible_heat += cell.sources[source_id]
 	return visible_heat
-	
+
 func _get_cell_color(t: float, pos: Vector2) -> Color:
 	if not is_cell_navigable(pos):
 		var color: Color = STYLE.DEBUG_COLORS.BOUNDARY
@@ -267,95 +267,95 @@ func _get_cell_color(t: float, pos: Vector2) -> Color:
 func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	if not is_instance_valid(entity):
 		return Vector2.ZERO
-		
+
 	var entity_id: int = entity.get_instance_id()
 	var center_cell: Vector2i = world_to_cell(world_pos)
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
-	
+
 	update_lock.lock()
-	
+
 	# Boundary repulsion
 	if entity is Colony:
 		var boundary_result: Dictionary = _calculate_boundary_repulsion(center_cell, world_pos)
 		direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
 		total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
-	
+
 	# Heat avoidance
 	var heat_result: Dictionary = _calculate_heat_avoidance(center_cell, world_pos, entity_id)
 	direction += heat_result.direction
 	total_weight += heat_result.weight
-	
+
 	update_lock.unlock()
-	
+
 	return direction / total_weight if total_weight > 0.0 else Vector2.ZERO
 
 func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
-	
+
 	for dx in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 		for dy in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 			var cell: Vector2i = center_cell + Vector2i(dx, dy)
 			var cell_pos: Vector2 = cell_to_world(cell)
-			
+
 			if not is_cell_navigable(cell_pos):
 				var away_vector: Vector2 = (world_pos - cell_pos).normalized()
 				var distance: float = world_pos.distance_to(cell_pos)
 				var weight: float = 1.0 / (1.0 + distance * 0.1)
-				
+
 				direction += away_vector * weight
 				total_weight += weight
-	
+
 	if total_weight > 0.0:
 		direction /= total_weight
-	
+
 	return {"direction": direction, "weight": total_weight}
 
 func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclude_entity_id: int) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
-	
+
 	var query_bounds = QuadTree.QuadTreeBounds.new(
 		world_pos,
 		Vector2.ONE * STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 2
 	)
-	
+
 	var nearby_cells = _spatial_index.query_range(query_bounds)
 	for cell_data in nearby_cells:
 		var chunk: HeatChunk = _chunks[cell_data.chunk_pos]
 		var cell_obj: HeatCell = chunk.cells[cell_data.local_pos]
 		var cell_pos: Vector2 = cell_to_world(chunk_to_world_cell(cell_data.chunk_pos, cell_data.local_pos))
-		
+
 		var heat: float = 0.0
 		for source_id in cell_obj.sources:
 			if source_id != exclude_entity_id:
 				heat += cell_obj.sources[source_id]
-		
+
 		if heat > 0:
 			var away_vector: Vector2 = (world_pos - cell_pos).normalized()
 			direction += away_vector * heat
 			total_weight += heat
-	
+
 	if total_weight > 0.0:
 		direction /= total_weight
-	
+
 	return {"direction": direction, "weight": total_weight}
-	
+
 #endregion
 
 #region Heat Management
 func update_entity_heat(entity: Node2D, p_position: Vector2, delta: float) -> void:
 	if not is_instance_valid(entity):
 		return
-		
+
 	var entity_id: int = entity.get_instance_id()
 	var center_cell: Vector2i = world_to_cell(p_position)
 	var base_heat: float = STYLE.HEAT_PER_SECOND * delta
-	
+
 	update_lock.lock()
 	_update_movement_heat(entity_id, center_cell, base_heat)
-	
+
 	if entity is Colony:
 		_update_boundary_repulsion(entity_id, center_cell, base_heat * STYLE.BOUNDARY_HEAT_MULTIPLIER)
 	update_lock.unlock()
@@ -366,7 +366,7 @@ func _update_movement_heat(entity_id: int, center_cell: Vector2i, base_heat: flo
 			var cell: Vector2i = center_cell + Vector2i(dx, dy)
 			var cell_pos: Vector2 = cell_to_world(cell)
 			var distance: float = center_cell.distance_to(cell)
-			
+
 			if distance <= STYLE.HEAT_RADIUS and is_cell_navigable(cell_pos):
 				var heat: float = base_heat / (1 + distance * distance)
 				_add_heat_to_cell(entity_id, cell, heat)
@@ -376,7 +376,7 @@ func _update_boundary_repulsion(entity_id: int, center_cell: Vector2i, base_heat
 		for dy in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
 			var check_cell: Vector2i = center_cell + Vector2i(dx, dy)
 			var check_pos: Vector2 = cell_to_world(check_cell)
-			
+
 			if not is_cell_navigable(check_pos):
 				_create_repulsion_from_boundary(entity_id, check_cell, cell_to_world(center_cell), base_heat)
 
@@ -387,16 +387,16 @@ func _create_repulsion_from_boundary(entity_id: int, boundary_cell: Vector2i, an
 			var inside_pos: Vector2 = cell_to_world(inside_cell)
 			var to_ant: Vector2 = ant_pos - inside_pos
 			var distance: float = to_ant.length()
-			
+
 			if distance < STYLE.CELL_SIZE * STYLE.BOUNDARY_CHECK_RADIUS:
 				var repulsion_direction: Vector2 = to_ant.normalized()
 				var repulsion_strength: float = base_heat * (1.0 / (1.0 + distance * 0.1))
 				var repulsion_pos: Vector2 = inside_pos + repulsion_direction * STYLE.CELL_SIZE
 				var repulsion_cell: Vector2i = world_to_cell(repulsion_pos)
-				
+
 				if is_cell_navigable(repulsion_pos):
 					_add_heat_to_cell(entity_id, repulsion_cell, repulsion_strength)
-					
+
 					if _debug_settings[entity_id]:
 						_boundary_repulsion_points.append({
 							"position": repulsion_pos,
@@ -438,7 +438,7 @@ func chunk_to_world_cell(chunk_pos: Vector2i, local_pos: Vector2i) -> Vector2i:
 	)
 func chunk_to_world(chunk_pos: Vector2i) -> Vector2:
 	return Vector2(chunk_pos * STYLE.CHUNK_SIZE * STYLE.CELL_SIZE)
-	
+
 #endregion
 
 #region Utility Functions
@@ -460,13 +460,13 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> v
 	var chunk_pos: Vector2i = world_to_chunk(world_cell)
 	var local_pos: Vector2i = world_to_local_cell(world_cell)
 	var world_pos = cell_to_world(world_cell)
-	
+
 	if not _chunks.has(chunk_pos):
 		_chunks[chunk_pos] = HeatChunk.new()
-	
+
 	var cell: HeatCell = _chunks[chunk_pos].get_or_create_cell(local_pos)
 	cell.add_heat(entity_id, amount)
-	
+
 	_spatial_index.insert(world_pos, {
 		"chunk_pos": chunk_pos,
 		"local_pos": local_pos,
@@ -476,32 +476,32 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> v
 func get_heat_at_position(entity: Node2D, pos: Vector2) -> float:
 	if not is_instance_valid(entity):
 		return 0.0
-		
+
 	var colony_id: int = entity.colony.get_instance_id() if entity is Ant else entity.get_instance_id()
 	var world_cell: Vector2i = world_to_cell(pos)
 	var chunk_pos: Vector2i = world_to_chunk(world_cell)
 	var local_pos: Vector2i = world_to_local_cell(world_cell)
-	
+
 	update_lock.lock()
 	if not _chunks.has(chunk_pos):
 		update_lock.unlock()
 		return 0.0
-	
+
 	var chunk: HeatChunk = _chunks[chunk_pos]
 	if not chunk.cells.has(local_pos):
 		update_lock.unlock()
 		return 0.0
-	
+
 	var cell: HeatCell = chunk.cells[local_pos]
 	var total_heat: float = 0.0
-	
+
 	for source_id in cell.sources:
 		var source: Node2D = instance_from_id(source_id)
 		if is_instance_valid(source):
 			var source_colony_id: int = source.colony.get_instance_id() if source is Ant else source.get_instance_id()
 			if source_colony_id == colony_id:
 				total_heat += cell.sources[source_id]
-	
+
 	update_lock.unlock()
 	return total_heat
 #endregion
