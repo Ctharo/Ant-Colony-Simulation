@@ -24,7 +24,7 @@ var sandbox: Node2D
 
 #region Default Spawn Values
 const DEFAULT_SPAWN_NUM = 5
-const DEFAULT_FOOD_SPAWN_NUM = 150
+const DEFAULT_FOOD_SPAWN_NUM = 500
 #endregion
 
 var initializing: bool = true :

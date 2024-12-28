@@ -131,7 +131,51 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
+	# Try to harvest food if we have capacity
+	if foods.mass < carry_max:
+		if harvest_food():
+			return  # Skip movement this frame if we harvested food
+
 	_process_movement(delta)
+
+func harvest_food() -> bool:
+	# Don't harvest if we're at capacity
+	if foods.mass >= carry_max:
+		return false
+
+	var foods_in_reach = get_foods_in_reach()
+	if foods_in_reach.is_empty():
+		return false
+
+	# Sort foods by distance to optimize harvesting
+	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
+		var dist_a = global_position.distance_squared_to(a.global_position)
+		var dist_b = global_position.distance_squared_to(b.global_position)
+		return dist_a < dist_b
+	)
+
+	var amount_harvested := 0.0
+	for food in foods_in_reach:
+		if not is_instance_valid(food) or not food.is_available:
+			continue
+
+		var space_remaining = carry_max - foods.mass
+		if space_remaining <= 0:
+			break
+
+		var amount_to_take = minf(space_remaining, food.mass)
+		foods.add_food(amount_to_take)
+		food.remove_amount(amount_to_take)
+		amount_harvested += amount_to_take
+
+		# Remove depleted food
+		if food.mass <= 0.0:
+			food.queue_free()
+
+		if foods.mass >= carry_max:
+			break
+
+	return amount_harvested > 0
 
 #region Movement Processing
 func _process_movement(delta: float) -> void:
@@ -282,6 +326,12 @@ func get_nearest_item(list: Array) -> Variant:
 			nearest = item
 
 	return nearest
+
+func get_nearest_food_direction() -> Vector2:
+	var nearest_food: Food = get_nearest_item(get_food_in_view())
+	if nearest_food and nearest_food is Food:
+		return global_position.direction_to(nearest_food.global_position)
+	return Vector2.ZERO
 
 func show_influence_vectors(_enabled: bool):
 	pass

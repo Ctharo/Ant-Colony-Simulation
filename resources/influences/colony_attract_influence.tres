@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://boijqqsqldlym"]
 
-[ext_resource type="Resource" uid="uid://bo1tn7vdxjtu5" path="res://resources/movement/directions/colony_direction_toward.tres" id="1_cs0q7"]
+[ext_resource type="Resource" uid="uid://bo1tn7vdxjtu5" path="res://resources/movement/directions/colony_direction_attract.tres" id="1_cs0q7"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_0s8jm"]
 [ext_resource type="Resource" uid="uid://drleodpwy1qvk" path="res://resources/movement/weights/colony_repel_weight.tres" id="3_2hvqi"]
 

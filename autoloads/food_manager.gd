@@ -8,7 +8,7 @@ func spawn_foods(num: int) -> Array[Food]:
 	return foods
 
 func spawn_food() -> Food:
-	var food := Food.new()
+	var food := preload("res://entities/food/food.tscn").instantiate()
 	food.add_to_group("food")
 	return food
 

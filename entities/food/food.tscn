@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://528jtekb4yy1"]
+
+[ext_resource type="Script" path="res://entities/food/food.gd" id="1_ruqvk"]
+[ext_resource type="Texture2D" uid="uid://re53v5nx8qbl" path="res://assets/entities/apple-4967157_640.png" id="2_uam3h"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_0ljxo"]
+radius = 13.0872
+
+[node name="Food" type="StaticBody2D"]
+top_level = true
+scale = Vector2(0.61548, 0.655494)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("1_ruqvk")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.0412911, 0.0342101)
+texture = ExtResource("2_uam3h")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+visible = false
+modulate = Color(0, 0.980392, 0.0352941, 1)
+shape = SubResource("CircleShape2D_0ljxo")

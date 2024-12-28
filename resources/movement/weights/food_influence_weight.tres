@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://bq1cya1qo6vlr"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_fbuqx"]
+[ext_resource type="Resource" uid="uid://b6jri4s7ybdvb" path="res://resources/expressions/conditions/can_see_food.tres" id="2_er27n"]
+
+[resource]
+script = ExtResource("1_fbuqx")
+name = "food influence weight"
+expression_string = "15 if can_see_food else 0.0"
+nested_expressions = Array[ExtResource("1_fbuqx")]([ExtResource("2_er27n")])
+description = ""
+type = 3
+min_eval_interval = 0.5
+change_threshold = 0.0

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://blm4y5t2y8bg4"]
+
+[ext_resource type="Resource" uid="uid://q78ibp3vfirs" path="res://resources/movement/directions/food_influence_direction.tres" id="1_8l4ge"]
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_gqta8"]
+[ext_resource type="Resource" uid="uid://bq1cya1qo6vlr" path="res://resources/movement/weights/food_influence_weight.tres" id="3_e50cq"]
+
+[resource]
+script = ExtResource("1_gqta8")
+name = "food influence"
+direction_logic = ExtResource("1_8l4ge")
+weight_logic = ExtResource("3_e50cq")
+color = Color(0, 0, 0, 1)
