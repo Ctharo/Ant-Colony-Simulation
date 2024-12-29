@@ -1,0 +1,17 @@
+
+UI:
+
+Logic:
+
+Behaviors: 
+	Possible Actions should be exposed, along with methods to get parameters for the Actions. Like harvest_food(food_to_harvest)
+	filter_by_nearest(list_of_food), filter_by_mass(list_of_food), etc. 
+	This would apply to Ant and Colony (and possibly child classes like PheromoneGland to produce pheromones under certain Conditions)
+	
+Conditions:
+	Make generic, able to add any number of them of any type, types are arbitrary. But can mark them under mutually 
+	exclusive categories where one active precludes another from being active. 
+	And/or chain them so that if one is on, so is another.
+	
+	
+Ants:

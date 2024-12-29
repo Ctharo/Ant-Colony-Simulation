@@ -1,5 +1,7 @@
 class_name Colony
 extends Node2D
+## TODO: Add Behaviors such as spawning x number of ants if Condition
+
 
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
