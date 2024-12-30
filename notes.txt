@@ -2,6 +2,10 @@
 UI:
 
 Logic:
+	What if Actions were nothing more than another Logic from which an action method is called 
+	ie, Logic move_to_food = "move_to(nearest_food_item)"
+		Logic wander = "move_to(random_pos)"
+		Logic move_to_food_condition = "move_to_food if food_in_view else wander"
 
 Behaviors: 
 	Possible Actions should be exposed, along with methods to get parameters for the Actions. Like harvest_food(food_to_harvest)
