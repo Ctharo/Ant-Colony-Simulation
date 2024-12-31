@@ -164,10 +164,6 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 
 	# Check if this combination of source and category should be logged
 	if not DebugLogger.should_log(source, category):
-		if level == LogLevel.ERROR:
-			push_error(message)
-		if level == LogLevel.WARN:
-			push_warning(message)
 		return
 
 	var timestamp = Time.get_datetime_string_from_system()
@@ -204,12 +200,6 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 
 	# Add color end tag just once at the end
 	formatted_message += "[/color]"
-
-	# Also utilize built-in methods
-	if level == LogLevel.ERROR:
-		push_error(message)
-	if level == LogLevel.WARN:
-		push_warning(message)
 
 	print_rich(formatted_message)
 

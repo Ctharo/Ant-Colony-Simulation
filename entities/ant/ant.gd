@@ -207,8 +207,8 @@ func _process_movement(delta: float) -> void:
 	else:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		velocity = target_velocity
-
 		move_and_slide()
+		
 	if target_velocity.length() > 0.0:
 		var target_angle = target_velocity.angle()
 		# Could add smooth rotation here if desired

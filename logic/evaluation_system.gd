@@ -54,8 +54,8 @@ class ExpressionState:
 			"@",   # Direct property access
 			"$/",  # Node path traversal
 			"get_node",  # Node access
-			"load",      # Resource loading
-			"preload"    # Resource preloading
+			" load",      # Resource loading
+			" preload"    # Resource preloading
 		]
 
 		for pattern in unsafe_patterns:
