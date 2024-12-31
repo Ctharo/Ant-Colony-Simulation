@@ -12,7 +12,6 @@ func _init(initial_foods: Array[Food] = []):
 func add_food(mass_to_add: float) -> float:
 	var food: Food = Food.new(mass_to_add)
 	append(food)
-	print("Food added")
 	return get_mass()
 
 func mark_as_carried() -> void:
