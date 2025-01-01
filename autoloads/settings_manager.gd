@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS = {
 	"master_volume": 1.0,
 	
 	# Simulation Settings
-	"ant_spawn_count": 10,
+	"ant_spawn_count": 5,
 	"food_spawn_count": 500,
 	"map_size_x": 6800,
 	"map_size_y": 3600,
@@ -26,8 +26,8 @@ const DEFAULT_SETTINGS = {
 	"terrain_seed": 0,
 	
 	# Debug Settings
-	"log_level": DebugLogger.LogLevel.INFO,
-	"show_context": true
+	"log_level": DebugLogger.LogLevel.TRACE,
+	"show_context": false
 }
 
 ## Logger instance for debugging
