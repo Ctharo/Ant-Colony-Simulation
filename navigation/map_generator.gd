@@ -3,14 +3,15 @@ extends Node2D
 
 ## Logger instance for debugging
 var logger: Logger
+var settings_manager: SettingsManager = SettingsManager
 
 ## Navigation and viewport properties
 var map_size: Vector2
 var navigation_region: NavigationRegion2D
 ## Constants for navigation mesh generation
-const NAVIGATION_OBSTACLES_DENSITY = 0.03
-const OBSTACLE_SIZE_MIN = 20.0
-const OBSTACLE_SIZE_MAX = 70.0
+var NAVIGATION_OBSTACLES_DENSITY: float = settings_manager.get_setting("obstacle_density")
+var OBSTACLE_SIZE_MIN: float = settings_manager.get_setting("obstacle_size_min")
+var OBSTACLE_SIZE_MAX: float = settings_manager.get_setting("obstacle_size_max")
 
 ## Drawing colors
 const BACKGROUND_COLOR = Color(Color.LIGHT_GREEN, 0.2)

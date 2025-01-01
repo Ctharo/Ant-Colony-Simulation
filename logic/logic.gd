@@ -14,12 +14,12 @@ extends Resource
 @export var type: Variant.Type = TYPE_BOOL
 
 ## Minimum evaluation interval (in seconds). Default 0.05 (50ms)
-@export_range(0.01, 1.0, 0.01, "or_greater") var min_eval_interval: float = 0.5:
+@export_range(0.016, 1.0, 0.001, "or_greater") var min_eval_interval: float = 0.0:
 	set(value):
-		min_eval_interval = max(0.01, value)
+		min_eval_interval = max(0.001, value)
 
 ## Maximum evaluation interval (in seconds). 0 means no maximum
-@export_range(0.01, 1.0, 0.01, "or_greater") var max_eval_interval: float = 0.0 :
+@export_range(0.00, 1.0, 0.01, "or_greater") var max_eval_interval: float = 0.0 :
 	set(value):
 		max_eval_interval = max(0.00, value)
 ## Whether to evaluate when system has spare processing time

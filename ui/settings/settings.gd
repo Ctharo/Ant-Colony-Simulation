@@ -21,9 +21,11 @@ var settings_manager: SettingsManager = SettingsManager
 ## Simulation settings references
 @onready var ant_spawn_count: SpinBox = %AntSpawnCount/SpinBox
 @onready var food_spawn_count: SpinBox = %FoodSpawnCount/SpinBox
-@onready var map_size_x: SpinBox = %XSpinBox
-@onready var map_size_y: SpinBox = %YSpinBox
+@onready var map_size_x: SpinBox = %MapSize/XSpinBox
+@onready var map_size_y: SpinBox = %MapSize/YSpinBox
 @onready var obstacle_density: SpinBox = %ObstacleDensity/SpinBox
+@onready var obstacle_size_min: SpinBox = %ObstacleSize/MinSpinBox
+@onready var obstacle_size_max: SpinBox = %ObstacleSize/MaxSpinBox
 @onready var terrain_seed: SpinBox = %TerrainSeed/SpinBox
 
 ## Debug settings references
@@ -66,6 +68,9 @@ func load_ui_state() -> void:
 	map_size_x.value = settings_manager.get_setting("map_size_x", 6800)
 	map_size_y.value = settings_manager.get_setting("map_size_y", 3600)
 	obstacle_density.value = settings_manager.get_setting("obstacle_density", 0.03)
+	obstacle_size_min.value = settings_manager.get_setting("obstacle_size_min", 15)
+	obstacle_size_max.value = settings_manager.get_setting("obstacle_size_max", 70)
+
 	terrain_seed.value = settings_manager.get_setting("terrain_seed", 0)
 
 	# Load debug category states
@@ -114,6 +119,9 @@ func setup_signals() -> void:
 	map_size_x.value_changed.connect(_on_map_size_changed)
 	map_size_y.value_changed.connect(_on_map_size_changed)
 	obstacle_density.value_changed.connect(_on_obstacle_density_changed)
+	obstacle_size_min.value_changed.connect(_on_obstacle_min_size_changed)
+	obstacle_size_max.value_changed.connect(_on_obstacle_max_size_changed)
+
 	terrain_seed.value_changed.connect(_on_terrain_seed_changed)
 
 	for check in category_grid.get_children():
@@ -141,6 +149,12 @@ func _on_map_size_changed(value: float) -> void:
 func _on_obstacle_density_changed(value: float) -> void:
 	logger.trace("Changing obstacle density to: %.2f" % value)
 	settings_manager.set_setting("obstacle_density", value)
+
+func _on_obstacle_min_size_changed(value: float) -> void:
+	settings_manager.set_setting("obstacle_size_min", value)
+
+func _on_obstacle_max_size_changed(value: float) -> void:
+	settings_manager.set_setting("obstacle_size_max", value)
 
 func _on_terrain_seed_changed(value: float) -> void:
 	logger.trace("Changing terrain seed to: %d" % value)
