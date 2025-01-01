@@ -25,11 +25,12 @@ func is_debug_enabled() -> bool:
 
 #region Logging Methods
 func trace(message: String, category: DebugLogger.Category = _log_category) -> void:
-	if DebugLogger.log_level >= DebugLogger.LogLevel.TRACE:
+	if is_trace_enabled():
 		DebugLogger.trace(category, message, {"from": _log_from})
 
 func debug(message: String, category: DebugLogger.Category = _log_category) -> void:
-	DebugLogger.debug(category, message, {"from": _log_from})
+	if is_debug_enabled():
+		DebugLogger.debug(category, message, {"from": _log_from})
 
 func info(message: String, category: DebugLogger.Category = _log_category) -> void:
 	DebugLogger.info(category, message, {"from": _log_from})

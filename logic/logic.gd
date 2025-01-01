@@ -24,14 +24,8 @@ extends Resource
 		max_eval_interval = max(0.00, value)
 ## Whether to evaluate when system has spare processing time
 @export var evaluate_when_idle: bool = false
-## Target node to execute action on
-@export var target_node: NodePath
-## Method to call on target node
-@export var action_method: String
-## Arguments to pass to action method
-@export var action_args: Array[Variant]
-## Change threshold. 0.0 means report all changes, >0 requires cumulative change to exceed threshold
 
+## Change threshold. 0.0 means report all changes, >0 requires cumulative change to exceed threshold
 @export_range(0.0, 1.0, 0.001) var change_threshold: float = 0.0:
 	set(value):
 		if value != change_threshold:
