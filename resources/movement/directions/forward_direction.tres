@@ -1,16 +1,15 @@
-[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://dbh8ialni6s52"]
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://dbh8ialni6s52"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_kmk4y"]
-[ext_resource type="Resource" uid="uid://cx6pe1wste8qp" path="res://resources/expressions/sense/proprioception/global_rot.tres" id="2_ifdxs"]
 
 [resource]
 script = ExtResource("1_kmk4y")
-name = "forward_influence_direction"
-expression_string = "Vector2(1,0).rotated(global_rot)"
-nested_expressions = Array[ExtResource("1_kmk4y")]([ExtResource("2_ifdxs")])
+name = "forward direction"
+expression_string = "Vector2(1,0).rotated(global_rotation) * 1.5"
+nested_expressions = Array[ExtResource("1_kmk4y")]([])
 description = ""
 type = 5
-min_eval_interval = 0.5
-max_eval_interval = 1.0
+min_eval_interval = 0.0
+max_eval_interval = 0.0
 evaluate_when_idle = false
 change_threshold = 0.0

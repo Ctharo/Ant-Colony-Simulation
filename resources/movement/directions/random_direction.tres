@@ -12,4 +12,5 @@ type = 5
 min_eval_interval = 0.5
 max_eval_interval = 1.0
 evaluate_when_idle = false
+force_evaluation = false
 change_threshold = 0.0

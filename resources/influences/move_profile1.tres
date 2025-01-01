@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=7 format=3 uid="uid://3xplhrjahskx"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_47cit"]
+[ext_resource type="Resource" uid="uid://l3wy8hfiuw2c" path="res://resources/movement/directions/colony_direction_repel.tres" id="2_3gpli"]
+[ext_resource type="Resource" uid="uid://irvvirjn5pew" path="res://resources/movement/directions/random_direction.tres" id="3_p4pd2"]
+[ext_resource type="Resource" uid="uid://q78ibp3vfirs" path="res://resources/movement/directions/food_direction.tres" id="4_vo6od"]
+[ext_resource type="Resource" uid="uid://bxq0x4qfa0adt" path="res://resources/movement/directions/pheromone_concentration_decreasing.tres" id="5_6bm2d"]
+[ext_resource type="Resource" uid="uid://dbh8ialni6s52" path="res://resources/movement/directions/forward_direction.tres" id="5_6y0ho"]
+
+[resource]
+script = ExtResource("1_47cit")
+name = "move profile 1"
+expression_string = "global_position + (colony_direction_repel + random_direction + food_direction + pheromone_concentration_decreasing + forward_direction).normalized() * 50"
+nested_expressions = Array[ExtResource("1_47cit")]([ExtResource("2_3gpli"), ExtResource("3_p4pd2"), ExtResource("4_vo6od"), ExtResource("5_6bm2d"), ExtResource("5_6y0ho")])
+description = ""
+type = 5
+min_eval_interval = 0.05
+max_eval_interval = 0.1
+evaluate_when_idle = false
+force_evaluation = false
+change_threshold = 0.0

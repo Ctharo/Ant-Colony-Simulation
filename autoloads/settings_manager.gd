@@ -3,7 +3,9 @@ extends Node
 ## Emitted when any setting changes
 signal setting_changed(setting_name: String, new_value: Variant)
 
-const SETTINGS_PATH = "user://settings.json"
+# Use different paths for editor and runtime
+const EDITOR_SETTINGS_PATH = "res://.godot/editor_settings.json"
+const RUNTIME_SETTINGS_PATH = "user://settings.json"
 
 var logger: Logger
 
@@ -11,9 +13,13 @@ var logger: Logger
 var _settings: Dictionary = {}
 
 func _init() -> void:
-	logger = Logger.new("settings_manager", DebugLogger.Category.PROGRAM)
-	logger.info("Initializing Settings Manager")
 	load_settings()
+
+func get_settings_path() -> String:
+	# Check if we're running in the editor
+	if Engine.is_editor_hint():
+		return EDITOR_SETTINGS_PATH
+	return RUNTIME_SETTINGS_PATH
 
 #region Public Methods
 ## Get a setting value. Returns default_value if setting doesn't exist
@@ -26,7 +32,6 @@ func set_setting(setting_name: String, value: Variant) -> void:
 		_settings[setting_name] = value
 		save_settings()
 		setting_changed.emit(setting_name, value)
-		logger.trace("Setting changed: %s = %s" % [setting_name, str(value)])
 
 ## Apply default settings for any missing values
 func ensure_defaults() -> void:
@@ -46,39 +51,34 @@ func _set_default_if_missing(setting_name: String, default_value: Variant) -> vo
 		set_setting(setting_name, default_value)
 
 func load_settings() -> void:
-	logger.trace("Loading settings from file")
+	var settings_path = get_settings_path()
 
-	if not FileAccess.file_exists(SETTINGS_PATH):
-		logger.info("No settings file found, using defaults")
+	if not FileAccess.file_exists(settings_path):
 		ensure_defaults()
 		return
 
-	var file = FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+	var file = FileAccess.open(settings_path, FileAccess.READ)
 	if not file:
-		logger.error("Failed to open settings file: %s" % FileAccess.get_open_error())
+		push_error("Failed to open settings file: %s" % FileAccess.get_open_error())
 		ensure_defaults()
 		return
 
 	var json_string = file.get_as_text()
 	var parse_result = JSON.parse_string(json_string)
-
 	if parse_result == null:
-		logger.error("Failed to parse settings JSON")
+		push_error("Failed to parse settings JSON")
 		ensure_defaults()
 		return
 
 	_settings = parse_result
 	ensure_defaults()  # Fill in any missing settings
-	logger.info("Settings loaded successfully")
 
 func save_settings() -> void:
-	logger.trace("Saving settings to file")
-
+	var settings_path = get_settings_path()
 	var json_string = JSON.stringify(_settings)
-	var file = FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
-	if file:
-		file.store_string(json_string)
-		logger.info("Settings saved successfully")
-	else:
-		logger.error("Failed to save settings: %s" % FileAccess.get_open_error())
+	var file = FileAccess.open(settings_path, FileAccess.WRITE)
+	if not file:
+		push_error("Failed to save settings: %s" % FileAccess.get_open_error())
+		return
+	file.store_string(json_string)
 #endregion
