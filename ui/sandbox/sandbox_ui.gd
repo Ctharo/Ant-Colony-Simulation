@@ -23,7 +23,7 @@ var sandbox: Node2D
 #endregion
 
 #region Default Spawn Values
-const DEFAULT_SPAWN_NUM = 5
+const DEFAULT_SPAWN_NUM = 1
 const DEFAULT_FOOD_SPAWN_NUM = 500
 #endregion
 
@@ -244,7 +244,12 @@ func _on_spawn_food_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
 	var foods = FoodManager.spawn_foods(DEFAULT_FOOD_SPAWN_NUM)
 	for food: Food in foods:
-		var wiggle: Vector2 = Vector2(randf_range(-15, 15), randf_range(-15, 15))
+		var radius = randf_range(0, 50)
+		var angle = randf_range(0, TAU)  # TAU is 2π, a full circle
+		var wiggle = Vector2(
+			radius * cos(angle),
+			radius * sin(angle)
+		)
 		$"../../FoodContainer".add_child(food)
 		food.global_position = world_position + wiggle
 #endregion
