@@ -6,11 +6,11 @@ extends Node2D
 @export var batch_size: int = 10
 ## Maximum time budget per frame (in milliseconds)
 @export var max_frame_time_ms: float = 5.0
-## Default evaluation priority (higher = evaluated sooner)  
+## Default evaluation priority (higher = evaluated sooner)
 @export var default_priority: int = 0
 ## High priority value for immediate evaluations
 const HIGH_PRIORITY := 100
-## Low priority value for idle evaluations  
+## Low priority value for idle evaluations
 const LOW_PRIORITY := -100
 ## Timer for tracking frame processing time
 var frame_timer: float = 0.0
@@ -56,20 +56,20 @@ func queue_idle_priority(expression_id: String) -> void:
 func process_evaluations() -> void:
 	if evaluation_queue.is_empty():
 		return
-		
+
 	frame_timer = Time.get_ticks_msec()
 	var processed_count := 0
 	var initial_queue_size := evaluation_queue.size()
-	
+
 	logger.trace("Starting evaluation processing. Queue size: %d" % initial_queue_size)
-	
+
 	# Sort queue by priority (higher priority first)
 	evaluation_queue.sort_custom(func(a, b):
 		return _priorities.get(a, default_priority) > _priorities.get(b, default_priority)
 	)
-	
+
 	logger.trace("Queue sorted by priority")
-	
+
 	while not evaluation_queue.is_empty() and processed_count < batch_size:
 		var elapsed = Time.get_ticks_msec() - frame_timer
 		if elapsed > max_frame_time_ms:
@@ -77,16 +77,16 @@ func process_evaluations() -> void:
 				elapsed, processed_count, initial_queue_size
 			])
 			break
-			
+
 		var expression_id = evaluation_queue.pop_front()
 		logger.trace("Processing expression %s (priority: %d)" % [
-			expression_id, 
+			expression_id,
 			_priorities.get(expression_id, default_priority)
 		])
-		
+
 		evaluate_expression(expression_id)
 		processed_count += 1
-		
+
 	if not evaluation_queue.is_empty():
 		logger.trace("Evaluation cycle complete. Processed: %d, Remaining: %d, Elapsed: %.2fms" % [
 			processed_count,
@@ -106,6 +106,6 @@ func get_stats() -> Dictionary:
 		"high_priority_count": _priorities.values().count(HIGH_PRIORITY),
 		"low_priority_count": _priorities.values().count(LOW_PRIORITY)
 	}
-	
+
 	logger.trace("Current stats: %s" % str(stats))
 	return stats

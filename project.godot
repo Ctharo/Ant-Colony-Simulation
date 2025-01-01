@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 AntManager="*res://autoloads/ant_manager.gd"
 FoodManager="*res://autoloads/food_manager.gd"
 ColonyManager="*res://autoloads/colony_manager.gd"
+SettingsManager="*res://autoloads/settings_manager.gd"
 
 [display]
 

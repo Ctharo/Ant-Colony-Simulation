@@ -1,0 +1,358 @@
+[gd_scene load_steps=7 format=3 uid="uid://dsfng7euy05we"]
+
+[ext_resource type="Script" path="res://ui/settings/settings.gd" id="1_settings"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tab_panel"]
+bg_color = Color(0.12, 0.12, 0.12, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+bg_color = Color(0.15, 0.15, 0.15, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.3, 0.3, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
+bg_color = Color(0.25, 0.25, 0.25, 1)
+border_width_bottom = 4
+border_color = Color(1, 0.8, 0, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pressed"]
+bg_color = Color(0.15, 0.15, 0.15, 1)
+border_width_bottom = 4
+border_color = Color(0.8, 0.6, 0, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
+bg_color = Color(0.2, 0.2, 0.2, 1)
+border_width_bottom = 4
+border_color = Color(0.3, 0.3, 0.3, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="SettingsScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_settings")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.1, 0.1, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "Settings"
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TabContainer" type="TabContainer" parent="MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_tab_panel")
+current_tab = 0
+
+[node name="Game" type="ScrollContainer" parent="MarginContainer/VBoxContainer/TabContainer"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="GameplaySection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameplaySection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameplaySection/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Gameplay"
+
+[node name="DifficultyOption" type="OptionButton" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameplaySection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+
+[node name="SimulationSection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Simulation"
+
+[node name="AntSpawnCount" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/AntSpawnCount"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ant Spawn Count"
+
+[node name="SpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/AntSpawnCount"]
+layout_mode = 2
+min_value = 1.0
+max_value = 1000.0
+value = 10.0
+
+[node name="FoodSpawnCount" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/FoodSpawnCount"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Food Spawn Count"
+
+[node name="SpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/FoodSpawnCount"]
+layout_mode = 2
+min_value = 1.0
+max_value = 2000.0
+value = 500.0
+
+[node name="MapSize" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/MapSize"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Map Size"
+
+[node name="XSpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/MapSize"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 10.0
+max_value = 10000.0
+value = 6800.0
+suffix = "x"
+
+[node name="YSpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/MapSize"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 10.0
+max_value = 10000.0
+value = 3600.0
+suffix = "y"
+
+[node name="ObstacleDensity" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/ObstacleDensity"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Obstacle Density"
+
+[node name="SpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/ObstacleDensity"]
+layout_mode = 2
+max_value = 10.0
+step = 0.001
+
+[node name="TerrainSeed" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/TerrainSeed"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Terrain Seed"
+
+[node name="SpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/TerrainSeed"]
+layout_mode = 2
+max_value = 999999.0
+rounded = true
+
+[node name="Audio" type="ScrollContainer" parent="MarginContainer/VBoxContainer/TabContainer"]
+visible = false
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Audio"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="AudioSection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Audio/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Audio/VBoxContainer/AudioSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Audio/VBoxContainer/AudioSection/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Volume Controls"
+
+[node name="MasterVolume" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Audio/VBoxContainer/AudioSection/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Audio/VBoxContainer/AudioSection/VBoxContainer/MasterVolume"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Master Volume"
+
+[node name="HSlider" type="HSlider" parent="MarginContainer/VBoxContainer/TabContainer/Audio/VBoxContainer/AudioSection/VBoxContainer/MasterVolume"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="Debug" type="ScrollContainer" parent="MarginContainer/VBoxContainer/TabContainer"]
+visible = false
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="LogLevelSection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/LogLevelSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/LogLevelSection/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Log Level"
+
+[node name="LogLevelContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/LogLevelSection/VBoxContainer"]
+layout_mode = 2
+
+[node name="LogLevelOption" type="OptionButton" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/LogLevelSection/VBoxContainer/LogLevelContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+
+[node name="ContextSection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/ContextSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/ContextSection/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Context Display"
+
+[node name="ShowContextCheck" type="CheckBox" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/ContextSection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Show Context in Logs"
+
+[node name="CategoriesSection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/CategoriesSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/CategoriesSection/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Log Categories"
+
+[node name="CategoryGrid" type="GridContainer" parent="MarginContainer/VBoxContainer/TabContainer/Debug/VBoxContainer/CategoriesSection/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="ButtonContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 2
+
+[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer/ButtonContainer"]
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pressed")
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+text = "Back"

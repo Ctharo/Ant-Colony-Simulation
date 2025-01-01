@@ -102,7 +102,7 @@ func _init() -> void:
 	log_category = DebugLogger.Category.UI
 	additional_log_categories = [DebugLogger.Category.PROPERTY]
 	log_from = "property_browser"
-	
+
 ## Called when the node enters the scene tree
 func _ready() -> void:
 	# Init logging
@@ -351,7 +351,7 @@ func _warn(message: String, category: DebugLogger.Category = log_category) -> vo
 
 func _error(message: String, category: DebugLogger.Category = log_category) -> void:
 	DebugLogger.error(category, message, {"from": log_from})
-	
+
 func _set_logging_category(category: DebugLogger.Category, enabled: bool = true) -> void:
 	DebugLogger.set_category_enabled(category, enabled, log_from)
 

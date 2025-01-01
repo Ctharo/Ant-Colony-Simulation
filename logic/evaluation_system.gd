@@ -59,7 +59,7 @@ class ExpressionState:
 			if compiled_expression.contains(pattern):
 				push_error("Unsafe expression pattern detected: %s" % pattern)
 				return ERR_UNAUTHORIZED
-		
+
 		# Validate variables don't contain unsafe patterns
 		for var_name in variables:
 			for pattern in unsafe_patterns:
@@ -102,19 +102,19 @@ func _init() -> void:
 
 func _process(_delta: float) -> void:
 	var current_time = Time.get_ticks_msec() / 1000.0
-	
+
 	# Check all registered logic for evaluation needs
 	for logic in _registered_logic:
 		if not logic.should_evaluate(current_time):
 			continue
-			
+
 		if logic.needs_immediate_eval():
 			_controller.queue_high_priority(logic.id)
 		elif logic.can_eval_when_idle():
 			_controller.queue_idle_priority(logic.id)
 		else:
 			_controller.queue_normal_priority(logic.id)
-	
+
 	# Let controller handle actual evaluations
 	_controller.process_evaluations()
 
@@ -129,7 +129,7 @@ func get_or_create_state(expression: Logic) -> ExpressionState:
 	if not _states.has(expression.id):
 		_states[expression.id] = ExpressionState.new(expression)
 		_registered_logic.append(expression)
-		
+
 
 	return _states[expression.id]
 
@@ -169,7 +169,7 @@ func register_expression(expression: Logic) -> void:
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	assert(expression != null and not expression.id.is_empty())
 	logger.trace("Getting value: id=%s force=%s" % [expression.id, force_update])
-	
+
 	var current_time = Time.get_ticks_msec() / 1000.0
 	var last_time = _last_eval_time.get(expression.id, 0.0)
 	var last_change = _last_change_time.get(expression.id, 0.0)
@@ -192,7 +192,7 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	# Calculate new value
 	_last_eval_time[expression.id] = current_time
 	var result = _calculate(expression.id)
-	
+
 	# Update cache if value changed significantly
 	var old_value = _cache.get_value(expression.id)
 	if expression._is_significant_change(old_value, result):
@@ -202,7 +202,7 @@ func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	else:
 		_cache.set_value(expression.id, result, false)  # Update without triggering dependencies
 		logger.trace("Value updated (not significant)")
-		
+
 	expression.mark_evaluated()
 	return result
 

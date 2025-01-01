@@ -1,6 +1,7 @@
 extends Node2D
 
 const MAP_SIZE_COEF = 4.0
+var settings_manager = SettingsManager
 var map_generator: MapGenerator
 var map_size: Vector2
 var logger: Logger

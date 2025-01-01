@@ -17,7 +17,7 @@ extends Resource
 @export_range(0.01, 1.0, 0.01, "or_greater") var min_eval_interval: float = 0.5:
 	set(value):
 		min_eval_interval = max(0.01, value)
-		
+
 ## Maximum evaluation interval (in seconds). 0 means no maximum
 @export_range(0.01, 1.0, 0.01, "or_greater") var max_eval_interval: float = 0.0 :
 	set(value):
@@ -90,27 +90,27 @@ func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Var
 
 func should_evaluate(current_time: float) -> bool:
 	var time_since_last = current_time - _last_eval_time
-	
+
 	# Must evaluate if max interval exceeded
 	if max_eval_interval > 0 and time_since_last >= max_eval_interval:
 		return true
-		
+
 	# Can't evaluate if min interval not met
 	if min_eval_interval > 0 and time_since_last < min_eval_interval:
 		return false
-		
+
 	# Can evaluate if no min interval set
 	return min_eval_interval <= 0
 
 func is_lazy_evaluated() -> bool:
 	return min_eval_interval > 0 and max_eval_interval <= 0
-	
+
 func is_forced_interval() -> bool:
 	return min_eval_interval > 0 and min_eval_interval == max_eval_interval
-	
+
 func needs_immediate_eval() -> bool:
 	return max_eval_interval > 0 and min_eval_interval <= 0
-	
+
 func can_eval_when_idle() -> bool:
 	return evaluate_when_idle and not needs_immediate_eval()
 

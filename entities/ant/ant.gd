@@ -206,13 +206,9 @@ func _process_movement(delta: float) -> void:
 		nav_agent.set_velocity(target_velocity)
 	else:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
-		velocity = target_velocity
-		move_and_slide()
-		
-	if target_velocity.length() > 0.0:
-		var target_angle = target_velocity.angle()
-		# Could add smooth rotation here if desired
-		global_rotation = target_angle
+		_on_navigation_agent_2d_velocity_computed(target_velocity)
+
+
 
 
 func _should_recalculate_target() -> bool:
@@ -252,6 +248,9 @@ func calculate_energy_cost(delta: float) -> float:
 #region Navigation Agent Callbacks
 func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 	velocity = safe_velocity
+	if safe_velocity.length() > 0.0:
+		var target_angle = safe_velocity.angle()
+		global_rotation = target_angle
 	move_and_slide()
 
 func _on_navigation_agent_2d_target_reached() -> void:

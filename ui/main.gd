@@ -133,7 +133,7 @@ func _on_logic_editor_button_pressed():
 
 func _on_settings_button_pressed():
 	logger.info("Settings pressed")
-	transition_to_scene("debug_settings", "debug")
+	transition_to_scene("settings", "settings")
 
 func _on_quit_button_pressed():
 	get_tree().quit()

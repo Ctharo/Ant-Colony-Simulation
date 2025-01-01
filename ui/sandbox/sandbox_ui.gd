@@ -1,6 +1,8 @@
 class_name SandboxUI
 extends Control
 
+@onready var settings_manager: SettingsManager = SettingsManager
+
 ## Camera node reference
 var camera: CameraController
 ## Active context menu
@@ -23,8 +25,8 @@ var sandbox: Node2D
 #endregion
 
 #region Default Spawn Values
-const DEFAULT_SPAWN_NUM = 1
-const DEFAULT_FOOD_SPAWN_NUM = 500
+var DEFAULT_SPAWN_NUM = 1#settings_manager.get_setting("ant_spawn_count", 1)
+var DEFAULT_FOOD_SPAWN_NUM = 50#settings_manager.get_setting("food_spawn_count", 50)
 #endregion
 
 var initializing: bool = true :
