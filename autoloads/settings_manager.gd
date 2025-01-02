@@ -2,12 +2,8 @@ extends Node
 ## Emitted when any setting changes
 signal setting_changed(setting_name: String, new_value: Variant)
 
-<<<<<<< HEAD
 ## Signal emitted when settings are fully initialized
 signal settings_initialized
-=======
-const SETTINGS_PATH = "user://settings.json"
->>>>>>> parent of 1272e56 (Many updates - removed influence)
 
 ## Paths for different runtime contexts
 const EDITOR_SETTINGS_PATH: String = "res://.godot/editor_settings.json"
@@ -40,7 +36,6 @@ var logger: Logger
 ## Current settings values
 var _settings: Dictionary = {}
 
-<<<<<<< HEAD
 ## Tracks if settings have been initialized
 var _is_initialized: bool = false
 
@@ -54,13 +49,6 @@ func _ready() -> void:
 	_is_initialized = true
 	settings_initialized.emit()
 
-=======
-func _init() -> void:
-	logger = Logger.new("settings_manager", DebugLogger.Category.PROGRAM)
-	logger.info("Initializing Settings Manager")
-	load_settings()
-
->>>>>>> parent of 1272e56 (Many updates - removed influence)
 #region Public Methods
 
 ## Returns whether settings have been fully initialized
@@ -151,7 +139,6 @@ func apply_debug_settings() -> void:
 
 ## Loads settings from disk
 func load_settings() -> void:
-<<<<<<< HEAD
 	var settings_path: String = get_settings_path()
 
 	if not FileAccess.file_exists(settings_path):
@@ -160,31 +147,16 @@ func load_settings() -> void:
 		return
 
 	var file: FileAccess = FileAccess.open(settings_path, FileAccess.READ)
-=======
-	logger.trace("Loading settings from file")
-
-	if not FileAccess.file_exists(SETTINGS_PATH):
-		logger.info("No settings file found, using defaults")
-		ensure_defaults()
-		return
-
-	var file = FileAccess.open(SETTINGS_PATH, FileAccess.READ)
->>>>>>> parent of 1272e56 (Many updates - removed influence)
 	if not file:
-		logger.error("Failed to open settings file: %s" % FileAccess.get_open_error())
+		push_error("Failed to open settings file: %s" % FileAccess.get_open_error())
 		ensure_defaults()
 		return
 
-<<<<<<< HEAD
 	var json_string: String = file.get_as_text()
 	var parse_result: Variant = JSON.parse_string(json_string)
-=======
-	var json_string = file.get_as_text()
-	var parse_result = JSON.parse_string(json_string)
->>>>>>> parent of 1272e56 (Many updates - removed influence)
 
 	if parse_result == null:
-		logger.error("Failed to parse settings JSON")
+		push_error("Failed to parse settings JSON")
 		ensure_defaults()
 		return
 
@@ -194,7 +166,6 @@ func load_settings() -> void:
 
 ## Saves current settings to disk
 func save_settings() -> void:
-<<<<<<< HEAD
 	var settings_path: String = get_settings_path()
 	var json_string: String = JSON.stringify(_settings)
 
@@ -205,15 +176,4 @@ func save_settings() -> void:
 
 	file.store_string(json_string)
 
-=======
-	logger.trace("Saving settings to file")
-
-	var json_string = JSON.stringify(_settings)
-	var file = FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
-	if file:
-		file.store_string(json_string)
-		logger.info("Settings saved successfully")
-	else:
-		logger.error("Failed to save settings: %s" % FileAccess.get_open_error())
->>>>>>> parent of 1272e56 (Many updates - removed influence)
 #endregion

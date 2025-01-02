@@ -112,23 +112,27 @@ static func configure_source(source: String, enabled: bool = true, categories: A
 
 ## Enable or disable specific categories
 static func set_category_enabled(category: Category, enabled: bool = true, from: String = "") -> void:
+	if enabled_categories.get(category) != null or enabled_categories.get(category) != enabled:
+		info(Category.PROGRAM, "%s logging category %s" % [
+			"Enabled" if enabled else "Disabled",
+			CATEGORY_NAMES[category]
+		],
+			{"from": from if from else "debug_logger"}
+		)
 	enabled_categories[category] = enabled
-	info(Category.PROGRAM, "%s logging category %s" % [
-				"Enabled" if enabled else "Disabled",
-				CATEGORY_NAMES[category]
-			],
-		{"from": from if from else "debug_logger"}
-	)
+	
 
 ## Set the global log level
 static func set_log_level(level: LogLevel, from: String = "") -> void:
+	if DebugLogger.log_level != level:
+		info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], {"from": from if from else "debug_logger"})
 	DebugLogger.log_level = level
-	info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], {"from": from if from else "debug_logger"})
 
 ## Enable or disable context print
 static func set_show_context(enabled: bool = true, from: String = "") -> void:
+	if DebugLogger.show_context != enabled:
+		info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], {"from": from if from else "debug_logger"})
 	DebugLogger.show_context = enabled
-	info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], {"from": from if from else "debug_logger"})
 #endregion
 
 #region Logging Implementation
@@ -216,12 +220,10 @@ static func info(category: Category, message: String, context: Dictionary = {}) 
 	DebugLogger.log(LogLevel.INFO, category, message, context)
 
 static func debug(category: Category, message: String, context: Dictionary = {}) -> void:
-	if DebugLogger.is_debug_enabled():
-		DebugLogger.log(LogLevel.DEBUG, category, message, context)
+	DebugLogger.log(LogLevel.DEBUG, category, message, context)
 
 static func trace(category: Category, message: String, context: Dictionary = {}) -> void:
-	if DebugLogger.is_trace_enabled():
-		DebugLogger.log(LogLevel.TRACE, category, message, context)
+	DebugLogger.log(LogLevel.TRACE, category, message, context)
 #endregion
 
 static func is_trace_enabled() -> bool:

@@ -206,31 +206,32 @@ func harvest_food() -> bool:
 
 #region Movement Processing
 func _process_movement(delta: float) -> void:
-	match move_state:
-		MoveState.IDLE:
-			return
-		MoveState.INTERRUPTED:
-			return
-		MoveState.MOVING:
-			var current_pos = global_position
-
-			# Check if path is still valid
-			if not nav_agent.is_target_reachable():
-				stop_movement()
-				return
-
-			# Calculate movement
-			var next_pos = nav_agent.get_next_path_position()
-			var move_direction = (next_pos - current_pos).normalized()
-			var target_velocity = move_direction * movement_rate
-
-			if nav_agent.avoidance_enabled:
-				nav_agent.set_velocity(target_velocity)
-			else:
-				target_velocity = velocity.lerp(target_velocity, 0.15)
-				_on_navigation_agent_2d_velocity_computed(target_velocity)
-
-
+	var current_pos = global_position
+	
+	# Check if we need a new target
+	if _should_recalculate_target():
+		var new_target = _calculate_new_target()
+		if new_target:
+			nav_agent.set_target_position(new_target)
+			if logger.is_trace_enabled():
+				logger.trace("New target calculated: %s" % new_target)
+	
+	# If we have no valid path, stop moving
+	if not nav_agent.is_target_reachable():
+		velocity = Vector2.ZERO
+		return
+		
+	# Calculate movement
+	var next_pos = nav_agent.get_next_path_position()
+	var move_direction = (next_pos - current_pos).normalized()
+	var target_velocity = move_direction * (movement_rate)
+	
+	if nav_agent.avoidance_enabled:
+		# Let the navigation agent handle avoidance
+		nav_agent.set_velocity(target_velocity)
+	else:
+		target_velocity = velocity.lerp(target_velocity, 0.15)
+		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
 func _should_recalculate_target() -> bool:
 	if not target_position:
@@ -283,6 +284,7 @@ func _on_navigation_agent_2d_path_changed() -> void:
 	# Could update path visualization here
 	if nav_agent.debug_enabled:
 		show_nav_path(true)
+	move_state = MoveState.MOVING
 #endregion
 
 
