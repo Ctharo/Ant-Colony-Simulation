@@ -57,9 +57,6 @@ func is_initialized() -> bool:
 
 ## Get a setting value. Returns default_value if setting doesn't exist
 func get_setting(setting_name: String, default_value: Variant = null) -> Variant:
-	if not _is_initialized:
-		push_warning("Attempting to access setting '%s' before initialization" % setting_name)
-
 	# If no default provided, use the one from DEFAULT_SETTINGS if it exists
 	if default_value == null and DEFAULT_SETTINGS.has(setting_name):
 		default_value = DEFAULT_SETTINGS[setting_name]
@@ -68,8 +65,6 @@ func get_setting(setting_name: String, default_value: Variant = null) -> Variant
 
 ## Set a setting value and save to disk
 func set_setting(setting_name: String, value: Variant) -> void:
-	if not _is_initialized:
-		push_warning("Attempting to set setting '%s' before initialization" % setting_name)
 
 	if _settings.get(setting_name) != value:
 		_settings[setting_name] = value
