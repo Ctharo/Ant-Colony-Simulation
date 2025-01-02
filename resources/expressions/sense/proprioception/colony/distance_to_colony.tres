@@ -13,7 +13,4 @@ type = 2
 min_eval_interval = 0.5
 max_eval_interval = 0.0
 evaluate_when_idle = false
-target_node = NodePath("")
-action_method = ""
-action_args = []
 change_threshold = 0.0

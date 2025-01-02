@@ -16,11 +16,6 @@ var id: String
 	set(value):
 		direction_logic = value
 
-## Weight logic expression (must return float)
-@export var weight_logic: Logic:
-	set(value):
-		weight_logic = value
-
 ## Debug visualization color
 @export var color: Color
 #endregion

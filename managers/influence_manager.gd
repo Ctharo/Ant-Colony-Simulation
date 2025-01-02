@@ -101,7 +101,7 @@ func _calculate_target_position() -> Vector2:
 		return Vector2.ZERO
 	
 	# Get new target from influence system
-	var target_pos = entity.global_position + _calculate_weighted_direction(active_profile.influences) * TARGET_DISTANCE
+	var target_pos = entity.global_position + _calculate_direction(active_profile.influences) * TARGET_DISTANCE
 	if not target_pos:
 		return Vector2.ZERO
 	
@@ -163,9 +163,8 @@ func _register_profile_influences(profile: InfluenceProfile) -> void:
 		eval_system.register_expression(condition)
 
 	for influence in profile.influences:
-		if influence and influence.direction_logic and influence.weight_logic:
+		if influence and influence.direction_logic:
 			eval_system.register_expression(influence.direction_logic)
-			eval_system.register_expression(influence.weight_logic)
 
 
 func _unregister_profile_influences(profile: InfluenceProfile) -> void:
@@ -183,51 +182,28 @@ func _on_active_profile_changed() -> void:
 #region Calculations
 
 ## Calculates the weighted direction from all influences
-func _calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
+func _calculate_direction(influences: Array[Influence]) -> Vector2:
 	if not eval_system or not influences:
 		return Vector2.ZERO
-
-	var total_weight := 0.0
-	var weighted_direction := Vector2.ZERO
-	var evaluated_influences := []
-
-	# First pass: evaluate all influences and calculate total weight
+		
+	var resultant_vector := Vector2.ZERO
+	
 	for influence in influences:
 		if not influence:
 			continue
-
-		var weight = eval_system.get_value(influence.weight_logic)
-
-		if not weight:
+			
+		# Get the direction vector which includes magnitude as weight
+		var direction = eval_system.get_value(influence.direction_logic)
+		if not direction:
 			continue
+			
+		resultant_vector += direction
 		
-		var dir = eval_system.get_value(influence.direction_logic)
-		dir = dir.normalized() if dir else Vector2.ZERO
-
-		if not dir:
-			continue
-
-		# Store evaluated values for second pass
-		evaluated_influences.append({
-			"id": influence.id,
-			"weight": weight,
-			"direction": dir
-		})
-		total_weight += weight
-
-	# Second pass: normalize weights and calculate final direction
-	if total_weight > 0:
-		for eval_influence in evaluated_influences:
-			# Normalize weight by dividing by total
-			var normalized_weight = eval_influence.weight / total_weight
-			weighted_direction += eval_influence.direction * normalized_weight
-
-			logger.trace("Influence %s evaluated: Weight: %s, Normalized: %s, Direction: %s" % [
-				eval_influence.id,
-				str(eval_influence.weight),
-				str(normalized_weight),
-				str(eval_influence.direction)
-			])
-
-	return weighted_direction
+		logger.trace("Influence %s evaluated: Direction: %s, Magnitude: %s" % [
+			influence.id,
+			str(direction.normalized()),
+			str(direction.length())
+		])
+	
+	return resultant_vector.normalized()
 #endregion

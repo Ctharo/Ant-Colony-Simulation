@@ -1,24 +1,10 @@
-[gd_resource type="Resource" script_class="Influence" load_steps=5 format=3 uid="uid://ocrh0kgvf20j"]
+[gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://ocrh0kgvf20j"]
 
 [ext_resource type="Resource" uid="uid://dbh8ialni6s52" path="res://resources/movement/directions/forward_direction.tres" id="1_ebnwc"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_ignkq"]
-[ext_resource type="Script" path="res://logic/logic.gd" id="3_dev3j"]
-
-[sub_resource type="Resource" id="Resource_yoim4"]
-script = ExtResource("3_dev3j")
-name = "forward influence weight"
-expression_string = "1.5"
-nested_expressions = Array[ExtResource("3_dev3j")]([])
-description = ""
-type = 1
-min_eval_interval = 0.5
-max_eval_interval = 0.0
-evaluate_when_idle = false
-change_threshold = 0.0
 
 [resource]
 script = ExtResource("2_ignkq")
 name = "forward influence"
 direction_logic = ExtResource("1_ebnwc")
-weight_logic = SubResource("Resource_yoim4")
 color = Color(0, 0, 0, 1)

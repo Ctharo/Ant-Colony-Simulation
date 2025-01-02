@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_b1uy1")
 name = "food influence direction"
-expression_string = "get_nearest_food_direction()"
+expression_string = "get_nearest_food_direction() * 15"
 nested_expressions = Array[ExtResource("1_b1uy1")]([])
 description = ""
 type = 5
