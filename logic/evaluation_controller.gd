@@ -1,6 +1,9 @@
 class_name EvaluationController
 extends Node2D
 
+signal evaluation_completed(expression_id: String)
+
+
 #region Properties
 ## Batch size for processing evaluations per frame
 @export var batch_size: int = 10
@@ -43,17 +46,27 @@ signal expression_needs_evaluation(expression_id: String)
 
 class QueuedState:
 	var last_queue_time: float = 0.0
+	var last_eval_time: float = 0.0
 	var priority: int = 0
+	var evaluation_count: int = 0
 
 	func _init(p_priority: int) -> void:
 		priority = p_priority
-		last_queue_time = Time.get_ticks_msec() / 1000.0
+		last_queue_time = 0.0
+		last_eval_time = 0.0
 
 	func can_queue(current_time: float) -> bool:
-		return current_time - last_queue_time >= MIN_EVAL_INTERVAL
+		# High priority expressions should still respect minimum interval
+		var time_diff = current_time - last_eval_time
+		if time_diff < MIN_EVAL_INTERVAL and evaluation_count > 0:
+			return false
 
-	func update_queue_time(current_time: float) -> void:
-		last_queue_time = current_time
+		# First evaluation or sufficient time has passed
+		return last_eval_time == 0.0 or time_diff >= MIN_EVAL_INTERVAL
+
+	func mark_evaluated(current_time: float) -> void:
+		last_eval_time = current_time
+		evaluation_count += 1
 
 #region Initialization
 func _init() -> void:
@@ -111,18 +124,35 @@ func is_queued(expression_id: String) -> bool:
 func _add_to_queue(expression_id: String) -> void:
 	var current_time = Time.get_ticks_msec() / 1000.0
 
-	# Get or create queued state
+	# Get or create queued state with current priority
 	if not _queued_states.has(expression_id):
-		_queued_states[expression_id] = QueuedState.new(_priorities.get(expression_id, default_priority))
+		var priority = _priorities.get(expression_id, default_priority)
+		_queued_states[expression_id] = QueuedState.new(priority)
+		logger.trace("Created new queued state for %s with priority %d" % [expression_id, priority])
 
-	var state = _queued_states[expression_id]
-	if not state.can_queue(current_time):
-		return
+	var state: QueuedState = _queued_states[expression_id]
 
-	if not is_queued(expression_id):
-		_evaluation_queue.append(expression_id)
-		state.update_queue_time(current_time)
+	# Always update priority to match current request
+	state.priority = _priorities.get(expression_id, default_priority)
 
+	# Check if we can queue now
+	if state.can_queue(current_time):
+		if not is_queued(expression_id):
+			_evaluation_queue.append(expression_id)
+			state.last_queue_time = current_time
+			logger.trace("Added %s to queue. Queue size: %d (eval count: %d)" % [
+				expression_id,
+				_evaluation_queue.size(),
+				state.evaluation_count
+			])
+		else:
+			logger.trace("Expression %s already in queue" % expression_id)
+	else:
+		logger.trace("Expression %s throttled (last eval: %.3f, current: %.3f)" % [
+			expression_id,
+			state.last_eval_time,
+			current_time
+		])
 ## Check if expression should be queued
 func _should_queue(expression_id: String) -> bool:
 	if expression_id.is_empty():
@@ -145,49 +175,50 @@ func clear_queue() -> void:
 #region Evaluation Processing
 ## Process queued evaluations within time and batch constraints
 func process_evaluations() -> void:
-	if _evaluation_queue.is_empty():
-		return
+		if _evaluation_queue.is_empty():
+			return
 
-	var current_time = Time.get_ticks_msec() / 1000.0
-	_frame_timer = current_time
-	var processed_count := 0
-	var initial_queue_size := _evaluation_queue.size()
+		var start_time = Time.get_ticks_msec()
+		var processed_count := 0
+		var initial_queue_size := _evaluation_queue.size()
 
-	logger.trace("Starting evaluation processing. Queue size: %d" % initial_queue_size)
+		logger.trace("Starting evaluation processing. Queue size: %d" % initial_queue_size)
 
-	# Sort queue by priority (higher priority first)
-	_evaluation_queue.sort_custom(func(a, b):
-		return _priorities.get(a, default_priority) > _priorities.get(b, default_priority)
-	)
+		# Sort queue by priority (higher priority first)
+		_evaluation_queue.sort_custom(func(a, b):
+			return _priorities.get(a, default_priority) > _priorities.get(b, default_priority)
+		)
 
-	logger.trace("Queue sorted by priority")
+		while not _evaluation_queue.is_empty() and processed_count < batch_size:
+			var elapsed = Time.get_ticks_msec() - start_time
+			if elapsed > max_frame_time_ms:
+				logger.trace("Frame budget exceeded: %.2fms. Processed %d/%d expressions" % [
+					elapsed, processed_count, initial_queue_size
+				])
+				break
 
-	while not _evaluation_queue.is_empty() and processed_count < batch_size:
-		var elapsed = Time.get_ticks_msec() - _frame_timer
-		if elapsed > max_frame_time_ms:
-			logger.trace("Frame budget exceeded: %.2fms. Processed %d/%d expressions" % [
-				elapsed, processed_count, initial_queue_size
+			var expression_id = _evaluation_queue.pop_front()
+			var state = _queued_states.get(expression_id)
+
+			if state:
+				state.mark_evaluated(Time.get_ticks_msec() / 1000.0)
+				logger.trace("Processing expression %s (priority: %d, eval count: %d)" % [
+					expression_id,
+					_priorities.get(expression_id, default_priority),
+					state.evaluation_count
+				])
+
+				expression_needs_evaluation.emit(expression_id)
+				evaluation_completed.emit(expression_id)
+				processed_count += 1
+
+		if not _evaluation_queue.is_empty():
+			logger.trace("Evaluation cycle complete. Processed: %d, Remaining: %d, Elapsed: %.2fms" % [
+				processed_count,
+				_evaluation_queue.size(),
+				Time.get_ticks_msec() - start_time
 			])
-			break
 
-		var expression_id = _evaluation_queue.pop_front()
-		var state = _queued_states.get(expression_id)
-		if state and state.can_queue(current_time):
-			_queued_states.erase(expression_id)  # Remove tracking state
-			logger.trace("Processing expression %s (priority: %d)" % [
-				expression_id,
-				_priorities.get(expression_id, default_priority)
-			])
-
-			expression_needs_evaluation.emit(expression_id)
-			processed_count += 1
-
-	if not _evaluation_queue.is_empty():
-		logger.trace("Evaluation cycle complete. Processed: %d, Remaining: %d, Elapsed: %.2fms" % [
-			processed_count,
-			_evaluation_queue.size(),
-			Time.get_ticks_msec() - _frame_timer
-		])
 #endregion
 
 #region Statistics

@@ -149,6 +149,9 @@ var _perf_monitor_enabled := false
 
 ## Threshold for logging slow evaluations (ms)
 var _slow_threshold_ms := 1.0
+
+var _last_evaluation_times: Dictionary = {}
+const MIN_REQUEUE_INTERVAL := 0.016  # ~60fps
 #endregion
 
 #region Initialization
@@ -181,26 +184,105 @@ func _process(_delta: float) -> void:
 
 	# Check all registered logic for evaluation needs
 	for logic in _registered_logic:
-		# Skip if already processed this frame or in evaluation queue
-		if processed_this_frame.has(logic.id) or _controller.is_queued(logic.id):
+		if logic == null or logic.id.is_empty():
+			continue
+
+		# Skip if already processed this frame
+		if processed_this_frame.has(logic.id):
+			continue
+
+		# Check if enough time has passed since last evaluation
+		var last_eval_time = _last_evaluation_times.get(logic.id, 0.0)
+		if current_time - last_eval_time < MIN_REQUEUE_INTERVAL:
 			continue
 
 		var timing_state = _get_timing_state(logic.id)
-		if not timing_state.can_evaluate(current_time, logic):
-			continue
+		var needs_eval = false
 
-		# Priority handling based on evaluation requirements
-		if logic.needs_immediate_eval():
-			_controller.queue_high_priority(logic.id)
-		elif logic.can_eval_when_idle():
-			_controller.queue_idle_priority(logic.id)
-		else:
-			_controller.queue_normal_priority(logic.id)
+		# Check evaluation conditions
+		if logic.force_evaluation or logic.needs_immediate_eval():
+			needs_eval = true
+		elif timing_state.can_evaluate(current_time, logic):
+			# Check if value is invalid or dependencies have changed
+			needs_eval = _cache.needs_update(logic.id) or _has_changed_dependencies(logic)
 
-		processed_this_frame[logic.id] = true
+		if needs_eval:
+			if logic.needs_immediate_eval() or logic.force_evaluation:
+				_controller.queue_high_priority(logic.id)
+				logger.trace("Queued high priority: %s (force=%s, immediate=%s)" % [
+					logic.id,
+					logic.force_evaluation,
+					logic.needs_immediate_eval()
+				])
+			else:
+				_controller.queue_normal_priority(logic.id)
+				logger.trace("Queued normal priority: %s" % logic.id)
+
+			processed_this_frame[logic.id] = true
 
 	# Let controller handle actual evaluations
 	_controller.process_evaluations()
+
+func _has_changed_dependencies(logic: Logic) -> bool:
+	for nested in logic.nested_expressions:
+		if _cache.has_changed_this_frame(nested.id):
+			return true
+	return false
+
+func _on_evaluation_complete(expression_id: String) -> void:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	_last_evaluation_times[expression_id] = current_time
+	logger.trace("Completed evaluation of %s at %.3f" % [expression_id, current_time])
+
+func _on_expression_value_changed(_value: Variant, expression_id: String) -> void:
+	# Invalidate cache and dependencies
+	_cache.invalidate_value(expression_id)
+	_cache.invalidate_dependents(expression_id)
+
+	# Force re-evaluation of dependents
+	var dependents = _cache.get_dependents(expression_id)
+	for dependent in dependents:
+		if dependent in _registered_logic:
+			_controller.queue_normal_priority(dependent)
+			logger.trace("Requeued dependent expression: %s" % dependent)
+
+# Update cache handling
+func get_value(expression: Logic, force_update: bool = false) -> Variant:
+	assert(expression != null and not expression.id.is_empty())
+	logger.trace("Getting value: id=%s force=%s" % [expression.id, force_update])
+
+	# Prevent recursive evaluation
+	if expression.id in _evaluating_expressions:
+		return _cache.get_value(expression.id)
+
+	_evaluating_expressions.append(expression.id)
+
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var timing_state = _get_timing_state(expression.id)
+	var change_state = _get_change_state(expression.id)
+
+	# Calculate new value if needed
+	force_update = force_update or expression.force_evaluation
+	var needs_update = force_update or not _cache.has_valid_value(expression.id)
+
+	var result
+	if needs_update and timing_state.can_evaluate(current_time, expression):
+		timing_state.mark_evaluated(current_time)
+		result = _calculate(expression.id)
+
+		# Update cache and notify changes
+		if change_state.is_significant_change(_cache.get_value(expression.id), result, expression.change_threshold):
+			_cache.set_value(expression.id, result)
+			timing_state.mark_changed(current_time)
+		else:
+			_cache.set_value(expression.id, result, false)
+
+		change_state.update_value(result)
+	else:
+		result = _cache.get_value(expression.id)
+
+	_evaluating_expressions.erase(expression.id)
+	return result
 
 func register_expression(expression: Logic) -> void:
 	if expression.id.is_empty():
@@ -235,47 +317,7 @@ func register_expression(expression: Logic) -> void:
 
 	logger.trace("Completed registration of %s" % expression.id)
 
-func get_value(expression: Logic, force_update: bool = false) -> Variant:
-	assert(expression != null and not expression.id.is_empty())
-	logger.trace("Getting value: id=%s force=%s" % [expression.id, force_update])
 
-	# Prevent recursive evaluation
-	if expression.id in _evaluating_expressions:
-		logger.warn("Preventing recursive evaluation of %s" % expression.id)
-		return _cache.get_value(expression.id)
-
-	_evaluating_expressions.append(expression.id)
-
-	var current_time = Time.get_ticks_msec() / 1000.0
-	var timing_state = _get_timing_state(expression.id)
-	var change_state = _get_change_state(expression.id)
-
-	# Force update overrides cache
-	force_update = force_update or expression.force_evaluation
-
-	# Check if we can use cached value
-	if _cache.has_value(expression.id) and not force_update:
-		if not timing_state.can_evaluate(current_time, expression):
-			_evaluating_expressions.erase(expression.id)
-			return _cache.get_value(expression.id)
-
-	# Calculate new value
-	timing_state.mark_evaluated(current_time)
-	var result = _calculate(expression.id)
-
-	# Update cache if value changed significantly
-	var old_value = _cache.get_value(expression.id)
-	if change_state.is_significant_change(old_value, result, expression.change_threshold):
-		timing_state.mark_changed(current_time)
-		_cache.set_value(expression.id, result)
-		logger.trace("Value changed significantly")
-	else:
-		_cache.set_value(expression.id, result, false)  # Update without triggering dependencies
-		logger.trace("Value updated (not significant)")
-
-	change_state.update_value(result)
-	_evaluating_expressions.erase(expression.id)
-	return result
 #endregion
 
 #region Private Methods
@@ -352,8 +394,6 @@ func _calculate(expression_id: String) -> Variant:
 #endregion
 
 #region Signal Handlers
-func _on_expression_value_changed(_value: Variant, expression_id: String) -> void:
-	_cache.invalidate_dependents(expression_id)
 
 func _on_expression_dependencies_changed(expression_id: String) -> void:
 	_cache.invalidate_dependents(expression_id)

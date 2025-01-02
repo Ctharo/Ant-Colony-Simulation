@@ -10,12 +10,12 @@
 [resource]
 script = ExtResource("1_47cit")
 name = "move profile 1"
-expression_string = "global_position + (colony_direction_repel + random_direction + food_direction + pheromone_concentration_decreasing + forward_direction).normalized() * 50"
+expression_string = "move_to(global_position + (colony_direction_repel + random_direction + food_direction + pheromone_concentration_decreasing + forward_direction).normalized() * 50)"
 nested_expressions = Array[ExtResource("1_47cit")]([ExtResource("2_3gpli"), ExtResource("3_p4pd2"), ExtResource("4_vo6od"), ExtResource("5_6bm2d"), ExtResource("5_6y0ho")])
 description = ""
-type = 5
-min_eval_interval = 0.05
-max_eval_interval = 0.1
+type = 0
+min_eval_interval = 1.0
+max_eval_interval = 1.0
 evaluate_when_idle = false
 force_evaluation = false
 change_threshold = 0.0

@@ -8,9 +8,21 @@ signal energy_changed
 @warning_ignore("unused_signal")
 signal damaged
 signal died(ant: Ant)
+## Signal emitted when movement is completed
+signal movement_completed(success: bool)
+
+## Enum for movement states
+enum MoveState {
+	IDLE,
+	MOVING,
+	INTERRUPTED
+}
 
 #endregion
-
+## Current movement state
+var move_state: MoveState = MoveState.IDLE
+## Movement target position
+var movement_target: Vector2
 #region Constants
 const DEFAULT_CONFIG_ROOT = "res://config/"
 #endregion
@@ -137,6 +149,21 @@ func _physics_process(delta: float) -> void:
 
 	_process_movement(delta)
 
+## Moves the ant to the specified position
+func move_to(target_pos: Vector2) -> void:
+	# Update movement state
+	move_state = MoveState.MOVING
+	movement_target = target_pos
+
+	# Set the navigation target
+	nav_agent.set_target_position(target_pos)
+
+## Stops the current movement
+func stop_movement() -> void:
+	move_state = MoveState.INTERRUPTED
+	velocity = Vector2.ZERO
+	movement_completed.emit(false)
+
 func harvest_food() -> bool:
 	# Don't harvest if we're at capacity
 	if foods.mass >= carry_max:
@@ -178,35 +205,29 @@ func harvest_food() -> bool:
 
 #region Movement Processing
 func _process_movement(delta: float) -> void:
-	var current_pos = global_position
+	match move_state:
+		MoveState.IDLE:
+			return
+		MoveState.INTERRUPTED:
+			return
+		MoveState.MOVING:
+			var current_pos = global_position
 
-	# Check if we need a new target
-	if _should_recalculate_target():
-		var new_target = _calculate_new_target()
-		if new_target:
-			nav_agent.set_target_position(new_target)
-			if logger.is_trace_enabled():
-				logger.trace("New target calculated: %s" % new_target)
+			# Check if path is still valid
+			if not nav_agent.is_target_reachable():
+				stop_movement()
+				return
 
-	# If we have no valid path, stop moving
-	if not nav_agent.is_target_reachable():
-		velocity = Vector2.ZERO
-		return
+			# Calculate movement
+			var next_pos = nav_agent.get_next_path_position()
+			var move_direction = (next_pos - current_pos).normalized()
+			var target_velocity = move_direction * movement_rate
 
-	# Calculate movement
-	var next_pos = nav_agent.get_next_path_position()
-	var move_direction = (next_pos - current_pos).normalized()
-
-	var target_velocity = move_direction * (movement_rate)
-
-
-	if nav_agent.avoidance_enabled:
-		# Let the navigation agent handle avoidance
-		nav_agent.set_velocity(target_velocity)
-	else:
-		target_velocity = velocity.lerp(target_velocity, 0.15)
-		_on_navigation_agent_2d_velocity_computed(target_velocity)
-
+			if nav_agent.avoidance_enabled:
+				nav_agent.set_velocity(target_velocity)
+			else:
+				target_velocity = velocity.lerp(target_velocity, 0.15)
+				_on_navigation_agent_2d_velocity_computed(target_velocity)
 
 
 
@@ -251,8 +272,9 @@ func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 	move_and_slide()
 
 func _on_navigation_agent_2d_target_reached() -> void:
-	# Could emit a signal or trigger next behavior
-	pass
+	if move_state == MoveState.MOVING:
+		move_state = MoveState.IDLE
+		movement_completed.emit(true)
 
 func _on_navigation_agent_2d_path_changed() -> void:
 	# Could update path visualization here
