@@ -5,11 +5,15 @@ extends Node2D
 signal profile_changed
 
 
+#region Movement Properties
+const TARGET_DISTANCE = 50.0
+var target_recalculation_cooldown: float = 0.5
+var _target_recalc_timer: float = 0.0
+#endregion
+
 #region Properties
 ## The entity this influence manager is attached to
 var entity: Node
-
-
 
 ## Reference to the evaluation system
 @onready var eval_system: EvaluationSystem = $EvaluationSystem
@@ -48,6 +52,8 @@ func is_profile_valid(profile: InfluenceProfile) -> bool:
 
 func _physics_process(delta: float) -> void:
 	_profile_check_timer += delta
+	_target_recalc_timer += delta
+	
 	if _profile_check_timer >= profile_check_interval:
 		for profile: InfluenceProfile in profiles:
 			if is_profile_valid(profile):
@@ -55,14 +61,62 @@ func _physics_process(delta: float) -> void:
 				break
 		_profile_check_timer = 0.0
 
+#region Movement Management
+## Checks if target position should be recalculated
+func should_recalculate_target() -> bool:
+	if _target_recalc_timer < target_recalculation_cooldown:
+		return false
+		
+	var nav_agent = entity.nav_agent
+	if not nav_agent:
+		return false
+
+	if not nav_agent.target_position:
+		return true
+
+	if nav_agent.is_navigation_finished():
+		return true
+
+	if not nav_agent.is_target_reachable():
+		return true
+
+	return false
+
+## Updates the movement target based on current influences
+func update_movement_target() -> void:
+	_target_recalc_timer = 0.0
+	var new_target = _calculate_target_position()
+	
+	# Only update if we have a meaningful new target
+	if new_target and new_target != entity.global_position and entity.has_method("move_to"):
+	
+		# Ensure the target is different enough to warrant movement
+		if new_target.distance_to(entity.global_position) > 1.0:
+			entity.move_to(new_target)
+			logger.trace("New target set: %s" % new_target)
+
+## Calculates the new target position based on influences
+func _calculate_target_position() -> Vector2:
+	# Get new target from influence system
+	var target_pos = calculate_target_position(TARGET_DISTANCE)
+
+	# Validate target is within navigation bounds
+	var nav_region = entity.get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
+	if nav_region:
+		var map_rid = nav_region.get_navigation_map()
+		target_pos = NavigationServer2D.map_get_closest_point(map_rid, target_pos)
+
+	return target_pos
+#endregion
+
 func initialize(p_entity: Node) -> void:
 	if not p_entity:
-		logger.error("Cannot initialize with null entity")
+		push_error("Cannot initialize with null entity")
 		return
 
 	entity = p_entity
 	if not eval_system:
-		logger.error("EvaluationSystem not found")
+		push_error("EvaluationSystem not found")
 		return
 
 	eval_system.initialize(entity)
@@ -74,7 +128,7 @@ func initialize(p_entity: Node) -> void:
 #region Profile Management
 func add_profile(influence_profile: InfluenceProfile) -> void:
 	if not influence_profile:
-		logger.error("Cannot add null profile")
+		push_error("Cannot add null profile")
 		return
 
 	if influence_profile not in profiles:
@@ -146,10 +200,15 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 			continue
 
 		var weight = eval_system.get_value(influence.weight_logic)
-		weight = weight if weight != null else 0.0
 
+		if not weight:
+			continue
+		
 		var dir = eval_system.get_value(influence.direction_logic)
 		dir = dir.normalized() if dir else Vector2.ZERO
+
+		if not dir:
+			continue
 
 		# Store evaluated values for second pass
 		evaluated_influences.append({
@@ -166,13 +225,12 @@ func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 			var normalized_weight = eval_influence.weight / total_weight
 			weighted_direction += eval_influence.direction * normalized_weight
 
-			if logger.is_trace_enabled():
-				logger.trace("Influence %s evaluated: Weight: %s, Normalized: %s, Direction: %s" % [
-					eval_influence.id,
-					str(eval_influence.weight),
-					str(normalized_weight),
-					str(eval_influence.direction)
-				])
+			logger.trace("Influence %s evaluated: Weight: %s, Normalized: %s, Direction: %s" % [
+				eval_influence.id,
+				str(eval_influence.weight),
+				str(normalized_weight),
+				str(eval_influence.direction)
+			])
 
 	return weighted_direction
 #endregion

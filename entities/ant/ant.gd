@@ -208,13 +208,9 @@ func harvest_food() -> bool:
 func _process_movement(delta: float) -> void:
 	var current_pos = global_position
 	
-	# Check if we need a new target
-	if _should_recalculate_target():
-		var new_target = _calculate_new_target()
-		if new_target:
-			nav_agent.set_target_position(new_target)
-			if logger.is_trace_enabled():
-				logger.trace("New target calculated: %s" % new_target)
+	# Check if we need a new target - delegated to InfluenceManager
+	if influence_manager.should_recalculate_target():
+		influence_manager.update_movement_target()
 	
 	# If we have no valid path, stop moving
 	if not nav_agent.is_target_reachable():
@@ -224,43 +220,13 @@ func _process_movement(delta: float) -> void:
 	# Calculate movement
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
-	var target_velocity = move_direction * (movement_rate)
+	var target_velocity = move_direction * movement_rate
 	
 	if nav_agent.avoidance_enabled:
-		# Let the navigation agent handle avoidance
 		nav_agent.set_velocity(target_velocity)
 	else:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
-
-func _should_recalculate_target() -> bool:
-	if not target_position:
-		return true
-
-	if nav_agent.is_navigation_finished():
-		return true
-
-	# Add additional conditions for recalculation
-	# e.g., if target becomes invalid or unreachable
-	if not nav_agent.is_target_reachable():
-		return true
-
-	return false
-
-func _calculate_new_target() -> Vector2:
-	const TARGET_DISTANCE = 50.0
-
-	# Get new target from influence system
-	var target_pos = influence_manager.calculate_target_position(TARGET_DISTANCE)
-
-	# Validate target is within navigation bounds
-	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
-	if nav_region:
-		var map_rid = nav_region.get_navigation_map()
-		target_pos = NavigationServer2D.map_get_closest_point(map_rid, target_pos)
-
-	return target_pos
-
 
 func calculate_energy_cost(delta: float) -> float:
 	var movement_cost = energy_drain * velocity.length()

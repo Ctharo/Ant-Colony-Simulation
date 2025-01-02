@@ -112,7 +112,7 @@ static func configure_source(source: String, enabled: bool = true, categories: A
 
 ## Enable or disable specific categories
 static func set_category_enabled(category: Category, enabled: bool = true, from: String = "") -> void:
-	if enabled_categories.get(category) != null or enabled_categories.get(category) != enabled:
+	if enabled_categories.get(category) == null or enabled_categories.get(category) != enabled:
 		info(Category.PROGRAM, "%s logging category %s" % [
 			"Enabled" if enabled else "Disabled",
 			CATEGORY_NAMES[category]
