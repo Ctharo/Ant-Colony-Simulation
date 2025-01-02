@@ -12,6 +12,14 @@ const STYLE = {
 	"MED_COLOR": Color.ORANGE,
 	"SELECTION_COLOR": Color(1, 1, 1, 0.3),
 	"SELECTION_RADIUS": 30.0,
+	"BUTTON_COLORS": {
+		"INFLUENCE": {
+			"ENABLED": Color.GREEN,
+			"DISABLED": Color.DARK_GREEN
+		},
+		"TRACK": Color.BLUE,
+		"DESTROY": Color.RED
+	}
 }
 #endregion
 
@@ -41,7 +49,6 @@ var camera: Camera2D
 @onready var destroy_button: Button = %DestroyButton
 @onready var track_button: Button = %TrackButton
 @onready var influence_button: Button = %InfluenceButton
-@onready var influence_renderer: InfluenceRenderer
 #endregion
 
 #region Lifecycle Methods
@@ -51,25 +58,25 @@ func _ready() -> void:
 	custom_minimum_size = STYLE.PANEL_SIZE
 	setup_styling()
 	setup_selection_circle()
+	setup_buttons()
+	connect_signals()
+	
+func setup_buttons() -> void:
+	# Set consistent button sizes
+	for button in [expand_button, destroy_button, track_button, influence_button]:
+		button.custom_minimum_size = Vector2(30, 30)
+	
+	# Set initial button colors
+	destroy_button.modulate = STYLE.BUTTON_COLORS.DESTROY
+	track_button.modulate = STYLE.BUTTON_COLORS.TRACK
+	influence_button.modulate = STYLE.BUTTON_COLORS.INFLUENCE.DISABLED
 
-	# Connect signals
+func connect_signals() -> void:
 	expand_button.pressed.connect(_on_expand_pressed)
 	destroy_button.pressed.connect(_on_destroy_pressed)
 	track_button.pressed.connect(_on_track_pressed)
 	influence_button.pressed.connect(_on_influence_pressed)
-
-
-	# Set button sizes
-	expand_button.custom_minimum_size = Vector2(30, 30)
-	destroy_button.custom_minimum_size = Vector2(30, 30)
-	track_button.custom_minimum_size = Vector2(30, 30)
-	influence_button.custom_minimum_size = Vector2(30, 30)
-
-	# Set button colors
-	destroy_button.modulate = Color.RED
-	track_button.modulate = Color.BLUE
-	influence_button.modulate = Color.GREEN
-
+	
 func _process(_delta: float) -> void:
 	if current_ant and is_instance_valid(current_ant):
 		_update_display()
@@ -84,21 +91,29 @@ func _process(_delta: float) -> void:
 func show_ant_info(ant: Ant, p_camera: Camera2D) -> void:
 	camera = p_camera
 	current_ant = ant
+	current_ant.influence_manager.camera = camera
+	
 	if not is_instance_valid(ant):
 		return
 
 	title_label.text = "Ant #%d" % ant.id
-	influence_renderer = InfluenceRenderer.new()
-	influence_renderer.set_ant(ant)
-	influence_renderer.camera = camera
 	selection_circle.show()
 	show()
+	
+	# Connect to influence visibility changes
+	if current_ant.influence_manager.influence_visibility_changed.is_connected(_on_influence_visibility_changed):
+		current_ant.influence_manager.influence_visibility_changed.disconnect(_on_influence_visibility_changed)
+	current_ant.influence_manager.influence_visibility_changed.connect(_on_influence_visibility_changed)
+	
+	_update_influence_button_state()
 	_update_display()
 
 ## Clear current ant and hide panel
 func clear() -> void:
-	if influence_renderer:
-		influence_renderer.set_enabled(false)
+	if current_ant and is_instance_valid(current_ant):
+		if current_ant.influence_manager.influence_visibility_changed.is_connected(_on_influence_visibility_changed):
+			current_ant.influence_manager.influence_visibility_changed.disconnect(_on_influence_visibility_changed)
+	
 	current_ant = null
 	selection_circle.hide()
 	hide()
@@ -265,9 +280,23 @@ func _on_track_pressed() -> void:
 			camera.stop_tracking()
 		else:
 			camera.track_entity(current_ant)
-
+			
+func _on_influence_visibility_changed(_enabled: bool) -> void:
+	_update_influence_button_state()
+	
 func _on_influence_pressed() -> void:
-	if influence_renderer:
-		influence_renderer.set_enabled(!influence_renderer._enabled)
-		influence_button.modulate = Color.GREEN if influence_renderer._enabled else Color.DARK_GREEN
+	if not current_ant or not is_instance_valid(current_ant):
+		return
+		
+	current_ant.influence_manager.toggle_visualization()
+	_update_influence_button_state()
+	
+## Update influence button state based on visualization state
+func _update_influence_button_state() -> void:
+	if not current_ant or not is_instance_valid(current_ant):
+		return
+		
+	influence_button.modulate = STYLE.BUTTON_COLORS.INFLUENCE.ENABLED \
+		if current_ant.influence_manager.is_visualization_enabled() \
+		else STYLE.BUTTON_COLORS.INFLUENCE.DISABLED
 #endregion

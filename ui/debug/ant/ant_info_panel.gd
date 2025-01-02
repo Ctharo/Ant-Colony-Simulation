@@ -25,7 +25,6 @@ const STYLE = {
 }
 
 var _influence_colors: Dictionary = {}
-@onready var influence_renderer: InfluenceRenderer
 var heatmap: HeatmapManager
 
 # UI Components
@@ -50,9 +49,7 @@ func _ready() -> void:
 	hide()  # Start hidden
 	setup_styling()
 	clear_legend()
-	# Initialize influence renderer
-	influence_renderer = InfluenceRenderer.new()
-	add_child(influence_renderer)
+
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 
 
@@ -105,9 +102,6 @@ func show_ant_info(ant: Ant) -> void:
 		return
 	current_ant = ant
 	show()
-
-	influence_renderer.set_ant(ant)
-	influence_renderer.set_enabled(%ShowInfluenceVectorsCheck.button_pressed)
 
 
 	# Update basic info
@@ -210,10 +204,6 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 	entry.add_child(weight_label)
 
 	influences_legend.add_child(entry)
-
-
-func _on_show_influence_vectors_check_toggled(enabled: bool) -> void:
-	influence_renderer.set_enabled(enabled)
 
 func _on_show_nav_path_check_toggled(toggled_on: bool) -> void:
 	if current_ant:
