@@ -9,11 +9,17 @@ signal track_ant_requested(ant: Ant)
 
 
 func _init() -> void:
-	var track = add_button("Track Ant")
+	var track = add_button("Track Ant",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
 
-	var info = add_button("Info")
+	var info = add_button("Info",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
 
-	var destroy = add_button("Destroy")
+	var destroy = add_button("Destroy",
+		preload("res://ui/styles/destroy_normal.tres"),
+		preload("res://ui/styles/destroy_hover.tres"))
 
 	track.pressed.connect(_on_track_pressed)
 	info.pressed.connect(_on_info_pressed)
