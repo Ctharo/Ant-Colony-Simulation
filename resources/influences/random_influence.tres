@@ -1,10 +1,17 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://cw1owtck8lyu1"]
 
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_d8g8r"]
-[ext_resource type="Resource" uid="uid://irvvirjn5pew" path="res://resources/movement/directions/random_direction.tres" id="1_o8hqk"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="3_hqprq"]
 
 [resource]
 script = ExtResource("1_d8g8r")
+color = Color(0.498039, 0.603922, 0.870588, 1)
 name = "random influence"
-direction_logic = ExtResource("1_o8hqk")
-color = Color(0, 0, 0, 1)
+expression_string = "Vector2(1, 0).rotated(global_rotation + randf_range(-PI, PI))"
+nested_expressions = Array[ExtResource("3_hqprq")]([])
+description = ""
+type = 5
+min_eval_interval = 0.0
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0

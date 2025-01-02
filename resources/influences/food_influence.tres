@@ -1,10 +1,17 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://blm4y5t2y8bg4"]
 
-[ext_resource type="Resource" uid="uid://q78ibp3vfirs" path="res://resources/movement/directions/food_influence_direction.tres" id="1_8l4ge"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_gqta8"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="2_tcg3g"]
 
 [resource]
 script = ExtResource("1_gqta8")
+color = Color(0, 1, 0, 1)
 name = "food influence"
-direction_logic = ExtResource("1_8l4ge")
-color = Color(0, 0, 0, 1)
+expression_string = "get_nearest_food_direction() * 15"
+nested_expressions = Array[ExtResource("2_tcg3g")]([])
+description = ""
+type = 5
+min_eval_interval = 0.0
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0

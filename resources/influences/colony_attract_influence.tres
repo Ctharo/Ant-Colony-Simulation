@@ -1,10 +1,18 @@
-[gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://boijqqsqldlym"]
+[gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://boijqqsqldlym"]
 
-[ext_resource type="Resource" uid="uid://bo1tn7vdxjtu5" path="res://resources/movement/directions/colony_direction_attract.tres" id="1_cs0q7"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_0s8jm"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="2_k2i2x"]
+[ext_resource type="Resource" uid="uid://drleodpwy1qvk" path="res://resources/movement/weights/colony_weight.tres" id="2_wei4k"]
 
 [resource]
 script = ExtResource("2_0s8jm")
-name = "colony attract influence"
-direction_logic = ExtResource("1_cs0q7")
 color = Color(1, 0, 0, 1)
+name = "colony attract influence"
+expression_string = "global_position.direction_to(colony.global_position) * colony_weight"
+nested_expressions = Array[ExtResource("2_k2i2x")]([ExtResource("2_wei4k")])
+description = ""
+type = 5
+min_eval_interval = 0.0
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0

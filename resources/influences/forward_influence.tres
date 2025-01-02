@@ -1,10 +1,17 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://ocrh0kgvf20j"]
 
-[ext_resource type="Resource" uid="uid://dbh8ialni6s52" path="res://resources/movement/directions/forward_direction.tres" id="1_ebnwc"]
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_ignkq"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="3_dev3j"]
 
 [resource]
 script = ExtResource("2_ignkq")
+color = Color(0.745532, 0.0971564, 0.444001, 1)
 name = "forward influence"
-direction_logic = ExtResource("1_ebnwc")
-color = Color(0, 0, 0, 1)
+expression_string = "Vector2(1,0).rotated(global_rotation) * 1.5"
+nested_expressions = Array[ExtResource("3_dev3j")]([])
+description = ""
+type = 5
+min_eval_interval = 0.0
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0

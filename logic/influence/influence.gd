@@ -1,21 +1,7 @@
 class_name Influence
-extends Resource
+extends Logic
 
 #region Properties
-## Name of the influence
-@export var name: String:
-	set(value):
-		name = value
-		id = name.to_snake_case() if name else ""
-
-## Unique identifier for this influence
-var id: String
-
-## Direction logic expression (must return Vector2)
-@export var direction_logic: Logic:
-	set(value):
-		direction_logic = value
-
 ## Debug visualization color
 @export var color: Color
 #endregion
@@ -23,7 +9,7 @@ var id: String
 func _init():
 	# Ensure resource has a unique name
 	resource_name = "Influence"
-
+	type = TYPE_VECTOR2
 	# Set default color if none provided
 	if not color:
 		color = Color.WHITE
