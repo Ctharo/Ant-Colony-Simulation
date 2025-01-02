@@ -10,21 +10,13 @@ signal heatmap_requested(colony: Colony)
 
 
 func _init() -> void:
-	var spawn = add_button("Spawn Ants",
-		preload("res://ui/styles/spawn_normal.tres"),
-		preload("res://ui/styles/spawn_hover.tres"))
+	var spawn = add_button("Spawn Ants", ContextMenuStyles.ActionType.POSITIVE)
 
-	var info = add_button("Info",
-		preload("res://ui/styles/info_normal.tres"),
-		preload("res://ui/styles/info_hover.tres"))
+	var info = add_button("Info", ContextMenuStyles.ActionType.INFO)
 
-	var heatmap = add_button("Heatmap",
-		preload("res://ui/styles/info_normal.tres"),
-		preload("res://ui/styles/info_hover.tres"))
+	var heatmap = add_button("Heatmap", ContextMenuStyles.ActionType.DEFAULT)
 
-	var destroy = add_button("Destroy",
-		preload("res://ui/styles/destroy_normal.tres"),
-		preload("res://ui/styles/destroy_hover.tres"))
+	var destroy = add_button("Destroy", ContextMenuStyles.ActionType.DESTRUCTIVE)
 
 	spawn.pressed.connect(_on_spawn_pressed)
 	info.pressed.connect(_on_info_pressed)

@@ -6,17 +6,14 @@ signal spawn_foods_requested(position: Vector2)
 var spawn_position: Vector2
 
 func _init() -> void:
+	# Add food spawn button
+	var spawn_food = add_button("Spawn Food", ContextMenuStyles.ActionType.POSITIVE)
+	spawn_food.pressed.connect(_on_food_spawn_pressed)
 	# Add colony spawn button
-	var spawn = add_button("Spawn Colony",
-		preload("res://ui/styles/spawn_normal.tres"),
-		preload("res://ui/styles/spawn_hover.tres"))
+	var spawn = add_button("Spawn Colony", ContextMenuStyles.ActionType.POSITIVE)
 	spawn.pressed.connect(_on_spawn_pressed)
 
-	# Add food spawn button
-	var spawn_food = add_button("Spawn Food",
-		preload("res://ui/styles/spawn_normal.tres"),
-		preload("res://ui/styles/spawn_hover.tres"))
-	spawn_food.pressed.connect(_on_food_spawn_pressed)
+
 
 func show_at_position(pos: Vector2) -> void:
 	spawn_position = pos
