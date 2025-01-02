@@ -32,13 +32,13 @@ script = ExtResource("1_6htid")
 [node name="InfluenceManager" type="Node2D" parent="."]
 script = ExtResource("2_2mgsy")
 
-[node name="EvaluationSystem" type="Node2D" parent="InfluenceManager"]
+[node name="EvaluationSystem" type="Node2D" parent="."]
 script = ExtResource("3_iddyu")
 
-[node name="EvaluationController" type="Node2D" parent="InfluenceManager/EvaluationSystem"]
+[node name="EvaluationController" type="Node2D" parent="EvaluationSystem"]
 script = ExtResource("4_2cjl2")
 
-[node name="EvaluationCache" type="Node2D" parent="InfluenceManager/EvaluationSystem"]
+[node name="EvaluationCache" type="Node2D" parent="EvaluationSystem"]
 script = ExtResource("5_757gv")
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]

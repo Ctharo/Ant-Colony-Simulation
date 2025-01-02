@@ -193,11 +193,6 @@ func _process(delta: float) -> void:
 				"heat": cell.heat
 			})
 
-	for entity_id in _debug_settings:
-		var entity: Node2D = instance_from_id(entity_id)
-		if is_instance_valid(entity):
-			update_entity_heat(entity, entity.global_position, delta)
-
 	_boundary_repulsion_points.clear()
 	update_lock.unlock()
 
@@ -345,13 +340,13 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 #endregion
 
 #region Heat Management
-func update_entity_heat(entity: Node2D, p_position: Vector2, delta: float) -> void:
+func update_entity_heat(entity: Node2D, delta: float, factor: float = 1.0) -> void:
 	if not is_instance_valid(entity):
 		return
 
 	var entity_id: int = entity.get_instance_id()
-	var center_cell: Vector2i = world_to_cell(p_position)
-	var base_heat: float = STYLE.HEAT_PER_SECOND * delta
+	var center_cell: Vector2i = world_to_cell(entity.global_position)
+	var base_heat: float = STYLE.HEAT_PER_SECOND * delta * factor
 
 	update_lock.lock()
 	_update_movement_heat(entity_id, center_cell, base_heat)

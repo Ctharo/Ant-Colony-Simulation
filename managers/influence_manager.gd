@@ -16,7 +16,7 @@ var _target_recalc_timer: float = 0.0
 var entity: Node
 
 ## Reference to the evaluation system
-@onready var eval_system: EvaluationSystem = $EvaluationSystem
+@onready var eval_system: EvaluationSystem = $"../EvaluationSystem"
 
 ## Currently active influence profile
 var active_profile: InfluenceProfile:

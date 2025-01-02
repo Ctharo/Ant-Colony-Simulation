@@ -46,14 +46,16 @@ var foods: Foods :
 	set(value):
 		foods = value
 		foods.mark_as_carried()
-#region Managers
+		
+#region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
-@onready var evaluation_system: EvaluationSystem = $InfluenceManager/EvaluationSystem
-#endregion
-@export var influences: Array[Influence]
-
-## The navigation agent for this ant
+@onready var evaluation_system: EvaluationSystem = $EvaluationSystem
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
+@onready var sight_area: Area2D = %SightArea
+@onready var sense_area: Area2D = %SenseArea
+@onready var reach_area: Area2D = %ReachArea
+#endregion
+
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position
@@ -68,9 +70,7 @@ var task_update_timer: float = 0.0
 var logger: Logger
 #endregion
 
-@onready var sight_area: Area2D = %SightArea
-@onready var sense_area: Area2D = %SenseArea
-@onready var reach_area: Area2D = %ReachArea
+
 
 var dead: bool = false :
 	set(value):
@@ -112,24 +112,16 @@ func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
-	# Initialize components
-
-	# Initialize state
-	_initialize_state()
-
+	# Initialize influence manager
 	influence_manager.initialize(self)
 	influence_manager.add_profile(load("res://resources/influences/profiles/look_for_food.tres").duplicate())
 	influence_manager.add_profile(load("res://resources/influences/profiles/go_home.tres").duplicate())
-	# Setup navigation
+	# Register to heatmap
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
 
 	# Emit ready signal
 	spawned.emit()
-
-func _initialize_state() -> void:
-	energy_level = energy_max
-	health_level = health_max
 
 
 func _physics_process(delta: float) -> void:
@@ -137,7 +129,7 @@ func _physics_process(delta: float) -> void:
 	# Don't process movement if dead
 	if dead:
 		return
-
+	
 	# Energy consumption
 	if energy_level > 0:
 		var energy_cost = calculate_energy_cost(delta)
@@ -228,6 +220,9 @@ func _process_movement(delta: float) -> void:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
+	# emit pheromones
+	heatmap.update_entity_heat(self, delta, 1.0)
+	
 func calculate_energy_cost(delta: float) -> float:
 	var movement_cost = energy_drain * velocity.length()
 	return movement_cost * delta
