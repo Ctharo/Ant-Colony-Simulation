@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
 	# Game Settings
 	"difficulty": 1,  # 0: Easy, 1: Normal, 2: Hard
 	"master_volume": 1.0,
-	
+
 	# Simulation Settings
 	"ant_spawn_count": 5,
 	"food_spawn_count": 500,
@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
 	"obstacle_size_min": 15,
 	"obstacle_size_max": 70,
 	"terrain_seed": 0,
-	
+
 	# Debug Settings
 	"log_level": DebugLogger.LogLevel.TRACE,
 	"show_context": false
@@ -59,29 +59,29 @@ func is_initialized() -> bool:
 func get_setting(setting_name: String, default_value: Variant = null) -> Variant:
 	if not _is_initialized:
 		push_warning("Attempting to access setting '%s' before initialization" % setting_name)
-	
+
 	# If no default provided, use the one from DEFAULT_SETTINGS if it exists
 	if default_value == null and DEFAULT_SETTINGS.has(setting_name):
 		default_value = DEFAULT_SETTINGS[setting_name]
-		
+
 	return _settings.get(setting_name, default_value)
 
 ## Set a setting value and save to disk
 func set_setting(setting_name: String, value: Variant) -> void:
 	if not _is_initialized:
 		push_warning("Attempting to set setting '%s' before initialization" % setting_name)
-		
+
 	if _settings.get(setting_name) != value:
 		_settings[setting_name] = value
 		save_settings()
-		
+
 		# Apply special handling for certain settings
 		match setting_name:
 			"log_level":
 				DebugLogger.set_log_level(value)
 			"show_context":
 				DebugLogger.set_show_context(value)
-		
+
 		setting_changed.emit(setting_name, value)
 
 ## Apply default settings for any missing values
@@ -89,7 +89,7 @@ func ensure_defaults() -> void:
 	# Apply all default settings
 	for setting_name in DEFAULT_SETTINGS:
 		set_default_if_missing(setting_name, DEFAULT_SETTINGS[setting_name])
-	
+
 	# Set defaults for all logging categories
 	for category in DebugLogger.Category.keys():
 		set_default_if_missing("category_" + category.to_lower(), true)
@@ -132,7 +132,7 @@ func apply_debug_settings() -> void:
 	# Apply logger settings
 	DebugLogger.set_log_level(get_setting("log_level"))
 	DebugLogger.set_show_context(get_setting("show_context"))
-	
+
 	# Apply category settings
 	for category in DebugLogger.Category.keys():
 		var setting_key: String = "category_" + category.to_lower()
@@ -144,26 +144,26 @@ func apply_debug_settings() -> void:
 ## Loads settings from disk
 func load_settings() -> void:
 	var settings_path: String = get_settings_path()
-	
+
 	if not FileAccess.file_exists(settings_path):
 		logger.info("No settings file found, creating with defaults")
 		ensure_defaults()
 		return
-		
+
 	var file: FileAccess = FileAccess.open(settings_path, FileAccess.READ)
 	if not file:
 		push_error("Failed to open settings file: %s" % FileAccess.get_open_error())
 		ensure_defaults()
 		return
-		
+
 	var json_string: String = file.get_as_text()
 	var parse_result: Variant = JSON.parse_string(json_string)
-	
+
 	if parse_result == null:
 		push_error("Failed to parse settings JSON")
 		ensure_defaults()
 		return
-		
+
 	_settings = parse_result
 	ensure_defaults()  # Fill in any missing settings
 
@@ -171,12 +171,12 @@ func load_settings() -> void:
 func save_settings() -> void:
 	var settings_path: String = get_settings_path()
 	var json_string: String = JSON.stringify(_settings)
-	
+
 	var file: FileAccess = FileAccess.open(settings_path, FileAccess.WRITE)
 	if not file:
 		push_error("Failed to save settings: %s" % FileAccess.get_open_error())
 		return
-		
+
 	file.store_string(json_string)
 
 #endregion
