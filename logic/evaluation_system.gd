@@ -5,40 +5,49 @@ extends Node2D
 ## Evaluation controller for batching and rate limiting
 @onready var _controller: EvaluationController = $EvaluationController
 @onready var _cache: EvaluationCache = $EvaluationCache
+
+## Registered logic expressions
 var _registered_logic: Array[Logic] = []
 
-## Map of expression resource ID to entity to state
+## Map of expression resource ID to evaluation state
 var _states: Dictionary = {}
-## Evaluation cache system
-## Track last evaluation time for expressions
-var _last_eval_time: Dictionary = {}
-## Track last significant change time for expressions
-var _last_change_time: Dictionary = {}
-
 
 ## Cache statistics tracker
 var _stats: Dictionary = {}
+
 ## Entity for evaluations
 var entity: Node
+
 ## Logger instance
 var logger: Logger
+
 ## Performance monitoring enabled state
 var _perf_monitor_enabled := false
+
 ## Threshold for logging slow evaluations (ms)
 var _slow_threshold_ms := 1.0
-
 #endregion
 
+#region Expression State
 class ExpressionState:
 	var expression: Expression
 	var compiled_expression: String
 	var logic: Logic  # Store reference to the Logic object
 	var is_parsed: bool = false
+	
+	# Runtime state
+	var last_value: Variant
+	var last_eval_time: float = 0.0
+	var last_change_time: float = 0.0
+	var cumulative_change: float = 0.0
+	var cumulative_vector_change: Vector2 = Vector2.ZERO
 
 	func _init(p_logic: Logic) -> void:
 		expression = Expression.new()
 		compiled_expression = p_logic.expression_string
 		logic = p_logic
+		last_eval_time = Time.get_ticks_msec() / 1000.0
+		last_change_time = last_eval_time
 
 	func parse(variables: PackedStringArray) -> Error:
 		if is_parsed:
@@ -78,6 +87,60 @@ class ExpressionState:
 
 	func has_error() -> bool:
 		return expression.has_execute_failed()
+		
+	func is_significant_change(new_value: Variant) -> bool:
+		if last_value == null or logic.change_threshold <= 0.0:
+			return last_value != new_value
+			
+		match typeof(new_value):
+			TYPE_FLOAT:
+				cumulative_change += abs(new_value - last_value)
+				if cumulative_change > logic.change_threshold:
+					cumulative_change = 0.0
+					return true
+				return false
+				
+			TYPE_VECTOR2:
+				var old_vec := last_value as Vector2
+				var new_vec := new_value as Vector2
+				cumulative_vector_change.x += abs(new_vec.x - old_vec.x)
+				cumulative_vector_change.y += abs(new_vec.y - old_vec.y)
+				if cumulative_vector_change.x > logic.change_threshold or \
+				   cumulative_vector_change.y > logic.change_threshold:
+					cumulative_vector_change = Vector2.ZERO
+					return true
+				return false
+				
+			_:
+				return last_value != new_value
+				
+	func update_value(new_value: Variant, current_time: float) -> bool:
+		var significant = is_significant_change(new_value)
+		last_value = new_value
+		if significant:
+			last_change_time = current_time
+		return significant
+		
+	func mark_evaluated(current_time: float) -> void:
+		last_eval_time = current_time
+		
+	func should_evaluate(current_time: float) -> bool:
+		var time_since_last = current_time - last_eval_time
+		
+		# Must evaluate if max interval exceeded
+		if logic.max_eval_interval > 0 and time_since_last >= logic.max_eval_interval:
+			return true
+			
+		# Can't evaluate if min interval not met
+		if logic.min_eval_interval > 0 and time_since_last < logic.min_eval_interval:
+			return false
+			
+		# Can evaluate if no min interval set
+		return logic.min_eval_interval <= 0
+
+	func has_changed_since(time: float) -> bool:
+		return last_change_time > time
+#endregion
 
 #region Cache Statistics Structure
 class ExpressionStats:
@@ -105,7 +168,8 @@ func _process(_delta: float) -> void:
 
 	# Check all registered logic for evaluation needs
 	for logic in _registered_logic:
-		if not logic.should_evaluate(current_time):
+		var state = _states[logic.id]
+		if not state.should_evaluate(current_time):
 			continue
 
 		if logic.needs_immediate_eval():
@@ -129,7 +193,6 @@ func get_or_create_state(expression: Logic) -> ExpressionState:
 	if not _states.has(expression.id):
 		_states[expression.id] = ExpressionState.new(expression)
 		_registered_logic.append(expression)
-
 
 	return _states[expression.id]
 
@@ -165,49 +228,47 @@ func register_expression(expression: Logic) -> void:
 		_cache.add_dependency(expression.id, nested.id)
 
 	logger.trace("Completed registration of %s" % expression.id)
+#endregion
 
+#region Expression Evaluation
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
-
 	var current_time = Time.get_ticks_msec() / 1000.0
-	var last_time = _last_eval_time.get(expression.id, 0.0)
-	var last_change = _last_change_time.get(expression.id, 0.0)
-	var time_since_eval = current_time - last_time
+	var state: ExpressionState = _states[expression.id]
 
 	# Check if we can use cached value
 	if _cache.has_value(expression.id) and not force_update:
 		# Handle immediate evaluation needs
 		if expression.needs_immediate_eval():
-			if time_since_eval < expression.max_eval_interval:
+			if not state.should_evaluate(current_time):
 				return _cache.get_value(expression.id)
 		# Handle lazy evaluation
 		elif expression.is_lazy_evaluated():
-			if not _have_dependencies_changed(expression, last_change):
+			if not _have_dependencies_changed(expression, state.last_change_time):
 				return _cache.get_value(expression.id)
 		# Handle normal evaluation
-		elif time_since_eval < expression.min_eval_interval:
+		elif not state.should_evaluate(current_time):
 			return _cache.get_value(expression.id)
 
 	# Calculate new value
-	_last_eval_time[expression.id] = current_time
 	var result = _calculate(expression.id)
 
 	# Update cache if value changed significantly
-	var old_value = _cache.get_value(expression.id)
-	if expression._is_significant_change(old_value, result):
-		_last_change_time[expression.id] = current_time
+	if state.update_value(result, current_time):
 		_cache.set_value(expression.id, result)
 		logger.trace("Value changed significantly")
+		expression.significant_value_change.emit(result, expression.id)
 	else:
 		_cache.set_value(expression.id, result, false)  # Update without triggering dependencies
 		logger.trace("Value updated (not significant)")
+		expression.value_changed.emit(result, expression.id)
 
-	expression.mark_evaluated()
+	state.mark_evaluated(current_time)
 	return result
 
 func _have_dependencies_changed(expression: Logic, since_time: float) -> bool:
 	for nested in expression.nested_expressions:
-		var dep_last_change = _last_change_time.get(nested.id, 0.0)
-		if dep_last_change > since_time:
+		var state: ExpressionState = _states[nested.id]
+		if state.has_changed_since(since_time):
 			logger.trace("Dependency %s changed since last eval" % nested.id)
 			return true
 	return false
@@ -307,14 +368,14 @@ func _calculate(expression_id: String) -> Variant:
 		logger.debug("Final result for %s = %s" % [expression_id, result])
 
 	return result
+#endregion
 
-## Get cache statistics for a specific expression
+#region Statistics
 func get_expression_stats(id: String) -> Dictionary:
 	if id in _stats:
 		return _stats[id].to_dictionary()
 	return {}
 
-## Get cache statistics for all expressions
 func get_cache_stats() -> Dictionary:
 	var total_hits := 0
 	var total_misses := 0
@@ -340,7 +401,6 @@ func get_cache_stats() -> Dictionary:
 #endregion
 
 #region Signal Handlers
-## Handle value changes in expressions
 func _on_expression_value_changed(_value: Variant, expression_id: String) -> void:
 	_cache.invalidate_dependents(expression_id)
 
