@@ -97,9 +97,14 @@ func update_movement_target() -> void:
 
 ## Calculates the new target position based on influences
 func _calculate_target_position() -> Vector2:
+	if not entity or not active_profile:
+		return Vector2.ZERO
+	
 	# Get new target from influence system
-	var target_pos = calculate_target_position(TARGET_DISTANCE)
-
+	var target_pos = entity.global_position + _calculate_weighted_direction(active_profile.influences) * TARGET_DISTANCE
+	if not target_pos:
+		return Vector2.ZERO
+	
 	# Validate target is within navigation bounds
 	var nav_region = entity.get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
 	if nav_region:
@@ -176,17 +181,9 @@ func _on_active_profile_changed() -> void:
 #endregion
 
 #region Calculations
-## Calculates a target position based on weighted influences
-func calculate_target_position(distance: float) -> Vector2:
-	if not entity or not active_profile:
-		return Vector2.ZERO
-
-	var direction = calculate_weighted_direction(active_profile.influences)
-	var actual_distance = distance #entity.rng.randfn(distance, distance * 0.33) # deviation from distance
-	return entity.global_position + direction * actual_distance
 
 ## Calculates the weighted direction from all influences
-func calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
+func _calculate_weighted_direction(influences: Array[Influence]) -> Vector2:
 	if not eval_system or not influences:
 		return Vector2.ZERO
 

@@ -55,19 +55,19 @@ static var source_filters: Dictionary = {}
 ## Enabled categories (whitelist)
 static var enabled_categories := {
 	Category.TASK: false,
-	Category.LOGIC: true,
+	Category.LOGIC: false,
 	Category.INFLUENCE: false,
-	Category.MOVEMENT: true,
-	Category.ACTION: true,
+	Category.MOVEMENT: false,
+	Category.ACTION: false,
 	Category.BEHAVIOR: false,
 	Category.CONDITION: false,
 	Category.PROPERTY: false,
 	Category.CONTEXT: false,
-	Category.ENTITY: true,
+	Category.ENTITY: false,
 	Category.TRANSITION: false,
 	Category.HIERARCHY: false,
 	Category.UI: false,
-	Category.PROGRAM: true, # Should always be on?
+	Category.PROGRAM: false,
 	Category.DATA: false
 }
 #endregion
