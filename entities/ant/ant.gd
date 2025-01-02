@@ -47,8 +47,10 @@ var foods: Foods :
 		foods = value
 		foods.mark_as_carried()
 #region Managers
-@onready var evaluation_system: EvaluationSystem = $EvaluationSystem
+@onready var influence_manager: InfluenceManager = $InfluenceManager
+@onready var evaluation_system: EvaluationSystem = $InfluenceManager/EvaluationSystem
 #endregion
+@export var influences: Array[Influence]
 
 ## The navigation agent for this ant
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
@@ -81,7 +83,6 @@ var dead: bool = false :
 var vision_range: float = 50.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
-var move_resource: Logic
 const ENERGY_DRAIN_FACTOR = 0.000005
 var energy_drain: float :
 	get:
@@ -116,9 +117,9 @@ func _ready() -> void:
 	# Initialize state
 	_initialize_state()
 
-	evaluation_system.initialize(self)
-	move_resource = load("res://resources/influences/move_profile1.tres")
-	evaluation_system.register_expression(move_resource)
+	influence_manager.initialize(self)
+	influence_manager.add_profile(load("res://resources/influences/profiles/look_for_food.tres").duplicate())
+	influence_manager.add_profile(load("res://resources/influences/profiles/go_home.tres").duplicate())
 	# Setup navigation
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
@@ -246,8 +247,10 @@ func _should_recalculate_target() -> bool:
 	return false
 
 func _calculate_new_target() -> Vector2:
+	const TARGET_DISTANCE = 50.0
+
 	# Get new target from influence system
-	var target_pos = evaluation_system.get_value(move_resource)
+	var target_pos = influence_manager.calculate_target_position(TARGET_DISTANCE)
 
 	# Validate target is within navigation bounds
 	var nav_region = get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
@@ -255,7 +258,7 @@ func _calculate_new_target() -> Vector2:
 		var map_rid = nav_region.get_navigation_map()
 		target_pos = NavigationServer2D.map_get_closest_point(map_rid, target_pos)
 
-	return target_pos if target_pos else Vector2.ZERO
+	return target_pos
 
 
 func calculate_energy_cost(delta: float) -> float:

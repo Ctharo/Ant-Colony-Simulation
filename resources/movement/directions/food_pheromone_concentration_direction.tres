@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bs6p7yvt85e5g"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_5o055"]
+
+[resource]
+script = ExtResource("1_5o055")
+name = ""
+expression_string = ""
+nested_expressions = Array[ExtResource("1_5o055")]([])
+description = ""
+type = 5
+min_eval_interval = 0.5
+change_threshold = 0.0

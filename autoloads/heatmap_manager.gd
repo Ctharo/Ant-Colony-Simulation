@@ -172,7 +172,6 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 #endregion
 
 #region Process and Draw
-#region Process and Draw
 func _process(delta: float) -> void:
 	update_timer += delta
 	if update_timer <= update_interval:
@@ -188,27 +187,23 @@ func _process(delta: float) -> void:
 			var world_pos = cell_to_world(world_cell)
 			var cell = chunk.cells[local_pos]
 
-			if cell.heat > 0:  # Only index cells with heat
-				# Store both the world position and chunk data for efficient lookup
-				_spatial_index.insert(world_pos, {
-					"chunk_pos": chunk_pos,
-					"local_pos": local_pos,
-					"heat": cell.heat,
-					"world_pos": world_pos  # Store actual world position for distance calculations
-				})
+			_spatial_index.insert(world_pos, {
+				"chunk_pos": chunk_pos,
+				"local_pos": local_pos,
+				"heat": cell.heat
+			})
 
-	update_lock.unlock()
-
-	# Update entity heat outside the lock
 	for entity_id in _debug_settings:
 		var entity: Node2D = instance_from_id(entity_id)
 		if is_instance_valid(entity):
 			update_entity_heat(entity, entity.global_position, delta)
 
+	_boundary_repulsion_points.clear()
+	update_lock.unlock()
+
 	if _debug_settings.values().has(true):
 		queue_redraw()
 	update_timer = 0.0
-#endregion
 
 func _draw() -> void:
 	if not camera:
@@ -271,7 +266,6 @@ func _get_cell_color(t: float, pos: Vector2) -> Color:
 #region Heat Direction Calculation
 func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	if not is_instance_valid(entity):
-		logger.error("Invalid entity passed to get_heat_direction")
 		return Vector2.ZERO
 
 	var entity_id: int = entity.get_instance_id()
@@ -279,50 +273,22 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
 
-	logger.debug("Getting heat direction for entity %s at pos %s" % [entity.name, world_pos])
-
-	# Check if we have any heat data before proceeding
-	if _spatial_index.is_empty():
-		logger.debug("Spatial index is empty")
-		return Vector2.ZERO
-
-	var query_bounds = QuadTree.QuadTreeBounds.new(
-		world_pos,
-		Vector2.ONE * STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 4  # Increased search radius
-	)
-
-	var nearby_cells = _spatial_index.query_range(query_bounds)
-	logger.debug("Found %d nearby cells" % nearby_cells.size())
-
 	update_lock.lock()
-
-	if nearby_cells.is_empty():
-		update_lock.unlock()
-		return Vector2.ZERO
 
 	# Boundary repulsion
 	if entity is Colony:
 		var boundary_result: Dictionary = _calculate_boundary_repulsion(center_cell, world_pos)
-		if boundary_result.weight > 0:
-			direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
-			total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
+		direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
+		total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
 
 	# Heat avoidance
 	var heat_result: Dictionary = _calculate_heat_avoidance(center_cell, world_pos, entity_id)
-	if heat_result.weight > 0:
-		direction += heat_result.direction
-		total_weight += heat_result.weight
+	direction += heat_result.direction
+	total_weight += heat_result.weight
 
 	update_lock.unlock()
 
-	if total_weight <= 0.0:
-		return Vector2.ZERO
-
-	# Normalize the direction vector
-	direction = direction.normalized() if direction.length() > 0 else Vector2.ZERO
-
-	logger.debug("Heat direction for %s: %s (weight: %f)" % [entity.name, direction, total_weight])
-	return direction
+	return direction / total_weight if total_weight > 0.0 else Vector2.ZERO
 
 func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
@@ -356,17 +322,8 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 	)
 
 	var nearby_cells = _spatial_index.query_range(query_bounds)
-	logger.debug("Heat avoidance calculation - Found %d cells near %s" % [nearby_cells.size(), world_pos])
-	var heat_found: int = 0
-
 	for cell_data in nearby_cells:
-		if not _chunks.has(cell_data.chunk_pos):
-			continue
-
 		var chunk: HeatChunk = _chunks[cell_data.chunk_pos]
-		if not chunk.cells.has(cell_data.local_pos):
-			continue
-
 		var cell_obj: HeatCell = chunk.cells[cell_data.local_pos]
 		var cell_pos: Vector2 = cell_to_world(chunk_to_world_cell(cell_data.chunk_pos, cell_data.local_pos))
 
@@ -376,21 +333,14 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 				heat += cell_obj.sources[source_id]
 
 		if heat > 0:
-			heat_found += 1
+			var away_vector: Vector2 = (world_pos - cell_pos).normalized()
+			direction += away_vector * heat
+			total_weight += heat
 
-			var to_cell: Vector2 = cell_pos - world_pos
-			var distance: float = to_cell.length()
-			if distance > 0:  # Prevent division by zero
-				var weight: float = heat / (1.0 + distance * 0.1)  # Distance falloff
-				direction += to_cell.normalized() * weight
-				total_weight += weight
-	logger.debug("Found %d cells with heat" % heat_found)
+	if total_weight > 0.0:
+		direction /= total_weight
 
-	return {
-		"direction": direction,
-		"weight": total_weight
-	}
-
+	return {"direction": direction, "weight": total_weight}
 
 #endregion
 
