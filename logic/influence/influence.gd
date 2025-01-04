@@ -1,5 +1,6 @@
 class_name Influence
 extends Logic
+## Logic wrapper adding some additional properties and setting some defaults
 
 #region Properties
 ## Debug visualization color
@@ -12,4 +13,4 @@ func _init():
 	type = TYPE_VECTOR2
 	# Set default color if none provided
 	if not color:
-		color = Color.WHITE
+		color = Color(randf(),randf(),randf())

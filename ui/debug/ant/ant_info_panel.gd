@@ -134,35 +134,47 @@ func update_legend(influences: Array) -> void:
 	var separator = HSeparator.new()
 	influences_legend.add_child(separator)
 
-	# Get influence manager
-	var influence_manager: InfluenceManager = current_ant.action_manager._states[current_ant.action_manager._current_action_id].influence_manager
+	# Get influence manager and eval system for weights
+	var influence_manager: InfluenceManager = current_ant.influence_manager
+	var eval_system = influence_manager.eval_system
 
-	# Calculate total weight first
-	var total_weight = 0.0
-	var weights = []
-
-	# First pass: calculate total weight
+	# Calculate total magnitude for normalization
+	var total_magnitude = 0.0
+	var influence_data = []
+	
+	# First pass: collect data and calculate total magnitude
 	for influence in influences:
-		var weight = influence_manager.eval_system.get_value(influence.weight)
-		weights.append(weight)
-		total_weight += weight
-
-	# Second pass: add legend entries with normalized weights
-	for i in range(influences.size()):
-		var influence = influences[i]
-		var weight = weights[i]
-		var normalized_weight = weight / total_weight if total_weight > 0 else 0.0
-
-		# Skip influences below threshold
-		if normalized_weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+		if _should_ignore_influence(influence):
 			continue
-
+			
+		var direction = eval_system.get_value(influence)
+		var magnitude = direction.length()
+		
+		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+			
+		total_magnitude += magnitude
+		influence_data.append({
+			"influence": influence,
+			"magnitude": magnitude
+		})
+	
+	# Sort by magnitude for consistent ordering
+	influence_data.sort_custom(
+		func(a, b): return a.magnitude > b.magnitude
+	)
+	
+	# Second pass: add legend entries with normalized weights
+	for data in influence_data:
+		var influence = data.influence
+		var normalized_weight = data.magnitude / total_magnitude if total_magnitude > 0 else 0.0
+		
 		add_legend_entry(
 			influence.name,
-			influence.color if not _should_ignore_influence(influence) else Color(Color.WHITE, 0),
+			influence.color,
 			normalized_weight
 		)
-
+		
 # Modified legend entry function with weight display
 func add_legend_entry(p_name: String, color: Color, normalized_weight: float) -> void:
 	var entry = HBoxContainer.new()
@@ -175,9 +187,9 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 		color_rect.color = color
 		entry.add_child(color_rect)
 	else:
-		var s = Control.new()
-		s.custom_minimum_size = Vector2(17, 0)
-		entry.add_child(s)
+		var spacer = Control.new()
+		spacer.custom_minimum_size = Vector2(17, 0)
+		entry.add_child(spacer)
 
 	# Spacing
 	var spacer = Control.new()
@@ -186,7 +198,7 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 
 	# Name label
 	var name_label = Label.new()
-	name_label.text = p_name.trim_suffix(" influence").capitalize()
+	name_label.text = p_name.trim_suffix("_influence").capitalize()
 	entry.add_child(name_label)
 
 	# Weight label with fixed width for alignment
@@ -195,12 +207,12 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	# Display percentage with one decimal place
 	weight_label.text = "%.1f%%" % (normalized_weight * 100)
-
+	
 	# Add some spacing before the percentage
 	var weight_spacer = Control.new()
 	weight_spacer.custom_minimum_size = Vector2(10, 0)
 	entry.add_child(weight_spacer)
-
+	
 	entry.add_child(weight_label)
 
 	influences_legend.add_child(entry)

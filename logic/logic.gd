@@ -18,7 +18,7 @@ extends Resource
 @export var description: String
 
 ## Expected return type of the expression
-@export var type: Variant.Type = TYPE_BOOL
+@export var type: Variant.Type = TYPE_FLOAT
 
 ## Minimum evaluation interval (in seconds). Default 0.016 (16ms)
 @export_range(0.016, 1.0, 0.001, "or_greater") var min_eval_interval: float = 0.016:

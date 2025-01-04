@@ -209,43 +209,49 @@ func _update_bar_color(bar: ProgressBar, value: float, normal_color: Color) -> v
 
 ## Clear and update the influences display
 func _update_influences() -> void:
-	# Clear existing influences
+	# Clear existing entries
 	for child in influences_container.get_children():
-		if child is HBoxContainer:  # Skip the header
-			child.queue_free()
-
-	if not current_ant:
-		return
-
-	var active_profile = current_ant.influence_manager.active_profile
-
-	# Add influence entries
-	for influence in active_profile.influences:
-		_add_influence_entry(influence)
+		child.queue_free()
+		
+	# Calculate total magnitude
+	var total_magnitude = 0.0
+	for influence in current_ant.influence_manager.active_profile.influences:
+		var magnitude = influence.get_value(current_ant.evaluation_system).length()
+		total_magnitude += magnitude
+	
+	# Add entries with relative weights
+	for influence in current_ant.influence_manager.active_profile.influences:
+		_add_influence_entry(influence, total_magnitude)
 
 ## Add a single influence entry to the influences container
-func _add_influence_entry(influence: Influence) -> void:
+func _add_influence_entry(influence: Influence, total_magnitude: float) -> void:
 	var entry = HBoxContainer.new()
-
+	
 	# Color indicator
 	var color_rect = ColorRect.new()
 	color_rect.custom_minimum_size = Vector2(16, 16)
 	color_rect.color = influence.color
 	entry.add_child(color_rect)
-
-	# Name and value labels
+	
+	# Add spacing after color
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(5, 0)
+	entry.add_child(spacer)
+	
+	# Name label
 	var name_label = Label.new()
-	name_label.text = influence.name.trim_suffix(" influence").capitalize()
+	name_label.text = influence.name.trim_suffix("_influence").capitalize()
 	entry.add_child(name_label)
-
+	
 	# Weight percentage label
 	var weight_label = Label.new()
-	var weight = influence.weight.get_value(current_ant.evaluation_system)
-	weight_label.text = "%.1f%%" % (weight * 100)
+	var magnitude = influence.get_value(current_ant.evaluation_system).length()
+	var relative_weight = magnitude / total_magnitude if total_magnitude > 0 else 0.0
+	weight_label.text = "%.1f%%" % (relative_weight * 100)
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weight_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	entry.add_child(weight_label)
-
+	
 	influences_container.add_child(entry)
 #endregion
 

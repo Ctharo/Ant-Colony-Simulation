@@ -17,6 +17,8 @@ const STYLE = {
 	}
 }
 
+var use_best_direction: bool = true  # Toggle for using best direction logic
+
 var _visualization_enabled: bool = false
 var camera: Camera2D
 #endregion
@@ -178,22 +180,56 @@ func update_movement_target() -> void:
 			entity.move_to(new_target)
 			logger.trace("New target set: %s" % new_target)
 
+
 func _calculate_target_position() -> Vector2:
 	if not entity or not active_profile:
 		return Vector2.ZERO
 	
-	# Get new target from influence system
-	var target_pos = entity.global_position + _calculate_direction(active_profile.influences) * TARGET_DISTANCE
-	if not target_pos:
+	var base_direction = _calculate_direction(active_profile.influences)
+	if base_direction == Vector2.ZERO:
 		return Vector2.ZERO
-	
-	# Validate target is within navigation bounds
+		
 	var nav_region = entity.get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
-	if nav_region:
-		var map_rid = nav_region.get_navigation_map()
-		target_pos = NavigationServer2D.map_get_closest_point(map_rid, target_pos)
+	if not nav_region:
+		return entity.global_position + base_direction * TARGET_DISTANCE
+		
+	# Choose between simple or best direction calculation
+	if use_best_direction:
+		return _get_best_navigable_target(base_direction, nav_region)
+	else:
+		return _get_simple_navigable_target(base_direction, nav_region)
 
-	return target_pos
+func _get_simple_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
+	var target_pos = entity.global_position + direction * TARGET_DISTANCE
+	return NavigationServer2D.map_get_closest_point(nav_region.get_navigation_map(), target_pos)
+
+func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
+	var map_rid = nav_region.get_navigation_map()
+	var test_angles = [0, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
+	var best_target: Vector2 = entity.global_position
+	var best_distance: float = 0.0
+	
+	for angle in test_angles:
+		var test_direction = direction.rotated(angle)
+		var test_target = entity.global_position + test_direction * TARGET_DISTANCE
+		var navigable_point = NavigationServer2D.map_get_closest_point(map_rid, test_target)
+		
+		if NavigationServer2D.map_get_path(
+			map_rid, 
+			entity.global_position,
+			navigable_point,
+			true
+		).size() > 0:
+			var dist_to_original = (test_target - navigable_point).length()
+			
+			if best_distance == 0.0 or dist_to_original < best_distance:
+				best_target = navigable_point
+				best_distance = dist_to_original
+				
+				if dist_to_original < 5.0:
+					break
+	
+	return best_target if best_distance > 0.0 else entity.global_position
 
 func _calculate_direction(influences: Array[Logic]) -> Vector2:
 	if not eval_system or not influences:
@@ -240,8 +276,6 @@ func draw_influences() -> void:
 	if not active_profile:
 		return
 		
-	var ant_pos = camera.global_to_ui(entity.global_position)
-	
 	# Collect influence data and calculate total magnitude
 	var total_magnitude = 0.0
 	var influence_data = []
@@ -258,10 +292,13 @@ func draw_influences() -> void:
 			
 		total_magnitude += magnitude
 		
+		# Check for existing color in meta, create if not exists
+		var influence_color: Color = influence.color
+	
 		influence_data.append({
 			"magnitude": magnitude,
 			"direction": direction.normalized(),
-			"color": Color(randi_range(0, 244), randi_range(0, 244), randi_range(0, 244)),
+			"color": influence_color,
 			"name": influence.name
 		})
 	
@@ -283,8 +320,8 @@ func draw_influences() -> void:
 	# Draw overall influence arrow
 	var overall_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
 	draw_arrow(
-		ant_pos,
-		ant_pos + total_direction * overall_length,
+		entity.global_position,
+		entity.global_position + total_direction * overall_length,
 		STYLE.INFLUENCE_SETTINGS.OVERALL_COLOR,
 		STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE,
 		STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
@@ -293,9 +330,9 @@ func draw_influences() -> void:
 	# Draw individual influence arrows
 	for data in influence_data:
 		var arrow_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * data.normalized_weight * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
-		var arrow_end = ant_pos + data.direction * arrow_length
+		var arrow_end = entity.global_position + data.direction * arrow_length
 		draw_arrow(
-			ant_pos,
+			entity.global_position,
 			arrow_end,
 			data.color,
 			STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH,
@@ -327,4 +364,4 @@ func is_visualization_enabled() -> bool:
 	return _visualization_enabled
 
 func toggle_visualization():
-	_visualization_enabled = !_visualization_enabled
+	set_visualization_enabled(!_visualization_enabled)

@@ -19,10 +19,19 @@ enum MoveState {
 }
 
 #endregion
+#region Movement
+const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
+const STUCK_TIME_THRESHOLD: float = 2.0  # Time before considering ant as stuck
+
+var _last_position: Vector2
+var _time_at_position: float = 0.0
+var _was_stuck: bool = false
+
 ## Current movement state
 var move_state: MoveState = MoveState.IDLE
 ## Movement target position
 var movement_target: Vector2
+#endregion
 #region Constants
 const DEFAULT_CONFIG_ROOT = "res://config/"
 #endregion
@@ -135,13 +144,15 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
+	_process_pheromones(delta)
+
 	# Try to harvest food if we have capacity
 	if foods.mass < carry_max:
 		if harvest_food():
 			return  # Skip movement this frame if we harvested food
 
 	_process_movement(delta)
-
+	
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
 	# Update movement state
@@ -200,16 +211,24 @@ func harvest_food() -> bool:
 func _process_movement(delta: float) -> void:
 	var current_pos = global_position
 	
-	# Check if we need a new target - delegated to InfluenceManager
+	# Stuck detection logic
+	if _check_if_stuck(current_pos, delta):
+		# Enable best direction pathfinding
+		influence_manager.use_best_direction = true
+		_was_stuck = true
+	else:
+		# If not stuck, disable best direction
+		influence_manager.use_best_direction = false
+		_was_stuck = false
+	
+	# Rest of original movement code
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
 	
-	# If we have no valid path, stop moving
 	if not nav_agent.is_target_reachable():
 		velocity = Vector2.ZERO
 		return
 		
-	# Calculate movement
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
 	var target_velocity = move_direction * movement_rate
@@ -220,8 +239,33 @@ func _process_movement(delta: float) -> void:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
+func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
+	if not _last_position:
+		_last_position = current_pos
+		return false
+	
+	# Check if we've moved less than the threshold
+	if current_pos.distance_to(_last_position) < STUCK_THRESHOLD:
+		_time_at_position += delta
+		
+		# Check if we've been stuck for longer than the threshold
+		if _time_at_position >= STUCK_TIME_THRESHOLD:
+			return true
+	else:
+		# Reset stuck timer if we've moved
+		_time_at_position = 0.0
+		_last_position = current_pos
+	
+	return false
+
+func _process_pheromones(delta: float):
+	var pheromone_factor: float = 1.0
+	
+	if foods.mass > 0:
+		pheromone_factor += 2.0
+		
 	# emit pheromones
-	heatmap.update_entity_heat(self, delta, 1.0)
+	heatmap.update_entity_heat(self, delta, pheromone_factor)
 	
 func calculate_energy_cost(delta: float) -> float:
 	var movement_cost = energy_drain * velocity.length()
@@ -317,8 +361,6 @@ func get_nearest_food_direction() -> Vector2:
 		return global_position.direction_to(nearest_food.global_position)
 	return Vector2.ZERO
 
-func show_influence_vectors(_enabled: bool):
-	pass
 
 func show_nav_path(enabled: bool):
 	nav_agent.debug_enabled = enabled

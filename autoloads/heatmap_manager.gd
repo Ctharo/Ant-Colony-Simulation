@@ -3,11 +3,11 @@ extends Node2D
 
 #region Constants
 const STYLE = {
-	"CELL_SIZE": 15,
+	"CELL_SIZE": 25,
 	"CHUNK_SIZE": 16,
 	"MAX_HEAT": 100.0,
 	"DECAY_RATE":  0.00025,
-	"HEAT_RADIUS": 1,
+	"HEAT_RADIUS": 2,
 	"HEAT_PER_SECOND": 10.0,
 	"BOUNDARY_HEAT_MULTIPLIER": 8.0,
 	"BOUNDARY_CHECK_RADIUS": 3,
@@ -265,25 +265,70 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 
 	var entity_id: int = entity.get_instance_id()
 	var center_cell: Vector2i = world_to_cell(world_pos)
+	
+	update_lock.lock()
+	
+	# Get base heat direction
+	var base_result = _calculate_base_heat_direction(center_cell, world_pos, entity_id)
+	if base_result.weight == 0.0:
+		update_lock.unlock()
+		return Vector2.ZERO
+		
+	# Try different angles if base direction isn't navigable
+	var best_direction = _find_best_navigable_direction(
+		base_result.direction,
+		world_pos,
+		base_result.weight
+	)
+	
+	update_lock.unlock()
+	return best_direction
+
+func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, base_weight: float) -> Vector2:
+	# If base direction is already navigable, use it
+	var base_target = world_pos + base_direction * STYLE.CELL_SIZE * 2
+	if is_cell_navigable(base_target):
+		return base_direction
+		
+	# Try different angles to find a navigable direction
+	var test_angles = [PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
+	var best_direction = Vector2.ZERO
+	var smallest_angle = PI * 2  # Start with maximum possible angle
+	
+	for angle in test_angles:
+		var test_direction = base_direction.rotated(angle)
+		var test_target = world_pos + test_direction * STYLE.CELL_SIZE * 2
+		
+		if is_cell_navigable(test_target):
+			var current_angle = abs(angle)
+			if current_angle < smallest_angle:
+				smallest_angle = current_angle
+				best_direction = test_direction
+				
+				# If this is a small deviation, use it immediately
+				if current_angle <= PI/8:
+					break
+	
+	return best_direction if best_direction != Vector2.ZERO else base_direction
+
+func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2, entity_id: int) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
 
-	update_lock.lock()
-
 	# Boundary repulsion
-	if entity is Colony:
-		var boundary_result: Dictionary = _calculate_boundary_repulsion(center_cell, world_pos)
-		direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
-		total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
+	var boundary_result = _calculate_boundary_repulsion(center_cell, world_pos)
+	direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
+	total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
 
 	# Heat avoidance
-	var heat_result: Dictionary = _calculate_heat_avoidance(center_cell, world_pos, entity_id)
+	var heat_result = _calculate_heat_avoidance(center_cell, world_pos, entity_id)
 	direction += heat_result.direction
 	total_weight += heat_result.weight
 
-	update_lock.unlock()
+	if total_weight > 0.0:
+		direction = direction / total_weight
 
-	return direction / total_weight if total_weight > 0.0 else Vector2.ZERO
+	return {"direction": direction, "weight": total_weight}
 
 func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
@@ -313,7 +358,7 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 
 	var query_bounds = QuadTree.QuadTreeBounds.new(
 		world_pos,
-		Vector2.ONE * STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 2
+		Vector2.ONE * STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 3
 	)
 
 	var nearby_cells = _spatial_index.query_range(query_bounds)
