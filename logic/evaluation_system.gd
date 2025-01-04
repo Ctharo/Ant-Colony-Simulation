@@ -234,7 +234,6 @@ func register_expression(expression: Logic) -> void:
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	var current_time = Time.get_ticks_msec() / 1000.0
 	var state: ExpressionState = _states[expression.id]
-
 	# Check if we can use cached value
 	if _cache.has_value(expression.id) and not force_update:
 		# Handle immediate evaluation needs

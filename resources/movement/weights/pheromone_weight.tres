@@ -5,9 +5,11 @@
 [resource]
 script = ExtResource("1_qkibf")
 name = "pheromone weight"
-expression_string = "min(1.0, heatmap.get_heat_at_position(self, global_position))"
+expression_string = "1.0"
 nested_expressions = Array[ExtResource("1_qkibf")]([])
 description = ""
 type = 3
 min_eval_interval = 0.5
+max_eval_interval = 0.5
+evaluate_when_idle = false
 change_threshold = 0.0

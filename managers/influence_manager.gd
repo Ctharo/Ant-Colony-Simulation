@@ -17,7 +17,7 @@ const STYLE = {
 	}
 }
 
-var use_best_direction: bool = true  # Toggle for using best direction logic
+var use_best_direction: bool = false  
 
 var _visualization_enabled: bool = false
 var camera: Camera2D
@@ -205,13 +205,13 @@ func _get_simple_navigable_target(direction: Vector2, nav_region: NavigationRegi
 
 func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
 	var map_rid = nav_region.get_navigation_map()
-	var test_angles = [0, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
+	var test_angles = [0,PI/16, -PI/16, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
 	var best_target: Vector2 = entity.global_position
 	var best_distance: float = 0.0
 	
 	for angle in test_angles:
 		var test_direction = direction.rotated(angle)
-		var test_target = entity.global_position + test_direction * TARGET_DISTANCE
+		var test_target = entity.global_position + test_direction * 15
 		var navigable_point = NavigationServer2D.map_get_closest_point(map_rid, test_target)
 		
 		if NavigationServer2D.map_get_path(

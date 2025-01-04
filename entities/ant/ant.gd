@@ -221,7 +221,6 @@ func _process_movement(delta: float) -> void:
 		influence_manager.use_best_direction = false
 		_was_stuck = false
 	
-	# Rest of original movement code
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
 	
@@ -319,10 +318,16 @@ func get_food_in_view() -> Array:
 	return fiv
 
 func get_pheromone_direction(follow_concentration: bool = true) -> Vector2:
-	# When follow_concentration is true, move towards higher concentrations
-	# When false, move away from high concentrations
-	var dir: int = -1 if follow_concentration else 1
-	return heatmap.get_heat_direction(colony, global_position) * dir
+	# Early exit if heatmap or colony not valid
+	if not is_instance_valid(heatmap) or not is_instance_valid(colony):
+		return Vector2.ZERO
+		
+	# Get base heat direction - this already handles proper thread safety internally
+	var direction: Vector2 = heatmap.get_heat_direction(self, global_position)
+	
+	# When follow_concentration is true, move towards higher concentrations (inverse direction)
+	# When false, move away from high concentrations (keep original direction)
+	return -direction if follow_concentration else direction
 
 func get_ants_in_view() -> Array:
 	var ants: Array = []
