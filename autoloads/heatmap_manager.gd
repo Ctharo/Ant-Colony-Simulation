@@ -28,7 +28,6 @@ var update_lock: Mutex
 var _nav_map: RID
 var camera: Camera2D
 var _chunks: Dictionary = {}
-var _chunk_update_times: Dictionary = {}
 var _debug_settings: Dictionary = {}
 var _boundary_repulsion_points: Array[Dictionary] = []
 var update_timer: float = 0.0
@@ -204,18 +203,11 @@ func _draw() -> void:
 	if not camera:
 		return
 
-	var viewport_rect: Rect2 = camera.get_viewport_rect()
 	update_lock.lock()
 
 	for chunk_pos in _chunks:
 		var chunk: HeatChunk = _chunks[chunk_pos]
-		var chunk_rect: Rect2 = Rect2(
-			chunk_to_world(chunk_pos),
-			Vector2.ONE * STYLE.CHUNK_SIZE * STYLE.CELL_SIZE
-		)
-		#
-		#if not viewport_rect.intersects(chunk_rect):
-			#continue
+		
 
 		for local_pos in chunk.cells:
 			var cell: HeatCell = chunk.cells[local_pos]
@@ -284,7 +276,7 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	update_lock.unlock()
 	return best_direction
 
-func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, base_weight: float) -> Vector2:
+func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, _base_weight: float) -> Vector2:
 	# If base direction is already navigable, use it
 	var base_target = world_pos + base_direction * STYLE.CELL_SIZE * 2
 	if is_cell_navigable(base_target):
@@ -352,7 +344,7 @@ func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) ->
 
 	return {"direction": direction, "weight": total_weight}
 
-func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclude_entity_id: int) -> Dictionary:
+func _calculate_heat_avoidance(_center_cell: Vector2i, world_pos: Vector2, exclude_entity_id: int) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
 

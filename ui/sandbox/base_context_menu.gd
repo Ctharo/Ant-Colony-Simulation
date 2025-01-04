@@ -142,7 +142,6 @@ func _animate_open() -> void:
 	# Position and rotate each button
 	for i in range(num_buttons):
 		var container = _button_containers[i]
-		var button = _menu_buttons[i]
 
 		# Calculate final position and rotation
 		var angle = -PI/2 + i * (angle_per_button + BUTTON_GAP)

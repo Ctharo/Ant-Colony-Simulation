@@ -5,7 +5,7 @@ extends Camera2D
 const MIN_ZOOM := 0.1
 const MAX_ZOOM := 3.0
 const ZOOM_SPEED := 0.1
-const PAN_SPEED := 800.0
+const PAN_SPEED := 400.0
 const KEYBOARD_PAN_SPEED := 500.0
 const SMOOTHING_FACTOR := 0.85
 #endregion

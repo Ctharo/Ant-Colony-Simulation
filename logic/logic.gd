@@ -40,8 +40,11 @@ extends Resource
 var id: String
 
 ## Signals for value changes and actions
+@warning_ignore("unused_signal")
 signal value_changed(new_value: Variant, expression_id: String)
+@warning_ignore("unused_signal")
 signal significant_value_change(new_value: Variant, expression_id: String)
+@warning_ignore("unused_signal")
 signal action_triggered(value: Variant, expression_id: String)
 #endregion
 

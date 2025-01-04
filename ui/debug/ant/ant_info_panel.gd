@@ -178,7 +178,8 @@ func update_legend(influences: Array) -> void:
 # Modified legend entry function with weight display
 func add_legend_entry(p_name: String, color: Color, normalized_weight: float) -> void:
 	var entry = HBoxContainer.new()
-
+	var spacer = Control.new()
+	
 	# Color indicator
 	var influence_type = p_name.to_snake_case().trim_suffix("_influence")
 	if not influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
@@ -187,12 +188,10 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 		color_rect.color = color
 		entry.add_child(color_rect)
 	else:
-		var spacer = Control.new()
 		spacer.custom_minimum_size = Vector2(17, 0)
 		entry.add_child(spacer)
 
 	# Spacing
-	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(5, 0)
 	entry.add_child(spacer)
 

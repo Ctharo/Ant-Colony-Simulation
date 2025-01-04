@@ -1,6 +1,6 @@
 class_name EvaluationController
 extends Node2D
-
+@warning_ignore("unused_signal")
 signal evaluation_completed(expression_id: String)
 
 
