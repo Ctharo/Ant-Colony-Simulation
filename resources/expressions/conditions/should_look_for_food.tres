@@ -1,16 +1,15 @@
-[gd_resource type="Resource" script_class="Logic" load_steps=6 format=3 uid="uid://cm2ne8isnu1rq"]
+[gd_resource type="Resource" script_class="Logic" load_steps=5 format=3 uid="uid://cm2ne8isnu1rq"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_05vuh"]
 [ext_resource type="Resource" uid="uid://c0s8ww8c78cdf" path="res://resources/expressions/conditions/can_work.tres" id="2_21tg7"]
 [ext_resource type="Resource" uid="uid://bgetyudhmykay" path="res://resources/expressions/conditions/should_work.tres" id="3_mfxnr"]
 [ext_resource type="Resource" uid="uid://i24bwdsx8uto" path="res://resources/expressions/conditions/critical_energy_reserve.tres" id="4_lddvh"]
-[ext_resource type="Resource" uid="uid://bf6wlqebehkrn" path="res://resources/expressions/conditions/is_overloaded.tres" id="5_gnlgr"]
 
 [resource]
 script = ExtResource("1_05vuh")
 name = "should look for food"
-expression_string = "can_work and should_work and not critical_energy_reserve and not is_overloaded"
-nested_expressions = Array[ExtResource("1_05vuh")]([ExtResource("2_21tg7"), ExtResource("3_mfxnr"), ExtResource("4_lddvh"), ExtResource("5_gnlgr")])
+expression_string = "can_work and should_work and not critical_energy_reserve"
+nested_expressions = Array[ExtResource("1_05vuh")]([ExtResource("2_21tg7"), ExtResource("3_mfxnr"), ExtResource("4_lddvh")])
 description = ""
 type = 1
 min_eval_interval = 0.5

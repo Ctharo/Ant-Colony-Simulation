@@ -89,7 +89,6 @@ var dead: bool = false :
 		if dead:
 			died.emit(self)
 
-var is_processing_action: bool = false
 var vision_range: float = 50.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
@@ -134,116 +133,26 @@ func _ready() -> void:
 	spawned.emit()
 
 
-enum ActionState {
-	NONE,
-	MOVING,
-	HARVESTING,
-	STORING
-}
-
-var current_action: ActionState = ActionState.NONE
-var action_timer: float = 0.0
-const ACTION_COOLDOWN: float = 0.1  # Time between actions
-
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
+	# Don't process movement if dead
 	if dead:
 		return
 	
-	# Core updates that happen regardless of action
+	# Energy consumption
 	if energy_level > 0:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
+
 	_process_pheromones(delta)
-	
-	# Always process navigation agent even during actions
-	var next_pos = nav_agent.get_next_path_position()
-	
-	# Process actions and movement
-	match current_action:
-		ActionState.NONE:
-			_process_next_action(next_pos, delta)
-		ActionState.HARVESTING, ActionState.STORING:
-			action_timer += delta
-			if action_timer >= ACTION_COOLDOWN:
-				current_action = ActionState.NONE
-				action_timer = 0.0
-		ActionState.MOVING:
-			_process_movement(next_pos, delta)
 
-func _process_next_action(next_pos: Vector2, delta: float) -> void:
-	# Try to harvest food if we have capacity
-	if foods.mass < carry_max:
-		if _try_harvest_food():
-			return
-			
-	# Try to store food if near colony
-	if global_position.distance_to(colony.global_position) < colony.radius:
-		if _try_store_food():
-			return
-	
-	# If no other action, process movement
-	current_action = ActionState.MOVING
-	_process_movement(next_pos, delta)
-
-func _try_harvest_food() -> bool:
-	if harvest_food():
-		current_action = ActionState.HARVESTING
-		action_timer = 0.0
-		return true
-	return false
-
-func _try_store_food() -> bool:
-	if store_food():
-		current_action = ActionState.STORING
-		action_timer = 0.0
-		return true
-	return false
-
-func _process_movement(next_pos: Vector2, delta: float) -> void:
-	var current_pos = global_position
-	
-	# Stuck detection logic
-	if _check_if_stuck(current_pos, delta):
-		influence_manager.use_best_direction = true
-		_was_stuck = true
-	else:
-		influence_manager.use_best_direction = false
-		_was_stuck = false
-	
-	if influence_manager.should_recalculate_target():
-		influence_manager.update_movement_target()
-	
-	if not nav_agent.is_target_reachable():
-		velocity = Vector2.ZERO
-		current_action = ActionState.NONE  # Reset action if we can't reach target
-		return
-		
-	var move_direction = (next_pos - current_pos).normalized()
-	var target_velocity = move_direction * movement_rate
-	
-	if nav_agent.avoidance_enabled:
-		nav_agent.set_velocity(target_velocity)
-	else:
-		target_velocity = velocity.lerp(target_velocity, 0.15)
-		_on_navigation_agent_2d_velocity_computed(target_velocity)
-	
-func process_action(next_pos: Vector2, delta: float) -> void:
-	is_processing_action = true
-	
 	# Try to harvest food if we have capacity
 	if foods.mass < carry_max:
 		if harvest_food():
-			await get_tree().create_timer(1).timeout
 			return  # Skip movement this frame if we harvested food
 
-	if global_position.distance_to(colony.global_position) < colony.radius:
-		if store_food():
-			await get_tree().create_timer(1).timeout
-			return # Skip movement this frame if we stored food
-		
-	_process_movement(next_pos, delta)
-
+	_process_movement(delta)
+	
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
 	# Update movement state
@@ -298,19 +207,37 @@ func harvest_food() -> bool:
 
 	return amount_harvested > 0
 
-func store_food() -> bool:
-	# Don't try to store if we have no food
-	if foods.mass <= 0:
-		return false
-		
-	# Transfer all carried food to colony
-	var amount_stored = foods.mass
-	colony.foods.add_food(amount_stored)
-	foods.clear()
-	
-	return amount_stored > 0
-
 #region Movement Processing
+func _process_movement(delta: float) -> void:
+	var current_pos = global_position
+	
+	# Stuck detection logic
+	if _check_if_stuck(current_pos, delta):
+		# Enable best direction pathfinding
+		influence_manager.use_best_direction = true
+		_was_stuck = true
+	else:
+		# If not stuck, disable best direction
+		influence_manager.use_best_direction = false
+		_was_stuck = false
+	
+	# Rest of original movement code
+	if influence_manager.should_recalculate_target():
+		influence_manager.update_movement_target()
+	
+	if not nav_agent.is_target_reachable():
+		velocity = Vector2.ZERO
+		return
+		
+	var next_pos = nav_agent.get_next_path_position()
+	var move_direction = (next_pos - current_pos).normalized()
+	var target_velocity = move_direction * movement_rate
+	
+	if nav_agent.avoidance_enabled:
+		nav_agent.set_velocity(target_velocity)
+	else:
+		target_velocity = velocity.lerp(target_velocity, 0.15)
+		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	if not _last_position:

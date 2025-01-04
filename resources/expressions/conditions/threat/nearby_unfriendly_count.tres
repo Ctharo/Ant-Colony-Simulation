@@ -11,6 +11,4 @@ nested_expressions = Array[ExtResource("1_efs0a")]([ExtResource("2_h0bij")])
 description = ""
 type = 1
 min_eval_interval = 0.5
-max_eval_interval = 0.5
-evaluate_when_idle = false
 change_threshold = 0.0
