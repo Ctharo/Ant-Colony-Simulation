@@ -49,29 +49,29 @@ func _on_gui_input(event: InputEvent) -> void:
 	if initializing:
 		return
 	if event is InputEventMouseButton and event.pressed:
+		var screen_position := get_global_mouse_position()
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
-				handle_click(get_global_mouse_position())
+				handle_left_click(screen_position)
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
-				deselect_all()
-				clear_active_menu()
+				show_empty_context_menu(screen_position)
+				get_viewport().set_input_as_handled()
 
 #region Click Handling
-func handle_click(screen_position: Vector2) -> void:
+func handle_left_click(screen_position: Vector2) -> void:
 	clear_active_menu()
 	var world_position: Vector2 = camera.ui_to_global(screen_position)
 	var closest_colony := _find_closest_colony(world_position)
 	var closest_ant := _find_closest_ant(world_position)
 
-
 	if closest_colony and _is_within_radius(closest_colony, world_position):
-		show_colony_context_menu(closest_colony, screen_position)
+		show_info_panel(closest_colony)
 	elif closest_ant and _is_within_radius(closest_ant, world_position):
 		show_ant_info(closest_ant)
 	else:
+		deselect_all()
 		close_ant_info()
-		show_empty_context_menu(screen_position)
 
 func _find_closest_colony(world_position: Vector2) -> Colony:
 	var colonies := get_tree().get_nodes_in_group("colony")
@@ -106,6 +106,7 @@ func _is_within_radius(entity: Node2D, world_position: Vector2) -> bool:
 		return world_position.distance_to(entity.global_position) <= entity.radius
 	return world_position.distance_to(entity.global_position) <= 50.0
 #endregion
+
 
 #region Context Menu Management
 func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
@@ -163,16 +164,17 @@ func close_ant_info() -> void:
 
 func show_info_panel(entity: Node) -> void:
 	var panel: Control
-	if entity is Colony:
-		if colony_info_panel and colony_info_panel.current_colony == entity:
+	if entity is Colony and is_instance_valid(entity):
+		if is_instance_valid(colony_info_panel) and colony_info_panel.current_colony == entity:
 			colony_info_panel.queue_free()
 			return
-		if colony_info_panel:
+		if is_instance_valid(colony_info_panel):
 			colony_info_panel.queue_free()
 		colony_info_panel = preload("res://ui/debug/colony/colony_info_panel.tscn").instantiate()
 		info_panels_container.add_child(colony_info_panel)
 		colony_info_panel.show_colony_info(entity)
 		panel = colony_info_panel
+		
 	elif entity is Ant:
 		if ant_info_panel and ant_info_panel.current_ant == entity:
 			ant_info_panel.queue_free()

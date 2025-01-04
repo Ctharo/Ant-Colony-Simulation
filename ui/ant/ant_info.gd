@@ -33,7 +33,7 @@ var is_expanded: bool = false
 ## Selection circle instance
 var selection_circle: Node2D
 
-var camera: Camera2D
+var camera: CameraController
 #endregion
 
 #region Onready Variables

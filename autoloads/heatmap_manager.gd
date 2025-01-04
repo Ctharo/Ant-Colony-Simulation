@@ -93,7 +93,7 @@ class HeatChunk:
 		last_update_time = Time.get_ticks_msec()
 		return active_cells > 0
 #endregion
-
+	
 func _init() -> void:
 	name = "HeatmapManager"
 	logger = Logger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)

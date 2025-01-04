@@ -53,7 +53,6 @@ func show_colony_info(colony: Colony) -> void:
 		return
 
 	current_colony = colony
-	show()
 
 	# Update basic info
 	title_label.text = "Colony %s" % colony.name

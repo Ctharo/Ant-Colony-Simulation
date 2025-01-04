@@ -48,9 +48,10 @@ func _process(delta: float) -> void:
 	_handle_keyboard_input(delta)
 
 	if is_instance_valid(tracked_entity):
-		target_position = to_local(tracked_entity.global_position)
+		target_position = tracked_entity.global_position
 		position = position.lerp(target_position, SMOOTHING_FACTOR)
 		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
+		
 	elif is_panning:
 		position = position.lerp(target_position, SMOOTHING_FACTOR)
 		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
