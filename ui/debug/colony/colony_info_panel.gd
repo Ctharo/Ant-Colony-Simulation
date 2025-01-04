@@ -43,6 +43,8 @@ func _ready() -> void:
 	custom_minimum_size = STYLE.PANEL_SIZE
 	hide()  # Start hidden
 	heatmap = get_tree().get_first_node_in_group("heatmap")
+	top_level = true
+	
 func _process(delta: float) -> void:
 	update_colony_info()
 	_handle_spawning(delta)
@@ -56,8 +58,11 @@ func show_colony_info(colony: Colony) -> void:
 
 	# Update basic info
 	title_label.text = "Colony %s" % colony.name
+	set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	show_heatmap_check.button_pressed = colony.heatmap_enabled
 	update_colony_info()
-
+	show() 
+	
 	# Queue redraw for selection circle
 	queue_redraw()
 
@@ -74,6 +79,7 @@ func _on_spawn_ants_pressed() -> void:
 	if current_colony:
 		start_spawning(int(ant_count_edit.value))
 
+# TODO: Currently does nothing
 func _on_highlight_ants_toggled(enabled: bool) -> void:
 	if current_colony != null:
 		highlight_ants.emit(current_colony, enabled)

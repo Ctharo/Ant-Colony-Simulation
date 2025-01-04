@@ -8,6 +8,7 @@ const ZOOM_SPEED := 0.1
 const PAN_SPEED := 400.0
 const KEYBOARD_PAN_SPEED := 500.0
 const SMOOTHING_FACTOR := 0.85
+const HOVERED_ENTITY_DISTANCE := 10
 #endregion
 
 #region Camera State Variables
@@ -18,6 +19,7 @@ var target_position := Vector2.ZERO :
 		target_position = value
 var current_velocity := Vector2.ZERO
 var tracked_entity: Node2D
+var hovered_entity: Node2D
 #endregion
 
 func _ready() -> void:
@@ -42,21 +44,35 @@ func _handle_keyboard_input(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	queue_redraw()
+	
 	if not is_instance_valid(self):
 		return
+
+	if is_instance_valid(hovered_entity):
+		if to_local(hovered_entity.global_position).distance_to(get_local_mouse_position()) > HOVERED_ENTITY_DISTANCE:
+			hovered_entity = null
+			
+	var entities: Array = []
+	entities.append_array(get_tree().get_nodes_in_group("ant"))
+	entities.append_array(get_tree().get_nodes_in_group("colony"))
+	
+	for entity in entities:
+		var pos: Vector2 = to_local(entity.global_position)
+		var distance = HOVERED_ENTITY_DISTANCE
+		if entity is Colony:
+			distance += entity.radius
+			
+		if pos.distance_to(get_local_mouse_position()) < distance:
+			hovered_entity = entity
+			break
 
 	_handle_keyboard_input(delta)
 
 	if is_instance_valid(tracked_entity):
 		target_position = tracked_entity.global_position
-		position = position.lerp(target_position, SMOOTHING_FACTOR)
-		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
+		position = target_position
 		
-	elif is_panning:
-		position = position.lerp(target_position, SMOOTHING_FACTOR)
-		current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
-	else:
-		position = position.lerp(target_position, SMOOTHING_FACTOR)
+	current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_instance_valid(event):
@@ -143,15 +159,26 @@ func ui_to_global(screen_position: Vector2) -> Vector2:
 func global_to_ui(p_global_position: Vector2) -> Vector2:
 	if not is_instance_valid(self):
 		return Vector2.ZERO
-
-	return get_global_transform_with_canvas() * to_local(p_global_position)
+	var ui_pos: Vector2 = get_global_transform_with_canvas() * to_local(p_global_position)
+	return ui_pos
 
 func _draw() -> void:
+	_draw_mouse_pos_circle(get_local_mouse_position())
+
+func _draw_mouse_pos_circle(mouse_pos: Vector2):
+	var radius: float = 8
+	if is_instance_valid(hovered_entity):
+		if hovered_entity is Ant:
+			radius = 12
+		elif hovered_entity is Colony:
+			radius = hovered_entity.radius + 12
+		mouse_pos = to_local(hovered_entity.global_position)
+			
 	draw_arc(
-	   get_local_mouse_position(),
-	   8,
-	   0,          # Start angle (radians)
-	   TAU,        # End angle (full circle)
-	   32,         # Number of points
-	   Color.WHITE # Circle color
-	)
+		   mouse_pos,
+		   radius,
+		   0,          # Start angle (radians)
+		   TAU,        # End angle (full circle)
+		   32,         # Number of points
+		   Color.WHITE # Circle color
+		)

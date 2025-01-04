@@ -11,11 +11,12 @@ var active_context_menu: BaseContextMenu
 var active_ant_info: AntInfo
 
 @onready var overlay: ColorRect = %InitializingRect
-
+var highlight_ants: bool = false
 #region Node References
 @onready var info_panels_container := %InfoPanelsContainer
 var ant_info_panel: AntInfoPanel
 var colony_info_panel: ColonyInfoPanel
+var hovered_entity_label: Label
 #endregion
 
 #region Managers
@@ -36,6 +37,8 @@ var initializing: bool = true :
 			overlay.queue_free()
 			overlay = null
 
+
+
 func _ready() -> void:
 	camera = get_node("../../Camera2D")
 	sandbox = get_node("../..")
@@ -44,6 +47,17 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	queue_redraw()
+	
+	if is_instance_valid(hovered_entity_label):
+		hovered_entity_label.queue_free()
+		hovered_entity_label = null
+		
+	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
+		hovered_entity_label = Label.new()
+		hovered_entity_label.name = "hovered_entity"
+		hovered_entity_label.text = camera.hovered_entity.name
+		add_child(hovered_entity_label)
+		hovered_entity_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 
 func _on_gui_input(event: InputEvent) -> void:
 	if initializing:
@@ -59,52 +73,18 @@ func _on_gui_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 
 #region Click Handling
-func handle_left_click(screen_position: Vector2) -> void:
+func handle_left_click(_screen_position: Vector2) -> void:
 	clear_active_menu()
-	var world_position: Vector2 = camera.ui_to_global(screen_position)
-	var closest_colony := _find_closest_colony(world_position)
-	var closest_ant := _find_closest_ant(world_position)
-
-	if closest_colony and _is_within_radius(closest_colony, world_position):
-		show_info_panel(closest_colony)
-	elif closest_ant and _is_within_radius(closest_ant, world_position):
-		show_ant_info(closest_ant)
+	
+	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
+		if camera.hovered_entity is Ant:
+			show_ant_info(camera.hovered_entity)
+		elif camera.hovered_entity is Colony:
+			show_info_panel(camera.hovered_entity)
 	else:
 		deselect_all()
 		close_ant_info()
 
-func _find_closest_colony(world_position: Vector2) -> Colony:
-	var colonies := get_tree().get_nodes_in_group("colony")
-	var closest: Colony
-	var closest_distance := INF
-
-	for colony in colonies:
-		if not is_instance_valid(colony):
-			continue
-		var distance := world_position.distance_to(colony.global_position)
-		if distance < closest_distance:
-			closest_distance = distance
-			closest = colony
-	return closest
-
-func _find_closest_ant(world_position: Vector2) -> Ant:
-	var ants := get_tree().get_nodes_in_group("ant")
-	var closest: Ant
-	var closest_distance := INF
-
-	for ant in ants:
-		if not is_instance_valid(ant):
-			continue
-		var distance := world_position.distance_to(ant.global_position)
-		if distance < closest_distance:
-			closest_distance = distance
-			closest = ant
-	return closest
-
-func _is_within_radius(entity: Node2D, world_position: Vector2) -> bool:
-	if entity is Colony:
-		return world_position.distance_to(entity.global_position) <= entity.radius
-	return world_position.distance_to(entity.global_position) <= 50.0
 #endregion
 
 
@@ -174,7 +154,7 @@ func show_info_panel(entity: Node) -> void:
 		info_panels_container.add_child(colony_info_panel)
 		colony_info_panel.show_colony_info(entity)
 		panel = colony_info_panel
-		
+
 	elif entity is Ant:
 		if ant_info_panel and ant_info_panel.current_ant == entity:
 			ant_info_panel.queue_free()
@@ -221,6 +201,12 @@ func _on_colony_destroy_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony_manager.remove_colony(colony)
 
+func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
+	if not is_instance_valid(colony):
+		highlight_ants = false
+		return
+	highlight_ants = enabled
+		
 func _on_colony_heatmap_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony.heatmap_enabled = !colony.heatmap_enabled
