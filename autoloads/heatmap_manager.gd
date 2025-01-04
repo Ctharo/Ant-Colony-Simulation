@@ -175,54 +175,30 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 #endregion
 
 #region Process and Draw
-func _process(delta: float) -> void:
-	update_timer += delta
+func _process(_delta: float) -> void:
+	update_timer += _delta
 	if update_timer <= update_interval:
 		return
 
 	update_lock.lock()
 	
-	# Instead of clearing and rebuilding every frame,
-	# only update when heat changes
-	var needs_update = false
-	
+	# Just handle decay and cleanup here
+	var chunks_to_remove: Array = []
 	for chunk_pos in _chunks:
 		var chunk: HeatChunk = _chunks[chunk_pos]
-		# Check if chunk was updated since last process
-		if chunk.last_update_time > update_timer:
-			needs_update = true
-			break
+		if not chunk.update(_delta):
+			chunks_to_remove.append(chunk_pos)
 	
-	if needs_update:
-		_spatial_index.clear()
-		# Update spatial index with all active heat cells
-		for chunk_pos in _chunks:
-			var chunk: HeatChunk = _chunks[chunk_pos]
-			if chunk.active_cells == 0:
-				continue
-				
-			for local_pos in chunk.cells:
-				var cell: HeatCell = chunk.cells[local_pos]
-				if cell.heat <= 0:
-					continue
-					
-				var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
-				var world_pos = cell_to_world(world_cell)
-				
-				_spatial_index.insert(world_pos, {
-					"position": world_pos,
-					"chunk_pos": chunk_pos,
-					"local_pos": local_pos,
-					"heat": cell.heat
-				})
-
+	for chunk_pos in chunks_to_remove:
+		_chunks.erase(chunk_pos)
+	
 	_boundary_repulsion_points.clear()
 	update_lock.unlock()
 
 	if _debug_settings.values().has(true):
 		queue_redraw()
 	update_timer = 0.0
-
+	
 func _draw() -> void:
 	if not camera:
 		return
@@ -369,14 +345,12 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 	var total_weight: float = 0.0
 
 	# Query radius in world coordinates
-	var query_radius = STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 2
-	var nearby_data = _spatial_index.query_radius(world_pos, query_radius)
+	var query_radius: float = STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 2
+	var nearby_cells: Array[Dictionary] = get_cells_in_radius(world_pos, query_radius)
 
-	for cell_data in nearby_data:
-		# Data is now guaranteed to have position
+	for cell_data in nearby_cells:
 		var cell_pos: Vector2 = cell_data.position
-		var chunk: HeatChunk = _chunks[cell_data.chunk_pos]
-		var cell_obj: HeatCell = chunk.cells[cell_data.local_pos]
+		var cell: HeatCell = cell_data.cell
 		
 		# Skip unnavigable cells
 		if not is_cell_navigable(cell_pos):
@@ -384,9 +358,9 @@ func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclud
 
 		# Calculate heat influence
 		var heat: float = 0.0
-		for source_id in cell_obj.sources:
+		for source_id in cell.sources:
 			if source_id != exclude_entity_id:
-				heat += cell_obj.sources[source_id]
+				heat += cell.sources[source_id]
 
 		if heat > 0:
 			var distance: float = world_pos.distance_to(cell_pos)
@@ -525,14 +499,41 @@ func is_cell_navigable(pos: Vector2) -> bool:
 	
 	return false
 
-func _get_neighboring_chunks(chunk_pos: Vector2i) -> Array:
-	var neighbors: Array = [chunk_pos]
-	for dx in [-1, 0, 1]:
-		for dy in [-1, 0, 1]:
-			if dx == 0 and dy == 0:
+## Gets all cells within a radius of a world position
+## Returns: Array of dictionaries containing cell data
+func get_cells_in_radius(world_pos: Vector2, radius: float) -> Array[Dictionary]:
+	var center_cell: Vector2i = world_to_cell(world_pos)
+	var cells_radius: int = ceili(radius / STYLE.CELL_SIZE)
+	var found_cells: Array[Dictionary] = []
+	
+	# Convert radius to chunk space
+	var chunk_radius: int = ceili(float(cells_radius) / STYLE.CHUNK_SIZE)
+	var center_chunk: Vector2i = world_to_chunk(center_cell)
+	
+	# Scan relevant chunks
+	for dx in range(-chunk_radius, chunk_radius + 1):
+		for dy in range(-chunk_radius, chunk_radius + 1):
+			var check_chunk: Vector2i = center_chunk + Vector2i(dx, dy)
+			if not _chunks.has(check_chunk):
 				continue
-			neighbors.append(chunk_pos + Vector2i(dx, dy))
-	return neighbors
+				
+			var chunk: HeatChunk = _chunks[check_chunk]
+			for local_pos in chunk.cells:
+				var cell: HeatCell = chunk.cells[local_pos]
+				var world_cell: Vector2i = chunk_to_world_cell(check_chunk, local_pos)
+				var cell_pos: Vector2 = cell_to_world(world_cell)
+				
+				if cell.heat > 0 and world_pos.distance_to(cell_pos) <= radius:
+					found_cells.append({
+						"position": cell_pos,
+						"chunk_pos": check_chunk,
+						"local_pos": local_pos,
+						"heat": cell.heat,
+						"sources": cell.sources,
+						"cell": cell  # Direct reference for efficiency
+					})
+	
+	return found_cells
 
 func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> void:
 	var chunk_pos: Vector2i = world_to_chunk(world_cell)
