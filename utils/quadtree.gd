@@ -70,9 +70,20 @@ func insert(position: Vector2, data: Variant) -> void:
 	
 	if children.is_empty():
 		subdivide()
+		# Redistribute existing objects to children
+		var existing_objects = objects.duplicate()
+		objects.clear()
+		for obj in existing_objects:
+			_insert_to_children(obj.position, obj.data)
 	
+	# Insert new object to appropriate child only
+	_insert_to_children(position, data)
+
+func _insert_to_children(position: Vector2, data: Variant) -> void:
 	for child in children:
-		child.insert(position, data)
+		if child.bounds.contains(position):
+			child.insert(position, data)
+			return  # Important: only insert into one child
 
 func query_range(range_bounds: QuadTreeBounds) -> Array:
 	var found_objects: Array = []
@@ -98,8 +109,9 @@ func query_radius(center: Vector2, radius: float) -> Array:
 	var found_objects: Array = []
 	var candidates = query_range(range_bounds)
 	
-	for obj in candidates:
-		if obj.position.distance_to(center) <= radius:
-			found_objects.append(obj)
+	for candidate in candidates:
+		# Simply use the position stored in the candidate data
+		if center.distance_to(candidate.position) <= radius:
+			found_objects.append(candidate.data)
 	
 	return found_objects

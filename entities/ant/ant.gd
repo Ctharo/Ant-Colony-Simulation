@@ -92,7 +92,7 @@ var dead: bool = false :
 var vision_range: float = 50.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
-const ENERGY_DRAIN_FACTOR = 0.000005
+const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000005 for reference, drains pretty slow
 var energy_drain: float :
 	get:
 		return ENERGY_DRAIN_FACTOR * (foods.mass + ant_mass) * pow(movement_rate, 1.2)

@@ -31,7 +31,7 @@ var _chunks: Dictionary = {}
 var _debug_settings: Dictionary = {}
 var _boundary_repulsion_points: Array[Dictionary] = []
 var update_timer: float = 0.0
-var update_interval: float = 0.25
+var update_interval: float = 1
 var logger: Logger
 var _is_quitting: bool = false
 #endregion
@@ -103,16 +103,20 @@ func _init() -> void:
 func _ready() -> void:
 	_start_update_thread()
 	setup_navigation()
+	
+
 
 func _start_update_thread() -> void:
 	update_thread = Thread.new()
 	update_thread.start(_update_heatmap_thread)
 
 func _init_spatial_index() -> void:
-	var world_size = map_size # Adjust based on your world size
-	_spatial_index = QuadTree.new(
-		QuadTree.QuadTreeBounds.new(Vector2.ZERO, world_size)
+	# Initialize with proper size for the map plus padding
+	var world_bounds = QuadTree.QuadTreeBounds.new(
+		Vector2(map_size) / 2,  # Center
+		Vector2(map_size) * 1.5  # Add 50% padding for overflow
 	)
+	_spatial_index = QuadTree.new(world_bounds)
 
 #region Thread Management
 func _update_heatmap_thread() -> void:
@@ -177,20 +181,40 @@ func _process(delta: float) -> void:
 		return
 
 	update_lock.lock()
-	_spatial_index.clear()
-
+	
+	# Instead of clearing and rebuilding every frame,
+	# only update when heat changes
+	var needs_update = false
+	
 	for chunk_pos in _chunks:
 		var chunk: HeatChunk = _chunks[chunk_pos]
-		for local_pos in chunk.cells:
-			var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
-			var world_pos = cell_to_world(world_cell)
-			var cell = chunk.cells[local_pos]
-
-			_spatial_index.insert(world_pos, {
-				"chunk_pos": chunk_pos,
-				"local_pos": local_pos,
-				"heat": cell.heat
-			})
+		# Check if chunk was updated since last process
+		if chunk.last_update_time > update_timer:
+			needs_update = true
+			break
+	
+	if needs_update:
+		_spatial_index.clear()
+		# Update spatial index with all active heat cells
+		for chunk_pos in _chunks:
+			var chunk: HeatChunk = _chunks[chunk_pos]
+			if chunk.active_cells == 0:
+				continue
+				
+			for local_pos in chunk.cells:
+				var cell: HeatCell = chunk.cells[local_pos]
+				if cell.heat <= 0:
+					continue
+					
+				var world_cell = chunk_to_world_cell(chunk_pos, local_pos)
+				var world_pos = cell_to_world(world_cell)
+				
+				_spatial_index.insert(world_pos, {
+					"position": world_pos,
+					"chunk_pos": chunk_pos,
+					"local_pos": local_pos,
+					"heat": cell.heat
+				})
 
 	_boundary_repulsion_points.clear()
 	update_lock.unlock()
@@ -260,49 +284,45 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 	
 	update_lock.lock()
 	
-	# Get base heat direction
-	var base_result = _calculate_base_heat_direction(center_cell, world_pos, entity_id)
-	if base_result.weight == 0.0:
-		update_lock.unlock()
-		return Vector2.ZERO
-		
-	# Try different angles if base direction isn't navigable
-	var best_direction = _find_best_navigable_direction(
-		base_result.direction,
-		world_pos,
-		base_result.weight
-	)
+	# Calculate heat avoidance
+	var heat_result = _calculate_heat_avoidance(center_cell, world_pos, entity_id)
+	var direction = heat_result.direction
+	var weight = heat_result.weight
+	
+	# Add boundary repulsion if needed
+	var boundary_result = _calculate_boundary_repulsion(center_cell, world_pos)
+	if boundary_result.weight > 0:
+		direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
+		weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
+	
+	if weight > 0:
+		direction = direction.normalized() * minf(weight, STYLE.MAX_HEAT)
+		direction = _find_best_navigable_direction(direction, world_pos, weight)
 	
 	update_lock.unlock()
-	return best_direction
+	return direction
 
-func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, _base_weight: float) -> Vector2:
-	# If base direction is already navigable, use it
-	var base_target = world_pos + base_direction * STYLE.CELL_SIZE * 2
+func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, base_weight: float) -> Vector2:
+	var normalized_direction = base_direction.normalized()
+	var check_distance = STYLE.CELL_SIZE * 2
+	var base_target = world_pos + normalized_direction * check_distance
+	
+	# If base direction is navigable, use it
 	if is_cell_navigable(base_target):
 		return base_direction
 		
-	# Try different angles to find a navigable direction
-	var test_angles = [PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
-	var best_direction = Vector2.ZERO
-	var smallest_angle = PI * 2  # Start with maximum possible angle
+	# Try angles in increasingly larger deviations
+	var test_angles = [PI/12, -PI/12, PI/6, -PI/6, PI/4, -PI/4, PI/3, -PI/3]
 	
 	for angle in test_angles:
-		var test_direction = base_direction.rotated(angle)
-		var test_target = world_pos + test_direction * STYLE.CELL_SIZE * 2
+		var test_direction = normalized_direction.rotated(angle)
+		var test_target = world_pos + test_direction * check_distance
 		
 		if is_cell_navigable(test_target):
-			var current_angle = abs(angle)
-			if current_angle < smallest_angle:
-				smallest_angle = current_angle
-				best_direction = test_direction
-				
-				# If this is a small deviation, use it immediately
-				if current_angle <= PI/8:
-					break
-	
-	return best_direction if best_direction != Vector2.ZERO else base_direction
-
+			return test_direction * base_weight
+			
+	# If no direction is found, return a very small vector in original direction
+	return normalized_direction * (base_weight * 0.1)  # Reduced magnitude when blocked
 func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2, entity_id: int) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
@@ -344,36 +364,48 @@ func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) ->
 
 	return {"direction": direction, "weight": total_weight}
 
-func _calculate_heat_avoidance(_center_cell: Vector2i, world_pos: Vector2, exclude_entity_id: int) -> Dictionary:
+func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclude_entity_id: int) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
 
-	var query_bounds = QuadTree.QuadTreeBounds.new(
-		world_pos,
-		Vector2.ONE * STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 3
-	)
+	# Query radius in world coordinates
+	var query_radius = STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 2
+	var nearby_data = _spatial_index.query_radius(world_pos, query_radius)
 
-	var nearby_cells = _spatial_index.query_range(query_bounds)
-	for cell_data in nearby_cells:
+	for cell_data in nearby_data:
+		# Data is now guaranteed to have position
+		var cell_pos: Vector2 = cell_data.position
 		var chunk: HeatChunk = _chunks[cell_data.chunk_pos]
 		var cell_obj: HeatCell = chunk.cells[cell_data.local_pos]
-		var cell_pos: Vector2 = cell_to_world(chunk_to_world_cell(cell_data.chunk_pos, cell_data.local_pos))
+		
+		# Skip unnavigable cells
+		if not is_cell_navigable(cell_pos):
+			continue
 
+		# Calculate heat influence
 		var heat: float = 0.0
 		for source_id in cell_obj.sources:
 			if source_id != exclude_entity_id:
 				heat += cell_obj.sources[source_id]
 
 		if heat > 0:
+			var distance: float = world_pos.distance_to(cell_pos)
+			var falloff: float = 1.0 / (1.0 + distance * 0.1)
 			var away_vector: Vector2 = (world_pos - cell_pos).normalized()
-			direction += away_vector * heat
-			total_weight += heat
+			
+			# Weight based on heat and distance
+			var weight = heat * falloff
+			direction += away_vector * weight
+			total_weight += weight
 
-	if total_weight > 0.0:
-		direction /= total_weight
-
-	return {"direction": direction, "weight": total_weight}
-
+	if total_weight > 0:
+		direction = direction.normalized()
+		
+	return {
+		"direction": direction,
+		"weight": total_weight
+	}
+	
 #endregion
 
 #region Heat Management
@@ -474,10 +506,24 @@ func chunk_to_world(chunk_pos: Vector2i) -> Vector2:
 #endregion
 
 #region Utility Functions
+## Checks if a cell position is navigable using NavigationServer2D's region queries
+## Returns: Whether the position is navigable
 func is_cell_navigable(pos: Vector2) -> bool:
-	if _nav_map == RID():
+	# Check for invalid navigation map states
+	if _nav_map == RID() or _nav_map == null or not NavigationServer2D.map_is_active(_nav_map):
 		return true
-	return NavigationServer2D.map_get_closest_point(_nav_map, pos).distance_to(pos) < STYLE.CELL_SIZE
+	
+	# Ensure we have valid navigation regions before querying
+	var regions: Array[RID] = NavigationServer2D.map_get_regions(_nav_map)
+	if regions.is_empty():
+		return true
+	
+	# Check if point is owned by any region in the navigation map
+	for region in regions:
+		if region and NavigationServer2D.region_owns_point(region, pos):
+			return true
+	
+	return false
 
 func _get_neighboring_chunks(chunk_pos: Vector2i) -> Array:
 	var neighbors: Array = [chunk_pos]
@@ -496,15 +542,20 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> v
 	if not _chunks.has(chunk_pos):
 		_chunks[chunk_pos] = HeatChunk.new()
 
-	var cell: HeatCell = _chunks[chunk_pos].get_or_create_cell(local_pos)
+	var chunk: HeatChunk = _chunks[chunk_pos]
+	var cell: HeatCell = chunk.get_or_create_cell(local_pos)
+	var old_heat = cell.heat
 	cell.add_heat(entity_id, amount)
-
-	_spatial_index.insert(world_pos, {
-		"chunk_pos": chunk_pos,
-		"local_pos": local_pos,
-		"heat": amount
-	})
-
+	
+	# Update spatial index immediately when heat changes
+	if cell.heat > 0:
+		_spatial_index.insert(world_pos, {
+			"position": world_pos,
+			"chunk_pos": chunk_pos,
+			"local_pos": local_pos,
+			"heat": cell.heat
+		})
+		
 func get_heat_at_position(entity: Node2D, pos: Vector2) -> float:
 	if not is_instance_valid(entity):
 		return 0.0
