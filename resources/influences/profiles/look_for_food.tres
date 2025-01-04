@@ -1,7 +1,6 @@
-[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=10 format=3 uid="uid://ch0lb2jhvsc1y"]
+[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=9 format=3 uid="uid://ch0lb2jhvsc1y"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_4qa5u"]
-[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_q5t2k"]
 [ext_resource type="Resource" uid="uid://cm2ne8isnu1rq" path="res://resources/expressions/conditions/should_look_for_food.tres" id="2_3uo55"]
 [ext_resource type="Resource" uid="uid://c14c2ty4as0jm" path="res://resources/influences/colony_repel_influence.tres" id="2_vhoae"]
 [ext_resource type="Script" path="res://logic/influence/influence_profile.gd" id="2_w5f3a"]
@@ -14,4 +13,4 @@
 script = ExtResource("2_w5f3a")
 name = "look for food"
 enter_conditions = Array[ExtResource("1_4qa5u")]([ExtResource("2_3uo55")])
-influences = Array[ExtResource("1_q5t2k")]([ExtResource("2_vhoae"), ExtResource("3_ik3v7"), ExtResource("4_v6a68"), ExtResource("5_caqf5"), ExtResource("8_wjawk")])
+influences = Array[ExtResource("1_4qa5u")]([ExtResource("2_vhoae"), ExtResource("3_ik3v7"), ExtResource("4_v6a68"), ExtResource("5_caqf5"), ExtResource("8_wjawk")])
