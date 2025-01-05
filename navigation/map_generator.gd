@@ -304,11 +304,10 @@ func _draw_navigation_mesh() -> void:
 	# Draw obstacles
 	for i in range(1, _obstacles.size()):
 		var obstacle_vertices = _obstacles[i]
-		if obstacle_vertices.size() >= 3:
-			draw_colored_polygon(obstacle_vertices, OBSTACLE_FILL_COLOR)
-			
-			# Draw borders
-			for j in range(obstacle_vertices.size()):
-				var start = obstacle_vertices[j]
-				var end = obstacle_vertices[(j + 1) % obstacle_vertices.size()]
-				draw_line(start, end, OBSTACLE_BORDER_COLOR, BORDER_WIDTH)
+		draw_colored_polygon(obstacle_vertices, OBSTACLE_FILL_COLOR)
+		
+		# Draw borders
+		for j in range(obstacle_vertices.size()):
+			var start = obstacle_vertices[j]
+			var end = obstacle_vertices[(j + 1) % obstacle_vertices.size()]
+			draw_line(start, end, OBSTACLE_BORDER_COLOR, BORDER_WIDTH)
