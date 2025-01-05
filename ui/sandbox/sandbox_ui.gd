@@ -249,7 +249,7 @@ func _draw() -> void:
 	var selected_colony = colony_info_panel.current_colony if is_instance_valid(colony_info_panel) else null
 	var hovered_colony = camera.hovered_entity
 	
-	if is_instance_valid(selected_colony) and selected_colony.highlight_ants_enabled:
+	if is_instance_valid(selected_colony):
 		for ant: Ant in selected_colony.ants:
 			draw_arc(
 				   camera.global_to_ui(ant.global_position),

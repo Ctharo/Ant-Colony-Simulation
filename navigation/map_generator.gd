@@ -70,7 +70,6 @@ func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -
 	# Add valid obstacles to navigation polygon
 	for obstacle_points in obstacles:
 		if _validate_polygon_points(obstacle_points):
-			var start_idx = nav_poly.get_vertices().size()
 			var current_vertices = nav_poly.get_vertices()
 			
 			# Add new vertices
@@ -176,7 +175,7 @@ func _is_polygon_convex(points: PackedVector2Array) -> bool:
 	if n < 3:
 		return false
 	
-	var sign = 0
+	var _sign = 0
 	
 	for i in range(n):
 		var current = points[i]
@@ -186,9 +185,9 @@ func _is_polygon_convex(points: PackedVector2Array) -> bool:
 		var cross_product = (next.x - current.x) * (next_next.y - current.y) - \
 						   (next.y - current.y) * (next_next.x - current.x)
 		
-		if sign == 0:
-			sign = signf(cross_product)
-		elif sign * cross_product < 0:
+		if _sign == 0:
+			_sign = signf(cross_product)
+		elif _sign * cross_product < 0:
 			return false
 	
 	return true

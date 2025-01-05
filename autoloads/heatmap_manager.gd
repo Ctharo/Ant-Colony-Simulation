@@ -248,12 +248,11 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2) -> Vector2:
 		return Vector2.ZERO
 
 	var entity_id: int = entity.get_instance_id()
-	var center_cell: Vector2i = world_to_cell(world_pos)
-	
+
 	update_lock.lock()
 	
 	# Calculate heat avoidance
-	var heat_result = _calculate_heat_avoidance(center_cell, world_pos, entity_id)
+	var heat_result = _calculate_heat_avoidance(world_pos, entity_id)
 	var direction = heat_result.direction
 	var weight = heat_result.weight
 	
@@ -285,7 +284,7 @@ func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2,
 			
 	# If no direction is found, return a very small vector in original direction
 	return normalized_direction * (base_weight * 0.1)  # Reduced magnitude when blocked
-func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2, entity_id: int) -> Dictionary:
+func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
 
@@ -295,7 +294,7 @@ func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2, e
 	total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
 
 	# Heat avoidance
-	var heat_result = _calculate_heat_avoidance(center_cell, world_pos)
+	var heat_result = _calculate_heat_avoidance(world_pos)
 	direction += heat_result.direction
 	total_weight += heat_result.weight
 
@@ -326,7 +325,7 @@ func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) ->
 
 	return {"direction": direction, "weight": total_weight}
 
-func _calculate_heat_avoidance(center_cell: Vector2i, world_pos: Vector2, exclude_entity_id: int = 0) -> Dictionary:
+func _calculate_heat_avoidance(world_pos: Vector2, exclude_entity_id: int = 0) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
 	var should_ignore_self: bool = exclude_entity_id == 0
@@ -529,14 +528,12 @@ func get_cells_in_radius(world_pos: Vector2, radius: float) -> Array[Dictionary]
 func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float) -> void:
 	var chunk_pos: Vector2i = world_to_chunk(world_cell)
 	var local_pos: Vector2i = world_to_local_cell(world_cell)
-	var world_pos = cell_to_world(world_cell)
 
 	if not _chunks.has(chunk_pos):
 		_chunks[chunk_pos] = HeatChunk.new()
 
 	var chunk: HeatChunk = _chunks[chunk_pos]
 	var cell: HeatCell = chunk.get_or_create_cell(local_pos)
-	var old_heat = cell.heat
 	cell.add_heat(entity_id, amount)
 	
 		
