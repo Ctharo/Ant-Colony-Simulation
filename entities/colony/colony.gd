@@ -44,7 +44,7 @@ func _init() -> void:
 func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
-	heatmap_enabled = true
+
 
 func _physics_process(delta: float) -> void:
 	for ant in ants_in_colony:
