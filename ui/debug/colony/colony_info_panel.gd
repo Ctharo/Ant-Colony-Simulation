@@ -143,4 +143,3 @@ func _on_show_heatmap_toggled(enabled: bool) -> void:
 func _exit_tree() -> void:
 	current_colony = null
 	show_heatmap_check.button_pressed = false
-	highlight_ants_check.button_pressed = false

@@ -246,15 +246,27 @@ func _on_spawn_food_requested(screen_position: Vector2) -> void:
 #endregion
 
 func _draw() -> void:
-	if highlight_ants and is_instance_valid(colony_info_panel):
-		if is_instance_valid(colony_info_panel.current_colony):
-				for ant: Ant in colony_info_panel.current_colony.ants:
-					draw_arc(
-						   camera.global_to_ui(ant.global_position),
-						   12,
-						   0,          # Start angle (radians)
-						   TAU,        # End angle (full circle)
-						   32,         # Number of points
-						   Color.WHITE # Circle color
-						)
+	var selected_colony = colony_info_panel.current_colony if is_instance_valid(colony_info_panel) else null
+	var hovered_colony = camera.hovered_entity
+	
+	if is_instance_valid(selected_colony) and selected_colony.highlight_ants_enabled:
+		for ant: Ant in selected_colony.ants:
+			draw_arc(
+				   camera.global_to_ui(ant.global_position),
+				   12,
+				   0,          # Start angle (radians)
+				   TAU,        # End angle (full circle)
+				   32,         # Number of points
+				   Color.WHITE # Circle color
+				)
 			
+	if (is_instance_valid(hovered_colony) and hovered_colony is Colony and hovered_colony.highlight_ants_enabled):
+		for ant: Ant in hovered_colony.ants:
+			draw_arc(
+				   camera.global_to_ui(ant.global_position),
+				   12,
+				   0,          # Start angle (radians)
+				   TAU,        # End angle (full circle)
+				   32,         # Number of points
+				   Color.WHITE # Circle color
+				)
