@@ -21,7 +21,13 @@ var inner_radius_ratio: float = 0.33
 var foods: Foods
 ## Ants belonging to this colony
 var ants: Ants = Ants.new([])
+## Whether this colony is highlighted
 var is_highlighted: bool = false
+## Whether to highlight all ants belonging to this colony
+var highlight_ants_enabled: bool = false
+
+## Whether to show navigation agent debug visualization
+var nav_debug_enabled: bool = false
 var heatmap_enabled: bool = false :
 	set(value):
 		heatmap_enabled = value

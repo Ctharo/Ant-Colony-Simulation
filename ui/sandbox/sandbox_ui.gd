@@ -152,6 +152,7 @@ func show_info_panel(entity: Node) -> void:
 			colony_info_panel.queue_free()
 		colony_info_panel = preload("res://ui/debug/colony/colony_info_panel.tscn").instantiate()
 		info_panels_container.add_child(colony_info_panel)
+		colony_info_panel.highlight_ants.connect(_on_colony_highlight_ants_requested)
 		colony_info_panel.show_colony_info(entity)
 		panel = colony_info_panel
 
@@ -243,3 +244,17 @@ func _on_spawn_food_requested(screen_position: Vector2) -> void:
 		$"../../FoodContainer".add_child(food)
 		food.global_position = world_position + wiggle
 #endregion
+
+func _draw() -> void:
+	if highlight_ants and is_instance_valid(colony_info_panel):
+		if is_instance_valid(colony_info_panel.current_colony):
+				for ant: Ant in colony_info_panel.current_colony.ants:
+					draw_arc(
+						   camera.global_to_ui(ant.global_position),
+						   12,
+						   0,          # Start angle (radians)
+						   TAU,        # End angle (full circle)
+						   32,         # Number of points
+						   Color.WHITE # Circle color
+						)
+			

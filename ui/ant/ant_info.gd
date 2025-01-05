@@ -18,7 +18,11 @@ const STYLE = {
 			"DISABLED": Color.DARK_GREEN
 		},
 		"TRACK": Color.BLUE,
-		"DESTROY": Color.RED
+		"DESTROY": Color.RED,
+		"NAV_DEBUG": {
+			"ENABLED": Color.YELLOW,
+			"DISABLED": Color.YELLOW_GREEN
+		}
 	}
 }
 #endregion
@@ -47,6 +51,7 @@ var camera: CameraController
 @onready var expand_button: Button = %ExpandButton
 @onready var influences_container: VBoxContainer = %InfluencesContainer
 @onready var destroy_button: Button = %DestroyButton
+@onready var nav_debug_button: Button = %NavDebugButton
 @onready var track_button: Button = %TrackButton
 @onready var influence_button: Button = %InfluenceButton
 #endregion
@@ -63,19 +68,23 @@ func _ready() -> void:
 	
 func setup_buttons() -> void:
 	# Set consistent button sizes
-	for button in [expand_button, destroy_button, track_button, influence_button]:
-		button.custom_minimum_size = Vector2(30, 30)
+	for button in [expand_button, destroy_button, track_button, influence_button, nav_debug_button]:
+		if button: button.custom_minimum_size = Vector2(30, 30)
+		
 	
 	# Set initial button colors
 	destroy_button.modulate = STYLE.BUTTON_COLORS.DESTROY
 	track_button.modulate = STYLE.BUTTON_COLORS.TRACK
 	influence_button.modulate = STYLE.BUTTON_COLORS.INFLUENCE.DISABLED
+	if nav_debug_button: nav_debug_button.modulate = STYLE.BUTTON_COLORS.NAV_DEBUG.DISABLED
+	
 
 func connect_signals() -> void:
 	expand_button.pressed.connect(_on_expand_pressed)
 	destroy_button.pressed.connect(_on_destroy_pressed)
 	track_button.pressed.connect(_on_track_pressed)
 	influence_button.pressed.connect(_on_influence_pressed)
+	if nav_debug_button: nav_debug_button.pressed.connect(_on_nav_debug_pressed)
 	
 	
 func _process(_delta: float) -> void:
@@ -107,8 +116,14 @@ func show_ant_info(ant: Ant, p_camera: Camera2D) -> void:
 	current_ant.influence_manager.influence_visibility_changed.connect(_on_influence_visibility_changed)
 	
 	_update_influence_button_state()
-	_update_display()
-
+	
+	# Update nav debug button state
+	if current_ant.nav_agent:
+		if nav_debug_button: nav_debug_button.modulate = STYLE.BUTTON_COLORS.NAV_DEBUG.ENABLED \
+			if current_ant.nav_agent.debug_enabled \
+			else STYLE.BUTTON_COLORS.NAV_DEBUG.DISABLED
+		
+		
 ## Clear current ant and hide panel
 func clear() -> void:
 	if current_ant and is_instance_valid(current_ant):
@@ -275,7 +290,16 @@ func _on_destroy_pressed() -> void:
 	if current_ant and is_instance_valid(current_ant):
 		current_ant.queue_free()
 		clear()
-
+		
+func _on_nav_debug_pressed() -> void:
+	if not current_ant or not is_instance_valid(current_ant):
+		return
+		
+	if current_ant.nav_agent:
+		current_ant.nav_agent.debug_enabled = !current_ant.nav_agent.debug_enabled
+		nav_debug_button.modulate = STYLE.BUTTON_COLORS.NAV_DEBUG.ENABLED \
+			if current_ant.nav_agent.debug_enabled \
+			else STYLE.BUTTON_COLORS.NAV_DEBUG.DISABLED
 func _on_track_pressed() -> void:
 	if current_ant and is_instance_valid(current_ant):
 		if not camera:

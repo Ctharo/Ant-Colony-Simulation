@@ -79,6 +79,12 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Highlight Ants"
 
+[node name="NavDebugCheck" type="CheckButton" parent="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Nav Debug"
+
 [node name="SpawnContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 
@@ -106,4 +112,5 @@ text = "Spawn"
 [connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/CloseButton" to="." method="_on_close_pressed"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/ShowHeatmapCheck" to="." method="_on_show_heatmap_toggled"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/HighlightAntsCheck" to="." method="_on_highlight_ants_toggled"]
+[connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/NavDebugCheck" to="." method="_on_nav_debug_toggled"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/SpawnContainer/HBoxContainer/SpawnAntsButton" to="." method="_on_spawn_ants_pressed"]
