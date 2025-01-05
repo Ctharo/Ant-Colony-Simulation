@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_tmb3a")
 name = "long lasting pheromone"
-decay_rate = 0.002
-generating_rate = 0.0
+decay_rate = 0.1
+generating_rate = 1.0
