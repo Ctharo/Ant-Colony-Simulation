@@ -6,11 +6,11 @@ const STYLE = {
 	"CELL_SIZE": 50,
 	"CHUNK_SIZE": 16,
 	"MAX_HEAT": 100.0,
-	"DECAY_RATE":  0.025,
+	"DECAY_RATE":  0.25,
 	"HEAT_RADIUS": 1,
 	"HEAT_PER_SECOND": 10.0,
 	"BOUNDARY_HEAT_MULTIPLIER": 8.0,
-	"BOUNDARY_CHECK_RADIUS": 3,
+	"BOUNDARY_CHECK_RADIUS": 1,
 	"BOUNDARY_PENETRATION_DEPTH": 2,
 	"DEBUG_COLORS": {
 		"START": Color(Color.LIGHT_GREEN, 0.3),
@@ -19,6 +19,14 @@ const STYLE = {
 		"REPULSION": Color(1, 0, 0, 0.6)
 	}
 }
+
+#TODO : DECAY_RATE and HEAT_PER_SECOND should scale based on:
+#			ant.movement_rate and CELL_SIZE
+#		which would allow to standardize how long the trail lasts or
+#		distance from colony before faded pheromones
+
+#		Additionally, introduce pheromones of different DECAY_RATEs/HEAT_PER_SECOND
+
 
 #region Member Variables
 var map_size: Vector2
