@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://df3wc3uubupgp"]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_xjjum"]
+[ext_resource type="Resource" uid="uid://drleodpwy1qvk" path="res://resources/movement/weights/colony_weight.tres" id="2_ang7n"]
+
+[resource]
+script = ExtResource("1_xjjum")
+name = "colony attract weight"
+expression_string = "1/colony_weight"
+nested_expressions = Array[ExtResource("1_xjjum")]([ExtResource("2_ang7n")])
+description = ""
+type = 3
+min_eval_interval = 0.016
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0

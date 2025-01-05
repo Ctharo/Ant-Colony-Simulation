@@ -89,7 +89,7 @@ var dead: bool = false :
 		if dead:
 			died.emit(self)
 
-var vision_range: float = 50.0 # TODO: Should be tied to sight_area.radius
+var vision_range: float = 100.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000005 for reference, drains pretty slow
@@ -144,7 +144,7 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-	#_process_pheromones(delta)
+	_process_pheromones(delta)
 
 	# Try to harvest food if we have capacity
 	if foods.mass < carry_max:
@@ -338,6 +338,13 @@ func get_ants_in_view() -> Array:
 			ants.append(ant)
 	return ants
 
+func get_colonies_in_view() -> Array:
+	var colonies: Array = []
+	for p_colony in sight_area.get_overlapping_bodies():
+		if p_colony is Colony:
+			colonies.append(p_colony)
+	return colonies
+
 func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
 	return ants.filter(func(ant): return friendly == (ant.colony == colony))
 
@@ -347,6 +354,9 @@ func get_foods_in_reach() -> Array:
 		if food is Food and food != null and food.is_available:
 			_foods.append(food)
 	return _foods
+
+func colony_in_sight() -> bool:
+	return colony in get_colonies_in_view()
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance

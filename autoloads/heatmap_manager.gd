@@ -3,11 +3,11 @@ extends Node2D
 
 #region Constants
 const STYLE = {
-	"CELL_SIZE": 25,
+	"CELL_SIZE": 50,
 	"CHUNK_SIZE": 16,
 	"MAX_HEAT": 100.0,
-	"DECAY_RATE":  0.00025,
-	"HEAT_RADIUS": 2,
+	"DECAY_RATE":  0.025,
+	"HEAT_RADIUS": 1,
 	"HEAT_PER_SECOND": 10.0,
 	"BOUNDARY_HEAT_MULTIPLIER": 8.0,
 	"BOUNDARY_CHECK_RADIUS": 3,
@@ -166,7 +166,7 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 #endregion
 
 #region Process and Draw
-func _process(_delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	update_timer += _delta
 	if update_timer <= update_interval:
 		return
@@ -284,6 +284,7 @@ func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2,
 			
 	# If no direction is found, return a very small vector in original direction
 	return normalized_direction * (base_weight * 0.1)  # Reduced magnitude when blocked
+
 func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0

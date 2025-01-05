@@ -5,6 +5,7 @@ extends Logic
 #region Properties
 ## Debug visualization color
 @export var color: Color
+@export var condition: Logic
 #endregion
 
 func _init():

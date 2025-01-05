@@ -140,6 +140,8 @@ func _register_profile_influences(profile: InfluenceProfile) -> void:
 
 	for influence in profile.influences:
 		eval_system.register_expression(influence)
+		if influence.condition:
+			eval_system.register_expression(influence.condition)
 
 func _unregister_profile_influences(profile: InfluenceProfile) -> void:
 	if not profile or not eval_system:
@@ -246,7 +248,11 @@ func _calculate_direction(influences: Array[Logic]) -> Vector2:
 	for influence in influences:
 		if not influence:
 			continue
-			
+		
+		# If has condition and it evaluates to false, skip
+		if influence.condition and not eval_system.get_value(influence.condition):
+			continue
+		
 		# Get the direction vector which includes magnitude as weight
 		var direction = eval_system.get_value(influence)
 		if not direction:

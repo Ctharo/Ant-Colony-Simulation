@@ -8,7 +8,7 @@ var settings_manager: SettingsManager = SettingsManager
 ## Navigation and viewport properties
 var map_size: Vector2
 var navigation_region: NavigationRegion2D
-
+var _obstacles
 #region Constants
 ## Constants for navigation mesh generation
 var NAVIGATION_OBSTACLES_DENSITY: float = settings_manager.get_setting("obstacle_density")
@@ -19,7 +19,7 @@ const AGENT_RADIUS: float = 12.5  # The largest diameter of the ant collision po
 const PADDING: float = 15.0
 const CELL_SIZE: float = 1.0     # Default cell size
 const MIN_VERTICES: int = 5  # Minimum vertices for irregular polygons
-const MAX_VERTICES: int = 8  # Maximum vertices for irregular polygons
+const MAX_VERTICES: int = 15  # Maximum vertices for irregular polygons
 const IRREGULARITY: float = 0.4  # Maximum deviation from regular polygon (0-1)
 const SPIKINESS: float = 0.3  # Maximum deviation in radius (0-1)
 #endregion
@@ -39,6 +39,7 @@ func _init() -> void:
 func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
 	map_size = p_map_size
 	
+	
 	# Create and configure navigation polygon
 	var nav_poly = NavigationPolygon.new()
 	nav_poly.agent_radius = AGENT_RADIUS
@@ -55,11 +56,8 @@ func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -
 	])
 	
 	# Set up the main navigation area
-	nav_poly.set_vertices(boundary_vertices)
 	nav_poly.add_outline(boundary_vertices)
-	var main_polygon = PackedInt32Array([0, 1, 2, 3])
-	nav_poly.add_polygon(main_polygon)
-	
+
 	if logger.is_debug_enabled():
 		logger.debug("Created main navigation boundary with vertices: %s" % [boundary_vertices])
 	
@@ -68,38 +66,27 @@ func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -
 	var obstacles = _generate_obstacles(safe_area)
 	
 	# Add valid obstacles to navigation polygon
+	var obstacle_data: NavigationMeshSourceGeometryData2D = NavigationMeshSourceGeometryData2D.new()
 	for obstacle_points in obstacles:
 		if _validate_polygon_points(obstacle_points):
-			var current_vertices = nav_poly.get_vertices()
-			
-			# Add new vertices
-			for point in obstacle_points:
-				current_vertices.push_back(point)
-			nav_poly.set_vertices(current_vertices)
-			
-			# Ensure clockwise winding for inner polygons
 			if is_outline_counterclockwise(obstacle_points):
 				obstacle_points.reverse()
-			
-			# Add obstacle outline
-			nav_poly.add_outline(obstacle_points)
-			
+			obstacle_data.add_obstruction_outline(obstacle_points)
 			if logger.is_trace_enabled():
 				logger.trace("Added valid obstacle with points: %s" % [obstacle_points])
 	
-	# Create polygons from outlines
-	nav_poly.make_polygons_from_outlines()
-	
+	_obstacles = obstacle_data.get_obstruction_outlines()
+	var count: int = _obstacles.size()
 	if logger.is_debug_enabled():
-		logger.debug("Added %d valid obstacles to navigation mesh" % [obstacles.size()])
+		logger.debug("Added %d valid obstacles to navigation mesh" % [count])
+	
+	NavigationServer2D.bake_from_source_geometry_data(nav_poly, obstacle_data)
 	
 	# Create and configure navigation region
 	navigation_region = NavigationRegion2D.new()
 	navigation_region.navigation_polygon = nav_poly
 	add_child(navigation_region)
 	
-	# Ensure proper baking
-	navigation_region.bake_navigation_polygon(true)
 	queue_redraw()
 	
 	# Wait for physics processing
@@ -108,7 +95,6 @@ func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -
 	
 	return navigation_region
 
-## Creates points for a square obstacle
 ## Creates points for an irregular polygon
 func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
 	# Randomly determine number of vertices
@@ -316,13 +302,13 @@ func _draw_navigation_mesh() -> void:
 		draw_colored_polygon(main_outline, BACKGROUND_COLOR)
 	
 	# Draw obstacles
-	for i in range(1, outline_count):
-		var obstacle = nav_poly.get_outline(i)
-		if obstacle.size() >= 3:
-			draw_colored_polygon(obstacle, OBSTACLE_FILL_COLOR)
+	for i in range(1, _obstacles.size()):
+		var obstacle_vertices = _obstacles[i]
+		if obstacle_vertices.size() >= 3:
+			draw_colored_polygon(obstacle_vertices, OBSTACLE_FILL_COLOR)
 			
 			# Draw borders
-			for j in range(obstacle.size()):
-				var start = obstacle[j]
-				var end = obstacle[(j + 1) % obstacle.size()]
+			for j in range(obstacle_vertices.size()):
+				var start = obstacle_vertices[j]
+				var end = obstacle_vertices[(j + 1) % obstacle_vertices.size()]
 				draw_line(start, end, OBSTACLE_BORDER_COLOR, BORDER_WIDTH)
