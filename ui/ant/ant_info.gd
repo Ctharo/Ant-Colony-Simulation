@@ -77,6 +77,7 @@ func connect_signals() -> void:
 	track_button.pressed.connect(_on_track_pressed)
 	influence_button.pressed.connect(_on_influence_pressed)
 	
+	
 func _process(_delta: float) -> void:
 	if current_ant and is_instance_valid(current_ant):
 		_update_display()

@@ -8,128 +8,286 @@ var settings_manager: SettingsManager = SettingsManager
 ## Navigation and viewport properties
 var map_size: Vector2
 var navigation_region: NavigationRegion2D
+
+#region Constants
 ## Constants for navigation mesh generation
 var NAVIGATION_OBSTACLES_DENSITY: float = settings_manager.get_setting("obstacle_density")
 var OBSTACLE_SIZE_MIN: float = settings_manager.get_setting("obstacle_size_min")
 var OBSTACLE_SIZE_MAX: float = settings_manager.get_setting("obstacle_size_max")
+const MIN_OBSTACLE_SEPARATION: float = 100.0  # Increased for better spacing
+const AGENT_RADIUS: float = 12.5  # The largest diameter of the ant collision polygon?
+const PADDING: float = 15.0
+const CELL_SIZE: float = 1.0     # Default cell size
+const MIN_VERTICES: int = 5  # Minimum vertices for irregular polygons
+const MAX_VERTICES: int = 8  # Maximum vertices for irregular polygons
+const IRREGULARITY: float = 0.4  # Maximum deviation from regular polygon (0-1)
+const SPIKINESS: float = 0.3  # Maximum deviation in radius (0-1)
+#endregion
 
-## Drawing colors
+#region Drawing colors
 const BACKGROUND_COLOR = Color(Color.LIGHT_GREEN, 0.2)
 const OBSTACLE_FILL_COLOR = Color(Color.WEB_GRAY, 0.7)
 const OBSTACLE_BORDER_COLOR = Color(0.3, 0.3, 0.3, 0.8)
 const PERIPHERY_COLOR = Color(0.2, 0.2, 0.2, 0.9)
 const BORDER_WIDTH = 2.0
+#endregion
 
 func _init() -> void:
 	logger = Logger.new("map_generator", DebugLogger.Category.PROGRAM)
 
 ## Creates a navigation setup for the given viewport
 func generate_navigation(p_map_size: Vector2, _margin_config: Dictionary = {}) -> NavigationRegion2D:
-	# Create navigation polygon
-	var nav_poly = NavigationPolygon.new()
-	var vertex_array = PackedVector2Array()
-	var vertices_map = {}  # To map Vector2 positions to vertex indices
-	var vertex_index = 0
-
-	# Get map size
 	map_size = p_map_size
-
-	# Define the navigation boundary points
-	var nav_left := 0
-	var nav_right := map_size.x
-	var nav_top := 0
-	var nav_bottom := map_size.y
-
-	# Add main boundary vertices
-	var main_vertices = [
-		Vector2(nav_left, nav_top),      # 0
-		Vector2(nav_left, nav_bottom),   # 1
-		Vector2(nav_right, nav_bottom),  # 2
-		Vector2(nav_right, nav_top)      # 3
-	]
-
-	# Add main vertices and store their indices
-	for vertex in main_vertices:
-		vertex_array.push_back(vertex)
-		vertices_map[vertex] = vertex_index
-		vertex_index += 1
-
-	# Create navigation polygon for main boundary
-	nav_poly.clear()
-	nav_poly.add_outline(PackedVector2Array(main_vertices))
-	nav_poly.set_vertices(vertex_array)
-	nav_poly.add_polygon(PackedInt32Array([0, 1, 2, 3]))
-
+	
+	# Create and configure navigation polygon
+	var nav_poly = NavigationPolygon.new()
+	nav_poly.agent_radius = AGENT_RADIUS
+	nav_poly.cell_size = CELL_SIZE
+	nav_poly.baking_rect = Rect2(Vector2.ZERO, map_size)
+	
+	# Define the navigation boundary points with slight inset
+	var inset = nav_poly.cell_size  # Use cell_size as inset
+	var boundary_vertices = PackedVector2Array([
+		Vector2(inset, inset),
+		Vector2(inset, map_size.y - inset),
+		Vector2(map_size.x - inset, map_size.y - inset),
+		Vector2(map_size.x - inset, inset)
+	])
+	
+	# Set up the main navigation area
+	nav_poly.set_vertices(boundary_vertices)
+	nav_poly.add_outline(boundary_vertices)
+	var main_polygon = PackedInt32Array([0, 1, 2, 3])
+	nav_poly.add_polygon(main_polygon)
+	
 	if logger.is_debug_enabled():
-		logger.debug("Main outline points: %s" % [main_vertices])
-
-	# Calculate safe area for obstacle placement
-	var safe_left := nav_left + OBSTACLE_SIZE_MAX
-	var safe_right := nav_right - OBSTACLE_SIZE_MAX
-	var safe_top := nav_top + OBSTACLE_SIZE_MAX
-	var safe_bottom := nav_bottom - OBSTACLE_SIZE_MAX
-
-	# Calculate number of obstacles based on viewport size
-	var obstacles_num = floori(NAVIGATION_OBSTACLES_DENSITY * map_size.length())
-	var obstacles_placed = 0
-	var max_attempts = obstacles_num * 2
-	var existing_obstacles: Array[PackedVector2Array] = []
-
-	while obstacles_placed < obstacles_num and max_attempts > 0:
-		max_attempts -= 1
-		var center_x = randf_range(safe_left, safe_right)
-		var center_y = randf_range(safe_top, safe_bottom)
-		var center = Vector2(center_x, center_y)
-
-		if center.distance_to(Vector2.ZERO) < 150:
-			continue
-
-		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
-		var obstacle_points = _create_obstacle_points(center, obstacle_size)
-
-		# Check for overlaps with minimum distance of OBSTACLE_SIZE_MIN
-		if _check_obstacle_overlap(obstacle_points, existing_obstacles, OBSTACLE_SIZE_MIN):
-			continue
-
-		# Add vertices and update navigation polygon
-		var start_idx = vertex_array.size()
-		for vertex in obstacle_points:
-			vertex_array.push_back(vertex)
-
-		if is_outline_counterclockwise(obstacle_points):
-			obstacle_points.reverse()
-
-		nav_poly.add_outline(obstacle_points)
-		nav_poly.set_vertices(vertex_array)
-
-		var obstacle_indices = PackedInt32Array()
-		for i in range(obstacle_points.size()):
-			obstacle_indices.push_back(start_idx + i)
-
-		nav_poly.add_polygon(obstacle_indices)
-		existing_obstacles.append(obstacle_points)
-
-		obstacles_placed += 1
-		if logger.is_trace_enabled():
-			logger.trace("Added obstacle %s with size %s" % [obstacles_placed, obstacle_size])
-
+		logger.debug("Created main navigation boundary with vertices: %s" % [boundary_vertices])
+	
+	# Generate and add obstacles
+	var safe_area = _calculate_safe_area()
+	var obstacles = _generate_obstacles(safe_area)
+	
+	# Add valid obstacles to navigation polygon
+	for obstacle_points in obstacles:
+		if _validate_polygon_points(obstacle_points):
+			var start_idx = nav_poly.get_vertices().size()
+			var current_vertices = nav_poly.get_vertices()
+			
+			# Add new vertices
+			for point in obstacle_points:
+				current_vertices.push_back(point)
+			nav_poly.set_vertices(current_vertices)
+			
+			# Ensure clockwise winding for inner polygons
+			if is_outline_counterclockwise(obstacle_points):
+				obstacle_points.reverse()
+			
+			# Add obstacle outline
+			nav_poly.add_outline(obstacle_points)
+			
+			if logger.is_trace_enabled():
+				logger.trace("Added valid obstacle with points: %s" % [obstacle_points])
+	
+	# Create polygons from outlines
+	nav_poly.make_polygons_from_outlines()
+	
 	if logger.is_debug_enabled():
-		logger.debug("Added %d obstacles - Final vertices: %d, Polygons: %d" % [
-			obstacles_placed,
-			nav_poly.get_vertices().size(),
-			nav_poly.get_polygon_count()
-		])
-
-	# Create navigation region
+		logger.debug("Added %d valid obstacles to navigation mesh" % [obstacles.size()])
+	
+	# Create and configure navigation region
 	navigation_region = NavigationRegion2D.new()
-	# Set the navigation polygon
 	navigation_region.navigation_polygon = nav_poly
 	add_child(navigation_region)
-	navigation_region.bake_navigation_polygon()
+	
+	# Ensure proper baking
+	navigation_region.bake_navigation_polygon(true)
 	queue_redraw()
+	
+	# Wait for physics processing
 	await get_tree().physics_frame
+	await get_tree().physics_frame
+	
 	return navigation_region
 
+## Creates points for a square obstacle
+## Creates points for an irregular polygon
+func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
+	# Randomly determine number of vertices
+	var num_vertices = randi_range(MIN_VERTICES, MAX_VERTICES)
+	var points = PackedVector2Array()
+	
+	# Generate base angles for a regular polygon
+	var base_angle = TAU / num_vertices
+	var angle_offset = randf_range(0, base_angle)  # Random rotation
+	
+	for i in range(num_vertices):
+		# Calculate base angle for this vertex
+		var angle = i * base_angle + angle_offset
+		
+		# Add irregularity to angle (deviation from regular spacing)
+		var angle_irregularity = randf_range(-IRREGULARITY, IRREGULARITY) * base_angle
+		angle += angle_irregularity
+		
+		# Add spikiness (deviation from regular radius)
+		var radius = size * (1.0 + randf_range(-SPIKINESS, SPIKINESS))
+		
+		# Calculate point position
+		var point = Vector2(
+			center.x + cos(angle) * radius,
+			center.y + sin(angle) * radius
+		)
+		points.push_back(point)
+	
+	if logger.is_trace_enabled():
+		logger.trace("Generated irregular polygon with %d vertices at %s" % [
+			num_vertices,
+			center
+		])
+	
+	return points
+
+## Validates polygon points
+func _validate_polygon_points(points: PackedVector2Array) -> bool:
+	if points.size() < MIN_VERTICES:
+		logger.trace("Invalid number of points: %d (minimum %d)" % [
+			points.size(),
+			MIN_VERTICES
+		])
+		return false
+	
+	# Check if all points are within the map bounds with padding
+	var padding = PADDING
+	for point in points:
+		if point.x < padding or point.x > map_size.x - padding or \
+		   point.y < padding or point.y > map_size.y - padding:
+			logger.trace("Point outside safe bounds: %s" % [point])
+			return false
+	
+	# Check if polygon is convex (required for navigation mesh)
+	if not _is_polygon_convex(points):
+		logger.trace("Generated polygon is not convex")
+		return false
+	
+	return true
+
+## Checks if a polygon is convex using cross product
+func _is_polygon_convex(points: PackedVector2Array) -> bool:
+	var n = points.size()
+	if n < 3:
+		return false
+	
+	var sign = 0
+	
+	for i in range(n):
+		var current = points[i]
+		var next = points[(i + 1) % n]
+		var next_next = points[(i + 2) % n]
+		
+		var cross_product = (next.x - current.x) * (next_next.y - current.y) - \
+						   (next.y - current.y) * (next_next.x - current.x)
+		
+		if sign == 0:
+			sign = signf(cross_product)
+		elif sign * cross_product < 0:
+			return false
+	
+	return true
+
+func _calculate_safe_area() -> Dictionary:
+	var padding = max(OBSTACLE_SIZE_MAX, MIN_OBSTACLE_SEPARATION) * 2
+	logger.debug("Calculating safe area with padding: %f" % [padding])
+	
+	var safe_area = {
+		"left": padding,
+		"right": map_size.x - padding,
+		"top": padding,
+		"bottom": map_size.y - padding
+	}
+	
+	var usable_width = safe_area.right - safe_area.left
+	var usable_height = safe_area.bottom - safe_area.top
+	logger.debug("Usable area: %f x %f" % [usable_width, usable_height])
+	
+	return safe_area
+
+## Generates obstacle points arrays
+func _generate_obstacles(safe_area: Dictionary) -> Array[PackedVector2Array]:
+	# Calculate number of obstacles based on area rather than length
+	var area = map_size.x * map_size.y
+	var obstacles_num = floori(NAVIGATION_OBSTACLES_DENSITY * area) * 0.00001  # Adjusted for large maps
+	
+	logger.debug("Attempting to generate %d obstacles for map size %s" % [obstacles_num, map_size])
+	logger.debug("Safe area: %s" % [safe_area])
+	
+	var existing_obstacles: Array[PackedVector2Array] = []
+	var attempts_per_obstacle = 15  # Increased attempts
+	var max_attempts = obstacles_num * attempts_per_obstacle
+	var current_attempts = 0
+	
+	var validation_failures = 0
+	var overlap_failures = 0
+	var origin_failures = 0
+	
+	while existing_obstacles.size() < obstacles_num and current_attempts < max_attempts:
+		current_attempts += 1
+		
+		var center = Vector2(
+			randf_range(safe_area.left, safe_area.right),
+			randf_range(safe_area.top, safe_area.bottom)
+		)
+		
+		# Skip if too close to origin
+		if center.distance_to(Vector2.ZERO) < AGENT_RADIUS * 20:
+			origin_failures += 1
+			if current_attempts % 100 == 0:
+				logger.trace("Origin proximity failures: %d" % [origin_failures])
+			continue
+			
+		var obstacle_size = randf_range(OBSTACLE_SIZE_MIN, OBSTACLE_SIZE_MAX)
+		var obstacle_points = _create_obstacle_points(center, obstacle_size)
+		
+		if not _validate_polygon_points(obstacle_points):
+			validation_failures += 1
+			if current_attempts % 100 == 0:
+				logger.trace("Validation failures: %d" % [validation_failures])
+			continue
+			
+		if _check_obstacle_overlap(obstacle_points, existing_obstacles):
+			overlap_failures += 1
+			if current_attempts % 100 == 0:
+				logger.trace("Overlap failures: %d" % [overlap_failures])
+			continue
+			
+		existing_obstacles.append(obstacle_points)
+		
+		if logger.is_trace_enabled():
+			logger.trace("Generated valid obstacle %d/%d at %s" % [
+				existing_obstacles.size(),
+				obstacles_num,
+				center
+			])
+	
+	logger.debug("Obstacle generation summary:")
+	logger.debug("- Total attempts: %d" % [current_attempts])
+	logger.debug("- Validation failures: %d" % [validation_failures])
+	logger.debug("- Overlap failures: %d" % [overlap_failures])
+	logger.debug("- Origin proximity failures: %d" % [origin_failures])
+	logger.debug("- Successful obstacles: %d" % [existing_obstacles.size()])
+	
+	return existing_obstacles
+
+## Check obstacle overlap
+func _check_obstacle_overlap(new_obstacle: PackedVector2Array, existing_obstacles: Array[PackedVector2Array]) -> bool:
+	var min_distance = AGENT_RADIUS * 3  # Minimum separation based on agent radius
+	
+	for existing in existing_obstacles:
+		for new_point in new_obstacle:
+			for existing_point in existing:
+				if new_point.distance_to(existing_point) < min_distance:
+					return true
+	return false
+
+## Checks outline winding order
 func is_outline_counterclockwise(outline: PackedVector2Array) -> bool:
 	var sum = 0.0
 	for i in range(outline.size()):
@@ -138,93 +296,34 @@ func is_outline_counterclockwise(outline: PackedVector2Array) -> bool:
 		sum += (next.x - current.x) * (next.y + current.y)
 	return sum > 0
 
-func _check_obstacle_overlap(obstacle_points: PackedVector2Array, existing_obstacles: Array[PackedVector2Array], min_distance: float) -> bool:
-	# Check if new obstacle overlaps with existing ones
-	for existing in existing_obstacles:
-		for point in obstacle_points:
-			for i in range(existing.size()):
-				var segment_start := existing[i]
-				var segment_end := existing[(i + 1) % existing.size()]
-
-				# Check distance to line segment
-				var closest := _get_closest_point_on_segment(point, segment_start, segment_end)
-				if point.distance_to(closest) < min_distance:
-					return true
-
-	return false
-
-func _get_closest_point_on_segment(point: Vector2, segment_start: Vector2, segment_end: Vector2) -> Vector2:
-	var segment := segment_end - segment_start
-	if segment.length_squared() == 0:
-		return segment_start
-
-	var t: float = max(0, min(1, (point - segment_start).dot(segment) / segment.length_squared()))
-	return segment_start + segment * t
-
-## Calculates the safe boundaries for navigation
-func _calculate_boundaries(
-	p_viewport_size: Vector2,
-	side_margin: float,
-	top_margin: float,
-	bottom_margin: float
-) -> Dictionary:
-	return {
-		"left": -p_viewport_size.x/2 + side_margin,
-		"right": p_viewport_size.x/2 - side_margin,
-		"top": -p_viewport_size.y/2 + top_margin,
-		"bottom": p_viewport_size.y/2 - bottom_margin,
-		"safe_left": -p_viewport_size.x/2 + side_margin + OBSTACLE_SIZE_MAX,
-		"safe_right": p_viewport_size.x/2 - side_margin - OBSTACLE_SIZE_MAX,
-		"safe_top": -p_viewport_size.y/2 + top_margin + OBSTACLE_SIZE_MAX,
-		"safe_bottom": p_viewport_size.y/2 - bottom_margin - OBSTACLE_SIZE_MAX
-	}
-
-## Creates points for an obstacle polygon
-func _create_obstacle_points(center: Vector2, size: float) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	var num_points := randi_range(6, 8)
-	var angle_step := 2 * PI / num_points
-
-	for i in range(num_points):
-		var angle = i * angle_step
-		var radius = size * (0.7 + randf() * 0.6)
-		var point = center + Vector2(
-			cos(angle) * radius * (0.8 + randf() * 0.4),
-			sin(angle) * radius * (0.8 + randf() * 0.4)
-		)
-		points.push_back(point)
-
-	return points
-
 func _draw() -> void:
+	if not navigation_region or not navigation_region.navigation_polygon:
+		return
+	
 	_draw_navigation_mesh()
 
-## Draws the navigation mesh with obstacles and periphery
+## Draws navigation mesh
 func _draw_navigation_mesh() -> void:
 	var nav_poly = navigation_region.navigation_polygon
-	var outline_count := nav_poly.get_outline_count()
-
-
+	var outline_count = nav_poly.get_outline_count()
+	
 	if outline_count == 0:
 		logger.error("No outlines found in navigation polygon")
 		return
-
-	var main_outline := nav_poly.get_outline(0)
+	
+	# Draw main area
+	var main_outline = nav_poly.get_outline(0)
 	if main_outline.size() >= 3:
 		draw_colored_polygon(main_outline, BACKGROUND_COLOR)
-	else:
-		logger.error("Main outline has insufficient points: %d" % main_outline.size())
-
-	# Draw inner obstacles
+	
+	# Draw obstacles
 	for i in range(1, outline_count):
-		var obstacle := nav_poly.get_outline(i)
+		var obstacle = nav_poly.get_outline(i)
 		if obstacle.size() >= 3:
 			draw_colored_polygon(obstacle, OBSTACLE_FILL_COLOR)
-
-			# Draw obstacle borders
+			
+			# Draw borders
 			for j in range(obstacle.size()):
-				var start := obstacle[j]
-				var end := obstacle[(j + 1) % obstacle.size()]
+				var start = obstacle[j]
+				var end = obstacle[(j + 1) % obstacle.size()]
 				draw_line(start, end, OBSTACLE_BORDER_COLOR, BORDER_WIDTH)
-		else:
-			logger.error("Obstacle %d has insufficient points: %d" % [i, obstacle.size()])

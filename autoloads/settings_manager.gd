@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS = {
 	"food_spawn_count": 500,
 	"map_size_x": 6800,
 	"map_size_y": 3600,
-	"obstacle_density": 0.03,
+	"obstacle_density": 0.00001,
 	"obstacle_size_min": 15,
 	"obstacle_size_max": 70,
 	"terrain_seed": 0,

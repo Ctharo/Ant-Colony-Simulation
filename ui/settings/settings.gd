@@ -67,7 +67,7 @@ func load_ui_state() -> void:
 	food_spawn_count.value = settings_manager.get_setting("food_spawn_count", 500)
 	map_size_x.value = settings_manager.get_setting("map_size_x", 6800)
 	map_size_y.value = settings_manager.get_setting("map_size_y", 3600)
-	obstacle_density.value = settings_manager.get_setting("obstacle_density", 0.03)
+	obstacle_density.value = settings_manager.get_setting("obstacle_density", 0.00001)
 	obstacle_size_min.value = settings_manager.get_setting("obstacle_size_min", 15)
 	obstacle_size_max.value = settings_manager.get_setting("obstacle_size_max", 70)
 

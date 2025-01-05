@@ -17,14 +17,17 @@ const STYLE = {
 	}
 }
 
-var use_best_direction: bool = false  
+var use_best_direction: bool = true  
 
 var _visualization_enabled: bool = false
 var camera: Camera2D
 #endregion
 
 #region Movement Properties
-const TARGET_DISTANCE = 50.0
+const TARGET_DISTANCE_MEAN = 65.0
+var TARGET_DISTANCE :
+	get:
+		return TARGET_DISTANCE_MEAN + randf_range(-0.25 * TARGET_DISTANCE_MEAN, 0.25 * TARGET_DISTANCE_MEAN)
 var target_recalculation_cooldown: float = 0.5
 var _target_recalc_timer: float = 0.0
 #endregion
@@ -154,7 +157,7 @@ func should_recalculate_target() -> bool:
 	if _target_recalc_timer < target_recalculation_cooldown:
 		return false
 		
-	var nav_agent = entity.nav_agent
+	var nav_agent: NavigationAgent2D = entity.nav_agent
 	if not nav_agent:
 		return false
 
@@ -170,9 +173,11 @@ func should_recalculate_target() -> bool:
 	return false
 
 func update_movement_target() -> void:
+	entity = entity as Ant
 	_target_recalc_timer = 0.0
 	var new_target = _calculate_target_position()
-	
+	entity.move_to(new_target)
+		
 	# Only update if we have a meaningful new target
 	if new_target and new_target != entity.global_position and entity.has_method("move_to"):
 		# Ensure the target is different enough to warrant movement
@@ -200,10 +205,11 @@ func _calculate_target_position() -> Vector2:
 		return _get_simple_navigable_target(base_direction, nav_region)
 
 func _get_simple_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
-	var target_pos = entity.global_position + direction * TARGET_DISTANCE
+	var target_pos = entity.global_position + direction * TARGET_DISTANCE 
 	return NavigationServer2D.map_get_closest_point(nav_region.get_navigation_map(), target_pos)
 
 func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
+	entity = entity as Ant
 	var map_rid = nav_region.get_navigation_map()
 	var test_angles = [0,PI/16, -PI/16, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
 	var best_target: Vector2 = entity.global_position
@@ -211,7 +217,7 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 	
 	for angle in test_angles:
 		var test_direction = direction.rotated(angle)
-		var test_target = entity.global_position + test_direction * 15
+		var test_target = entity.global_position + test_direction * TARGET_DISTANCE 
 		var navigable_point = NavigationServer2D.map_get_closest_point(map_rid, test_target)
 		
 		if NavigationServer2D.map_get_path(
@@ -228,7 +234,7 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 				
 				if dist_to_original < 5.0:
 					break
-	
+	assert(best_distance > 0)
 	return best_target if best_distance > 0.0 else entity.global_position
 
 func _calculate_direction(influences: Array[Logic]) -> Vector2:

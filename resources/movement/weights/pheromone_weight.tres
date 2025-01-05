@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_qkibf")
 name = "pheromone weight"
-expression_string = "1.0"
+expression_string = "heatmap.get_heat_at_position(self, global_position)/heatmap.STYLE.MAX_HEAT * 5"
 nested_expressions = Array[ExtResource("1_qkibf")]([])
 description = ""
 type = 3

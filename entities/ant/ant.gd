@@ -144,7 +144,7 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-	_process_pheromones(delta)
+	#_process_pheromones(delta)
 
 	# Try to harvest food if we have capacity
 	if foods.mass < carry_max:
@@ -158,10 +158,11 @@ func move_to(target_pos: Vector2) -> void:
 	# Update movement state
 	move_state = MoveState.MOVING
 	movement_target = target_pos
-
+	
 	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
-
+	
+	
 ## Stops the current movement
 func stop_movement() -> void:
 	move_state = MoveState.INTERRUPTED
@@ -209,6 +210,9 @@ func harvest_food() -> bool:
 
 #region Movement Processing
 func _process_movement(delta: float) -> void:
+	if not is_instance_valid(nav_agent):
+		return
+	
 	var current_pos = global_position
 	
 	# Stuck detection logic
@@ -224,9 +228,7 @@ func _process_movement(delta: float) -> void:
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
 	
-	if not nav_agent.is_target_reachable():
-		velocity = Vector2.ZERO
-		return
+
 		
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
