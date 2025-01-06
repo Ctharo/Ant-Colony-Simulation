@@ -260,7 +260,7 @@ func _draw() -> void:
 				   Color.WHITE # Circle color
 				)
 			
-	if (is_instance_valid(hovered_colony) and hovered_colony is Colony and hovered_colony.highlight_ants_enabled):
+	if (is_instance_valid(hovered_colony) and hovered_colony is Colony):
 		for ant: Ant in hovered_colony.ants:
 			draw_arc(
 				   camera.global_to_ui(ant.global_position),
