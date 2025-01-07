@@ -14,6 +14,36 @@ func add_food(mass_to_add: float) -> float:
 	append(food)
 	return get_mass()
 
+## Removes food by mass from foods collection, returns remaining mass to remove
+## If mass_to_remove is greater than available mass, removes all food and returns remaining mass
+## If mass_to_remove is less than or equal to available mass, removes exact amount and returns 0
+func remove_food(mass_to_remove: float) -> float:
+	# Handle invalid input
+	if mass_to_remove <= 0:
+		return 0.0
+	
+	var remaining_mass: float = mass_to_remove
+	var foods_to_remove: Array[Food] = []
+	
+	# First pass: identify foods to remove completely
+	for food in elements:
+		if food.mass <= remaining_mass:
+			foods_to_remove.append(food)
+			remaining_mass -= food.mass
+		elif remaining_mass > 0:
+			# Split this food item
+			var new_mass: float = food.mass - remaining_mass
+			food.mass = new_mass
+			remaining_mass = 0
+			break
+	
+	# Remove the identified foods
+	for food in foods_to_remove:
+		elements.erase(food)
+	
+	return remaining_mass
+	
+
 func mark_as_carried() -> void:
 	for food in elements:
 		food.carried = true

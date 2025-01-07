@@ -12,10 +12,12 @@ signal died(ant: Ant)
 signal movement_completed(success: bool)
 
 ## Enum for movement states
-enum MoveState {
+enum State {
 	IDLE,
 	MOVING,
-	INTERRUPTED
+	HARVESTING,
+	STORING,
+	RESTING
 }
 
 #endregion
@@ -28,7 +30,7 @@ var _time_at_position: float = 0.0
 var _was_stuck: bool = false
 
 ## Current movement state
-var move_state: MoveState = MoveState.IDLE
+var current_state: State = State.IDLE
 ## Movement target position
 var movement_target: Vector2
 #endregion
@@ -92,7 +94,11 @@ var dead: bool = false :
 var vision_range: float = 100.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
-const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000005 for reference, drains pretty slow
+var harvesting_rate: float = 20.0
+var storing_rate: float = 20.0
+var resting_rate: float = 20.0
+
+const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
 		return ENERGY_DRAIN_FACTOR * (foods.mass + ant_mass) * pow(movement_rate, 1.2)
@@ -144,19 +150,26 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-	_process_pheromones(delta)
 
-	# Try to harvest food if we have capacity
-	if foods.mass < carry_max:
-		if harvest_food():
-			return  # Skip movement this frame if we harvested food
-
-	_process_movement(delta)
+	match current_state:
+		State.MOVING:
+			_process_movement(delta)
+		State.HARVESTING:
+			_process_harvesting(delta)
+		State.STORING:
+			_process_storing(delta)
+		State.RESTING:
+			_process_resting(delta)
+		State.IDLE:
+			pass
+		_:
+			pass
+			
 	
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
 	# Update movement state
-	move_state = MoveState.MOVING
+	current_state = State.MOVING
 	movement_target = target_pos
 	
 	# Set the navigation target
@@ -165,56 +178,87 @@ func move_to(target_pos: Vector2) -> void:
 	
 ## Stops the current movement
 func stop_movement() -> void:
-	move_state = MoveState.INTERRUPTED
+	current_state = State.IDLE
 	velocity = Vector2.ZERO
 	movement_completed.emit(false)
 
-func harvest_food() -> bool:
+func _process_resting(delta: float) -> void:
+	if health_level == health_max and energy_level == energy_max:
+		current_state = State.IDLE
+		return
+	
+	health_level += resting_rate * delta
+	energy_level += resting_rate * delta
+	
+	
+func _process_storing(delta: float) -> void:
+	var food_to_store: float = foods.mass
+	
+	if not food_to_store:
+		current_state = State.IDLE
+		return
+		
+	food_to_store = min(food_to_store, storing_rate * delta) # TODO: magic number
+	colony.foods.add_food(food_to_store)
+	foods.remove_food(food_to_store)
+	
+func _process_harvesting(delta: float) -> bool:
 	# Don't harvest if we're at capacity
 	if foods.mass >= carry_max:
+		current_state = State.IDLE
 		return false
-
+		
 	var foods_in_reach = get_foods_in_reach()
 	if foods_in_reach.is_empty():
 		return false
-
+		
 	# Sort foods by distance to optimize harvesting
 	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
 		var dist_a = global_position.distance_squared_to(a.global_position)
 		var dist_b = global_position.distance_squared_to(b.global_position)
 		return dist_a < dist_b
 	)
-
+	
+	# Calculate max amount that can be harvested this frame based on delta
+	var max_harvest_this_frame := harvesting_rate * delta
 	var amount_harvested := 0.0
+	
 	for food in foods_in_reach:
 		if not is_instance_valid(food) or not food.is_available:
 			continue
-
+			
 		var space_remaining = carry_max - foods.mass
 		if space_remaining <= 0:
 			break
-
+			
+		# Limit harvest by rate, remaining capacity, and available food
+		var harvest_remaining = max_harvest_this_frame - amount_harvested
+		if harvest_remaining <= 0:
+			break
+			
 		var amount_to_take = minf(space_remaining, food.mass)
+		amount_to_take = minf(amount_to_take, harvest_remaining)
+		
 		foods.add_food(amount_to_take)
 		food.remove_amount(amount_to_take)
 		amount_harvested += amount_to_take
-
+		
 		# Remove depleted food
 		if food.mass <= 0.0:
 			food.queue_free()
-
+			
 		if foods.mass >= carry_max:
 			break
-
+		
 	return amount_harvested > 0
 
-#region Movement Processing
 func _process_movement(delta: float) -> void:
 	if not is_instance_valid(nav_agent):
 		return
 	
 	var current_pos = global_position
-	
+	_process_pheromones(delta)
+		
 	# Stuck detection logic
 	if _check_if_stuck(current_pos, delta):
 		# Enable best direction pathfinding
@@ -228,7 +272,6 @@ func _process_movement(delta: float) -> void:
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
 	
-
 		
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
@@ -239,6 +282,15 @@ func _process_movement(delta: float) -> void:
 	else:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
+
+func _process_pheromones(delta: float):
+	var pheromone_factor: float = 1.0
+	
+	if foods.mass > 0:
+		pheromone_factor += 2.0
+		
+	# emit pheromones
+	heatmap.update_entity_heat(self, delta, pheromone_factor)
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	if not _last_position:
@@ -259,19 +311,9 @@ func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	
 	return false
 
-func _process_pheromones(delta: float):
-	var pheromone_factor: float = 1.0
-	
-	if foods.mass > 0:
-		pheromone_factor += 2.0
-		
-	# emit pheromones
-	heatmap.update_entity_heat(self, delta, pheromone_factor)
-	
 func calculate_energy_cost(delta: float) -> float:
 	var movement_cost = energy_drain * velocity.length()
 	return movement_cost * delta
-#endregion
 
 #region Navigation Agent Callbacks
 func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
@@ -282,15 +324,15 @@ func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 	move_and_slide()
 
 func _on_navigation_agent_2d_target_reached() -> void:
-	if move_state == MoveState.MOVING:
-		move_state = MoveState.IDLE
+	if current_state == State.MOVING:
+		current_state = State.IDLE
 		movement_completed.emit(true)
 
 func _on_navigation_agent_2d_path_changed() -> void:
 	# Could update path visualization here
 	if nav_agent.debug_enabled:
 		show_nav_path(true)
-	move_state = MoveState.MOVING
+	current_state = State.MOVING
 #endregion
 
 
