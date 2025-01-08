@@ -11,15 +11,6 @@ signal died(ant: Ant)
 ## Signal emitted when movement is completed
 signal movement_completed(success: bool)
 
-## Enum for movement states
-enum State {
-	IDLE,
-	MOVING,
-	HARVESTING,
-	STORING,
-	RESTING
-}
-
 #endregion
 #region Movement
 const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
@@ -29,11 +20,10 @@ var _last_position: Vector2
 var _time_at_position: float = 0.0
 var _was_stuck: bool = false
 
-## Current movement state
-var current_state: State = State.IDLE
 ## Movement target position
 var movement_target: Vector2
 #endregion
+
 #region Constants
 const DEFAULT_CONFIG_ROOT = "res://config/"
 #endregion
@@ -57,7 +47,10 @@ var foods: Foods :
 	set(value):
 		foods = value
 		foods.mark_as_carried()
+		_update_carried_food_visual()
 		
+var _carried_food: Food
+
 #region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
 @onready var evaluation_system: EvaluationSystem = $EvaluationSystem
@@ -65,6 +58,7 @@ var foods: Foods :
 @onready var sight_area: Area2D = %SightArea
 @onready var sense_area: Area2D = %SenseArea
 @onready var reach_area: Area2D = %ReachArea
+@onready var mouth_marker: Marker2D = %MouthMarker
 #endregion
 
 var target_position: Vector2 :
@@ -75,13 +69,10 @@ var target_position: Vector2 :
 
 @onready var heatmap = HeatmapManager
 
-
 ## Task update timer
 var task_update_timer: float = 0.0
 var logger: Logger
 #endregion
-
-
 
 var dead: bool = false :
 	set(value):
@@ -122,7 +113,6 @@ var health_level: float = health_max :
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
-
 func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 
@@ -138,7 +128,6 @@ func _ready() -> void:
 	# Emit ready signal
 	spawned.emit()
 
-
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
 	# Don't process movement if dead
@@ -150,62 +139,68 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-
-	match current_state:
-		State.MOVING:
-			_process_movement(delta)
-		State.HARVESTING:
-			_process_harvesting(delta)
-		State.STORING:
-			_process_storing(delta)
-		State.RESTING:
-			_process_resting(delta)
-		State.IDLE:
-			pass
-		_:
-			pass
-			
+	# Basic movement processing if we're moving
+	_process_movement(delta)
+		
+	# Attempt actions based on immediate conditions
+	if get_foods_in_reach() and foods.mass < carry_max:
+		_process_harvesting(delta)
 	
+	# If we're at colony with food, store it
+	if colony_in_sight() and foods.mass > 0:
+		_process_storing(delta)
+		
+	# Rest at colony if needed
+	if colony_in_sight() and (health_level < health_max or energy_level < energy_max):
+		_process_resting(delta)
+
+func _update_carried_food_visual() -> void:
+	# Remove existing food visual if it exists
+	if _carried_food:
+		_carried_food.queue_free()
+		_carried_food = null
+	
+	# Create new food visual if carrying food
+	if foods and foods.mass > 0:
+		# Instance the food scene
+		_carried_food = preload("res://entities/food/food.tscn").instantiate()
+		mouth_marker.add_child(_carried_food)
+		# Scale down the food visual
+		_carried_food.scale = Vector2(0.3, 0.3)  # Adjust scale as needed
+		
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
-	# Update movement state
-	current_state = State.MOVING
 	movement_target = target_pos
 	
 	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
 	
-	
 ## Stops the current movement
 func stop_movement() -> void:
-	current_state = State.IDLE
 	velocity = Vector2.ZERO
 	movement_completed.emit(false)
 
 func _process_resting(delta: float) -> void:
 	if health_level == health_max and energy_level == energy_max:
-		current_state = State.IDLE
 		return
 	
 	health_level += resting_rate * delta
 	energy_level += resting_rate * delta
 	
-	
 func _process_storing(delta: float) -> void:
 	var food_to_store: float = foods.mass
 	
 	if not food_to_store:
-		current_state = State.IDLE
 		return
 		
-	food_to_store = min(food_to_store, storing_rate * delta) # TODO: magic number
+	food_to_store = min(food_to_store, storing_rate * delta)
 	colony.foods.add_food(food_to_store)
 	foods.remove_food(food_to_store)
+	_update_carried_food_visual()
 	
 func _process_harvesting(delta: float) -> bool:
 	# Don't harvest if we're at capacity
 	if foods.mass >= carry_max:
-		current_state = State.IDLE
 		return false
 		
 	var foods_in_reach = get_foods_in_reach()
@@ -249,7 +244,7 @@ func _process_harvesting(delta: float) -> bool:
 			
 		if foods.mass >= carry_max:
 			break
-		
+	_update_carried_food_visual()
 	return amount_harvested > 0
 
 func _process_movement(delta: float) -> void:
@@ -271,7 +266,6 @@ func _process_movement(delta: float) -> void:
 	
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
-	
 		
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
@@ -302,7 +296,7 @@ func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 		_time_at_position += delta
 		
 		# Check if we've been stuck for longer than the threshold
-		if _time_at_position >= STUCK_TIME_THRESHOLD:
+		if _time_at_position >= STUCK_THRESHOLD:
 			return true
 	else:
 		# Reset stuck timer if we've moved
@@ -324,17 +318,15 @@ func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 	move_and_slide()
 
 func _on_navigation_agent_2d_target_reached() -> void:
-	if current_state == State.MOVING:
-		current_state = State.IDLE
+	if velocity != Vector2.ZERO:
 		movement_completed.emit(true)
 
 func _on_navigation_agent_2d_path_changed() -> void:
 	# Could update path visualization here
 	if nav_agent.debug_enabled:
 		show_nav_path(true)
-	current_state = State.MOVING
+	# Path changed, continue movement
 #endregion
-
 
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
@@ -419,7 +411,6 @@ func get_nearest_food_direction() -> Vector2:
 	if nearest_food and nearest_food is Food:
 		return global_position.direction_to(nearest_food.global_position)
 	return Vector2.ZERO
-
 
 func show_nav_path(enabled: bool):
 	nav_agent.debug_enabled = enabled
