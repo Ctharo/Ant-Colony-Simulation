@@ -20,9 +20,6 @@ func _init(initial_foods: Array[Food] = []) -> void:
 
 ## Add a single food unit
 func add_food(food: Food) -> void:
-	# Only the first food should be visible when carried
-	if count > 0:
-		food.hide_visual()
 	append(food)
 	foods_changed.emit()
 

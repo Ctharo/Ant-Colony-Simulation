@@ -9,7 +9,7 @@ extends Node2D
 
 #region Member Variables
 ## Colony radius in units
-@export var radius: float = 30.0:
+@export var radius: float = 60.0:
 	set(value):
 		radius = value
 		queue_redraw()  # Redraw when radius changes
@@ -18,7 +18,7 @@ var ants_in_colony: Array[Ant] = []
 ## Inner radius as a ratio of the main radius
 var inner_radius_ratio: float = 0.33
 ## Collection of food resources
-var foods: Foods
+var foods: Foods = Foods.new()
 ## Ants belonging to this colony
 var ants: Ants = Ants.new([])
 ## Whether this colony is highlighted
@@ -97,6 +97,13 @@ func add_ant(ant: Ant) -> Result:
 	ant.set_colony(self)
 	add_child(ant)
 	return Result.new()
+
+func store_food(food: Food) -> void:
+	food.reparent(self)
+	food.stored = true
+	food.carried = false
+	foods.add_food(food)
+	
 
 func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	var _ants: Array[Ant] = AntManager.spawn_ants(self, num, physics_at_spawn)

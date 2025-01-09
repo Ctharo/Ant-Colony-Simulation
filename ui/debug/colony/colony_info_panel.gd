@@ -78,7 +78,7 @@ func update_colony_info() -> void:
 		return
 
 	ant_count_label.text = "Ants: %d" % current_colony.ants.size()
-	food_collected_label.text = "Food Collected: %.1f units" % (current_colony.foods.mass if current_colony.foods else 0.0)
+	food_collected_label.text = "Food Collected: %s units" % (current_colony.foods.mass if current_colony.foods else 0.0)
 	radius_label.text = "Colony Radius: %.1f" % current_colony.radius
 
 

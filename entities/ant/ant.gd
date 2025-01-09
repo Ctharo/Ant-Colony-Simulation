@@ -103,7 +103,7 @@ var energy_level: float = energy_max :
 			energy_changed.emit()
 		dead = energy_level == 0.0
 
-var carry_max: float = 10
+var carry_max: int = 2
 var health_max: float = 100
 var health_level: float = health_max :
 	set(value):
@@ -138,21 +138,27 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-	# Basic movement processing if we're moving
-	_process_movement(delta)
+	var doing_task: bool = false
+
 		
 	# Attempt actions based on immediate conditions
-	if get_foods_in_reach() and foods.mass < carry_max:
+	if get_foods_in_reach() and not is_carrying_max():
 		_process_harvesting(delta)
-	
+		doing_task = true
+		
 	# If we're at colony with food, store it
-	if colony_in_sight() and foods.mass > 0:
+	if colony_in_range() and is_carrying_food():
 		_process_storing(delta)
+		doing_task = true
 		
 	# Rest at colony if needed
-	if colony_in_sight() and (health_level < health_max or energy_level < energy_max):
+	if colony_in_range() and (health_level < health_max or energy_level < energy_max):
 		_process_resting(delta)
-
+		doing_task = true
+		
+	if not doing_task:
+		# Basic movement processing if we're moving
+		_process_movement(delta)
 		
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
@@ -183,12 +189,7 @@ func _process_storing(delta: float) -> void:
 	
 	for i in range(foods_to_store):
 		var food = foods.remove_food()
-		if food and is_instance_valid(food):
-			food.show_visual()
-			food.reparent(colony)
-			food.carried = false
-			food.stored = true
-			
+		store_food(food)
 
 func _process_harvesting(delta: float) -> bool:
 	# Don't harvest if we're at capacity
@@ -308,6 +309,17 @@ func _on_navigation_agent_2d_path_changed() -> void:
 	# Path changed, continue movement
 #endregion
 
+func harvest_food(food: Food) -> void:
+	foods.add_food(food)
+	food.reparent(mouth_marker)
+	food.carried = true
+
+func store_food(food: Food):
+	if food in foods.elements:
+		foods.elements.erase(food)
+	if food and is_instance_valid(food):
+		colony.store_food(food)
+
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
 	if colony != p_colony:
@@ -315,7 +327,10 @@ func set_colony(p_colony: Colony) -> void:
 #endregion
 
 func is_carrying_food() -> bool:
-	return foods.mass > 0
+	return foods.size() > 0
+
+func is_carrying_max() -> bool:
+	return foods.size() == carry_max
 
 func is_navigation_finished() -> bool:
 	return nav_agent.is_navigation_finished()
@@ -369,8 +384,8 @@ func get_foods_in_reach() -> Array:
 			_foods.append(food)
 	return _foods
 
-func colony_in_sight() -> bool:
-	return colony.global_position.distance_to(global_position) < colony.radius * 2
+func colony_in_range() -> bool:
+	return colony.global_position.distance_to(global_position) < colony.radius
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance
