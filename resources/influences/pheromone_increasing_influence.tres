@@ -1,15 +1,14 @@
-[gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://duar8dik4bi45"]
+[gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://duar8dik4bi45"]
 
 [ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_nxqpj"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="2_4bhvs"]
-[ext_resource type="Resource" uid="uid://bu1fqvhv2mhb5" path="res://resources/movement/weights/pheromone_weight.tres" id="2_sh36x"]
 
 [resource]
 script = ExtResource("1_nxqpj")
 color = Color(0, 0, 0.831373, 1)
 name = "pheromone increasing influence"
 expression_string = "get_pheromone_direction().normalized() * 1.5"
-nested_expressions = Array[ExtResource("2_4bhvs")]([ExtResource("2_sh36x")])
+nested_expressions = Array[ExtResource("2_4bhvs")]([])
 description = ""
 type = 5
 min_eval_interval = 0.0
