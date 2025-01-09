@@ -103,7 +103,7 @@ var energy_level: float = energy_max :
 			energy_changed.emit()
 		dead = energy_level == 0.0
 
-var carry_max: int = 2
+var carry_max: int = 1
 var health_max: float = 100
 var health_level: float = health_max :
 	set(value):

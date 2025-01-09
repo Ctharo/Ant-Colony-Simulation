@@ -575,7 +575,6 @@ func get_heat_at_position(entity: Node2D, pos: Vector2) -> float:
 			if source_colony_id == colony_id:
 				total_heat += cell.sources[source_id]
 	assert(total_heat)
-	print(total_heat)
 	update_lock.unlock()
 	return total_heat
 #endregion

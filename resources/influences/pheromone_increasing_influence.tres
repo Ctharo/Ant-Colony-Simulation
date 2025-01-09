@@ -8,7 +8,7 @@
 script = ExtResource("1_nxqpj")
 color = Color(0, 0, 0.831373, 1)
 name = "pheromone increasing influence"
-expression_string = "get_pheromone_direction() *  pheromone_weight"
+expression_string = "get_pheromone_direction().normalized() * 1.5"
 nested_expressions = Array[ExtResource("2_4bhvs")]([ExtResource("2_sh36x")])
 description = ""
 type = 5
