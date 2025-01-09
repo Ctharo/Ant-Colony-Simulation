@@ -155,19 +155,21 @@ func _physics_process(delta: float) -> void:
 		_process_resting(delta)
 
 func _update_carried_food_visual() -> void:
-	# Remove existing food visual if it exists
+	# Clear existing carried food visual
 	if _carried_food:
 		_carried_food.queue_free()
 		_carried_food = null
 	
-	# Create new food visual if carrying food
-	if foods and foods.mass > 0:
-		# Instance the food scene
-		_carried_food = preload("res://entities/food/food.tscn").instantiate()
-		mouth_marker.add_child(_carried_food)
-		# Scale down the food visual
-		_carried_food.scale = Vector2(0.3, 0.3)  # Adjust scale as needed
-		
+	# If carrying any food, show the first one at mouth
+	if foods and foods.count > 0:
+		var first_food = foods.elements[0]
+		first_food.show_visual()
+		# Reparent to mouth marker
+		if first_food.get_parent():
+			first_food.get_parent().remove_child(first_food)
+		mouth_marker.add_child(first_food)
+		first_food.scale = Vector2(0.3, 0.3)
+		_carried_food = first_food
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
 	movement_target = target_pos
@@ -188,64 +190,55 @@ func _process_resting(delta: float) -> void:
 	energy_level += resting_rate * delta
 	
 func _process_storing(delta: float) -> void:
-	var food_to_store: float = foods.mass
-	
-	if not food_to_store:
+	if foods.count == 0:
 		return
 		
-	food_to_store = min(food_to_store, storing_rate * delta)
-	colony.foods.add_food(food_to_store)
-	foods.remove_food(food_to_store)
+	# Store up to storing_rate foods per second
+	var foods_to_store = floor(storing_rate * delta)
+	foods_to_store = mini(foods_to_store, foods.count)
+	
+	for i in range(foods_to_store):
+		var food = foods.remove_food()
+		if food:
+			food.show_visual()
+			colony.foods.add_food(food)
+			
 	_update_carried_food_visual()
 	
 func _process_harvesting(delta: float) -> bool:
 	# Don't harvest if we're at capacity
-	if foods.mass >= carry_max:
+	if foods.count >= carry_max:
 		return false
 		
 	var foods_in_reach = get_foods_in_reach()
 	if foods_in_reach.is_empty():
 		return false
-		
-	# Sort foods by distance to optimize harvesting
+	
+	# Sort foods by distance
 	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
 		var dist_a = global_position.distance_squared_to(a.global_position)
 		var dist_b = global_position.distance_squared_to(b.global_position)
 		return dist_a < dist_b
 	)
 	
-	# Calculate max amount that can be harvested this frame based on delta
-	var max_harvest_this_frame := harvesting_rate * delta
-	var amount_harvested := 0.0
+	# Calculate max foods that can be harvested this frame
+	var max_harvest = floor(harvesting_rate * delta)
+	var harvested := 0
 	
 	for food in foods_in_reach:
 		if not is_instance_valid(food) or not food.is_available:
 			continue
 			
-		var space_remaining = carry_max - foods.mass
-		if space_remaining <= 0:
+		if foods.count >= carry_max or harvested >= max_harvest:
 			break
 			
-		# Limit harvest by rate, remaining capacity, and available food
-		var harvest_remaining = max_harvest_this_frame - amount_harvested
-		if harvest_remaining <= 0:
-			break
-			
-		var amount_to_take = minf(space_remaining, food.mass)
-		amount_to_take = minf(amount_to_take, harvest_remaining)
+		foods.add_food(food)
+		harvested += 1
 		
-		foods.add_food(amount_to_take)
-		food.remove_amount(amount_to_take)
-		amount_harvested += amount_to_take
+	if harvested > 0:
+		_update_carried_food_visual()
 		
-		# Remove depleted food
-		if food.mass <= 0.0:
-			food.queue_free()
-			
-		if foods.mass >= carry_max:
-			break
-	_update_carried_food_visual()
-	return amount_harvested > 0
+	return harvested > 0
 
 func _process_movement(delta: float) -> void:
 	if not is_instance_valid(nav_agent):

@@ -1,96 +1,88 @@
 class_name Foods
 extends Iterator
 
-var mass: float : get = get_mass
+## Signal emitted when foods are added or removed
+signal foods_changed
 
-func _init(initial_foods: Array[Food] = []):
+## Current count of food units
+var count: int :
+	get:
+		return len(elements)
+
+func _init(initial_foods: Array[Food] = []) -> void:
 	super._init()
 	for food in initial_foods:
-		self.append(food)
+		append(food)
 
-## Add food by mass to foods, return total stored mass
-func add_food(mass_to_add: float) -> float:
-	var food: Food = Food.new(mass_to_add)
+## Add a single food unit
+func add_food(food: Food) -> void:
+	# Only the first food should be visible when carried
+	if count > 0:
+		food.hide_visual()
 	append(food)
-	return get_mass()
+	foods_changed.emit()
 
-## Removes food by mass from foods collection, returns remaining mass to remove
-## If mass_to_remove is greater than available mass, removes all food and returns remaining mass
-## If mass_to_remove is less than or equal to available mass, removes exact amount and returns 0
-func remove_food(mass_to_remove: float) -> float:
-	# Handle invalid input
-	if mass_to_remove <= 0:
-		return 0.0
-	
-	var remaining_mass: float = mass_to_remove
-	var foods_to_remove: Array[Food] = []
-	
-	# First pass: identify foods to remove completely
-	for food in elements:
-		if food.mass <= remaining_mass:
-			foods_to_remove.append(food)
-			remaining_mass -= food.mass
-		elif remaining_mass > 0:
-			# Split this food item
-			var new_mass: float = food.mass - remaining_mass
-			food.mass = new_mass
-			remaining_mass = 0
-			break
-	
-	# Remove the identified foods
-	for food in foods_to_remove:
-		elements.erase(food)
-	
-	return remaining_mass
-	
+## Remove a single food unit
+func remove_food() -> Food:
+	if count == 0:
+		return null
+		
+	var food = elements.pop_back()
+	foods_changed.emit()
+	return food
 
+## Mark all food units as carried
 func mark_as_carried() -> void:
 	for food in elements:
 		food.carried = true
+		# Only first food should be visible
+		food.visible = (food == elements[0]) if not elements.is_empty() else false
 
-func get_mass() -> float:
-	var _mass: float = 0.0
-	for food in self:
-		_mass += food.mass
-	return _mass
-
+## Get array of food unit locations
 func locations() -> Array[Vector2]:
-	return [] as Array[Vector2]
-
-func as_array() -> Array[Food]:
-	var f: Array[Food]
+	var locs: Array[Vector2] = []
 	for food in elements:
-		f.append(food)
-	return f
+		locs.append(food.global_position)
+	return locs
 
+## Convert to array of Food objects
+func as_array() -> Array[Food]:
+	var foods: Array[Food] = []
+	for food in elements:
+		foods.append(food)
+	return foods
+
+## Get all available food units
 static func are_available() -> Foods:
-	var f: Foods = Foods.new()
-	for food: Food in all():
+	var foods := Foods.new()
+	for food in all():
 		if food.is_available:
-			f.append(food)
-	return f
+			foods.append(food)
+	return foods
 
-static func in_range(location: Vector2, _range: float, available_foods: bool = false) -> Foods:
-	var f: Foods = Foods.new()
-	for food: Food in Foods.all():
-		if food.get_position().distance_to(location) <= _range:
-			if available_foods == food.is_available:
-				f.append(food)
-			elif not available_foods:
-				f.append(food)
+## Get food units within range of a location
+static func in_range(location: Vector2, range: float, available_only: bool = false) -> Foods:
+	var foods := Foods.new()
+	for food in Foods.all():
+		if food.global_position.distance_to(location) <= range:
+			if available_only:
+				if food.is_available:
+					foods.append(food)
 			else:
-				continue
-	return f
+				foods.append(food)
+	return foods
 
-static func nearest_food(location: Vector2, _range: float, available_foods: bool = false) -> Food:
+## Get nearest food unit to a location
+static func nearest_food(location: Vector2, range: float, available_only: bool = false) -> Food:
 	var nearest: Food
-	var distance: float = INF
-	for food: Food in Foods.in_range(location, _range, available_foods):
-		var d: float = food.global_position.distance_to(location)
+	var distance := INF
+	for food in Foods.in_range(location, range, available_only):
+		var d : float = food.global_position.distance_to(location)
 		if d < distance:
 			nearest = food
 			distance = d
 	return nearest
 
+## Get all food units in scene
 static func all() -> Foods:
 	return FoodManager.get_all()
