@@ -17,10 +17,6 @@ var is_available: bool :
 func _init() -> void:
 	add_to_group("food")
 
-func _physics_process(delta: float) -> void:
-	if carried:
-		global_position = get_parent().global_position
-
 ## Hide this food unit but keep it in the scene tree
 func hide_visual() -> void:
 	visible = false
