@@ -9,6 +9,10 @@ var count: int :
 	get:
 		return len(elements)
 
+var mass :
+	get:
+		return float(count)
+
 func _init(initial_foods: Array[Food] = []) -> void:
 	super._init()
 	for food in initial_foods:
@@ -61,10 +65,10 @@ static func are_available() -> Foods:
 	return foods
 
 ## Get food units within range of a location
-static func in_range(location: Vector2, range: float, available_only: bool = false) -> Foods:
+static func in_range(location: Vector2, p_range: float, available_only: bool = false) -> Foods:
 	var foods := Foods.new()
 	for food in Foods.all():
-		if food.global_position.distance_to(location) <= range:
+		if food.global_position.distance_to(location) <= p_range:
 			if available_only:
 				if food.is_available:
 					foods.append(food)
@@ -73,10 +77,10 @@ static func in_range(location: Vector2, range: float, available_only: bool = fal
 	return foods
 
 ## Get nearest food unit to a location
-static func nearest_food(location: Vector2, range: float, available_only: bool = false) -> Food:
+static func nearest_food(location: Vector2, p_range: float, available_only: bool = false) -> Food:
 	var nearest: Food
 	var distance := INF
-	for food in Foods.in_range(location, range, available_only):
+	for food in Foods.in_range(location, p_range, available_only):
 		var d : float = food.global_position.distance_to(location)
 		if d < distance:
 			nearest = food

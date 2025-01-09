@@ -8,12 +8,6 @@ var stored: bool = false
 var carried: bool = false
 ## Whether this food unit is targeted for pickup
 var targeted: bool = false
-## Whether this food unit is visible
-var visible: bool = true :
-	set(value):
-		visible = value
-		# Update visibility of sprite or visual components
-		modulate.a = 1.0 if visible else 0.0
 
 ## Whether this food unit is available for pickup
 var is_available: bool :
@@ -22,6 +16,10 @@ var is_available: bool :
 
 func _init() -> void:
 	add_to_group("food")
+
+func _physics_process(delta: float) -> void:
+	if carried:
+		global_position = get_parent().global_position
 
 ## Hide this food unit but keep it in the scene tree
 func hide_visual() -> void:

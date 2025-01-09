@@ -47,8 +47,7 @@ var foods: Foods :
 	set(value):
 		foods = value
 		foods.mark_as_carried()
-		_update_carried_food_visual()
-		
+
 var _carried_food: Food
 
 #region Components
@@ -85,8 +84,8 @@ var dead: bool = false :
 var vision_range: float = 100.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
 var movement_rate: float = 25.0
-var harvesting_rate: float = 20.0
-var storing_rate: float = 20.0
+var harvesting_rate: float = 60.0
+var storing_rate: float = 60.0
 var resting_rate: float = 20.0
 
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
@@ -104,7 +103,7 @@ var energy_level: float = energy_max :
 			energy_changed.emit()
 		dead = energy_level == 0.0
 
-var carry_max: float = 100
+var carry_max: float = 10
 var health_max: float = 100
 var health_level: float = health_max :
 	set(value):
@@ -154,22 +153,7 @@ func _physics_process(delta: float) -> void:
 	if colony_in_sight() and (health_level < health_max or energy_level < energy_max):
 		_process_resting(delta)
 
-func _update_carried_food_visual() -> void:
-	# Clear existing carried food visual
-	if _carried_food:
-		_carried_food.queue_free()
-		_carried_food = null
-	
-	# If carrying any food, show the first one at mouth
-	if foods and foods.count > 0:
-		var first_food = foods.elements[0]
-		first_food.show_visual()
-		# Reparent to mouth marker
-		if first_food.get_parent():
-			first_food.get_parent().remove_child(first_food)
-		mouth_marker.add_child(first_food)
-		first_food.scale = Vector2(0.3, 0.3)
-		_carried_food = first_food
+		
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
 	movement_target = target_pos
@@ -199,15 +183,16 @@ func _process_storing(delta: float) -> void:
 	
 	for i in range(foods_to_store):
 		var food = foods.remove_food()
-		if food:
+		if food and is_instance_valid(food):
 			food.show_visual()
-			colony.foods.add_food(food)
+			food.reparent(colony)
+			food.carried = false
+			food.stored = true
 			
-	_update_carried_food_visual()
-	
+
 func _process_harvesting(delta: float) -> bool:
 	# Don't harvest if we're at capacity
-	if foods.count >= carry_max:
+	if foods.mass >= carry_max:
 		return false
 		
 	var foods_in_reach = get_foods_in_reach()
@@ -229,15 +214,17 @@ func _process_harvesting(delta: float) -> bool:
 		if not is_instance_valid(food) or not food.is_available:
 			continue
 			
-		if foods.count >= carry_max or harvested >= max_harvest:
+		if foods.mass >= carry_max or harvested >= max_harvest:
 			break
 			
 		foods.add_food(food)
+		food.reparent(mouth_marker)
+		food.carried = true
+		
+		food.show_visual()
 		harvested += 1
 		
-	if harvested > 0:
-		_update_carried_food_visual()
-		
+
 	return harvested > 0
 
 func _process_movement(delta: float) -> void:
@@ -383,7 +370,7 @@ func get_foods_in_reach() -> Array:
 	return _foods
 
 func colony_in_sight() -> bool:
-	return colony in get_colonies_in_view()
+	return colony.global_position.distance_to(global_position) < colony.radius * 2
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance
