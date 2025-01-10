@@ -5,8 +5,11 @@
 [resource]
 script = ExtResource("1_cxgbl")
 name = "carried_food_mass"
-force_recalculate = true
-type = 2
-expression_string = "foods.mass"
+expression_string = ""
 nested_expressions = Array[ExtResource("1_cxgbl")]([])
 description = "Mass of carried foods"
+type = 2
+min_eval_interval = 0.016
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0

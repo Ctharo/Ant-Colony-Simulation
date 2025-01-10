@@ -8,7 +8,7 @@ radius = 13.0872
 
 [node name="Food" type="StaticBody2D"]
 scale = Vector2(0.61548, 0.655494)
-collision_layer = 16
+collision_layer = 8
 collision_mask = 0
 script = ExtResource("1_ruqvk")
 

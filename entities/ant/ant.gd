@@ -81,14 +81,14 @@ var resting_rate: float = 20.0
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
-		return ENERGY_DRAIN_FACTOR * (50 if is_carrying_food() else 0 + ant_mass) * pow(movement_rate, 1.2)
+		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + ant_mass) * pow(movement_rate, 1.2)
 
 var ant_mass: float = 10.0
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
 		var first: int = int(energy_level)
-		energy_level = maxf(value, 0.0)
+		energy_level = min(maxf(value, 0.0), energy_max)
 		if first != int(energy_level):
 			energy_changed.emit()
 		dead = energy_level == 0.0
@@ -97,7 +97,7 @@ var carry_max: int = 1
 var health_max: float = 100
 var health_level: float = health_max :
 	set(value):
-		health_level = maxf(value, 0.0)
+		health_level = min(maxf(value, 0.0), health_max)
 		dead = health_level == 0.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -120,31 +120,36 @@ func _ready() -> void:
 	spawned.emit()
 
 func _physics_process(delta: float) -> void:
+
+	
 	task_update_timer += delta
 	# Don't process movement if dead
 	if dead:
 		return
 	
 	# Energy consumption
-	if energy_level > 0:
+	if energy_level > 0 and not colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
-
 		
+	if doing_task:
+		return
+	
 	# Attempt actions based on immediate conditions
-	if get_foods_in_reach() and not is_carrying_max():
-		_process_harvesting(delta)
-		doing_task = true
-		
+	if get_foods_in_reach() and not is_carrying_food():
+		harvest_food()
+		return
+
 	# If we're at colony with food, store it
 	if colony_in_range() and is_carrying_food():
-		_process_storing(delta)
+		store_food()
+		return
 		
 	# Rest at colony if needed
-	if colony_in_range() and (health_level < health_max or energy_level < energy_max):
-		_process_resting(delta)
-		doing_task = true
-		
+	if colony_in_range() and should_rest():
+		rest_until_full()
+		return
+
 	if not doing_task:
 		# Basic movement processing if we're moving
 		_process_movement(delta)
@@ -161,57 +166,25 @@ func stop_movement() -> void:
 	velocity = Vector2.ZERO
 	movement_completed.emit(false)
 
-func _process_resting(delta: float) -> void:
-	if health_level == health_max and energy_level == energy_max:
-		return
-	
-	health_level += resting_rate * delta
-	energy_level += resting_rate * delta
-	
-func _process_storing(delta: float) -> void:
-	if not is_instance_valid(_carried_food):
-		return
-
-	await get_tree().create_timer(1.0).timeout
-	colony.store_food(_carried_food)
+func rest_until_full() -> void:
+	doing_task = true
+	while not is_fully_rested():
+		await get_tree().create_timer(0.5).timeout
+		_process_resting(0.5)
 	doing_task = false
 
-func _process_harvesting(delta: float) -> bool:
-	# Don't harvest if we're at capacity
-	if is_carrying_food():
-		return false
-		
-	var foods_in_reach = get_foods_in_reach()
-	if foods_in_reach.is_empty():
-		return false
-	
-	# Sort foods by distance
-	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
-		var dist_a = global_position.distance_squared_to(a.global_position)
-		var dist_b = global_position.distance_squared_to(b.global_position)
-		return dist_a < dist_b
-	)
-	
-	# Calculate max foods that can be harvested this frame
-	var max_harvest = floor(harvesting_rate * delta)
-	var harvested := 0
-	
-	for food in foods_in_reach:
-		if not is_instance_valid(food) or not food.is_available:
-			continue
-			
-		if foods.mass >= carry_max or harvested >= max_harvest:
-			break
-			
-		foods.add_food(food)
-		food.reparent(mouth_marker)
-		food.carried = true
-		
-		food.show_visual()
-		harvested += 1
-		
+func _process_resting(delta: float) -> void:
+	health_level += resting_rate * delta
+	energy_level += resting_rate * delta
 
-	return harvested > 0
+func store_food() -> void:
+	if not is_instance_valid(_carried_food):
+		return
+	doing_task = true
+	await get_tree().create_timer(1.0).timeout
+	colony.store_food(_carried_food)
+	_carried_food = null
+	doing_task = false
 
 func _process_movement(delta: float) -> void:
 	if not is_instance_valid(nav_agent):
@@ -246,7 +219,7 @@ func _process_movement(delta: float) -> void:
 func _process_pheromones(delta: float):
 	var pheromone_factor: float = 1.0
 	
-	if foods.mass > 0:
+	if is_carrying_food():
 		pheromone_factor += 2.0
 		
 	# emit pheromones
@@ -294,11 +267,27 @@ func _on_navigation_agent_2d_path_changed() -> void:
 	# Path changed, continue movement
 #endregion
 
-func harvest_food(food: Food) -> void:
-	foods.add_food(food)
-	food.reparent(mouth_marker)
-	food.carried = true
-
+func harvest_food():
+	doing_task = true
+	var foods_in_reach = get_foods_in_reach()
+	if foods_in_reach.is_empty():
+		return
+	
+	# Sort foods by distance
+	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
+		var dist_a = global_position.distance_squared_to(a.global_position)
+		var dist_b = global_position.distance_squared_to(b.global_position)
+		return dist_a < dist_b
+	)
+	
+	var food = foods_in_reach[0]
+	if is_instance_valid(food) and food.is_available:
+		food.carried = true # Mark as carried so another doesn't try to take it
+		await get_tree().create_timer(1).timeout
+		food.reparent(mouth_marker)
+		_carried_food = food
+		doing_task = false
+	return
 
 
 #region Colony Management
@@ -308,13 +297,20 @@ func set_colony(p_colony: Colony) -> void:
 #endregion
 
 func is_carrying_food() -> bool:
-	return foods.size() > 0
+	return is_instance_valid(_carried_food)
 
 func is_carrying_max() -> bool:
-	return foods.size() == carry_max
+	return is_carrying_food()
 
 func is_navigation_finished() -> bool:
 	return nav_agent.is_navigation_finished()
+
+func should_rest() -> bool:
+	return health_level < 0.9 * health_max or energy_level < 0.9 * energy_max
+
+
+func is_fully_rested() -> bool:
+	return health_level == health_max and energy_level == energy_max
 
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
@@ -373,7 +369,7 @@ func get_foods_in_reach() -> Array:
 	return _foods
 
 func colony_in_range() -> bool:
-	return colony in get_colonies_in_reach()
+	return colony.global_position.distance_to(global_position) < colony.radius
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance
