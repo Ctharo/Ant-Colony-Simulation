@@ -122,8 +122,12 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 func _on_collision_area_body_entered(body: Node2D) -> void:
 	if body is Ant and body.colony == self:
 		ants_in_colony.append(body)
+	if body is Food:
+		store_food(body)
 
 
 func _on_collision_area_body_exited(body: Node2D) -> void:
 	if body is Ant and body.colony == self and body in ants_in_colony:
 		ants_in_colony.erase(body)
+	if body is Food:
+		print("food stolen?")

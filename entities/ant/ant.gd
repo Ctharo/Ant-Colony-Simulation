@@ -38,16 +38,6 @@ var role: String
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
 
-## The foods being carried by the ant
-var foods: Foods :
-	get:
-		if not foods:
-			foods = Foods.new()
-		return foods
-	set(value):
-		foods = value
-		foods.mark_as_carried()
-
 var _carried_food: Food
 
 #region Components
@@ -91,7 +81,7 @@ var resting_rate: float = 20.0
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
-		return ENERGY_DRAIN_FACTOR * (foods.mass + ant_mass) * pow(movement_rate, 1.2)
+		return ENERGY_DRAIN_FACTOR * (50 if is_carrying_food() else 0 + ant_mass) * pow(movement_rate, 1.2)
 
 var ant_mass: float = 10.0
 var energy_max: float = 100
@@ -111,6 +101,8 @@ var health_level: float = health_max :
 		dead = health_level == 0.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+var doing_task: bool = false
 
 func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
@@ -138,8 +130,6 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-	var doing_task: bool = false
-
 		
 	# Attempt actions based on immediate conditions
 	if get_foods_in_reach() and not is_carrying_max():
@@ -149,7 +139,6 @@ func _physics_process(delta: float) -> void:
 	# If we're at colony with food, store it
 	if colony_in_range() and is_carrying_food():
 		_process_storing(delta)
-		doing_task = true
 		
 	# Rest at colony if needed
 	if colony_in_range() and (health_level < health_max or energy_level < energy_max):
@@ -180,20 +169,16 @@ func _process_resting(delta: float) -> void:
 	energy_level += resting_rate * delta
 	
 func _process_storing(delta: float) -> void:
-	if foods.count == 0:
+	if not is_instance_valid(_carried_food):
 		return
-		
-	# Store up to storing_rate foods per second
-	var foods_to_store = floor(storing_rate * delta)
-	foods_to_store = mini(foods_to_store, foods.count)
-	
-	for i in range(foods_to_store):
-		var food = foods.remove_food()
-		store_food(food)
+
+	await get_tree().create_timer(1.0).timeout
+	colony.store_food(_carried_food)
+	doing_task = false
 
 func _process_harvesting(delta: float) -> bool:
 	# Don't harvest if we're at capacity
-	if foods.mass >= carry_max:
+	if is_carrying_food():
 		return false
 		
 	var foods_in_reach = get_foods_in_reach()
@@ -314,11 +299,7 @@ func harvest_food(food: Food) -> void:
 	food.reparent(mouth_marker)
 	food.carried = true
 
-func store_food(food: Food):
-	if food in foods.elements:
-		foods.elements.erase(food)
-	if food and is_instance_valid(food):
-		colony.store_food(food)
+
 
 #region Colony Management
 func set_colony(p_colony: Colony) -> void:
@@ -374,6 +355,13 @@ func get_colonies_in_view() -> Array:
 			colonies.append(p_colony)
 	return colonies
 
+func get_colonies_in_reach() -> Array:
+	var colonies: Array = []
+	for p_colony in reach_area.get_overlapping_bodies():
+		if p_colony is Colony:
+			colonies.append(p_colony)
+	return colonies
+
 func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
 	return ants.filter(func(ant): return friendly == (ant.colony == colony))
 
@@ -385,7 +373,7 @@ func get_foods_in_reach() -> Array:
 	return _foods
 
 func colony_in_range() -> bool:
-	return colony.global_position.distance_to(global_position) < colony.radius
+	return colony in get_colonies_in_reach()
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance

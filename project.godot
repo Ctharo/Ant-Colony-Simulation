@@ -34,6 +34,13 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/ScriptEditorQoL/plugin.cfg", "res://addons/Todo_Manager/plugin.cfg")
 
+[layer_names]
+
+2d_physics/layer_1="terrain"
+2d_physics/layer_2="ant"
+2d_physics/layer_3="colony"
+2d_physics/layer_4="food"
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
