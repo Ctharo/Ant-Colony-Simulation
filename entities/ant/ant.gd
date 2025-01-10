@@ -120,8 +120,6 @@ func _ready() -> void:
 	spawned.emit()
 
 func _physics_process(delta: float) -> void:
-
-	
 	task_update_timer += delta
 	# Don't process movement if dead
 	if dead:
@@ -178,8 +176,6 @@ func _process_resting(delta: float) -> void:
 	energy_level += resting_rate * delta
 
 func store_food() -> void:
-	if not is_instance_valid(_carried_food):
-		return
 	doing_task = true
 	await get_tree().create_timer(1.0).timeout
 	colony.store_food(_carried_food)

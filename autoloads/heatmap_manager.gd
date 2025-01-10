@@ -36,7 +36,6 @@ var _nav_map: RID
 var camera: Camera2D
 var _chunks: Dictionary = {}
 var _debug_settings: Dictionary = {}
-var _boundary_repulsion_points: Array[Dictionary] = []
 var update_timer: float = 0.0
 var update_interval: float = 1
 var logger: Logger
@@ -110,12 +109,9 @@ func _ready() -> void:
 	_start_update_thread()
 	setup_navigation()
 	
-
-
 func _start_update_thread() -> void:
 	update_thread = Thread.new()
 	update_thread.start(_update_heatmap_thread)
-
 
 #region Thread Management
 func _update_heatmap_thread() -> void:
@@ -191,7 +187,6 @@ func _physics_process(_delta: float) -> void:
 	for chunk_pos in chunks_to_remove:
 		_chunks.erase(chunk_pos)
 	
-	_boundary_repulsion_points.clear()
 	update_lock.unlock()
 
 	if _debug_settings.values().has(true):
@@ -293,47 +288,6 @@ func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2,
 	# If no direction is found, return a very small vector in original direction
 	return normalized_direction * (base_weight * 0.1)  # Reduced magnitude when blocked
 
-func _calculate_base_heat_direction(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
-	var direction: Vector2 = Vector2.ZERO
-	var total_weight: float = 0.0
-
-	# Boundary repulsion
-	var boundary_result = _calculate_boundary_repulsion(center_cell, world_pos)
-	direction += boundary_result.direction * STYLE.BOUNDARY_HEAT_MULTIPLIER
-	total_weight += boundary_result.weight * STYLE.BOUNDARY_HEAT_MULTIPLIER
-
-	# Heat avoidance
-	var heat_result = _calculate_heat_avoidance(world_pos)
-	direction += heat_result.direction
-	total_weight += heat_result.weight
-
-	if total_weight > 0.0:
-		direction = direction / total_weight
-
-	return {"direction": direction, "weight": total_weight}
-
-func _calculate_boundary_repulsion(center_cell: Vector2i, world_pos: Vector2) -> Dictionary:
-	var direction: Vector2 = Vector2.ZERO
-	var total_weight: float = 0.0
-
-	for dx in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
-		for dy in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
-			var cell: Vector2i = center_cell + Vector2i(dx, dy)
-			var cell_pos: Vector2 = cell_to_world(cell)
-
-			if not is_cell_navigable(cell_pos):
-				var away_vector: Vector2 = (world_pos - cell_pos).normalized()
-				var distance: float = world_pos.distance_to(cell_pos)
-				var weight: float = 1.0 / (1.0 + distance * 0.1)
-
-				direction += away_vector * weight
-				total_weight += weight
-
-	if total_weight > 0.0:
-		direction /= total_weight
-
-	return {"direction": direction, "weight": total_weight}
-
 func _calculate_heat_avoidance(world_pos: Vector2, exclude_entity_id: int = 0) -> Dictionary:
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
@@ -342,8 +296,6 @@ func _calculate_heat_avoidance(world_pos: Vector2, exclude_entity_id: int = 0) -
 	# Query radius in world coordinates
 	var query_radius: float = STYLE.HEAT_RADIUS * STYLE.CELL_SIZE * 2
 	var nearby_cells: Array[Dictionary] = get_cells_in_radius(world_pos, query_radius)
-	
-
 	
 	for cell_data in nearby_cells:
 		var cell_pos: Vector2 = cell_data.position
@@ -391,9 +343,6 @@ func update_entity_heat(entity: Node2D, delta: float, factor: float = 1.0) -> vo
 
 	update_lock.lock()
 	_update_movement_heat(entity_id, center_cell, base_heat)
-
-	if entity is Colony:
-		_update_boundary_repulsion(entity_id, center_cell, base_heat * STYLE.BOUNDARY_HEAT_MULTIPLIER)
 	update_lock.unlock()
 
 func _update_movement_heat(entity_id: int, center_cell: Vector2i, base_heat: float) -> void:
@@ -407,37 +356,6 @@ func _update_movement_heat(entity_id: int, center_cell: Vector2i, base_heat: flo
 				var heat: float = base_heat / (1 + distance * distance)
 				_add_heat_to_cell(entity_id, cell, heat)
 
-func _update_boundary_repulsion(entity_id: int, center_cell: Vector2i, base_heat: float) -> void:
-	for dx in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
-		for dy in range(-STYLE.BOUNDARY_CHECK_RADIUS, STYLE.BOUNDARY_CHECK_RADIUS + 1):
-			var check_cell: Vector2i = center_cell + Vector2i(dx, dy)
-			var check_pos: Vector2 = cell_to_world(check_cell)
-
-			if not is_cell_navigable(check_pos):
-				_create_repulsion_from_boundary(entity_id, check_cell, cell_to_world(center_cell), base_heat)
-
-func _create_repulsion_from_boundary(entity_id: int, boundary_cell: Vector2i, ant_pos: Vector2, base_heat: float) -> void:
-	for dx in range(-STYLE.BOUNDARY_PENETRATION_DEPTH, STYLE.BOUNDARY_PENETRATION_DEPTH + 1):
-		for dy in range(-STYLE.BOUNDARY_PENETRATION_DEPTH, STYLE.BOUNDARY_PENETRATION_DEPTH + 1):
-			var inside_cell: Vector2i = boundary_cell + Vector2i(dx, dy)
-			var inside_pos: Vector2 = cell_to_world(inside_cell)
-			var to_ant: Vector2 = ant_pos - inside_pos
-			var distance: float = to_ant.length()
-
-			if distance < STYLE.CELL_SIZE * STYLE.BOUNDARY_CHECK_RADIUS:
-				var repulsion_direction: Vector2 = to_ant.normalized()
-				var repulsion_strength: float = base_heat * (1.0 / (1.0 + distance * 0.1))
-				var repulsion_pos: Vector2 = inside_pos + repulsion_direction * STYLE.CELL_SIZE
-				var repulsion_cell: Vector2i = world_to_cell(repulsion_pos)
-
-				if is_cell_navigable(repulsion_pos):
-					_add_heat_to_cell(entity_id, repulsion_cell, repulsion_strength)
-
-					if _debug_settings[entity_id]:
-						_boundary_repulsion_points.append({
-							"position": repulsion_pos,
-							"strength": repulsion_strength
-						})
 #endregion
 
 #region Coordinate Conversions
