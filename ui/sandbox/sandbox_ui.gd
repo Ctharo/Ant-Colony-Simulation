@@ -47,11 +47,11 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	queue_redraw()
-	
+
 	if is_instance_valid(hovered_entity_label):
 		hovered_entity_label.queue_free()
 		hovered_entity_label = null
-		
+
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		hovered_entity_label = Label.new()
 		hovered_entity_label.name = "hovered_entity"
@@ -75,7 +75,7 @@ func _on_gui_input(event: InputEvent) -> void:
 #region Click Handling
 func handle_left_click(_screen_position: Vector2) -> void:
 	clear_active_menu()
-	
+
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		if camera.hovered_entity is Ant:
 			show_ant_info(camera.hovered_entity)
@@ -207,7 +207,7 @@ func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
 		highlight_ants = false
 		return
 	highlight_ants = enabled
-		
+
 func _on_colony_heatmap_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony.heatmap_enabled = !colony.heatmap_enabled
@@ -248,9 +248,11 @@ func _on_spawn_food_requested(screen_position: Vector2) -> void:
 func _draw() -> void:
 	var selected_colony = colony_info_panel.current_colony if is_instance_valid(colony_info_panel) else null
 	var hovered_colony = camera.hovered_entity
-	
+
 	if is_instance_valid(selected_colony):
 		for ant: Ant in selected_colony.ants:
+			if not is_instance_valid(ant):
+				continue
 			draw_arc(
 				   camera.global_to_ui(ant.global_position),
 				   12,
@@ -259,9 +261,11 @@ func _draw() -> void:
 				   32,         # Number of points
 				   Color.WHITE # Circle color
 				)
-			
+
 	if (is_instance_valid(hovered_colony) and hovered_colony is Colony):
 		for ant: Ant in hovered_colony.ants:
+			if not is_instance_valid(ant):
+				continue
 			draw_arc(
 				   camera.global_to_ui(ant.global_position),
 				   12,

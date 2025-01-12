@@ -34,7 +34,7 @@ class ExpressionState:
 	var compiled_expression: String
 	var logic: Logic  # Store reference to the Logic object
 	var is_parsed: bool = false
-	
+
 	# Runtime state
 	var last_value: Variant
 	var last_eval_time: float = 0.0
@@ -87,11 +87,11 @@ class ExpressionState:
 
 	func has_error() -> bool:
 		return expression.has_execute_failed()
-		
+
 	func is_significant_change(new_value: Variant) -> bool:
 		if last_value == null or logic.change_threshold <= 0.0:
 			return last_value != new_value
-			
+
 		match typeof(new_value):
 			TYPE_FLOAT:
 				cumulative_change += abs(new_value - last_value)
@@ -99,7 +99,7 @@ class ExpressionState:
 					cumulative_change = 0.0
 					return true
 				return false
-				
+
 			TYPE_VECTOR2:
 				var old_vec := last_value as Vector2
 				var new_vec := new_value as Vector2
@@ -110,31 +110,31 @@ class ExpressionState:
 					cumulative_vector_change = Vector2.ZERO
 					return true
 				return false
-				
+
 			_:
 				return last_value != new_value
-				
+
 	func update_value(new_value: Variant, current_time: float) -> bool:
 		var significant = is_significant_change(new_value)
 		last_value = new_value
 		if significant:
 			last_change_time = current_time
 		return significant
-		
+
 	func mark_evaluated(current_time: float) -> void:
 		last_eval_time = current_time
-		
+
 	func should_evaluate(current_time: float) -> bool:
 		var time_since_last = current_time - last_eval_time
-		
+
 		# Must evaluate if max interval exceeded
 		if logic.max_eval_interval > 0 and time_since_last >= logic.max_eval_interval:
 			return true
-			
+
 		# Can't evaluate if min interval not met
 		if logic.min_eval_interval > 0 and time_since_last < logic.min_eval_interval:
 			return false
-			
+
 		# Can evaluate if no min interval set
 		return logic.min_eval_interval <= 0
 

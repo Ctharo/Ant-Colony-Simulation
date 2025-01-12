@@ -45,8 +45,8 @@ func _ready() -> void:
 	hide()  # Start hidden
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	top_level = true
-	
-	
+
+
 func _process(delta: float) -> void:
 	update_colony_info()
 	handle_spawning(delta)
@@ -55,21 +55,21 @@ func _process(delta: float) -> void:
 func show_colony_info(colony: Colony) -> void:
 	if not colony:
 		return
-		
+
 	current_colony = colony
-	
+
 	# Update basic info
 	title_label.text = "Colony %s" % colony.name
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-	
+
 	# Sync checkboxes with colony state
 	show_heatmap_check.button_pressed = colony.heatmap_enabled
 	highlight_ants_check.button_pressed = colony.highlight_ants_enabled
 	nav_debug_check.button_pressed = colony.nav_debug_enabled
-	
+
 	update_colony_info()
-	show() 
-	
+	show()
+
 	# Queue redraw for selection circle
 	queue_redraw()
 
@@ -107,15 +107,15 @@ func start_spawning(num_to_spawn: int) -> void:
 func handle_spawning(_delta: float) -> void:
 	if not is_spawning:
 		return
-		
+
 	if frames_until_next_batch > 0:
 		frames_until_next_batch -= 1
 		return
-		
+
 	if pending_spawns <= 0:
 		_finish_spawning()
 		return
-		
+
 	var batch_size = mini(BATCH_SIZE, pending_spawns)
 	spawn_batch(batch_size)
 	frames_until_next_batch = FRAMES_BETWEEN_BATCHES
@@ -123,7 +123,7 @@ func handle_spawning(_delta: float) -> void:
 func spawn_batch(p_size: int) -> void:
 	var ants = current_colony.spawn_ants(p_size, true)
 	pending_spawns -= p_size
-	
+
 	# Apply current nav debug state to new ants
 	if current_colony.nav_debug_enabled:
 		for ant in ants:
@@ -142,4 +142,3 @@ func _on_show_heatmap_toggled(enabled: bool) -> void:
 
 func _exit_tree() -> void:
 	current_colony = null
-	show_heatmap_check.button_pressed = false

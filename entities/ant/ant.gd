@@ -15,7 +15,7 @@ signal movement_completed(success: bool)
 #region Movement
 const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
 const STUCK_TIME_THRESHOLD: float = 2.0  # Time before considering ant as stuck
-
+enum PHEROMONE_TYPES { HOME, FOOD }
 var _last_position: Vector2
 var _time_at_position: float = 0.0
 var _was_stuck: bool = false
@@ -124,15 +124,15 @@ func _physics_process(delta: float) -> void:
 	# Don't process movement if dead
 	if dead:
 		return
-	
+
 	# Energy consumption
 	if energy_level > 0 and not colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
-		
+
 	if doing_task:
 		return
-	
+
 	# Attempt actions based on immediate conditions
 	if get_foods_in_reach() and not is_carrying_food():
 		harvest_food()
@@ -142,7 +142,7 @@ func _physics_process(delta: float) -> void:
 	if colony_in_range() and is_carrying_food():
 		store_food()
 		return
-		
+
 	# Rest at colony if needed
 	if colony_in_range() and should_rest():
 		rest_until_full()
@@ -151,14 +151,14 @@ func _physics_process(delta: float) -> void:
 	if not doing_task:
 		# Basic movement processing if we're moving
 		_process_movement(delta)
-		
+
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> void:
 	movement_target = target_pos
-	
+
 	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
-	
+
 ## Stops the current movement
 func stop_movement() -> void:
 	velocity = Vector2.ZERO
@@ -185,10 +185,10 @@ func store_food() -> void:
 func _process_movement(delta: float) -> void:
 	if not is_instance_valid(nav_agent):
 		return
-	
+
 	var current_pos = global_position
 	_process_pheromones(delta)
-		
+
 	# Stuck detection logic
 	if _check_if_stuck(current_pos, delta):
 		# Enable best direction pathfinding
@@ -198,14 +198,14 @@ func _process_movement(delta: float) -> void:
 		# If not stuck, disable best direction
 		influence_manager.use_best_direction = false
 		_was_stuck = false
-	
+
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
-		
+
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
 	var target_velocity = move_direction * movement_rate
-	
+
 	if nav_agent.avoidance_enabled:
 		nav_agent.set_velocity(target_velocity)
 	else:
@@ -214,22 +214,23 @@ func _process_movement(delta: float) -> void:
 
 func _process_pheromones(delta: float):
 	var pheromone_factor: float = 1.0
-	
+	var pheromone_type: int = PHEROMONE_TYPES.FOOD if is_carrying_food() else PHEROMONE_TYPES.HOME
+
 	if is_carrying_food():
 		pheromone_factor += 2.0
-		
+
 	# emit pheromones
-	heatmap.update_entity_heat(self, delta, pheromone_factor)
+	heatmap.update_entity_heat(self, delta, pheromone_type, pheromone_factor)
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	if not _last_position:
 		_last_position = current_pos
 		return false
-	
+
 	# Check if we've moved less than the threshold
 	if current_pos.distance_to(_last_position) < STUCK_THRESHOLD:
 		_time_at_position += delta
-		
+
 		# Check if we've been stuck for longer than the threshold
 		if _time_at_position >= STUCK_THRESHOLD:
 			return true
@@ -237,7 +238,7 @@ func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 		# Reset stuck timer if we've moved
 		_time_at_position = 0.0
 		_last_position = current_pos
-	
+
 	return false
 
 func calculate_energy_cost(delta: float) -> float:
@@ -268,14 +269,14 @@ func harvest_food():
 	var foods_in_reach = get_foods_in_reach()
 	if foods_in_reach.is_empty():
 		return
-	
+
 	# Sort foods by distance
 	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
 		var dist_a = global_position.distance_squared_to(a.global_position)
 		var dist_b = global_position.distance_squared_to(b.global_position)
 		return dist_a < dist_b
 	)
-	
+
 	var food = foods_in_reach[0]
 	if is_instance_valid(food) and food.is_available:
 		food.carried = true # Mark as carried so another doesn't try to take it
@@ -321,17 +322,23 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
-func get_pheromone_direction(follow_concentration: bool = true) -> Vector2:
+func get_pheromone_direction(pheromone_type: int, follow_concentration: bool = true) -> Vector2:
 	# Early exit if heatmap or colony not valid
 	if not is_instance_valid(heatmap) or not is_instance_valid(colony):
 		return Vector2.ZERO
-		
+
 	# Get base heat direction - this already handles proper thread safety internally
-	var direction: Vector2 = heatmap.get_heat_direction(self, global_position)
-	
+	var direction: Vector2 = heatmap.get_heat_direction(self, global_position, pheromone_type)
+
 	# When follow_concentration is true, move towards higher concentrations (inverse direction)
 	# When false, move away from high concentrations (keep original direction)
 	return -direction if follow_concentration else direction
+
+func get_food_pheromone_direction(follow_concentration: bool = true):
+	return get_pheromone_direction(PHEROMONE_TYPES.FOOD, follow_concentration)
+
+func get_home_pheromone_direction(follow_concentration: bool = true):
+	return get_pheromone_direction(PHEROMONE_TYPES.HOME, follow_concentration)
 
 func get_ants_in_view() -> Array:
 	var ants: Array = []

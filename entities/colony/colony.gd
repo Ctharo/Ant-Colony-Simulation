@@ -103,7 +103,7 @@ func store_food(food: Food) -> void:
 	food.stored = true
 	food.carried = false
 	foods.add_food(food)
-	
+
 
 func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	var _ants: Array[Ant] = AntManager.spawn_ants(self, num, physics_at_spawn)

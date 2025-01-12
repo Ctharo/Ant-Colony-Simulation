@@ -44,24 +44,24 @@ func _handle_keyboard_input(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	queue_redraw()
-	
+
 	if not is_instance_valid(self):
 		return
 
 	if is_instance_valid(hovered_entity):
 		if to_local(hovered_entity.global_position).distance_to(get_local_mouse_position()) > HOVERED_ENTITY_DISTANCE:
 			hovered_entity = null
-			
+
 	var entities: Array = []
 	entities.append_array(get_tree().get_nodes_in_group("ant"))
 	entities.append_array(get_tree().get_nodes_in_group("colony"))
-	
+
 	for entity in entities:
 		var pos: Vector2 = to_local(entity.global_position)
 		var distance = HOVERED_ENTITY_DISTANCE
 		if entity is Colony:
 			distance += entity.radius
-			
+
 		if pos.distance_to(get_local_mouse_position()) < distance:
 			hovered_entity = entity
 			break
@@ -71,7 +71,7 @@ func _process(delta: float) -> void:
 	if is_instance_valid(tracked_entity):
 		target_position = tracked_entity.global_position
 		position = target_position
-		
+
 	current_velocity = current_velocity * (1.0 - SMOOTHING_FACTOR)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -173,7 +173,7 @@ func _draw_mouse_pos_circle(mouse_pos: Vector2):
 		elif hovered_entity is Colony:
 			radius = hovered_entity.radius + 12
 		mouse_pos = to_local(hovered_entity.global_position)
-			
+
 	draw_arc(
 		   mouse_pos,
 		   radius,

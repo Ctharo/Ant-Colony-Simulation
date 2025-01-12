@@ -16,7 +16,7 @@ class HeatmapConfig:
 	var heat_per_second: float
 	var heat_radius: int
 	var debug_colors: Dictionary
-	
+
 	func _init(p_decay: float, p_heat: float, p_radius: int, p_colors: Dictionary) -> void:
 		decay_rate = p_decay
 		heat_per_second = p_heat
@@ -106,10 +106,10 @@ class HeatChunk:
 class HeatmapInstance:
 	var chunks: Dictionary = {}  # Vector2i -> HeatChunk
 	var config: HeatmapConfig
-	
+
 	func _init(p_config: HeatmapConfig) -> void:
 		config = p_config
-		
+
 	func get_or_create_chunk(chunk_pos: Vector2i) -> HeatChunk:
 		if not chunks.has(chunk_pos):
 			chunks[chunk_pos] = HeatChunk.new()
@@ -127,6 +127,7 @@ func _ready() -> void:
 	_start_update_thread()
 	setup_navigation()
 
+
 func create_heatmap_type(id: int, decay_rate: float, heat_per_second: float, radius: int, colors: Dictionary) -> void:
 	_heatmaps[id] = HeatmapInstance.new(
 		HeatmapConfig.new(decay_rate, heat_per_second, radius, colors)
@@ -141,7 +142,7 @@ func _update_heatmap_thread() -> void:
 	while not _is_quitting:
 		var current_time: int = Time.get_ticks_msec()
 		var time_since_decay: float = (current_time - _last_decay_time) / 1000.0
-		
+
 		# Only attempt update if enough time has passed
 		if time_since_decay >= update_interval:
 			# Try to acquire lock, don't block if can't get it
@@ -149,7 +150,8 @@ func _update_heatmap_thread() -> void:
 				_process_decay(time_since_decay)
 				update_lock.unlock()
 				_last_decay_time = current_time
-		
+
+		call_thread_safe("queue_redraw")
 		# Always sleep to prevent tight loop
 		OS.delay_msec(int(update_interval * 100))  # Check 10 times per interval
 
@@ -157,12 +159,12 @@ func _process_decay(delta: float) -> void:
 	for heat_type in _heatmaps:
 		var heatmap: HeatmapInstance = _heatmaps[heat_type]
 		var chunks_to_remove: Array = []
-		
+
 		for chunk_pos in heatmap.chunks:
 			var chunk: HeatChunk = heatmap.chunks[chunk_pos]
 			if not chunk.update(delta, heatmap.config.decay_rate):
 				chunks_to_remove.append(chunk_pos)
-		
+
 		for chunk_pos in chunks_to_remove:
 			heatmap.chunks.erase(chunk_pos)
 
@@ -198,7 +200,7 @@ func unregister_entity(entity: Node2D) -> void:
 		"id": entity_id,
 		"name": entity.name
 	}
-	
+
 	update_lock.lock()
 	# Quick removal operation
 	_debug_settings.erase(entity_id)
@@ -207,7 +209,7 @@ func unregister_entity(entity: Node2D) -> void:
 			for cell in chunk.cells.values():
 				cell.remove_source(entity_id)
 	update_lock.unlock()
-	
+
 	logger.debug("Unregistered entity %s" % entity_data.name)
 
 func debug_draw(entity: Node2D, enabled: bool) -> void:
@@ -227,7 +229,7 @@ func update_entity_heat(entity: Node2D, delta: float, heat_type: int, factor: fl
 		"base_heat": _heatmaps[heat_type].config.heat_per_second * delta * factor,
 		"heat_type": heat_type
 	}
-	
+
 	update_lock.lock()
 	_update_movement_heat(update_data)
 	update_lock.unlock()
@@ -236,20 +238,20 @@ func _update_movement_heat(data: Dictionary) -> void:
 	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
 	var radius: int = heatmap.config.heat_radius
 	var center_cell: Vector2i = data.center_cell
-	
+
 	var updates: Array[Dictionary] = []
 	# Gather all updates without modifying data
 	for dx in range(-radius, radius + 1):
 		for dy in range(-radius, radius + 1):
 			var cell: Vector2i = center_cell + Vector2i(dx, dy)
 			var distance: float = center_cell.distance_to(cell)
-			
-			if distance <= radius and is_cell_navigable(cell_to_world(cell)):
+
+			if distance <= radius:
 				updates.append({
 					"cell": cell,
 					"heat": data.base_heat / (1 + distance * distance)
 				})
-	
+
 	# Apply all updates at once
 	for update in updates:
 		_add_heat_to_cell(data.entity_id, update.cell, update.heat, data.heat_type)
@@ -272,11 +274,11 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2, heat_type: int) -> V
 		"position": world_pos,
 		"heat_type": heat_type
 	}
-	
+
 	update_lock.lock()
 	var result = _calculate_heat_direction(query_data)
 	update_lock.unlock()
-	
+
 	return result
 
 func _calculate_heat_direction(data: Dictionary) -> Vector2:
@@ -284,56 +286,56 @@ func _calculate_heat_direction(data: Dictionary) -> Vector2:
 	var radius: float = heatmap.config.heat_radius * STYLE.CELL_SIZE * 2
 	var direction: Vector2 = Vector2.ZERO
 	var total_weight: float = 0.0
-	
+
 	var nearby_cells = get_cells_in_radius(data.position, radius, data.heat_type)
-	
+
 	for cell_data in nearby_cells:
-		if not is_cell_navigable(cell_data.position):
-			continue
-			
+		#if not is_cell_navigable(cell_data.position):
+			#continue
+
 		var heat = _calculate_cell_influence(cell_data, data)
 		if heat > 0:
 			var distance: float = data.position.distance_to(cell_data.position)
 			var falloff: float = 1.0 / (1.0 + distance * 0.1)
 			var away_vector: Vector2 = (data.position - cell_data.position).normalized()
-			
+
 			var weight = heat * falloff
 			direction += away_vector * weight
 			total_weight += weight
 
 	if total_weight > 0:
 		direction = direction.normalized()
-		direction = _find_best_navigable_direction(direction, data.position, total_weight)
-		
+		#direction = _find_best_navigable_direction(direction, data.position, total_weight)
+
 	return direction
 
 func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, base_weight: float) -> Vector2:
 	var normalized_direction = base_direction.normalized()
 	var check_distance = STYLE.CELL_SIZE * 2
 	var base_target = world_pos + normalized_direction * check_distance
-	
+
 	if is_cell_navigable(base_target):
 		return base_direction
-		
+
 	var test_angles = [PI/12, -PI/12, PI/6, -PI/6, PI/4, -PI/4, PI/3, -PI/3]
-	
+
 	for angle in test_angles:
 		var test_direction = normalized_direction.rotated(angle)
 		var test_target = world_pos + test_direction * check_distance
-		
+
 		if is_cell_navigable(test_target):
 			return test_direction * base_weight
-			
+
 	return normalized_direction * (base_weight * 0.1)
 
 func _calculate_cell_influence(cell_data: Dictionary, query_data: Dictionary) -> float:
 	var cell: HeatCell = cell_data.cell
 	var total_heat: float = 0.0
-	
+
 	for source_id in cell.sources:
 		if source_id != query_data.entity_id:  # Don't be influenced by own heat
 			total_heat += cell.sources[source_id]
-			
+
 	return total_heat
 
 func get_heat_at_position(entity: Node2D, pos: Vector2, heat_type: int) -> float:
@@ -345,26 +347,26 @@ func get_heat_at_position(entity: Node2D, pos: Vector2, heat_type: int) -> float
 		"world_cell": world_to_cell(pos),
 		"heat_type": heat_type
 	}
-	
+
 	var result: float = 0.0
 	update_lock.lock()
 	result = _get_heat_for_query(query_data)
 	update_lock.unlock()
-	
+
 	return result
 
 func _get_heat_for_query(data: Dictionary) -> float:
 	var chunk_pos: Vector2i = world_to_chunk(data.world_cell)
 	var local_pos: Vector2i = world_to_local_cell(data.world_cell)
 	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
-	
+
 	if not heatmap.chunks.has(chunk_pos):
 		return 0.0
-		
+
 	var chunk: HeatChunk = heatmap.chunks[chunk_pos]
 	if not chunk.cells.has(local_pos):
 		return 0.0
-		
+
 	var cell: HeatCell = chunk.cells[local_pos]
 	return cell.get_total_heat_for_colony(data.colony_id)
 #endregion
@@ -415,10 +417,10 @@ func _calculate_visible_heat(cell: HeatCell) -> float:
 	return visible_heat
 
 func _get_cell_color(t: float, pos: Vector2, config: HeatmapConfig) -> Color:
-	if not is_cell_navigable(pos):
-		var color: Color = Color(1, 0, 1, 0.4)  # Boundary color
-		color.a *= t
-		return color
+	#if not is_cell_navigable(pos):
+		#var color: Color = Color(1, 0, 1, 0.4)  # Boundary color
+		#color.a *= t
+		#return color
 	return config.debug_colors.START.lerp(config.debug_colors.END, t)
 
 #region Coordinate Conversions
@@ -461,38 +463,38 @@ func chunk_to_world(chunk_pos: Vector2i) -> Vector2:
 func is_cell_navigable(pos: Vector2) -> bool:
 	if _nav_map == RID() or _nav_map == null or not NavigationServer2D.map_is_active(_nav_map):
 		return true
-	
+
 	var regions: Array[RID] = NavigationServer2D.map_get_regions(_nav_map)
 	if regions.is_empty():
 		return true
-	
+
 	for region in regions:
 		if region and NavigationServer2D.region_owns_point(region, pos):
 			return true
-	
+
 	return false
 
 func get_cells_in_radius(world_pos: Vector2, radius: float, heat_type: int) -> Array[Dictionary]:
 	var center_cell: Vector2i = world_to_cell(world_pos)
 	var cells_radius: int = ceili(radius / STYLE.CELL_SIZE)
 	var found_cells: Array[Dictionary] = []
-	
+
 	var chunk_radius: int = ceili(float(cells_radius) / STYLE.CHUNK_SIZE)
 	var center_chunk: Vector2i = world_to_chunk(center_cell)
-	
+
 	var heatmap: HeatmapInstance = _heatmaps[heat_type]
 	for dx in range(-chunk_radius, chunk_radius + 1):
 		for dy in range(-chunk_radius, chunk_radius + 1):
 			var check_chunk: Vector2i = center_chunk + Vector2i(dx, dy)
 			if not heatmap.chunks.has(check_chunk):
 				continue
-				
+
 			var chunk: HeatChunk = heatmap.chunks[check_chunk]
 			for local_pos in chunk.cells:
 				var cell: HeatCell = chunk.cells[local_pos]
 				var world_cell: Vector2i = chunk_to_world_cell(check_chunk, local_pos)
 				var cell_pos: Vector2 = cell_to_world(world_cell)
-				
+
 				if cell.heat > 0 and world_pos.distance_to(cell_pos) <= radius:
 					found_cells.append({
 						"position": cell_pos,
@@ -502,5 +504,5 @@ func get_cells_in_radius(world_pos: Vector2, radius: float, heat_type: int) -> A
 						"sources": cell.sources,
 						"cell": cell
 					})
-	
+
 	return found_cells
