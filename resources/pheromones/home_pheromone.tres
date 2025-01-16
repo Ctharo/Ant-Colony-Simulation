@@ -22,5 +22,5 @@ decay_rate = 0.02
 generating_rate = 5.0
 heat_radius = 2
 start_color = Color(0, 1, 0, 0.1)
-end_color = Color(0, 0.404, 0, 0.3)
+end_color = Color(0, 0.404, 0, 0.2)
 condition = SubResource("Resource_el6o8")

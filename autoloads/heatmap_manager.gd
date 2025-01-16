@@ -8,27 +8,6 @@ const STYLE = {
 	"MAX_HEAT": 100.0
 }
 
-#region Configuration Classes
-class HeatmapConfig:
-	## Rate at which pheromone decays over time
-	@export var decay_rate: float
-	## Rate at which pheromone is generated per second
-	@export var heat_per_second: float
-	## Radius of effect for the pheromone
-	@export var heat_radius: int
-	## Starting color for the pheromone visualization
-	@export var start_color: Color
-	## Ending color for the pheromone visualization
-	@export var end_color: Color
-	
-	func _init(p_config: Pheromone = null) -> void:
-		if p_config:
-			decay_rate = p_config.decay_rate
-			heat_per_second = p_config.generating_rate
-			heat_radius = p_config.heat_radius
-			start_color = p_config.start_color
-			end_color = p_config.end_color
-
 #region Member Variables
 var map_size: Vector2
 var update_thread: Thread
@@ -111,9 +90,9 @@ class HeatChunk:
 
 class HeatmapInstance:
 	var chunks: Dictionary = {}  # Vector2i -> HeatChunk
-	var config: HeatmapConfig
+	var config: Pheromone
 	
-	func _init(p_config: HeatmapConfig) -> void:
+	func _init(p_config: Pheromone) -> void:
 		config = p_config
 	
 	func get_or_create_chunk(chunk_pos: Vector2i) -> HeatChunk:
@@ -138,7 +117,7 @@ func create_heatmap_type(pheromone: Pheromone) -> void:
 	var heatmap_name = pheromone.name.to_lower()
 	if not _heatmaps.has(heatmap_name):
 		_heatmaps[heatmap_name] = HeatmapInstance.new(
-			HeatmapConfig.new(pheromone)
+			pheromone
 		)
 
 #region Thread Management
@@ -234,7 +213,7 @@ func update_entity_heat(entity: Node2D, delta: float, heat_type: String, factor:
 	var update_data = {
 		"entity_id": entity.get_instance_id(),
 		"center_cell": world_to_cell(entity.global_position),
-		"base_heat": _heatmaps[heat_type].config.heat_per_second * delta * factor,
+		"base_heat": _heatmaps[heat_type].config.generating_rate * delta * factor,
 		"heat_type": heat_type
 	}
 
@@ -408,7 +387,7 @@ func _draw_heatmap(heatmap: HeatmapInstance) -> void:
 			)
 
 			var t: float = visible_heat / STYLE.MAX_HEAT
-			var color: Color = _get_cell_color(t, world_pos, heatmap.config)
+			var color: Color = _get_cell_color(t, heatmap.config)
 			draw_rect(rect, color)
 
 func _calculate_visible_heat(cell: HeatCell) -> float:
@@ -424,7 +403,7 @@ func _calculate_visible_heat(cell: HeatCell) -> float:
 				visible_heat += cell.sources[source_id]
 	return visible_heat
 
-func _get_cell_color(t: float, pos: Vector2, config: HeatmapConfig) -> Color:
+func _get_cell_color(t: float, config: Pheromone) -> Color:
 	return config.start_color.lerp(config.end_color, t)
 
 #region Coordinate Conversions

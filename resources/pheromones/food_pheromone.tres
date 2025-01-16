@@ -22,5 +22,5 @@ decay_rate = 0.25
 generating_rate = 20.0
 heat_radius = 4
 start_color = Color(0.702, 0.804, 1, 0.1)
-end_color = Color(0.047, 0.282, 1, 0.3)
+end_color = Color(0.047, 0.282, 1, 0.2)
 condition = SubResource("Resource_e0ucx")
