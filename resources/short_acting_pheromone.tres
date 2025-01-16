@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="Pheromone" load_steps=2 format=3 uid="uid://cs13oqaro5pnl"]
-
-[ext_resource type="Script" path="res://entities/pheromone.gd" id="1_h46pj"]
-
-[resource]
-script = ExtResource("1_h46pj")
-name = "short acting pheromone"
-decay_rate = 1.0
-generating_rate = 10.0

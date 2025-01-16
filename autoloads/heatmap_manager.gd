@@ -5,23 +5,29 @@ extends Node2D
 const STYLE = {
 	"CELL_SIZE": 50,
 	"CHUNK_SIZE": 16,
-	"MAX_HEAT": 100.0,
-	"BOUNDARY_CHECK_RADIUS": 1,
-	"BOUNDARY_PENETRATION_DEPTH": 2,
+	"MAX_HEAT": 100.0
 }
 
 #region Configuration Classes
 class HeatmapConfig:
-	var decay_rate: float
-	var heat_per_second: float
-	var heat_radius: int
-	var debug_colors: Dictionary
-
-	func _init(p_decay: float, p_heat: float, p_radius: int, p_colors: Dictionary) -> void:
-		decay_rate = p_decay
-		heat_per_second = p_heat
-		heat_radius = p_radius
-		debug_colors = p_colors
+	## Rate at which pheromone decays over time
+	@export var decay_rate: float
+	## Rate at which pheromone is generated per second
+	@export var heat_per_second: float
+	## Radius of effect for the pheromone
+	@export var heat_radius: int
+	## Starting color for the pheromone visualization
+	@export var start_color: Color
+	## Ending color for the pheromone visualization
+	@export var end_color: Color
+	
+	func _init(p_config: Pheromone = null) -> void:
+		if p_config:
+			decay_rate = p_config.decay_rate
+			heat_per_second = p_config.generating_rate
+			heat_radius = p_config.heat_radius
+			start_color = p_config.start_color
+			end_color = p_config.end_color
 
 #region Member Variables
 var map_size: Vector2
@@ -106,10 +112,10 @@ class HeatChunk:
 class HeatmapInstance:
 	var chunks: Dictionary = {}  # Vector2i -> HeatChunk
 	var config: HeatmapConfig
-
+	
 	func _init(p_config: HeatmapConfig) -> void:
 		config = p_config
-
+	
 	func get_or_create_chunk(chunk_pos: Vector2i) -> HeatChunk:
 		if not chunks.has(chunk_pos):
 			chunks[chunk_pos] = HeatChunk.new()
@@ -128,10 +134,12 @@ func _ready() -> void:
 	setup_navigation()
 
 
-func create_heatmap_type(id: int, decay_rate: float, heat_per_second: float, radius: int, colors: Dictionary) -> void:
-	_heatmaps[id] = HeatmapInstance.new(
-		HeatmapConfig.new(decay_rate, heat_per_second, radius, colors)
-	)
+func create_heatmap_type(pheromone: Pheromone) -> void:
+	var heatmap_name = pheromone.name.to_lower()
+	if not _heatmaps.has(heatmap_name):
+		_heatmaps[heatmap_name] = HeatmapInstance.new(
+			HeatmapConfig.new(pheromone)
+		)
 
 #region Thread Management
 func _start_update_thread() -> void:
@@ -218,7 +226,7 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 #endregion
 
 #region Heat Management
-func update_entity_heat(entity: Node2D, delta: float, heat_type: int, factor: float = 1.0) -> void:
+func update_entity_heat(entity: Node2D, delta: float, heat_type: String, factor: float = 1.0) -> void:
 	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
 		return
 
@@ -256,7 +264,7 @@ func _update_movement_heat(data: Dictionary) -> void:
 	for update in updates:
 		_add_heat_to_cell(data.entity_id, update.cell, update.heat, data.heat_type)
 
-func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat_type: int) -> void:
+func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat_type: String) -> void:
 	var chunk_pos: Vector2i = world_to_chunk(world_cell)
 	var local_pos: Vector2i = world_to_local_cell(world_cell)
 	var heatmap: HeatmapInstance = _heatmaps[heat_type]
@@ -265,7 +273,7 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat
 	cell.add_heat(entity_id, amount, STYLE.MAX_HEAT)
 
 #region Heat Direction Calculation
-func get_heat_direction(entity: Node2D, world_pos: Vector2, heat_type: int) -> Vector2:
+func get_heat_direction(entity: Node2D, world_pos: Vector2, heat_type: String) -> Vector2:
 	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
 		return Vector2.ZERO
 
@@ -338,7 +346,7 @@ func _calculate_cell_influence(cell_data: Dictionary, query_data: Dictionary) ->
 
 	return total_heat
 
-func get_heat_at_position(entity: Node2D, pos: Vector2, heat_type: int) -> float:
+func get_heat_at_position(entity: Node2D, pos: Vector2, heat_type: String) -> float:
 	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
 		return 0.0
 
@@ -417,11 +425,7 @@ func _calculate_visible_heat(cell: HeatCell) -> float:
 	return visible_heat
 
 func _get_cell_color(t: float, pos: Vector2, config: HeatmapConfig) -> Color:
-	#if not is_cell_navigable(pos):
-		#var color: Color = Color(1, 0, 1, 0.4)  # Boundary color
-		#color.a *= t
-		#return color
-	return config.debug_colors.START.lerp(config.debug_colors.END, t)
+	return config.start_color.lerp(config.end_color, t)
 
 #region Coordinate Conversions
 func world_to_cell(world_pos: Vector2) -> Vector2i:
@@ -474,7 +478,7 @@ func is_cell_navigable(pos: Vector2) -> bool:
 
 	return false
 
-func get_cells_in_radius(world_pos: Vector2, radius: float, heat_type: int) -> Array[Dictionary]:
+func get_cells_in_radius(world_pos: Vector2, radius: float, heat_type: String) -> Array[Dictionary]:
 	var center_cell: Vector2i = world_to_cell(world_pos)
 	var cells_radius: int = ceili(radius / STYLE.CELL_SIZE)
 	var found_cells: Array[Dictionary] = []

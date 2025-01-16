@@ -62,29 +62,7 @@ func setup_heatmap() -> bool:
 	add_child(heatmap_manager)
 	heatmap_manager.add_to_group("heatmap")
 	heatmap_manager.setup_camera(camera)
-	heatmap_manager.create_heatmap_type(
-		Ant.PHEROMONE_TYPES.HOME,
-		0.02,
-		5,
-		2,
-		{
-			"START": Color(Color.LIGHT_GREEN, 0.3),
-			"END": Color(Color.RED, 0.3)
-		}
-	)
-	heatmap_manager.create_heatmap_type(
-		Ant.PHEROMONE_TYPES.FOOD,
-		0.25,
-		20,
-		2,
-		{
-			"START": Color(Color.LIGHT_BLUE, 0.3),
-			"END": Color(Color.REBECCA_PURPLE, 0.3)
-		}
-	)
 	return true
-
-
 
 func _exit_tree() -> void:
 	ColonyManager.delete_all()

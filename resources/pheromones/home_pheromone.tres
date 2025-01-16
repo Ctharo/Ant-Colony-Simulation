@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Pheromone" load_steps=4 format=3 uid="uid://n55uv4uui3sc"]
+
+[ext_resource type="Script" path="res://entities/pheromone.gd" id="1_uxl6n"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_xgpaw"]
+
+[sub_resource type="Resource" id="Resource_el6o8"]
+script = ExtResource("1_xgpaw")
+name = "home pheromone condition"
+expression_string = "not is_carrying_food()"
+nested_expressions = Array[ExtResource("1_xgpaw")]([])
+description = ""
+type = 1
+min_eval_interval = 0.016
+max_eval_interval = 0.16
+evaluate_when_idle = false
+change_threshold = 0.0
+
+[resource]
+script = ExtResource("1_uxl6n")
+name = "home"
+decay_rate = 0.02
+generating_rate = 5.0
+heat_radius = 2
+start_color = Color(0, 1, 0, 0.1)
+end_color = Color(0, 0.404, 0, 0.3)
+condition = SubResource("Resource_el6o8")

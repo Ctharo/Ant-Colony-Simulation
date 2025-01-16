@@ -1,6 +1,5 @@
 extends Node
 
-
 func spawn_foods(num: int) -> Array[Food]:
 	var foods: Array[Food]
 	for i in range(num):

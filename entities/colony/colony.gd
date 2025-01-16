@@ -95,11 +95,9 @@ func add_ant(ant: Ant) -> Result:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
 	ants.append(ant)
 	ant.set_colony(self)
-	add_child(ant)
 	return Result.new()
 
 func store_food(food: Food) -> void:
-	food.reparent(self)
 	food.stored = true
 	food.carried = false
 	foods.add_food(food)
@@ -117,17 +115,3 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	logger.info("Spawned %s %s from %s" % [_ants.size(), "ant" if _ants.size() == 1 else "ants", name])
 	return _ants
 #endregion
-
-
-func _on_collision_area_body_entered(body: Node2D) -> void:
-	if body is Ant and body.colony == self:
-		ants_in_colony.append(body)
-	if body is Food:
-		store_food(body)
-
-
-func _on_collision_area_body_exited(body: Node2D) -> void:
-	if body is Ant and body.colony == self and body in ants_in_colony:
-		ants_in_colony.erase(body)
-	if body is Food:
-		print("food stolen?")

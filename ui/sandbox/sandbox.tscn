@@ -7,15 +7,11 @@
 [node name="Sandbox" type="Node2D"]
 script = ExtResource("1_dcr83")
 
-[node name="Camera2D" type="Camera2D" parent="."]
-script = ExtResource("2_wv2im")
-
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
 
 [node name="UI" type="Control" parent="CanvasLayer"]
 unique_name_in_owner = true
-top_level = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -82,7 +78,14 @@ text = "Initializing..."
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("2_wv2im")
+
+[node name="ColonyContainer" type="Node2D" parent="."]
+
 [node name="FoodContainer" type="Node2D" parent="."]
+
+[node name="AntContainer" type="Node2D" parent="."]
 
 [connection signal="gui_input" from="CanvasLayer/UI" to="CanvasLayer/UI" method="_on_gui_input"]
 [connection signal="pressed" from="CanvasLayer/UI/ControlPanel/HBoxContainer/BackButton" to="." method="_on_back_button_pressed"]

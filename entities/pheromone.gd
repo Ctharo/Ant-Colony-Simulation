@@ -1,24 +1,26 @@
 class_name Pheromone
 extends Resource
 
+
+#region Export Properties
+## Name of the pheromone type
 @export var name: String
 
-## Rate at which it decays
-@export var decay_rate: float :
-	set(value):
-		if value < 0:
-			return
-		decay_rate = value
-		generating_rate = decay_rate * GENERATING_DECAY_QUOTIENT
-		emit_changed()
-		
-## Rate at which it is generated
-@export var generating_rate: float :
-	set(value):
-		if value < 0:
-			return
-		generating_rate = value
-		decay_rate = generating_rate / GENERATING_DECAY_QUOTIENT
-		emit_changed()
+## Rate at which pheromone decays over time
+@export var decay_rate: float
 
-const GENERATING_DECAY_QUOTIENT: float = 10 # Places 10x quicker than it decays
+## Rate at which pheromone is generated
+@export var generating_rate: float
+
+## Radius of effect for the pheromone
+@export var heat_radius: int = 1
+
+## Starting color for the pheromone visualization
+@export var start_color: Color = Color.WHITE
+
+## Ending color for the pheromone visualization
+@export var end_color: Color = Color(1, 1, 1, 0)
+
+## If present, denotes condition that must be true to emit this pheromone
+@export var condition: Logic
+#endregion

@@ -1,10 +1,13 @@
-[gd_scene load_steps=11 format=3 uid="uid://csrvvfq3x0u3r"]
+[gd_scene load_steps=14 format=3 uid="uid://csrvvfq3x0u3r"]
 
 [ext_resource type="Script" path="res://entities/ant/ant.gd" id="1_6htid"]
 [ext_resource type="Script" path="res://managers/influence_manager.gd" id="2_2mgsy"]
+[ext_resource type="Script" path="res://entities/pheromone.gd" id="2_tscyr"]
 [ext_resource type="Texture2D" uid="uid://djfp7c852qxaq" path="res://entities/ant/Ant.svg" id="2_wmt1h"]
+[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://resources/pheromones/food_pheromone.tres" id="3_bxdt5"]
 [ext_resource type="Script" path="res://logic/evaluation_system.gd" id="3_iddyu"]
 [ext_resource type="Script" path="res://logic/evaluation_controller.gd" id="4_2cjl2"]
+[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://resources/pheromones/home_pheromone.tres" id="4_x6xol"]
 [ext_resource type="Script" path="res://logic/evaluation_cache.gd" id="5_757gv"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ikxuy"]
@@ -20,14 +23,13 @@ radius = 150.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_epip7"]
 
 [node name="Ant" type="CharacterBody2D" groups=["ant"]]
-z_index = 5
-z_as_relative = false
 disable_mode = 1
 collision_layer = 0
 collision_mask = 0
 input_pickable = true
 motion_mode = 1
 script = ExtResource("1_6htid")
+pheromones = Array[ExtResource("2_tscyr")]([ExtResource("3_bxdt5"), ExtResource("4_x6xol")])
 
 [node name="InfluenceManager" type="Node2D" parent="."]
 script = ExtResource("2_2mgsy")
@@ -100,7 +102,7 @@ texture = ExtResource("2_wmt1h")
 [node name="MouthMarker" type="Marker2D" parent="."]
 unique_name_in_owner = true
 modulate = Color(0.352941, 0.513726, 0.172549, 1)
-position = Vector2(10.4286, 0)
+position = Vector2(14, 0)
 gizmo_extents = 5.0
 
 [connection signal="navigation_finished" from="NavigationAgent2D" to="." method="_on_nav_agent_navigation_finished"]

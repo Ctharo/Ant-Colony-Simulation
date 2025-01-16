@@ -12,6 +12,9 @@ signal died(ant: Ant)
 signal movement_completed(success: bool)
 
 #endregion
+
+@export var pheromones: Array[Pheromone]
+
 #region Movement
 const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
 const STUCK_TIME_THRESHOLD: float = 2.0  # Time before considering ant as stuck
@@ -113,8 +116,12 @@ func _ready() -> void:
 	influence_manager.add_profile(load("res://resources/influences/profiles/look_for_food.tres").duplicate())
 	influence_manager.add_profile(load("res://resources/influences/profiles/go_home.tres").duplicate())
 	# Register to heatmap
-	heatmap = get_tree().get_first_node_in_group("heatmap")
+	heatmap = get_tree().get_first_node_in_group("heatmap") as HeatmapManager
 	heatmap.register_entity(self)
+	for pheromone in pheromones:
+		heatmap.create_heatmap_type(pheromone)
+		if pheromone.condition:
+			evaluation_system.register_expression(pheromone.condition)
 
 	# Emit ready signal
 	spawned.emit()
@@ -125,6 +132,8 @@ func _physics_process(delta: float) -> void:
 	if dead:
 		return
 
+	_process_carrying()
+	
 	# Energy consumption
 	if energy_level > 0 and not colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
@@ -171,6 +180,11 @@ func rest_until_full() -> void:
 		_process_resting(0.5)
 	doing_task = false
 
+func _process_carrying() -> void:
+	if is_instance_valid(_carried_food):
+		_carried_food.global_position = mouth_marker.global_position
+		_carried_food.rotation = rotation
+		
 func _process_resting(delta: float) -> void:
 	health_level += resting_rate * delta
 	energy_level += resting_rate * delta
@@ -213,14 +227,13 @@ func _process_movement(delta: float) -> void:
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
 func _process_pheromones(delta: float):
-	var pheromone_factor: float = 1.0
-	var pheromone_type: int = PHEROMONE_TYPES.FOOD if is_carrying_food() else PHEROMONE_TYPES.HOME
-
-	if is_carrying_food():
-		pheromone_factor += 2.0
-
-	# emit pheromones
-	heatmap.update_entity_heat(self, delta, pheromone_type, pheromone_factor)
+	for pheromone: Pheromone in pheromones:
+		if pheromone.condition:
+			if evaluation_system.get_value(pheromone.condition):
+				heatmap.update_entity_heat(self, delta, pheromone.name)
+		else:
+			heatmap.update_entity_heat(self, delta, pheromone.name)
+			
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	if not _last_position:
@@ -281,7 +294,7 @@ func harvest_food():
 	if is_instance_valid(food) and food.is_available:
 		food.carried = true # Mark as carried so another doesn't try to take it
 		await get_tree().create_timer(1).timeout
-		food.reparent(mouth_marker)
+		food.global_position = mouth_marker.global_position
 		_carried_food = food
 		doing_task = false
 	return
@@ -322,23 +335,17 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
-func get_pheromone_direction(pheromone_type: int, follow_concentration: bool = true) -> Vector2:
+func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
 	# Early exit if heatmap or colony not valid
 	if not is_instance_valid(heatmap) or not is_instance_valid(colony):
 		return Vector2.ZERO
 
 	# Get base heat direction - this already handles proper thread safety internally
-	var direction: Vector2 = heatmap.get_heat_direction(self, global_position, pheromone_type)
+	var direction: Vector2 = heatmap.get_heat_direction(self, global_position, pheromone_name)
 
 	# When follow_concentration is true, move towards higher concentrations (inverse direction)
 	# When false, move away from high concentrations (keep original direction)
 	return -direction if follow_concentration else direction
-
-func get_food_pheromone_direction(follow_concentration: bool = true):
-	return get_pheromone_direction(PHEROMONE_TYPES.FOOD, follow_concentration)
-
-func get_home_pheromone_direction(follow_concentration: bool = true):
-	return get_pheromone_direction(PHEROMONE_TYPES.HOME, follow_concentration)
 
 func get_ants_in_view() -> Array:
 	var ants: Array = []

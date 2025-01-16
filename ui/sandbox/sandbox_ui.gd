@@ -187,13 +187,15 @@ func deselect_all() -> void:
 func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
 	var colony = colony_manager.spawn_colony_at(world_position)
-	sandbox.add_child(colony)
-	colony.spawn_ants(DEFAULT_SPAWN_NUM)
+	$"../../ColonyContainer".add_child(colony)
+	_on_colony_spawn_ants_requested(colony)
 
 func _on_colony_spawn_ants_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
-		colony.spawn_ants(DEFAULT_SPAWN_NUM)
-
+		var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
+		for ant in ants:
+			$"../../AntContainer".add_child(ant)
+				
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		show_info_panel(colony)
