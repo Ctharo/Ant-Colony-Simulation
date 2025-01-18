@@ -128,6 +128,12 @@ func _ready() -> void:
 	# Emit ready signal
 	spawned.emit()
 
+## Takes care of basic actions/processes without input.
+## Harvests food if possible
+## Stores food if possible
+## TODO fights if possible?
+## Rests if possible and necessary
+## Moves otherwise
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
 	# Don't process movement if dead
@@ -228,14 +234,18 @@ func _process_movement(delta: float) -> void:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
+## If Pheromone has a condition attached, will check condition to see if should be emitted
+## Otherwise always emits
 func _process_pheromones(delta: float):
+	
 	for pheromone: Pheromone in pheromones:
-		if pheromone.condition:
-			if evaluation_system.get_value(pheromone.condition):
-				heatmap.update_entity_heat(self, delta, pheromone.name)
-		else:
+		if not pheromone.condition:
 			heatmap.update_entity_heat(self, delta, pheromone.name)
+			continue
 			
+		elif evaluation_system.get_value(pheromone.condition):
+			heatmap.update_entity_heat(self, delta, pheromone.name)
+			continue
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	if not _last_position:
