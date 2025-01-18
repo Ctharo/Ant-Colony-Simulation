@@ -6,4 +6,4 @@ extends Resource
 @export var vision_range: float 
 @export var olfaction_range: float 
 @export var reach_range: float
-@export var spawn_condition: Logic
+@export var size: float

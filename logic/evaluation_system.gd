@@ -187,6 +187,10 @@ func _process(_delta: float) -> void:
 
 func initialize(p_entity: Node) -> void:
 	entity = p_entity
+	if not _controller:
+		_controller = EvaluationController.new()
+	if not _cache:
+		_cache = EvaluationCache.new()
 
 func get_or_create_state(expression: Logic) -> ExpressionState:
 	if expression.id.is_empty():

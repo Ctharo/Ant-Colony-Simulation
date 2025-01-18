@@ -6,7 +6,8 @@ extends Node2D
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
 @export var darker_dirt = Color(Color.BROWN, 0.9)   # Darker brown for depth
-
+@export var ant_profiles: Array[ColonyAntProfile]
+var _last_spawn_ticks: int
 #region Member Variables
 ## Colony radius in units
 @export var radius: float = 60.0:
@@ -14,9 +15,8 @@ extends Node2D
 		radius = value
 		queue_redraw()  # Redraw when radius changes
 
-var ants_in_colony: Array[Ant] = []
 ## Inner radius as a ratio of the main radius
-var inner_radius_ratio: float = 0.33
+var inner_radius_ratio: float = 0.2
 ## Collection of food resources
 var foods: Foods = Foods.new()
 ## Ants belonging to this colony
@@ -32,24 +32,28 @@ var heatmap_enabled: bool = false :
 	set(value):
 		heatmap_enabled = value
 		heatmap.debug_draw(self, value)
-
+var eval_system: EvaluationSystem
 #endregion
 
 var logger: Logger
 var heatmap: HeatmapManager
+var sandbox
+
 #region Initialization
 func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
-
+	eval_system = EvaluationSystem.new()
+	
 func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
-
+	eval_system.initialize(self)
+	ant_profiles.append(load("res://entities/colony/basic_worker.tres"))
 
 func _physics_process(delta: float) -> void:
-	for ant in ants_in_colony:
-		if ant.energy_level < ant.energy_max:
-			ant.energy_level += 10 * delta
+	for profile: ColonyAntProfile in ant_profiles:
+		if should_spawn() and profile.spawn_condition.get_value(eval_system):
+			spawn_ant(profile.ant_profile)
 
 func _exit_tree() -> void:
 	heatmap.unregister_entity(self)
@@ -59,6 +63,12 @@ func delete_all():
 	for ant in ants:
 		if ant != null:
 			AntManager.remove_ant(ant)
+
+func should_spawn() -> bool:
+	var result: bool = false
+	if Time.get_ticks_msec() - _last_spawn_ticks >= 1000:
+		result = true
+	return result
 
 func get_ants() -> Array:
 	return ants.to_array()
@@ -102,7 +112,6 @@ func store_food(food: Food) -> void:
 	food.carried = false
 	foods.add_food(food)
 
-
 func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	var _ants: Array[Ant] = AntManager.spawn_ants(self, num, physics_at_spawn)
 	for ant in _ants:
@@ -113,5 +122,19 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 		var wiggle_y: float = randf_range(-15,15)
 		ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
 	logger.info("Spawned %s %s from %s" % [_ants.size(), "ant" if _ants.size() == 1 else "ants", name])
+	_last_spawn_ticks = Time.get_ticks_msec()
 	return _ants
+	
+func spawn_ant(ant_profile: AntProfile) -> Ant:
+	var ant = spawn_ants(1)[0]
+	ant.movement_rate = ant_profile.movement_rate
+	ant.vision_range = ant_profile.vision_range
+	ant.olfaction_range = ant_profile.olfaction_range
+	ant.reach_range = ant_profile.reach_range
+	ant.pheromones = ant_profile.pheromones
+	if sandbox:
+		sandbox.ant_container.add_child(ant)
+	else:
+		add_child(ant)
+	return ant
 #endregion

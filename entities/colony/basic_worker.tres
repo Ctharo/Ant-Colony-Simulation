@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ColonyAntProfile" load_steps=5 format=3 uid="uid://bmvne15jbw10b"]
+
+[ext_resource type="Resource" uid="uid://bqf6p88g1j2ax" path="res://entities/ant/basic_worker.tres" id="1_1f0es"]
+[ext_resource type="Script" path="res://entities/colony/colony_ant_profile.gd" id="1_gtk8i"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="3_o0g2a"]
+
+[sub_resource type="Resource" id="Resource_kh3hg"]
+script = ExtResource("3_o0g2a")
+auto_track = false
+name = "basic worker spawn condition"
+expression_string = "ants.size() < 10"
+nested_expressions = Array[ExtResource("3_o0g2a")]([])
+description = ""
+type = 1
+min_eval_interval = 0.016
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0
+
+[resource]
+script = ExtResource("1_gtk8i")
+ant_profile = ExtResource("1_1f0es")
+spawn_condition = SubResource("Resource_kh3hg")

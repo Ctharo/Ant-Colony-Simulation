@@ -76,6 +76,7 @@ var dead: bool = false :
 
 var vision_range: float = 100.0 # TODO: Should be tied to sight_area.radius
 var olfaction_range: float = 200.0 # TODO: Should be tied to sense_area.radius
+var reach_range: float = 50.0
 var movement_rate: float = 25.0
 var harvesting_rate: float = 60.0
 var storing_rate: float = 60.0

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AntProfile" load_steps=5 format=3 uid="uid://bqf6p88g1j2ax"]
+
+[ext_resource type="Script" path="res://entities/pheromone.gd" id="1_5rgkj"]
+[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://resources/pheromones/food_pheromone.tres" id="2_5d5b8"]
+[ext_resource type="Script" path="res://entities/ant/ant_profile.gd" id="2_wi06i"]
+[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://resources/pheromones/home_pheromone.tres" id="3_0tw88"]
+
+[resource]
+script = ExtResource("2_wi06i")
+pheromones = Array[ExtResource("1_5rgkj")]([ExtResource("2_5d5b8"), ExtResource("3_0tw88")])
+movement_rate = 25.0
+vision_range = 100.0
+olfaction_range = 200.0
+reach_range = 50.0
+size = 1.0

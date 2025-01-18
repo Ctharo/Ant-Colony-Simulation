@@ -14,6 +14,7 @@ var heatmap_manager: HeatmapManager
 # States
 var initializing: bool = false
 @onready var sandbox_ui := %UI as SandboxUI
+@onready var ant_container = $AntContainer
 
 func _init() -> void:
 	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
