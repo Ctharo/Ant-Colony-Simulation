@@ -2,6 +2,9 @@ class_name Logic
 extends Resource
 
 #region Properties
+## Whether this logic should be automatically tracked by evaluation systems
+@export var auto_track: bool = false
+
 ## Name of the logic expression, used to generate ID
 @export var name: String:
 	set(value):

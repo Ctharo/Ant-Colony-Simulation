@@ -5,6 +5,7 @@
 
 [sub_resource type="Resource" id="Resource_el6o8"]
 script = ExtResource("1_xgpaw")
+auto_track = true
 name = "home pheromone condition"
 expression_string = "not is_carrying_food()"
 nested_expressions = Array[ExtResource("1_xgpaw")]([])

@@ -111,17 +111,19 @@ func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
+	evaluation_system.initialize(self)
+
 	# Initialize influence manager
 	influence_manager.initialize(self)
 	influence_manager.add_profile(load("res://resources/influences/profiles/look_for_food.tres").duplicate())
 	influence_manager.add_profile(load("res://resources/influences/profiles/go_home.tres").duplicate())
+	
 	# Register to heatmap
 	heatmap = get_tree().get_first_node_in_group("heatmap") as HeatmapManager
 	heatmap.register_entity(self)
 	for pheromone in pheromones:
 		heatmap.create_heatmap_type(pheromone)
-		if pheromone.condition:
-			evaluation_system.register_expression(pheromone.condition)
+
 
 	# Emit ready signal
 	spawned.emit()

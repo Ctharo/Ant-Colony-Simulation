@@ -84,14 +84,7 @@ func initialize(p_entity: Node) -> void:
 		return
 
 	entity = p_entity
-	if not eval_system:
-		push_error("EvaluationSystem not found")
-		return
 
-	eval_system.initialize(entity)
-	# Register existing profiles
-	for profile in profiles:
-		_register_profile_influences(profile)
 #endregion
 
 #region Profile Management
@@ -114,7 +107,6 @@ func add_profile(influence_profile: InfluenceProfile) -> void:
 
 	if influence_profile not in profiles:
 		profiles.append(influence_profile)
-		_register_profile_influences(influence_profile)
 
 		# If no active profile set, set first one as active
 		if active_profile==null:
@@ -125,31 +117,11 @@ func remove_profile(influence_profile: InfluenceProfile) -> void:
 		return
 
 	if influence_profile in profiles:
-		_unregister_profile_influences(influence_profile)
 		profiles.erase(influence_profile)
 
 	if active_profile == influence_profile:
 		active_profile = null
-
-func _register_profile_influences(profile: InfluenceProfile) -> void:
-	if not profile or not eval_system:
-		return
-
-	for condition: Logic in profile.enter_conditions:
-		eval_system.register_expression(condition)
-
-	for influence in profile.influences:
-		eval_system.register_expression(influence)
-		if influence.condition:
-			eval_system.register_expression(influence.condition)
-
-func _unregister_profile_influences(profile: InfluenceProfile) -> void:
-	if not profile or not eval_system:
-		return
-
-	# TODO: Implement unregister in EvaluationSystem
-	pass
-
+	
 func _on_active_profile_changed() -> void:
 	profile_changed.emit()
 #endregion

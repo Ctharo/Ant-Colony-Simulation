@@ -164,6 +164,9 @@ func _init() -> void:
 	logger = Logger.new("eval", DebugLogger.Category.LOGIC)
 
 func _process(_delta: float) -> void:
+	if _registered_logic.is_empty():
+		return
+		
 	var current_time = Time.get_ticks_msec() / 1000.0
 
 	# Check all registered logic for evaluation needs
@@ -192,48 +195,72 @@ func get_or_create_state(expression: Logic) -> ExpressionState:
 
 	if not _states.has(expression.id):
 		_states[expression.id] = ExpressionState.new(expression)
+		
+	if expression.auto_track and not expression in _registered_logic:
 		_registered_logic.append(expression)
 
 	return _states[expression.id]
 
 func register_expression(expression: Logic) -> void:
+	# Generate ID if needed
 	if expression.id.is_empty():
 		expression.id = str(expression.get_instance_id())
 
+	# Log expression details for debugging
 	logger.trace("Expression details: string=%s, always_eval=%s, nested=%s" % [
 		expression.expression_string,
 		expression.always_evaluate,
 		expression.nested_expressions
 	])
 
-	# Create and parse state
+	# Create state (parsing will be done lazily when needed)
 	var state := get_or_create_state(expression)
 	if not state:
+		logger.error("Failed to create state for expression %s" % expression.id)
 		return
 
-	if not state.is_parsed:
-		_parse_expression(expression)
-
-	# Register nested expressions and dependencies
+	# Register nested expressions and their dependencies
 	for nested in expression.nested_expressions:
 		if nested == null:
 			logger.error("Cannot register null nested expression")
-			return
+			continue
 
-		logger.trace("Registering nested expression %s for %s" % [
-			nested.id,
-			expression.id
-		])
-		register_expression(nested)
-		_cache.add_dependency(expression.id, nested.id)
+		# Only auto-register nested expressions if they're marked for tracking
+		if nested.auto_track:
+			logger.trace("Auto-registering nested expression %s for %s" % [
+				nested.id,
+				expression.id
+			])
+			register_expression(nested)
+			_cache.add_dependency(expression.id, nested.id)
+		else:
+			logger.trace("Skipping auto-registration for nested expression %s (auto_track disabled)" % nested.id)
 
+	# Emit signal to notify of changed dependencies
+	_on_expression_dependencies_changed(expression.id)
+	
 	logger.trace("Completed registration of %s" % expression.id)
 #endregion
 
 #region Expression Evaluation
 func get_value(expression: Logic, force_update: bool = false) -> Variant:
 	var current_time = Time.get_ticks_msec() / 1000.0
+	
+	# Lazy registration and parsing if needed
+	if not _states.has(expression.id):
+		logger.trace("Auto-registering expression %s" % expression.id)
+		register_expression(expression)
+	
+	# Get expression state if available
 	var state: ExpressionState = _states[expression.id]
+	if not state:
+		logger.error("Failed to get/create state for expression %s" % expression.id)
+		return null
+		
+	# Lazy parsing if needed
+	if not state.is_parsed:
+		_parse_expression(expression)
+		
 	# Check if we can use cached value
 	if _cache.has_value(expression.id) and not force_update:
 		# Handle immediate evaluation needs
