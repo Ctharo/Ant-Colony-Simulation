@@ -33,6 +33,7 @@ func spawn_ants(colony: Colony, num: int = 1, physics_at_spawn: bool = false) ->
 
 func spawn_ant(colony: Colony) -> Ant:
 	var ant: Ant = preload("res://entities/ant/ant.tscn").instantiate() as Ant
+	ant.init_profile(load("res://entities/ant/resources/basic_worker.tres"))
 	ant.set_colony(colony)
 	AntManager.ants_created += 1
 	ant.id = AntManager.ants_created

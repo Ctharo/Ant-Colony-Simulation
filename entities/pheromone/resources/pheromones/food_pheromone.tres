@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="Pheromone" load_steps=4 format=3 uid="uid://bqym7fdwwu5m4"]
 
 [ext_resource type="Script" path="res://logic/logic.gd" id="1_4bm7j"]
-[ext_resource type="Script" path="res://entities/pheromone.gd" id="1_y0igt"]
+[ext_resource type="Script" path="res://entities/pheromone/pheromone.gd" id="1_y0igt"]
 
 [sub_resource type="Resource" id="Resource_e0ucx"]
 script = ExtResource("1_4bm7j")

@@ -38,6 +38,8 @@ var id: int
 ## The role of this ant in the colony
 var role: String
 
+
+var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
 
@@ -116,8 +118,9 @@ func _ready() -> void:
 
 	# Initialize influence manager
 	influence_manager.initialize(self)
-	influence_manager.add_profile(load("res://resources/influences/profiles/look_for_food.tres").duplicate())
-	influence_manager.add_profile(load("res://resources/influences/profiles/go_home.tres").duplicate())
+	
+	if profile:
+		init_profile(profile)
 	
 	# Register to heatmap
 	heatmap = get_tree().get_first_node_in_group("heatmap") as HeatmapManager
@@ -128,6 +131,14 @@ func _ready() -> void:
 
 	# Emit ready signal
 	spawned.emit()
+
+func init_profile(p_profile: AntProfile) -> void:
+	profile = p_profile
+	if not influence_manager:
+		return
+	
+	for influence: InfluenceProfile in p_profile.movement_influences:
+		influence_manager.add_profile(influence)
 
 ## Takes care of basic actions/processes without input.
 ## Harvests food if possible
