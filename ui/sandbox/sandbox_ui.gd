@@ -254,7 +254,7 @@ func _draw() -> void:
 	var hovered_colony = camera.hovered_entity
 
 	if is_instance_valid(selected_colony):
-		for ant: Ant in selected_colony.ants:
+		for ant in selected_colony.ants:
 			if not is_instance_valid(ant):
 				continue
 			draw_arc(
@@ -267,7 +267,7 @@ func _draw() -> void:
 				)
 
 	if (is_instance_valid(hovered_colony) and hovered_colony is Colony):
-		for ant: Ant in hovered_colony.ants:
+		for ant in hovered_colony.ants:
 			if not is_instance_valid(ant):
 				continue
 			draw_arc(
