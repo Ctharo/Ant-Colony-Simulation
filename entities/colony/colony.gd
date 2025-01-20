@@ -128,6 +128,7 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	
 func spawn_ant(ant_profile: AntProfile) -> Ant:
 	var ant: Ant = AntManager.spawn_ant(self)
+	ant.role = String(ant_profile.resource_name)
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
 	ant.olfaction_range = ant_profile.olfaction_range
@@ -147,4 +148,12 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 func _on_ant_died(ant: Ant) -> void:
 	if ant in ants.elements:
 		ants.elements.erase(ant)
+		
+		
+func ant_count_by_role(role: String) -> int:
+	var result = 0
+	for ant: Ant in ants:
+		if is_instance_valid(ant) and (role.contains(ant.role) or ant.role.contains(role)):
+			result += 1
+	return result
 	

@@ -196,7 +196,8 @@ func _on_colony_spawn_ants_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
 		for ant in ants:
-			$"../../AntContainer".add_child(ant)
+			if not ant.is_inside_tree():
+				$"../../AntContainer".add_child(ant)
 				
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
