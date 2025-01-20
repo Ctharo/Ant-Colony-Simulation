@@ -156,9 +156,10 @@ height = 20.0
 radius = 200.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_2p8x4"]
-radius = 150.0
+radius = 100.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_epip7"]
+radius = 50.0
 
 [node name="Ant" type="CharacterBody2D" groups=["ant"]]
 disable_mode = 1
@@ -196,7 +197,6 @@ debug_color = Color(0.552941, 0.752941, 0, 0.419608)
 
 [node name="SenseArea" type="Area2D" parent="."]
 unique_name_in_owner = true
-visible = false
 rotation = 1.5708
 collision_layer = 0
 collision_mask = 10
@@ -209,7 +209,6 @@ shape = SubResource("CircleShape2D_bgmjh")
 
 [node name="SightArea" type="Area2D" parent="."]
 unique_name_in_owner = true
-visible = false
 rotation = 1.5708
 collision_layer = 0
 collision_mask = 14
@@ -220,7 +219,6 @@ shape = SubResource("CircleShape2D_2p8x4")
 
 [node name="ReachArea" type="Area2D" parent="."]
 unique_name_in_owner = true
-visible = false
 modulate = Color(0.678431, 0.678431, 0, 1)
 collision_layer = 2
 collision_mask = 15

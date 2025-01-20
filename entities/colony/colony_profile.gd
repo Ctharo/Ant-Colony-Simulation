@@ -4,4 +4,4 @@ extends Resource
 ## Contains ColonyAntProfiles
 
 @export var name: String
-@export var ant_profiles: Array[ColonyAntProfile]
+@export var ant_profiles: Array[AntProfile]

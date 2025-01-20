@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="AntProfile" load_steps=8 format=3 uid="uid://bqf6p88g1j2ax"]
+[gd_resource type="Resource" script_class="AntProfile" load_steps=10 format=3 uid="uid://bqf6p88g1j2ax"]
 
 [ext_resource type="Script" path="res://logic/influence/influence_profile.gd" id="1_cwn33"]
 [ext_resource type="Resource" uid="uid://ch0lb2jhvsc1y" path="res://resources/influences/profiles/look_for_food.tres" id="2_lahj1"]
@@ -7,10 +7,20 @@
 [ext_resource type="Script" path="res://entities/pheromone/pheromone.gd" id="4_gooye"]
 [ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/pheromones/food_pheromone.tres" id="5_vc4ou"]
 [ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/pheromones/home_pheromone.tres" id="6_qm3s6"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="8_l7mvj"]
+
+[sub_resource type="Resource" id="Resource_b6ghj"]
+script = ExtResource("8_l7mvj")
+name = "basic worker spawn condition"
+expression_string = "ant_count_by_role(\"basic_worker\") < 10 and ticks_since_spawn() > 1000"
+nested_expressions = Array[ExtResource("8_l7mvj")]([])
+description = ""
+type = 3
 
 [resource]
 script = ExtResource("2_wi06i")
 name = "basic worker"
+spawn_condition = SubResource("Resource_b6ghj")
 pheromones = Array[ExtResource("4_gooye")]([ExtResource("5_vc4ou"), ExtResource("6_qm3s6")])
 movement_influences = Array[ExtResource("1_cwn33")]([ExtResource("2_lahj1"), ExtResource("3_nw4e2")])
 movement_rate = 25.0

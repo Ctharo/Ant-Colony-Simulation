@@ -7,7 +7,7 @@ extends Node2D
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
 @export var darker_dirt = Color(Color.BROWN, 0.9) # Darker brown for depth
 @export var profile: ColonyProfile
-@export var ant_profiles: Array[ColonyAntProfile]
+@export var ant_profiles: Array[AntProfile]
 
 ## Dictionary tracking spawned ants by their profile ID
 var _profile_ant_map: Dictionary = {}
@@ -58,14 +58,14 @@ func init_colony_profile(p_profile: ColonyProfile) -> void:
 	ant_profiles.clear()
 	_profile_ant_map.clear()
 	
-	for ant_profile: ColonyAntProfile in p_profile.ant_profiles:
+	for ant_profile: AntProfile in p_profile.ant_profiles:
 		ant_profiles.append(ant_profile)
-		_profile_ant_map[ant_profile.ant_profile.id] = []
+		_profile_ant_map[ant_profile.id] = []
 
 func _physics_process(_delta: float) -> void:
-	for p_profile: ColonyAntProfile in ant_profiles:
+	for p_profile: AntProfile in ant_profiles:
 		if p_profile.spawn_condition.get_value(eval_system):
-			spawn_ant(p_profile.ant_profile)
+			spawn_ant(p_profile)
 
 func _exit_tree() -> void:
 	heatmap.unregister_entity(self)
