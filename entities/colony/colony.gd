@@ -1,15 +1,18 @@
 class_name Colony
 extends Node2D
-## TODO: Add Behaviors such as spawning x number of ants if Condition
+## Colony class managing ant spawning, tracking, and role management
 
-
+#region Member Variables
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
 @export var darker_dirt = Color(Color.BROWN, 0.9) # Darker brown for depth
 @export var profile: ColonyProfile
 @export var ant_profiles: Array[ColonyAntProfile]
+
+## Dictionary tracking spawned ants by their profile ID
+var _profile_ant_map: Dictionary = {}
 var _last_spawn_ticks: int
-#region Member Variables
+
 ## Colony radius in units
 @export var radius: float = 60.0:
 	set(value):
@@ -53,9 +56,11 @@ func _ready() -> void:
 func init_colony_profile(p_profile: ColonyProfile) -> void:
 	profile = p_profile
 	ant_profiles.clear()
+	_profile_ant_map.clear()
 	
 	for ant_profile: ColonyAntProfile in p_profile.ant_profiles:
 		ant_profiles.append(ant_profile)
+		_profile_ant_map[ant_profile.ant_profile.id] = []
 
 func _physics_process(_delta: float) -> void:
 	for p_profile: ColonyAntProfile in ant_profiles:
@@ -70,12 +75,19 @@ func delete_all():
 	for ant in ants:
 		if ant != null:
 			AntManager.remove_ant(ant)
+	_profile_ant_map.clear()
 
+## Returns the time in milliseconds since the last ant spawn
 func ticks_since_spawn() -> int:
 	return Time.get_ticks_msec() - _last_spawn_ticks
 
+## Returns all ants in the colony
 func get_ants() -> Array:
 	return ants.to_array()
+
+## Returns ants of a specific profile
+func get_ants_by_profile(profile_id: String) -> Array:
+	return _profile_ant_map.get(profile_id, [])
 
 func _draw() -> void:
 	# Rich brown/dirt color with some transparency
@@ -108,6 +120,11 @@ func add_ant(ant: Ant) -> Result:
 	if not ant:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
 	ants.append(ant)
+	
+	# Track ant in profile map
+	if ant.profile_id in _profile_ant_map:
+		_profile_ant_map[ant.profile_id].append(ant)
+	
 	if sandbox:
 		sandbox.ant_container.add_child(ant)
 	else:
@@ -140,6 +157,9 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 	ant.olfaction_range = ant_profile.olfaction_range
 	ant.reach_range = ant_profile.reach_range
 	ant.pheromones = ant_profile.pheromones
+	ant.profile_id = ant_profile.id
+	ant.role = ant.profile_id # FIXME: Redundant
+	
 	randomize()
 	add_ant(ant)
 	ant.global_rotation = randf_range(-PI, PI)
@@ -154,11 +174,27 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 func _on_ant_died(ant: Ant) -> void:
 	if ant in ants.elements:
 		ants.elements.erase(ant)
-		
+		# Remove from profile tracking
+		if ant.profile_id in _profile_ant_map:
+			_profile_ant_map[ant.profile_id].erase(ant)
+
+## Returns the count of ants with a specific role
+## The role parameter can be a partial match
 func ant_count_by_role(role: String) -> int:
+	if role.is_empty():
+		return 0
+		
+	var normalized_role = role.to_lower().strip_edges()
+	if normalized_role.is_empty():
+		return 0
+		
 	var result = 0
 	for ant: Ant in ants:
-		if is_instance_valid(ant) and (role.contains(ant.role) or ant.role.contains(role)):
+		if not is_instance_valid(ant):
+			continue
+			
+		var ant_role = ant.role.to_lower()
+		# Check both if role contains ant's role or ant's role contains the search role
+		if ant_role.contains(normalized_role) or normalized_role.contains(ant_role):
 			result += 1
 	return result
-	

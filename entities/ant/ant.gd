@@ -38,7 +38,7 @@ var id: int
 ## The role of this ant in the colony
 var role: String
 
-
+var profile_id: String
 var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
@@ -134,7 +134,6 @@ func _ready() -> void:
 
 func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
-	role = profile.name.to_snake_case()
 	if not influence_manager:
 		return
 	
