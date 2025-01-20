@@ -122,8 +122,8 @@ func add_ant(ant: Ant) -> Result:
 	ants.append(ant)
 	
 	# Track ant in profile map
-	if ant.profile_id in _profile_ant_map:
-		_profile_ant_map[ant.profile_id].append(ant)
+	if ant.role in _profile_ant_map:
+		_profile_ant_map[ant.role].append(ant)
 	
 	if sandbox:
 		sandbox.ant_container.add_child(ant)
@@ -157,8 +157,7 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 	ant.olfaction_range = ant_profile.olfaction_range
 	ant.reach_range = ant_profile.reach_range
 	ant.pheromones = ant_profile.pheromones
-	ant.profile_id = ant_profile.id
-	ant.role = ant.profile_id # FIXME: Redundant
+	ant.role = ant_profile.name.to_snake_case() # FIXME: Redundant
 	
 	randomize()
 	add_ant(ant)
@@ -175,8 +174,8 @@ func _on_ant_died(ant: Ant) -> void:
 	if ant in ants.elements:
 		ants.elements.erase(ant)
 		# Remove from profile tracking
-		if ant.profile_id in _profile_ant_map:
-			_profile_ant_map[ant.profile_id].erase(ant)
+		if ant.role in _profile_ant_map:
+			_profile_ant_map[ant.role].erase(ant)
 
 ## Returns the count of ants with a specific role
 ## The role parameter can be a partial match

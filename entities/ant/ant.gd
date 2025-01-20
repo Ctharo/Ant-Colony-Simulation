@@ -38,7 +38,7 @@ var id: int
 ## The role of this ant in the colony
 var role: String
 
-var profile_id: String
+
 var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
