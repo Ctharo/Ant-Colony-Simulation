@@ -24,9 +24,9 @@ extends Resource
 @export var type: Variant.Type = TYPE_FLOAT
 
 ## Minimum evaluation interval (in seconds). Default 0.016 (16ms)
-@export_range(0.016, 1.0, 0.001, "or_greater") var min_eval_interval: float = 0.016:
+@export_range(0.0, 1.0, 0.001, "or_greater") var min_eval_interval: float = 0.016:
 	set(value):
-		min_eval_interval = max(0.001, value)
+		min_eval_interval = max(0.0, value)
 
 ## Maximum evaluation interval (in seconds). 0 means no maximum
 @export_range(0.00, 1.0, 0.01, "or_greater") var max_eval_interval: float = 0.5:
@@ -58,6 +58,11 @@ var always_evaluate: bool:
 
 ## Checks if this logic should be evaluated based on timing constraints
 func should_evaluate(current_time: float, last_eval_time: float) -> bool:
+	
+	## Evaluate if both are zero
+	if max_eval_interval + min_eval_interval == 0.0:
+		return true
+	
 	var time_since_last = current_time - last_eval_time
 	
 	# Must evaluate if max interval exceeded

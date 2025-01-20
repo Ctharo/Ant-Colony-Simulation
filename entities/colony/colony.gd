@@ -52,7 +52,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	for profile: ColonyAntProfile in ant_profiles:
-		if should_spawn() and profile.spawn_condition.get_value(eval_system):
+		if profile.spawn_condition.get_value(eval_system):
 			spawn_ant(profile.ant_profile)
 
 func _exit_tree() -> void:
@@ -64,11 +64,8 @@ func delete_all():
 		if ant != null:
 			AntManager.remove_ant(ant)
 
-func should_spawn() -> bool:
-	var result: bool = false
-	if Time.get_ticks_msec() - _last_spawn_ticks >= 1000:
-		result = true
-	return result
+func ticks_since_spawn() -> int:
+	return Time.get_ticks_msec() - _last_spawn_ticks
 
 func get_ants() -> Array:
 	return ants.to_array()
@@ -104,6 +101,10 @@ func add_ant(ant: Ant) -> Result:
 	if not ant:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
 	ants.append(ant)
+	if sandbox:
+		sandbox.ant_container.add_child(ant)
+	else:
+		add_child(ant)
 	ant.set_colony(self)
 	return Result.new()
 
@@ -126,15 +127,24 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	return _ants
 	
 func spawn_ant(ant_profile: AntProfile) -> Ant:
-	var ant = spawn_ants(1)[0]
+	var ant: Ant = AntManager.spawn_ant(self)
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
 	ant.olfaction_range = ant_profile.olfaction_range
 	ant.reach_range = ant_profile.reach_range
 	ant.pheromones = ant_profile.pheromones
-	if sandbox:
-		sandbox.ant_container.add_child(ant)
-	else:
-		add_child(ant)
+	randomize()
+	add_ant(ant)
+	ant.global_rotation = randf_range(-PI, PI)
+	var wiggle_x: float = randf_range(-15,15)
+	var wiggle_y: float = randf_range(-15,15)
+	ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
+	_last_spawn_ticks = Time.get_ticks_msec()
+	ant.died.connect(_on_ant_died)
 	return ant
 #endregion
+
+func _on_ant_died(ant: Ant) -> void:
+	if ant in ants.elements:
+		ants.elements.erase(ant)
+	

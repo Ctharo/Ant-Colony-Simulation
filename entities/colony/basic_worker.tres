@@ -8,12 +8,12 @@
 script = ExtResource("3_o0g2a")
 auto_track = false
 name = "basic worker spawn condition"
-expression_string = "ants.size() < 10"
+expression_string = "ticks_since_spawn() >= 1000 and ants.size() < 10"
 nested_expressions = Array[ExtResource("3_o0g2a")]([])
 description = ""
 type = 1
-min_eval_interval = 0.016
-max_eval_interval = 0.5
+min_eval_interval = 0.0
+max_eval_interval = 0.0
 evaluate_when_idle = false
 change_threshold = 0.0
 

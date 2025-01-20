@@ -418,6 +418,8 @@ func show_nav_path(enabled: bool):
 	nav_agent.debug_enabled = enabled
 
 func _exit_tree() -> void:
+	if not dead:
+		dead = true
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
 	heatmap.unregister_entity(self)
