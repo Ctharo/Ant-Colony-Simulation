@@ -187,10 +187,10 @@ func deselect_all() -> void:
 func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
 	var colony = colony_manager.spawn_colony_at(world_position)
-	$"../../ColonyContainer".add_child(colony)
+
 	colony.sandbox = sandbox
+	$"../../ColonyContainer".add_child(colony)
 	
-	_on_colony_spawn_ants_requested(colony)
 
 func _on_colony_spawn_ants_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):

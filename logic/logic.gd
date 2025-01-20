@@ -135,5 +135,5 @@ func can_eval_when_idle() -> bool:
 	return evaluate_when_idle and not needs_immediate_eval()
 
 ## Get value with evaluation system
-func get_value(eval_system: EvaluationSystem, force_update: bool = false) -> Variant:
-	return eval_system.get_value(self, force_update)
+func get_value(eval_system: EvaluationSystem, _force_update: bool = false) -> Variant:
+	return eval_system.get_value(self)

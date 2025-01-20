@@ -70,11 +70,10 @@ func spawn_colony() -> Colony:
 		logger.warn("Cannot spawn colony - maximum of %d reached" % MAX_COLONIES)
 		return null
 
-	var colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
-
-	# Initialize colony state
-	colony.set_physics_process(false)
-	colony.set_process(false)
+	var colony: Colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
+	
+	var profile = load("res://entities/colony/resources/base_colony_profile.tres") as ColonyProfile
+	colony.init_colony_profile(profile)
 
 	# Add to tracking
 	colonies.append(colony)

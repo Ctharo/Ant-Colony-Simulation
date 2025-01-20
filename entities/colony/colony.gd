@@ -5,7 +5,8 @@ extends Node2D
 
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
-@export var darker_dirt = Color(Color.BROWN, 0.9)   # Darker brown for depth
+@export var darker_dirt = Color(Color.BROWN, 0.9) # Darker brown for depth
+@export var profile: ColonyProfile
 @export var ant_profiles: Array[ColonyAntProfile]
 var _last_spawn_ticks: int
 #region Member Variables
@@ -48,12 +49,18 @@ func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
 	eval_system.initialize(self)
-	ant_profiles.append(load("res://entities/colony/basic_worker.tres"))
 
-func _physics_process(delta: float) -> void:
-	for profile: ColonyAntProfile in ant_profiles:
-		if profile.spawn_condition.get_value(eval_system):
-			spawn_ant(profile.ant_profile)
+func init_colony_profile(p_profile: ColonyProfile) -> void:
+	profile = p_profile
+	ant_profiles.clear()
+	
+	for ant_profile: ColonyAntProfile in p_profile.ant_profiles:
+		ant_profiles.append(ant_profile)
+
+func _physics_process(_delta: float) -> void:
+	for p_profile: ColonyAntProfile in ant_profiles:
+		if p_profile.spawn_condition.get_value(eval_system):
+			spawn_ant(p_profile.ant_profile)
 
 func _exit_tree() -> void:
 	heatmap.unregister_entity(self)
@@ -148,7 +155,6 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 func _on_ant_died(ant: Ant) -> void:
 	if ant in ants.elements:
 		ants.elements.erase(ant)
-		
 		
 func ant_count_by_role(role: String) -> int:
 	var result = 0

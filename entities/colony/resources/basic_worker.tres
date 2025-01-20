@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="ColonyAntProfile" load_steps=5 format=3 uid="uid://bmvne15jbw10b"]
 
-[ext_resource type="Resource" uid="uid://bqf6p88g1j2ax" path="res://entities/ant/basic_worker.tres" id="1_1f0es"]
+[ext_resource type="Resource" uid="uid://bqf6p88g1j2ax" path="res://entities/ant/resources/basic_worker.tres" id="1_1f0es"]
 [ext_resource type="Script" path="res://entities/colony/colony_ant_profile.gd" id="1_gtk8i"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="3_o0g2a"]
 
@@ -8,7 +8,7 @@
 script = ExtResource("3_o0g2a")
 auto_track = false
 name = "basic worker spawn condition"
-expression_string = "ticks_since_spawn() >= 1000 and ants.size() < 10"
+expression_string = "ticks_since_spawn() >= 1000 and ant_count_by_role(\"basic_worker\") < 10"
 nested_expressions = Array[ExtResource("3_o0g2a")]([])
 description = ""
 type = 1
