@@ -1,6 +1,7 @@
 class_name AntProfile
 extends Resource
 
+@export var name: String
 @export var pheromones: Array[Pheromone]
 @export var movement_rate: float
 @export var vision_range: float 

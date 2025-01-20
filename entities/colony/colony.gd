@@ -128,7 +128,7 @@ func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
 	
 func spawn_ant(ant_profile: AntProfile) -> Ant:
 	var ant: Ant = AntManager.spawn_ant(self)
-	ant.role = String(ant_profile.resource_name)
+	ant.role = String(ant_profile.name).to_snake_case()
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
 	ant.olfaction_range = ant_profile.olfaction_range
