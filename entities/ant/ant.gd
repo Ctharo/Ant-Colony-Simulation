@@ -134,6 +134,7 @@ func _ready() -> void:
 
 func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
+	role = profile.name.to_snake_case()
 	if not influence_manager:
 		return
 	

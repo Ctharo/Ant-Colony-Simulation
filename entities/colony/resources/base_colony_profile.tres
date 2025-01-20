@@ -6,4 +6,5 @@
 
 [resource]
 script = ExtResource("2_1epkk")
+name = ""
 ant_profiles = Array[ExtResource("1_7lgei")]([ExtResource("2_6smc0")])

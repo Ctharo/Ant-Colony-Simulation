@@ -6,16 +6,11 @@
 
 [sub_resource type="Resource" id="Resource_kh3hg"]
 script = ExtResource("3_o0g2a")
-auto_track = false
 name = "basic worker spawn condition"
 expression_string = "ticks_since_spawn() >= 1000 and ant_count_by_role(\"basic_worker\") < 10"
 nested_expressions = Array[ExtResource("3_o0g2a")]([])
 description = ""
 type = 1
-min_eval_interval = 0.0
-max_eval_interval = 0.0
-evaluate_when_idle = false
-change_threshold = 0.0
 
 [resource]
 script = ExtResource("1_gtk8i")
