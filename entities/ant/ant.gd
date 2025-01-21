@@ -60,7 +60,6 @@ var target_position: Vector2 :
 	set(value):
 		nav_agent.set_target_position(value)
 
-@onready var heatmap = HeatmapManager
 
 ## Task update timer
 var task_update_timer: float = 0.0
@@ -130,10 +129,9 @@ func _ready() -> void:
 		init_profile(profile)
 	
 	# Register to heatmap
-	heatmap = get_tree().get_first_node_in_group("heatmap") as HeatmapManager
-	heatmap.register_entity(self)
+	HeatmapManager.register_entity(self)
 	for pheromone in pheromones:
-		heatmap.create_heatmap_type(pheromone)
+		HeatmapManager.create_heatmap_type(pheromone)
 
 
 	# Emit ready signal
@@ -259,11 +257,11 @@ func _process_pheromones(delta: float):
 	
 	for pheromone: Pheromone in pheromones:
 		if not pheromone.condition:
-			heatmap.update_entity_heat(self, delta, pheromone.name)
+			HeatmapManager.update_entity_heat(self, delta, pheromone.name)
 			continue
 			
 		elif EvaluationSystem.get_value(pheromone.condition, self):
-			heatmap.update_entity_heat(self, delta, pheromone.name)
+			HeatmapManager.update_entity_heat(self, delta, pheromone.name)
 			continue
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
@@ -368,11 +366,11 @@ func get_food_in_view() -> Array:
 
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
 	# Early exit if heatmap or colony not valid
-	if not is_instance_valid(heatmap) or not is_instance_valid(colony):
+	if not is_instance_valid(colony):
 		return Vector2.ZERO
 
 	# Get base heat direction - this already handles proper thread safety internally
-	var direction: Vector2 = heatmap.get_heat_direction(self, global_position, pheromone_name)
+	var direction: Vector2 = HeatmapManager.get_heat_direction(self, global_position, pheromone_name)
 
 	# When follow_concentration is true, move towards higher concentrations (inverse direction)
 	# When false, move away from high concentrations (keep original direction)
@@ -440,5 +438,5 @@ func _exit_tree() -> void:
 		dead = true
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
-	heatmap.unregister_entity(self)
+	HeatmapManager.unregister_entity(self)
 	EvaluationSystem.cleanup_entity(self)

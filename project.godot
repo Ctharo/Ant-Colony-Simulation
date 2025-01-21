@@ -23,6 +23,7 @@ FoodManager="*res://autoloads/food_manager.gd"
 ColonyManager="*res://autoloads/colony_manager.gd"
 SettingsManager="*res://autoloads/settings_manager.gd"
 EvaluationSystem="*res://logic/evaluation_system.gd"
+HeatmapManager="*res://autoloads/heatmap_manager.gd"
 
 [display]
 

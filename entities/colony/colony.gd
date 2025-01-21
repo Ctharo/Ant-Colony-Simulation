@@ -35,11 +35,10 @@ var nav_debug_enabled: bool = false
 var heatmap_enabled: bool = false :
 	set(value):
 		heatmap_enabled = value
-		heatmap.debug_draw(self, value)
+		HeatmapManager.debug_draw(self, value)
 #endregion
 
 var logger: Logger
-var heatmap: HeatmapManager
 var sandbox
 
 #region Initialization
@@ -47,8 +46,7 @@ func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
 	
 func _ready() -> void:
-	heatmap = get_tree().get_first_node_in_group("heatmap")
-	heatmap.register_entity(self)
+	HeatmapManager.register_entity(self)
 
 func init_colony_profile(p_profile: ColonyProfile) -> void:
 	profile = p_profile
@@ -65,7 +63,8 @@ func _physics_process(_delta: float) -> void:
 			spawn_ant(p_profile)
 
 func _exit_tree() -> void:
-	heatmap.unregister_entity(self)
+	HeatmapManager.unregister_entity(self)
+	EvaluationSystem.cleanup_entity(self)
 	delete_all()
 
 func delete_all():

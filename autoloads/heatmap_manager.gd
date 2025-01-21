@@ -1,4 +1,3 @@
-class_name HeatmapManager
 extends Node2D
 
 #region Constants
@@ -102,7 +101,6 @@ class HeatmapInstance:
 #endregion
 
 func _init() -> void:
-	name = "HeatmapManager"
 	logger = Logger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
 	update_lock = Mutex.new()
 	top_level = true
@@ -110,7 +108,6 @@ func _init() -> void:
 
 func _ready() -> void:
 	_start_update_thread()
-	setup_navigation()
 
 
 func create_heatmap_type(pheromone: Pheromone) -> void:
