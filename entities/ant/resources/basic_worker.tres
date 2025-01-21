@@ -5,9 +5,10 @@
 [ext_resource type="Script" path="res://entities/ant/ant_profile.gd" id="2_wi06i"]
 [ext_resource type="Resource" uid="uid://b2tn5yjt7gso5" path="res://resources/influences/profiles/go_home.tres" id="3_nw4e2"]
 [ext_resource type="Script" path="res://entities/pheromone/pheromone.gd" id="4_gooye"]
-[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/pheromones/food_pheromone.tres" id="5_vc4ou"]
-[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/pheromones/home_pheromone.tres" id="6_qm3s6"]
+[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/food_pheromone.tres" id="5_vc4ou"]
+[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/home_pheromone.tres" id="6_qm3s6"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="8_l7mvj"]
+
 
 [sub_resource type="Resource" id="Resource_b6ghj"]
 script = ExtResource("8_l7mvj")

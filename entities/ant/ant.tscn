@@ -4,10 +4,10 @@
 [ext_resource type="Script" path="res://managers/influence_manager.gd" id="2_2mgsy"]
 [ext_resource type="Script" path="res://entities/pheromone/pheromone.gd" id="2_tscyr"]
 [ext_resource type="Texture2D" uid="uid://djfp7c852qxaq" path="res://entities/ant/Ant.svg" id="2_wmt1h"]
-[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/pheromones/food_pheromone.tres" id="3_bxdt5"]
+[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/food_pheromone.tres" id="3_bxdt5"]
 [ext_resource type="Script" path="res://logic/evaluation_system.gd" id="3_iddyu"]
 [ext_resource type="Script" path="res://logic/evaluation_controller.gd" id="4_2cjl2"]
-[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/pheromones/home_pheromone.tres" id="4_x6xol"]
+[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/home_pheromone.tres" id="4_x6xol"]
 
 [sub_resource type="GDScript" id="GDScript_xh62h"]
 script/source = "class_name EvaluationCache
