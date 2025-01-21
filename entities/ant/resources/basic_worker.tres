@@ -9,7 +9,6 @@
 [ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/home_pheromone.tres" id="6_qm3s6"]
 [ext_resource type="Script" path="res://logic/logic.gd" id="8_l7mvj"]
 
-
 [sub_resource type="Resource" id="Resource_b6ghj"]
 script = ExtResource("8_l7mvj")
 name = "basic worker spawn condition"

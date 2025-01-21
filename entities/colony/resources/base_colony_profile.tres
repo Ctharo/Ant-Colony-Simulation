@@ -6,5 +6,5 @@
 
 [resource]
 script = ExtResource("2_1epkk")
-name = ""
+name = "base colony profile"
 ant_profiles = Array[ExtResource("1_eyh8a")]([ExtResource("2_w05kn")])
