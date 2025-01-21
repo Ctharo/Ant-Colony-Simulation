@@ -36,7 +36,6 @@ var heatmap_enabled: bool = false :
 	set(value):
 		heatmap_enabled = value
 		heatmap.debug_draw(self, value)
-var eval_system: EvaluationSystem
 #endregion
 
 var logger: Logger
@@ -46,12 +45,10 @@ var sandbox
 #region Initialization
 func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
-	eval_system = EvaluationSystem.new()
 	
 func _ready() -> void:
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	heatmap.register_entity(self)
-	eval_system.initialize(self)
 
 func init_colony_profile(p_profile: ColonyProfile) -> void:
 	profile = p_profile
@@ -64,7 +61,7 @@ func init_colony_profile(p_profile: ColonyProfile) -> void:
 
 func _physics_process(_delta: float) -> void:
 	for p_profile: AntProfile in ant_profiles:
-		if p_profile.spawn_condition.get_value(eval_system):
+		if p_profile.spawn_condition.get_value(self):
 			spawn_ant(p_profile)
 
 func _exit_tree() -> void:

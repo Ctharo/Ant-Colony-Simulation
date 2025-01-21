@@ -47,7 +47,6 @@ var _carried_food: Food
 
 #region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
-@onready var evaluation_system: EvaluationSystem = $EvaluationSystem
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 @onready var sight_area: Area2D = %SightArea
 @onready var sense_area: Area2D = %SenseArea
@@ -124,8 +123,6 @@ func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
-	evaluation_system.initialize(self)
-
 	# Initialize influence manager
 	influence_manager.initialize(self)
 	
@@ -265,7 +262,7 @@ func _process_pheromones(delta: float):
 			heatmap.update_entity_heat(self, delta, pheromone.name)
 			continue
 			
-		elif evaluation_system.get_value(pheromone.condition):
+		elif EvaluationSystem.get_value(pheromone.condition, self):
 			heatmap.update_entity_heat(self, delta, pheromone.name)
 			continue
 
@@ -444,3 +441,4 @@ func _exit_tree() -> void:
 	if nav_agent and nav_agent.get_rid().is_valid():
 		NavigationServer2D.free_rid(nav_agent.get_rid())
 	heatmap.unregister_entity(self)
+	EvaluationSystem.cleanup_entity(self)

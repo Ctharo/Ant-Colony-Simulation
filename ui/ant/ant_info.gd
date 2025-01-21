@@ -232,7 +232,7 @@ func _update_influences() -> void:
 	# Calculate total magnitude
 	var total_magnitude = 0.0
 	for influence in current_ant.influence_manager.active_profile.influences:
-		var magnitude = influence.get_value(current_ant.evaluation_system).length()
+		var magnitude = influence.get_value(current_ant).length()
 		total_magnitude += magnitude
 	
 	# Add entries with relative weights
@@ -261,7 +261,7 @@ func _add_influence_entry(influence: Influence, total_magnitude: float) -> void:
 	
 	# Weight percentage label
 	var weight_label = Label.new()
-	var magnitude = influence.get_value(current_ant.evaluation_system).length()
+	var magnitude = influence.get_value(current_ant).length()
 	var relative_weight = magnitude / total_magnitude if total_magnitude > 0 else 0.0
 	weight_label.text = "%.1f%%" % (relative_weight * 100)
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

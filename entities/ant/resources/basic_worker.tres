@@ -26,5 +26,5 @@ movement_influences = Array[ExtResource("1_cwn33")]([ExtResource("2_lahj1"), Ext
 movement_rate = 25.0
 vision_range = 100.0
 olfaction_range = 200.0
-reach_range = 50.0
+reach_range = 20.0
 size = 1.0

@@ -36,9 +36,6 @@ var _target_recalc_timer: float = 0.0
 ## The entity this influence manager is attached to
 var entity: Node
 
-## Reference to the evaluation system
-@onready var eval_system: EvaluationSystem = $"../EvaluationSystem"
-
 ## Currently active influence profile
 var active_profile: InfluenceProfile:
 	set(value):
@@ -95,7 +92,7 @@ func is_profile_valid(profile: InfluenceProfile) -> bool:
 
 	## Otherwise check each condition and if any are true, then return true
 	for condition: Logic in profile.enter_conditions:
-		if condition.get_value(eval_system):
+		if condition.get_value(entity):
 			return true
 
 	return false
@@ -212,7 +209,7 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 	return best_target if best_distance > 0.0 else entity.global_position
 
 func _calculate_direction(influences: Array[Logic]) -> Vector2:
-	if not eval_system or not influences:
+	if not influences:
 		return Vector2.ZERO
 		
 	var resultant_vector := Vector2.ZERO
@@ -222,11 +219,11 @@ func _calculate_direction(influences: Array[Logic]) -> Vector2:
 			continue
 		
 		# If has condition and it evaluates to false, skip
-		if influence.condition and not eval_system.get_value(influence.condition):
+		if influence.condition and not EvaluationSystem.get_value(influence.condition, entity):
 			continue
 		
 		# Get the direction vector which includes magnitude as weight
-		var direction = eval_system.get_value(influence)
+		var direction = EvaluationSystem.get_value(influence, entity)
 		if not direction:
 			continue
 			
@@ -268,7 +265,7 @@ func draw_influences() -> void:
 		if should_ignore_influence(influence):
 			continue
 			
-		var direction = eval_system.get_value(influence)
+		var direction = EvaluationSystem.get_value(influence, entity)
 		var magnitude = direction.length()
 		
 		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:

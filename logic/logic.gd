@@ -28,5 +28,5 @@ signal action_triggered(value: Variant, expression_id: String)
 #endregion
 
 ## Get value with evaluation system
-func get_value(eval_system: EvaluationSystem) -> Variant:
-	return eval_system.get_value(self)
+func get_value(entity: Node) -> Variant:
+	return EvaluationSystem.get_value(self, entity)
