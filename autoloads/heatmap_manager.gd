@@ -288,7 +288,6 @@ func _calculate_heat_direction(data: Dictionary) -> Vector2:
 
 	if total_weight > 0:
 		direction = direction.normalized()
-		#direction = _find_best_navigable_direction(direction, data.position, total_weight)
 
 	return direction
 
