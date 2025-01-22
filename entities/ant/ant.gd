@@ -358,6 +358,8 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
+## TODO: Have it sample heat at a location (i.e., single cell) and move on. Develop a 
+## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
 	# Early exit if heatmap or colony not valid
 	if not is_instance_valid(colony):
