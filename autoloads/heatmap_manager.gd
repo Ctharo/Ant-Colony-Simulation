@@ -266,6 +266,7 @@ func get_heat_direction(entity: Node2D, heat_type: String) -> Vector2:
 	return result
 
 ## TODO: Needs to get heat direction respecting olfactory range/physics
+## i.e. if no heat touching ant, no heat direction
 func _calculate_heat_direction(data: Dictionary) -> Vector2:
 	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
 	var radius: float = heatmap.config.heat_radius * STYLE.CELL_SIZE * 2
@@ -275,7 +276,6 @@ func _calculate_heat_direction(data: Dictionary) -> Vector2:
 	var nearby_cells = get_cells_in_radius(data.position, radius, data.heat_type)
 
 	for cell_data in nearby_cells:
-
 		var heat = _calculate_cell_influence(cell_data, data)
 		if heat > 0:
 			var distance: float = data.position.distance_to(cell_data.position)
