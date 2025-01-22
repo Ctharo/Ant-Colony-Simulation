@@ -150,8 +150,6 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 	var ant: Ant = AntManager.spawn_ant(self)
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
-	ant.olfaction_range = ant_profile.olfaction_range
-	ant.reach_range = ant_profile.reach_range
 	ant.pheromones = ant_profile.pheromones
 	ant.role = ant_profile.name.to_snake_case() # FIXME: Redundant
 	

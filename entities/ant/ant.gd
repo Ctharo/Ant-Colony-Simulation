@@ -78,14 +78,6 @@ var vision_range: float = 100.0 :
 	set(value):
 		vision_range = value
 		$SightArea/CollisionShape2D.shape.radius = vision_range
-var olfaction_range: float = 200.0 :
-	set(value):
-		olfaction_range = value
-		$SenseArea/CollisionShape2D.shape.radius = olfaction_range
-var reach_range: float = 50.0 :
-	set(value):
-		reach_range = value
-		$ReachArea/CollisionShape2D.shape.radius = reach_range
 		
 var movement_rate: float = 25.0
 var harvesting_rate: float = 60.0
@@ -372,7 +364,7 @@ func get_pheromone_direction(pheromone_name: String, follow_concentration: bool 
 		return Vector2.ZERO
 
 	# Get base heat direction - this already handles proper thread safety internally
-	var direction: Vector2 = HeatmapManager.get_heat_direction(self, global_position, pheromone_name)
+	var direction: Vector2 = HeatmapManager.get_heat_direction(self, pheromone_name)
 
 	# When follow_concentration is true, move towards higher concentrations (inverse direction)
 	# When false, move away from high concentrations (keep original direction)

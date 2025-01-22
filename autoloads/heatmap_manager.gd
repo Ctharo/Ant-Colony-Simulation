@@ -249,13 +249,13 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat
 	cell.add_heat(entity_id, amount, STYLE.MAX_HEAT)
 
 #region Heat Direction Calculation
-func get_heat_direction(entity: Node2D, world_pos: Vector2, heat_type: String) -> Vector2:
+func get_heat_direction(entity: Node2D, heat_type: String) -> Vector2:
 	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
 		return Vector2.ZERO
 
 	var query_data = {
 		"entity_id": entity.get_instance_id(),
-		"position": world_pos,
+		"position": entity.global_position,
 		"heat_type": heat_type
 	}
 
@@ -265,6 +265,7 @@ func get_heat_direction(entity: Node2D, world_pos: Vector2, heat_type: String) -
 
 	return result
 
+## TODO: Needs to get heat direction respecting olfactory range/physics
 func _calculate_heat_direction(data: Dictionary) -> Vector2:
 	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
 	var radius: float = heatmap.config.heat_radius * STYLE.CELL_SIZE * 2
@@ -274,8 +275,6 @@ func _calculate_heat_direction(data: Dictionary) -> Vector2:
 	var nearby_cells = get_cells_in_radius(data.position, radius, data.heat_type)
 
 	for cell_data in nearby_cells:
-		#if not is_cell_navigable(cell_data.position):
-			#continue
 
 		var heat = _calculate_cell_influence(cell_data, data)
 		if heat > 0:

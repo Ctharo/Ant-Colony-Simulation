@@ -153,13 +153,13 @@ radius = 4.0
 height = 18.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_bgmjh"]
-radius = 200.0
+radius = 9.00089
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_2p8x4"]
 radius = 100.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_epip7"]
-radius = 50.0
+radius = 14.0
 
 [node name="Ant" type="CharacterBody2D" groups=["ant"]]
 disable_mode = 1
@@ -204,7 +204,6 @@ input_pickable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="SenseArea"]
 position = Vector2(-1.07288e-05, 0.125512)
-scale = Vector2(1, 0.897145)
 shape = SubResource("CircleShape2D_bgmjh")
 
 [node name="SightArea" type="Area2D" parent="."]
