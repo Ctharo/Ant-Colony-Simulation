@@ -10,7 +10,3 @@ expression_string = "energy_level  < (distance_to_colony * energy_drain * 1.1) "
 nested_expressions = Array[ExtResource("1_rrugo")]([ExtResource("3_5fkrr")])
 description = ""
 type = 1
-min_eval_interval = 0.5
-max_eval_interval = 0.0
-evaluate_when_idle = false
-change_threshold = 0.0

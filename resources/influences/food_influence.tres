@@ -11,7 +11,3 @@ expression_string = "get_nearest_food_direction() * 15"
 nested_expressions = Array[ExtResource("2_tcg3g")]([])
 description = ""
 type = 5
-min_eval_interval = 0.0
-max_eval_interval = 0.5
-evaluate_when_idle = false
-change_threshold = 0.0

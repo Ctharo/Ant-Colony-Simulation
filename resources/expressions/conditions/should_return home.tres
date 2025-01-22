@@ -12,7 +12,3 @@ expression_string = "is_overloaded or not should_work or critical_energy_reserve
 nested_expressions = Array[ExtResource("1_r3mu2")]([ExtResource("2_0w8rt"), ExtResource("4_x50xy"), ExtResource("5_05p50")])
 description = ""
 type = 1
-min_eval_interval = 0.5
-max_eval_interval = 0.5
-evaluate_when_idle = false
-change_threshold = 0.0

@@ -347,6 +347,8 @@ func is_navigation_finished() -> bool:
 func should_rest() -> bool:
 	return health_level < 0.9 * health_max or energy_level < 0.9 * energy_max
 
+func suicide():
+	dead = true
 
 func is_fully_rested() -> bool:
 	return health_level == health_max and energy_level == energy_max

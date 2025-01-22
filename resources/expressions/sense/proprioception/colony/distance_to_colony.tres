@@ -9,7 +9,3 @@ expression_string = "global_position.distance_to(colony.global_position)"
 nested_expressions = Array[ExtResource("1_d1vnn")]([])
 description = ""
 type = 3
-min_eval_interval = 0.5
-max_eval_interval = 0.0
-evaluate_when_idle = false
-change_threshold = 0.0
