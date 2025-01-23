@@ -12,7 +12,7 @@
 [sub_resource type="Resource" id="Resource_b6ghj"]
 script = ExtResource("8_l7mvj")
 name = "basic worker spawn condition"
-expression_string = "ant_count_by_role(\"basic_worker\") < 10 and ticks_since_spawn() > 1000"
+expression_string = "ant_count_by_role(\"basic_worker\") < 25 and ticks_since_spawn() > 1000"
 nested_expressions = Array[ExtResource("8_l7mvj")]([])
 description = ""
 type = 3
@@ -25,6 +25,4 @@ pheromones = Array[ExtResource("4_gooye")]([ExtResource("5_vc4ou"), ExtResource(
 movement_influences = Array[ExtResource("1_cwn33")]([ExtResource("2_lahj1"), ExtResource("3_nw4e2")])
 movement_rate = 25.0
 vision_range = 100.0
-olfaction_range = 200.0
-reach_range = 15.0
 size = 1.0
