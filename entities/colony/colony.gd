@@ -2,6 +2,8 @@ class_name Colony
 extends Node2D
 ## Colony class managing ant spawning, tracking, and role management
 
+signal ant_spawned(ant: Ant, colony: Colony)
+
 #region Member Variables
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
@@ -57,15 +59,18 @@ func init_colony_profile(p_profile: ColonyProfile) -> void:
 		ant_profiles.append(ant_profile)
 		_profile_ant_map[ant_profile.id] = []
 
-func _physics_process(_delta: float) -> void:
-	for p_profile: AntProfile in ant_profiles:
-		if p_profile.spawn_condition.get_value(self):
-			spawn_ant(p_profile)
+func _physics_process(delta: float) -> void:
+	_process_spawning(delta)
 
 func _exit_tree() -> void:
 	HeatmapManager.unregister_entity(self)
 	EvaluationSystem.cleanup_entity(self)
 	delete_all()
+
+func _process_spawning(_delta: float) -> void:
+	for p_profile: AntProfile in ant_profiles:
+		if p_profile.spawn_condition.get_value(self):
+			spawn_ant(p_profile)
 
 func delete_all():
 	for ant in ants:
@@ -133,34 +138,67 @@ func store_food(food: Food) -> void:
 	food.carried = false
 	foods.add_food(food)
 
-func spawn_ants(num: int, physics_at_spawn: bool = true) -> Array[Ant]:
-	var _ants: Array[Ant] = AntManager.spawn_ants(self, num, physics_at_spawn)
-	for ant in _ants:
-		randomize()
-		add_ant(ant)
-		ant.global_rotation = randf_range(-PI, PI)
-		var wiggle_x: float = randf_range(-15,15)
-		var wiggle_y: float = randf_range(-15,15)
-		ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
-	logger.info("Spawned %s %s from %s" % [_ants.size(), "ant" if _ants.size() == 1 else "ants", name])
-	_last_spawn_ticks = Time.get_ticks_msec()
-	return _ants
+func spawn_ants(num: int, profile: AntProfile = null) -> Array[Ant]:
+	var spawned_ants: Array[Ant] = []
+	
+	var spawn_profile := profile
+	if not spawn_profile and ant_profiles.size() > 0:
+		spawn_profile = ant_profiles[0]
+	
+	if not spawn_profile:
+		logger.error("No ant profile available for spawning")
+		return spawned_ants
+	
+	for i in range(num):
+		var ant = spawn_ant(spawn_profile)
+		if ant:
+			spawned_ants.append(ant)
+	
+	logger.info("Spawned %s %s from %s" % [
+		spawned_ants.size(), 
+		"ant" if spawned_ants.size() == 1 else "ants", 
+		name
+	])
+	
+	return spawned_ants
 	
 func spawn_ant(ant_profile: AntProfile) -> Ant:
+	if not ant_profile:
+		logger.error("Invalid ant profile provided")
+		return null
+		
 	var ant: Ant = AntManager.spawn_ant(self)
+	if not ant:
+		logger.error("Failed to spawn ant from AntManager")
+		return null
+		
+	# Apply profile attributes
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
 	ant.pheromones = ant_profile.pheromones
-	ant.role = ant_profile.name.to_snake_case() # FIXME: Redundant
+	ant.size = ant_profile.size
+	ant.role = ant_profile.name.to_snake_case()
 	
+	# Initialize position and rotation
 	randomize()
-	add_ant(ant)
+	var spawn_position := Vector2(
+		randf_range(-15, 15),
+		randf_range(-15, 15)
+	)
+	
+	var result := add_ant(ant)
+	if result.is_error():
+		logger.error("Failed to add ant to colony: %s" % result.message)
+		return null
+		
 	ant.global_rotation = randf_range(-PI, PI)
-	var wiggle_x: float = randf_range(-15,15)
-	var wiggle_y: float = randf_range(-15,15)
-	ant.global_position = global_position + Vector2(wiggle_x, wiggle_y)
+	ant.global_position = global_position + spawn_position
 	_last_spawn_ticks = Time.get_ticks_msec()
+	
+	# Connect signals
 	ant.died.connect(_on_ant_died)
+	ant_spawned.emit(ant, self)
+	
 	return ant
 #endregion
 

@@ -87,9 +87,9 @@ var resting_rate: float = 20.0
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
-		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + ant_mass) * pow(movement_rate, 1.2)
+		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + size) * pow(movement_rate, 1.2)
 
-var ant_mass: float = 10.0
+var size: float = 1
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
