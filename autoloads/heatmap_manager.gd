@@ -320,13 +320,13 @@ func _calculate_cell_influence(cell_data: Dictionary, query_data: Dictionary) ->
 
 	return total_heat
 
-func get_heat_at_position(entity: Node2D, pos: Vector2, heat_type: String) -> float:
+func get_heat_at_position(entity: Node2D, heat_type: String) -> float:
 	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
 		return 0.0
 
 	var query_data = {
 		"colony_id": entity.colony.get_instance_id() if entity is Ant else entity.get_instance_id(),
-		"world_cell": world_to_cell(pos),
+		"world_cell": world_to_cell(entity.global_position),
 		"heat_type": heat_type
 	}
 

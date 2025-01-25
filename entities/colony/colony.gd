@@ -138,10 +138,10 @@ func store_food(food: Food) -> void:
 	food.carried = false
 	foods.add_food(food)
 
-func spawn_ants(num: int, profile: AntProfile = null) -> Array[Ant]:
+func spawn_ants(num: int, p_profile: AntProfile = null) -> Array[Ant]:
 	var spawned_ants: Array[Ant] = []
 	
-	var spawn_profile := profile
+	var spawn_profile := p_profile
 	if not spawn_profile and ant_profiles.size() > 0:
 		spawn_profile = ant_profiles[0]
 	
@@ -208,6 +208,7 @@ func _on_ant_died(ant: Ant) -> void:
 		# Remove from profile tracking
 		if ant.role in _profile_ant_map:
 			_profile_ant_map[ant.role].erase(ant)
+	AntManager.remove_ant(ant)
 
 ## Returns the count of ants with a specific role
 ## The role parameter can be a partial match

@@ -121,7 +121,8 @@ func handle_spawning(_delta: float) -> void:
 	frames_until_next_batch = FRAMES_BETWEEN_BATCHES
 
 func spawn_batch(p_size: int) -> void:
-	var ants = current_colony.spawn_ants(p_size, true)
+	var ant_profile: AntProfile = load("res://entities/ant/resources/basic_worker.tres")
+	var ants = current_colony.spawn_ants(p_size, ant_profile)
 	pending_spawns -= p_size
 
 	# Apply current nav debug state to new ants
