@@ -125,6 +125,10 @@ func _ready() -> void:
 	for pheromone in pheromones:
 		HeatmapManager.create_heatmap_type(pheromone)
 
+	# Ensure food is positioned correctly with respect to ant reach and carry position
+	var food: Food = load("res://entities/food/food.tscn").instantiate()
+	$ReachArea/CollisionShape2D.shape.radius = mouth_marker.position.x - food.get_size()
+	food.queue_free()
 
 	# Emit ready signal
 	spawned.emit()
@@ -243,18 +247,10 @@ func _process_movement(delta: float) -> void:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
-## If Pheromone has a condition attached, will check condition to see if should be emitted
-## Otherwise always emits
+## Pheromone handles checking condition and emitting if necessary
 func _process_pheromones(delta: float):
-	
 	for pheromone: Pheromone in pheromones:
-		if not pheromone.condition:
-			HeatmapManager.update_entity_heat(self, delta, pheromone.name)
-			continue
-			
-		elif EvaluationSystem.get_value(pheromone.condition, self):
-			HeatmapManager.update_entity_heat(self, delta, pheromone.name)
-			continue
+		pheromone.check_and_emit(self, delta)
 
 func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
 	if not _last_position:

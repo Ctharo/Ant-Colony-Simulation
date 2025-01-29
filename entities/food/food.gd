@@ -9,6 +9,7 @@ var carried: bool = false
 ## Whether this food unit is targeted for pickup
 var targeted: bool = false
 
+var size: float
 ## Whether this food unit is available for pickup
 var is_available: bool :
 	get:
@@ -16,6 +17,11 @@ var is_available: bool :
 
 func _init() -> void:
 	add_to_group("food")
+
+
+
+func get_size() -> float:
+	return %CollisionShape2D.shape.radius
 
 ## Hide this food unit but keep it in the scene tree
 func hide_visual() -> void:

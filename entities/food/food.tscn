@@ -17,6 +17,7 @@ scale = Vector2(0.0412911, 0.0342101)
 texture = ExtResource("2_uam3h")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+unique_name_in_owner = true
 visible = false
 modulate = Color(0, 0.980392, 0.0352941, 1)
 shape = SubResource("CircleShape2D_0ljxo")

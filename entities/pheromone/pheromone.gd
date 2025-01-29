@@ -24,3 +24,20 @@ extends Resource
 ## If present, denotes condition that must be true to emit this pheromone
 @export var condition: Logic
 #endregion
+
+func check_and_emit(ant: Ant, delta: float):
+	if _should_emit(ant):
+		_update_heat(ant, delta)
+
+func _update_heat(ant: Ant, delta: float):
+	HeatmapManager.update_entity_heat(ant, delta, name)
+
+func _should_emit(ant: Ant) -> bool:
+	if not condition:
+		return true
+	if _evaluate_condition(ant):
+		return true
+	return false
+	
+func _evaluate_condition(ant: Ant):
+	return EvaluationSystem.get_value(condition, ant)
