@@ -35,9 +35,8 @@ func _update_heat(ant: Ant, delta: float):
 func _should_emit(ant: Ant) -> bool:
 	if not condition:
 		return true
-	if _evaluate_condition(ant):
-		return true
-	return false
+	return _evaluate_condition(ant)
+
 	
 func _evaluate_condition(ant: Ant):
 	return EvaluationSystem.get_value(condition, ant)

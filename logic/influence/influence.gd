@@ -15,3 +15,9 @@ func _init():
 	# Set default color if none provided
 	if not color:
 		color = Color(randf(),randf(),randf())
+
+## Returns true if no condition or if condition evaluates to true
+func is_valid(entity: Node2D) -> bool:
+	if not condition:
+		return true
+	return EvaluationSystem.get_value(condition, entity)

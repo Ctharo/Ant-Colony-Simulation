@@ -232,11 +232,15 @@ func _update_influences() -> void:
 	# Calculate total magnitude
 	var total_magnitude = 0.0
 	for influence in current_ant.influence_manager.active_profile.influences:
+		if _skip_influence(influence):
+			continue
 		var magnitude = influence.get_value(current_ant).length()
 		total_magnitude += magnitude
 	
 	# Add entries with relative weights
 	for influence in current_ant.influence_manager.active_profile.influences:
+		if _skip_influence(influence):
+			continue
 		_add_influence_entry(influence, total_magnitude)
 
 ## Add a single influence entry to the influences container
@@ -331,3 +335,6 @@ func _update_influence_button_state() -> void:
 		if current_ant.influence_manager.is_visualization_enabled() \
 		else STYLE.BUTTON_COLORS.INFLUENCE.DISABLED
 #endregion
+
+func _skip_influence(influence: Influence) -> bool:
+	return not influence.is_valid(current_ant)

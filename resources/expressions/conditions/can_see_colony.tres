@@ -5,11 +5,7 @@
 [resource]
 script = ExtResource("1_s51bw")
 name = "can see colony"
-expression_string = "colony_in_sight()"
+expression_string = "is_colony_in_sight()"
 nested_expressions = Array[ExtResource("1_s51bw")]([])
 description = ""
 type = 1
-min_eval_interval = 0.016
-max_eval_interval = 0.5
-evaluate_when_idle = false
-change_threshold = 0.0

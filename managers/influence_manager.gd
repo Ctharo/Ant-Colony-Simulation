@@ -265,6 +265,9 @@ func draw_influences() -> void:
 		if should_ignore_influence(influence):
 			continue
 			
+		if not influence.is_valid(entity):
+			continue
+			
 		var direction = EvaluationSystem.get_value(influence, entity)
 		var magnitude = direction.length()
 		

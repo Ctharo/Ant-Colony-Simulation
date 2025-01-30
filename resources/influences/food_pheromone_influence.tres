@@ -7,11 +7,7 @@
 script = ExtResource("2_borkh")
 color = Color(0, 0, 0.831373, 1)
 name = "food pheromone influence"
-expression_string = "get_pheromone_direction(\"food\").normalized() * 1.5"
+expression_string = "get_pheromone_direction(\"food\").normalized() * 2.5"
 nested_expressions = Array[ExtResource("1_ivw4h")]([])
 description = ""
 type = 5
-min_eval_interval = 0.0
-max_eval_interval = 0.5
-evaluate_when_idle = false
-change_threshold = 0.0
