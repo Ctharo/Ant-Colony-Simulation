@@ -14,7 +14,7 @@ signal movement_completed(success: bool)
 #endregion
 
 @export var pheromones: Array[Pheromone]
-
+var pheromone_memories: Dictionary = {}  # String -> PheromoneMemory
 #region Movement
 const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
 const STUCK_TIME_THRESHOLD: float = 2.0  # Time before considering ant as stuck
@@ -357,16 +357,27 @@ func get_food_in_view() -> Array:
 ## TODO: Have it sample heat at a location (i.e., single cell) and move on. Develop a 
 ## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
-	# Early exit if heatmap or colony not valid
 	if not is_instance_valid(colony):
 		return Vector2.ZERO
-
-	# Get base heat direction - this already handles proper thread safety internally
-	var direction: Vector2 = HeatmapManager.get_heat_direction(self, pheromone_name)
-
-	# When follow_concentration is true, move towards higher concentrations (inverse direction)
-	# When false, move away from high concentrations (keep original direction)
-	return -direction if follow_concentration else direction
+		
+	# Initialize memory for this pheromone type if needed
+	if not pheromone_memories.has(pheromone_name):
+		pheromone_memories[pheromone_name] = PheromoneMemory.new()
+		
+	# Sample current position
+	var current_concentration: float = HeatmapManager.get_heat_at_position(
+		self,
+		pheromone_name
+	)
+	
+	# Add to memory
+	pheromone_memories[pheromone_name].add_sample(global_position, current_concentration)
+	
+	# Get direction based on concentration history
+	var direction: Vector2 = pheromone_memories[pheromone_name].get_concentration_vector()
+	
+	# Invert direction if not following concentration
+	return direction if follow_concentration else -direction
 
 func get_ants_in_view() -> Array:
 	var ants: Array = []
@@ -424,3 +435,61 @@ func get_nearest_food_direction() -> Vector2:
 
 func show_nav_path(enabled: bool):
 	nav_agent.debug_enabled = enabled
+
+
+#region Pheromone Sensing
+class ConcentrationSample:
+	var position: Vector2
+	var concentration: float
+	var timestamp: int
+	
+	func _init(p_position: Vector2, p_concentration: float) -> void:
+		position = p_position
+		concentration = p_concentration
+		timestamp = Time.get_ticks_msec()
+
+class PheromoneMemory:
+	var samples: Array[ConcentrationSample] = []
+	var max_samples: int = 5
+	var memory_duration: int = 5000  # 5 seconds
+	
+	func add_sample(position: Vector2, concentration: float) -> void:
+		var current_time: int = Time.get_ticks_msec()
+		# Clean old samples
+		samples = samples.filter(func(sample): 
+			return current_time - sample.timestamp < memory_duration
+		)
+		
+		if samples.size() >= max_samples:
+			samples.pop_front()
+		
+		samples.push_back(ConcentrationSample.new(position, concentration))
+	
+	func get_concentration_vector() -> Vector2:
+		if samples.size() < 2:
+			return Vector2.ZERO
+			
+		var current_time: int = Time.get_ticks_msec()
+		var direction: Vector2 = Vector2.ZERO
+		var total_weight: float = 0.0
+		
+		# Compare each sample with more recent samples
+		for i in range(samples.size() - 1):
+			for j in range(i + 1, samples.size()):
+				var sample1: ConcentrationSample = samples[i]
+				var sample2: ConcentrationSample = samples[j]
+				
+				var concentration_diff: float = sample2.concentration - sample1.concentration
+				if concentration_diff == 0:
+					continue
+					
+				# Calculate time weight - more recent comparisons have higher weight
+				var time_factor: float = 1.0 - float(current_time - sample2.timestamp) / memory_duration
+				var weight: float = time_factor * absf(concentration_diff)
+				
+				# Direction from lower to higher concentration
+				var sample_direction: Vector2 = (sample2.position - sample1.position).normalized()
+				direction += sample_direction * weight * signf(concentration_diff)
+				total_weight += weight
+		
+		return direction.normalized() if total_weight > 0 else Vector2.ZERO
