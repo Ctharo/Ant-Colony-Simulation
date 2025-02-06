@@ -14,7 +14,7 @@ signal movement_completed(success: bool)
 #endregion
 
 @export var pheromones: Array[Pheromone]
-var pheromone_memories: Dictionary = {}  # String -> PheromoneMemory
+var pheromone_memories: Dictionary[String, PheromoneMemory] = {}  # String -> PheromoneMemory
 #region Movement
 const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
 const STUCK_TIME_THRESHOLD: float = 2.0  # Time before considering ant as stuck
@@ -354,7 +354,7 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
-## TODO: Have it sample heat at a location (i.e., single cell) and move on. Develop a 
+## Samples heat at a location (i.e., single cell) and moves on. Develops a 
 ## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
 	if not is_instance_valid(colony):

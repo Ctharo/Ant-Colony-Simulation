@@ -249,48 +249,6 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat
 	cell.add_heat(entity_id, amount, STYLE.MAX_HEAT)
 
 #region Heat Direction Calculation
-func get_heat_direction(entity: Node2D, heat_type: String) -> Vector2:
-	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
-		return Vector2.ZERO
-
-	var query_data = {
-		"entity_id": entity.get_instance_id(),
-		"position": entity.global_position,
-		"heat_type": heat_type
-	}
-
-	update_lock.lock()
-	var result = _calculate_heat_direction(query_data)
-	update_lock.unlock()
-
-	return result
-
-## TODO: Needs to get heat direction respecting olfactory range/physics
-## i.e. if no heat touching ant, no heat direction
-func _calculate_heat_direction(data: Dictionary) -> Vector2:
-	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
-	var radius: float = heatmap.config.heat_radius * STYLE.CELL_SIZE * 2
-	var direction: Vector2 = Vector2.ZERO
-	var total_weight: float = 0.0
-
-	var nearby_cells = get_cells_in_radius(data.position, radius, data.heat_type)
-
-	for cell_data in nearby_cells:
-		var heat = _calculate_cell_influence(cell_data, data)
-		if heat > 0:
-			var distance: float = data.position.distance_to(cell_data.position)
-			var falloff: float = 1.0 / (1.0 + distance * 0.1)
-			var away_vector: Vector2 = (data.position - cell_data.position).normalized()
-
-			var weight = heat * falloff
-			direction += away_vector * weight
-			total_weight += weight
-
-	if total_weight > 0:
-		direction = direction.normalized()
-
-	return direction
-
 func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, base_weight: float) -> Vector2:
 	var normalized_direction = base_direction.normalized()
 	var check_distance = STYLE.CELL_SIZE * 2
