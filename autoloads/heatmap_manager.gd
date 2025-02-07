@@ -13,7 +13,7 @@ var update_thread: Thread
 var update_lock: Mutex
 var _nav_map: RID
 var camera: Camera2D
-var _heatmaps: Dictionary = {}  # int -> HeatmapInstance
+var _heatmaps: Dictionary[String, HeatmapInstance] = {} 
 var _debug_settings: Dictionary = {}
 var update_timer: float = 0.0
 var update_interval: float = 1.0
@@ -25,7 +25,7 @@ var _last_decay_time: int = 0
 #region Inner Classes
 class HeatCell:
 	var heat: float = 0.0
-	var sources: Dictionary = {}  # entity_id -> heat_value
+	var sources: Dictionary[int, float] = {}  # entity_id -> heat_value
 
 	func add_heat(entity_id: int, amount: float, max_heat: float) -> void:
 		if not sources.has(entity_id):
@@ -88,7 +88,7 @@ class HeatChunk:
 		return active_cells > 0
 
 class HeatmapInstance:
-	var chunks: Dictionary = {}  # Vector2i -> HeatChunk
+	var chunks: Dictionary[Vector2i, HeatChunk] = {}  # Vector2i -> HeatChunk
 	var config: Pheromone
 	
 	func _init(p_config: Pheromone) -> void:
