@@ -62,7 +62,7 @@ class HeatCell:
 			heat += contribution
 
 class HeatChunk:
-	var cells: Dictionary = {}  # Vector2i -> HeatCell
+	var cells: Dictionary[Vector2i, HeatCell] = {}  # Vector2i -> HeatCell
 	var active_cells: int = 0
 	var last_update_time: int = 0
 
