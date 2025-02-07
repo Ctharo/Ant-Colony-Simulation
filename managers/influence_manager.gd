@@ -74,7 +74,8 @@ func _physics_process(delta: float) -> void:
 				active_profile = profile
 				break
 		_profile_check_timer = 0.0
-		
+
+## Sets the entity reference
 func initialize(p_entity: Node) -> void:
 	if not p_entity:
 		push_error("Cannot initialize with null entity")
@@ -97,6 +98,7 @@ func is_profile_valid(profile: InfluenceProfile) -> bool:
 
 	return false
 
+## Add resource InfluenceProfile to [member profiles]
 func add_profile(influence_profile: InfluenceProfile) -> void:
 	if not influence_profile:
 		push_error("Cannot add null profile")

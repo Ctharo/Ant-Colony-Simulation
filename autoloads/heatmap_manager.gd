@@ -109,7 +109,7 @@ func _init() -> void:
 func _ready() -> void:
 	_start_update_thread()
 
-
+## Generate [HeatmapManager.HeatmapInstance] that represents the [Pheromone].
 func create_heatmap_type(pheromone: Pheromone) -> void:
 	var heatmap_name = pheromone.name.to_lower()
 	if not _heatmaps.has(heatmap_name):
@@ -171,6 +171,7 @@ func setup_camera(p_camera: Camera2D) -> void:
 #endregion
 
 #region Entity Management
+## Register entity with the heatmap system
 func register_entity(entity: Node2D) -> void:
 	var entity_id: int = entity.get_instance_id()
 	if not _debug_settings.has(entity_id):
@@ -202,6 +203,7 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 #endregion
 
 #region Heat Management
+## Adds heat from an entity to a cell
 func update_entity_heat(entity: Node2D, delta: float, heat_type: String, factor: float = 1.0) -> void:
 	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
 		return
