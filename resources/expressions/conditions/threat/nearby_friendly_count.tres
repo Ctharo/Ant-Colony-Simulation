@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://broqntixdgd2i"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_jbaie"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_jbaie"]
 [ext_resource type="Resource" uid="uid://c0bqcyotj1esu" path="res://resources/expressions/sense/vision/ant/ants_in_view_friendly.tres" id="2_25vp8"]
 
 [resource]

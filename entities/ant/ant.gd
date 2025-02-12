@@ -183,12 +183,12 @@ func _physics_process(delta: float) -> void:
 		_process_movement(delta)
 
 ## Moves the ant to the specified position
-func move_to(target_pos: Vector2) -> void:
+func move_to(target_pos: Vector2) -> bool:
 	movement_target = target_pos
 
 	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
-
+	return true
 ## Stops the current movement
 func stop_movement() -> void:
 	velocity = Vector2.ZERO

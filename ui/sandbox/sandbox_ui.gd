@@ -2,6 +2,7 @@ class_name SandboxUI
 extends Control
 
 var settings_manager: SettingsManager = SettingsManager
+const RadialMenu = preload("res://addons/RadialMenu/RadialMenu.gd")
 
 ## Camera node reference
 var camera: CameraController
@@ -69,7 +70,8 @@ func _on_gui_input(event: InputEvent) -> void:
 				handle_left_click(screen_position)
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
-				show_empty_context_menu(screen_position)
+				show_radial_menu(screen_position)
+				#show_empty_context_menu(screen_position)
 				get_viewport().set_input_as_handled()
 
 #region Click Handling
@@ -111,6 +113,16 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu.destroy_colony_requested.connect(_on_colony_destroy_requested)
 	active_context_menu.heatmap_requested.connect(_on_colony_heatmap_requested)
 	active_context_menu.show_for_colony(world_pos, colony)
+
+func show_radial_menu(world_pos: Vector2) -> void:
+	var radial = RadialMenu.new()
+	radial.set_items([])
+	var apple_icon: CompressedTexture2D = load("res://assets/entities/apple_icon.png")
+	radial.item_selected.connect(_on_menu_item_selected)
+	radial.add_icon_item(RadialMenu.STAR_TEXTURE, "SpawnColony", "arc_id1")
+	radial.add_icon_item(apple_icon, "SpawnFood", "arc_id2")
+	add_child(radial)
+	radial.open_menu(world_pos)
 
 func show_empty_context_menu(world_pos: Vector2) -> void:
 	clear_active_menu()
@@ -248,6 +260,12 @@ func _on_spawn_food_requested(screen_position: Vector2) -> void:
 		)
 		$"../../FoodContainer".add_child(food)
 		food.global_position = world_position + wiggle
+		
+func _on_menu_item_selected(id: Variant, pos: Vector2):
+	if id == "arc_id1":
+		_on_spawn_colony_requested(pos)
+	if id == "arc_id2":
+		_on_spawn_food_requested(pos)
 #endregion
 
 func _draw() -> void:

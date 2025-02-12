@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://dwwmqd4c8clkq"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_bvieo"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_bvieo"]
 [ext_resource type="Resource" uid="uid://d307mmqr4fh46" path="res://resources/expressions/stats/health/derived/health_percentage.tres" id="2_p5peh"]
 
 [resource]

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://1nls8wb6824s"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_og0tp"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_og0tp"]
 [ext_resource type="Resource" uid="uid://cnhv58wx0evch" path="res://resources/expressions/stats/energy/derived/energy_percentage.tres" id="2_tggi3"]
 
 [resource]

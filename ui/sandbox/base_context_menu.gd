@@ -19,6 +19,8 @@ const ANIMATION_DURATION = 0.3
 ## Angular gap between buttons in radians
 const BUTTON_GAP = 0.05
 
+
+
 #region Public Properties
 ## Whether the menu is currently open
 var is_open := false

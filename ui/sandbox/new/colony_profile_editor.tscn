@@ -1,0 +1,87 @@
+[gd_scene load_steps=2 format=3 uid="uid://example2"]
+
+[ext_resource type="Script" uid="uid://dqd6osid17r6i" path="res://ui/sandbox/new/colony_profile_editor.gd" id="1_script"]
+
+[node name="ColonyProfileEditor" type="Window"]
+title = "Edit Colony Profile"
+size = Vector2i(400, 500)
+script = ExtResource("1_script")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NameContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/NameContainer"]
+layout_mode = 2
+text = "Profile Name:"
+
+[node name="NameEdit" type="LineEdit" parent="MarginContainer/VBoxContainer/NameContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+placeholder_text = "Enter profile name..."
+
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="AntProfilesContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/AntProfilesContainer"]
+layout_mode = 2
+text = "Ant Profiles:"
+
+[node name="AntProfilesList" type="ItemList" parent="MarginContainer/VBoxContainer/AntProfilesContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+allow_reselect = true
+allow_rmb_select = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/AntProfilesContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="AddAntProfileButton" type="Button" parent="MarginContainer/VBoxContainer/AntProfilesContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add Profile"
+
+[node name="RemoveAntProfileButton" type="Button" parent="MarginContainer/VBoxContainer/AntProfilesContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Remove Profile"
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ButtonContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer/ButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/ButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"

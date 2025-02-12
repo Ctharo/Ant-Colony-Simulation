@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://c5finp56u4fg0"]
 
-[ext_resource type="Script" path="res://entities/colony/colony.gd" id="1_colony"]
+[ext_resource type="Script" uid="uid://cmcprfq7niaro" path="res://entities/colony/colony.gd" id="1_colony"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_u8v2p"]
 radius = 60.0
