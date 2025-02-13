@@ -144,6 +144,7 @@ func track_entity(entity: Node2D) -> void:
 func stop_tracking() -> void:
 	tracked_entity = null
 
+## Converts from screen position to global coordinates
 func ui_to_global(screen_position: Vector2) -> Vector2:
 	if not is_instance_valid(self):
 		return Vector2.ZERO
@@ -156,6 +157,7 @@ func ui_to_global(screen_position: Vector2) -> Vector2:
 	var scaled_pos := relative_pos / zoom
 	return position + scaled_pos
 
+## Converts from global coordinates to screen position
 func global_to_ui(p_global_position: Vector2) -> Vector2:
 	if not is_instance_valid(self):
 		return Vector2.ZERO
