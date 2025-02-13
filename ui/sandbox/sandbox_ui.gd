@@ -2,7 +2,6 @@ class_name SandboxUI
 extends Control
 
 var settings_manager: SettingsManager = SettingsManager
-const RadialMenu = preload("res://addons/RadialMenu/RadialMenu.gd")
 
 ## Camera node reference
 var camera: CameraController
@@ -70,9 +69,10 @@ func _on_gui_input(event: InputEvent) -> void:
 				handle_left_click(screen_position)
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
-				show_radial_menu(screen_position)
-				#show_empty_context_menu(screen_position)
+				handle_right_click(screen_position)
 				get_viewport().set_input_as_handled()
+
+
 
 #region Click Handling
 func handle_left_click(_screen_position: Vector2) -> void:
@@ -87,51 +87,132 @@ func handle_left_click(_screen_position: Vector2) -> void:
 		deselect_all()
 		close_ant_info()
 
+
+func handle_right_click(screen_position: Vector2) -> void:
+	clear_active_menu()
+	
+	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
+		if camera.hovered_entity is Ant:
+			show_ant_context_menu(camera.hovered_entity, screen_position)
+		elif camera.hovered_entity is Colony:
+			show_colony_context_menu(camera.hovered_entity, screen_position)
+	else:
+		show_empty_context_menu(screen_position)
+		
 #endregion
 
 
 #region Context Menu Management
-func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
-	clear_active_menu()
-	active_context_menu = AntContextMenu.new()
-	active_context_menu.setup(camera)
-	add_child(active_context_menu)
-
-	active_context_menu.show_info_requested.connect(_on_ant_info_requested)
-	active_context_menu.destroy_ant_requested.connect(_on_ant_destroy_requested)
-	active_context_menu.track_ant_requested.connect(_on_ant_track_requested)
-	active_context_menu.show_for_ant(world_pos, ant)
-
 func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	clear_active_menu()
-	active_context_menu = ColonyContextMenu.new()
+	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
+	
+	# Add buttons
+	active_context_menu.add_button("Spawn Ants",
+		preload("res://ui/styles/spawn_normal.tres"),
+		preload("res://ui/styles/spawn_hover.tres"))
+	active_context_menu.add_button("Info",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
+	active_context_menu.add_button("Heatmap",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
+	active_context_menu.add_button("Destroy",
+		preload("res://ui/styles/destroy_normal.tres"),
+		preload("res://ui/styles/destroy_hover.tres"))
+	
+	# Connect signal
+	active_context_menu.button_pressed.connect(
+		func(index: int): _on_colony_menu_button_pressed(index, colony))
+	active_context_menu.show_at(world_pos, colony.radius)
 
-	active_context_menu.spawn_ants_requested.connect(_on_colony_spawn_ants_requested)
-	active_context_menu.show_info_requested.connect(_on_colony_info_requested)
-	active_context_menu.destroy_colony_requested.connect(_on_colony_destroy_requested)
-	active_context_menu.heatmap_requested.connect(_on_colony_heatmap_requested)
-	active_context_menu.show_for_colony(world_pos, colony)
-
-func show_radial_menu(world_pos: Vector2) -> void:
-	var radial = RadialMenu.new()
-	radial.set_items([])
-	var apple_icon: CompressedTexture2D = load("res://assets/entities/apple_icon.png")
-	radial.item_selected.connect(_on_menu_item_selected)
-	radial.add_icon_item(RadialMenu.STAR_TEXTURE, "SpawnColony", "arc_id1")
-	radial.add_icon_item(apple_icon, "SpawnFood", "arc_id2")
-	add_child(radial)
-	radial.open_menu(world_pos)
-
+func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
+	if not is_instance_valid(colony):
+		return
+		
+	match index:
+		0: # Spawn Ants
+			var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
+			for ant in ants:
+				if not ant.is_inside_tree():
+					$"../../AntContainer".add_child(ant)
+		1: # Info
+			show_info_panel(colony)
+		2: # Heatmap
+			colony.heatmap_enabled = !colony.heatmap_enabled
+		3: # Destroy
+			colony_manager.remove_colony(colony)
+	
+	clear_active_menu()
+	
+#region Context Menu Management
 func show_empty_context_menu(world_pos: Vector2) -> void:
 	clear_active_menu()
-	active_context_menu = EmptyContextMenu.new()
+	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	active_context_menu.spawn_colony_requested.connect(_on_spawn_colony_requested)
-	active_context_menu.spawn_foods_requested.connect(_on_spawn_food_requested)
-	active_context_menu.show_at_position(world_pos)
+	
+	# Add buttons
+	active_context_menu.add_button("Spawn Colony",
+		preload("res://ui/styles/spawn_normal.tres"),
+		preload("res://ui/styles/spawn_hover.tres"))
+	active_context_menu.add_button("Spawn Food",
+		preload("res://ui/styles/spawn_normal.tres"),
+		preload("res://ui/styles/spawn_hover.tres"))
+	
+	# Connect signal
+	active_context_menu.button_pressed.connect(_on_empty_menu_button_pressed.bind(world_pos))
+	active_context_menu.show_at(world_pos)
+
+# Add this new method to handle empty menu button presses
+func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
+	match index:
+		0: # Spawn Colony
+			_on_spawn_colony_requested(pos)
+		1: # Spawn Food
+			_on_spawn_food_requested(pos)
+	clear_active_menu()
+
+func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
+	clear_active_menu()
+	active_context_menu = BaseContextMenu.new()
+	active_context_menu.setup(camera)
+	add_child(active_context_menu)
+	
+	# Add buttons
+	active_context_menu.add_button("Track Ant",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
+	active_context_menu.add_button("Info",
+		preload("res://ui/styles/info_normal.tres"),
+		preload("res://ui/styles/info_hover.tres"))
+	active_context_menu.add_button("Destroy",
+		preload("res://ui/styles/destroy_normal.tres"),
+		preload("res://ui/styles/destroy_hover.tres"))
+	
+	# Connect signal
+	active_context_menu.button_pressed.connect(
+		func(index: int): _on_ant_menu_button_pressed(index, ant))
+	active_context_menu.show_at(world_pos)
+
+func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
+	if not is_instance_valid(ant):
+		return
+		
+	match index:
+		0: # Track Ant
+			if is_instance_valid(camera.tracked_entity) and ant == camera.tracked_entity:
+				camera.stop_tracking()
+			else:
+				camera.track_entity(ant)
+		1: # Info
+			pass
+		2: # Destroy
+			ant_manager.remove_ant(ant)
+	
+	clear_active_menu()
 
 func clear_active_menu() -> void:
 	if is_instance_valid(active_context_menu):

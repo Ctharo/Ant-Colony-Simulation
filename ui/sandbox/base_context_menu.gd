@@ -19,7 +19,7 @@ const ANIMATION_DURATION = 0.3
 ## Angular gap between buttons in radians
 const BUTTON_GAP = 0.05
 
-
+signal button_pressed(index: int)
 
 #region Public Properties
 ## Whether the menu is currently open
@@ -39,8 +39,7 @@ var _screen_position: Vector2
 var _selection_radius := 12.0
 var _button_containers: Array[Control] = []
 var _menu_buttons: Array[Button] = []
-var tracked_ant: Ant = null
-var tracked_colony: Colony = null
+var _tracked_object = null  # Generic tracked object reference
 #endregion
 
 func _ready() -> void:
@@ -55,19 +54,24 @@ func _process(_delta: float) -> void:
 	if not camera:
 		return
 
-	# Update position based on tracked objects
-	if tracked_ant and is_instance_valid(tracked_ant):
-		_screen_position = camera.global_to_ui(tracked_ant.global_position)
-	elif tracked_colony and is_instance_valid(tracked_colony):
-		_screen_position = camera.global_to_ui(tracked_colony.global_position)
+	# Update position based on tracked object if it exists and is valid
+	if _tracked_object and is_instance_valid(_tracked_object) and _tracked_object.has_method("get_global_position"):
+		_screen_position = camera.global_to_ui(_tracked_object.global_position)
 
 	position = screen_position
 	queue_redraw()
+
+## Sets an object to track for menu positioning
+func track_object(object) -> void:
+	_tracked_object = object
 
 ## Creates and adds a new button to the menu
 func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> Button:
 	var container = _create_button_container()
 	var button = _create_button(container, text, style_normal, style_hover)
+	
+	var button_index = _menu_buttons.size()
+	button.pressed.connect(func(): button_pressed.emit(button_index))
 
 	_button_containers.append(container)
 	_menu_buttons.append(button)
@@ -113,49 +117,80 @@ func _create_button(container: Control, text: String, style_normal: StyleBox,
 	button.pivot_offset = BUTTON_SIZE / 2
 	button.position = -BUTTON_SIZE / 2
 
+	# Create a container for the label that will counter-rotate
+	var label_container = Control.new()
+	label_container.custom_minimum_size = BUTTON_SIZE
+	label_container.position = BUTTON_SIZE / 2
+	label_container.pivot_offset = BUTTON_SIZE / 2
+	
 	var label = Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.custom_minimum_size = BUTTON_SIZE
 	label.size = BUTTON_SIZE
-	button.add_child(label)
-
+	label.position = -BUTTON_SIZE / 2
+	
+	label_container.add_child(label)
+	button.add_child(label_container)
 	container.add_child(button)
+	
+	# Store label container for rotation updates
+	button.set_meta("label_container", label_container)
+	
 	return button
 
+## Animates the radial menu opening, calculating screen positions for buttons
+## without rotating them for better readability
 func _animate_open() -> void:
 	if is_open:
 		return
-
+		
 	is_open = true
-	var num_buttons = _button_containers.size()
-	var angle_per_button = (TAU - (BUTTON_GAP * num_buttons)) / num_buttons
-
-	var tween = create_tween()
+	
+	# Calculate layout parameters
+	var num_buttons: int = _button_containers.size()
+	var angle_per_button: float = (TAU - (BUTTON_GAP * num_buttons)) / num_buttons
+	
+	# Setup animation tween
+	var tween: Tween = create_tween()
 	tween.set_parallel(true)
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_BACK)
-
-	# Fade in and scale up the entire menu
+	
+	# Animate menu container properties
 	tween.tween_property(self, "modulate:a", 1.0, ANIMATION_DURATION)
 	tween.tween_property(self, "scale", Vector2.ONE, ANIMATION_DURATION)
-
-	# Position and rotate each button
+	
+	# Position each button around the circle
 	for i in range(num_buttons):
-		var container = _button_containers[i]
-
-		# Calculate final position and rotation
-		var angle = -PI/2 + i * (angle_per_button + BUTTON_GAP)
-		var target_pos = Vector2(cos(angle), sin(angle)) * RADIUS
-
+		var container: Control = _button_containers[i]
+		var button: Button = _menu_buttons[i]
+		var label_container: Control = button.get_meta("label_container")
+		
+		# Calculate the angle for this button
+		var angle: float = -PI/2 + i * (angle_per_button + BUTTON_GAP)
+		
+		# Calculate target position using polar coordinates
+		var target_pos: Vector2 = Vector2(
+			cos(angle) * RADIUS,
+			sin(angle) * RADIUS
+		)
+		
+		# Calculate label offset to maintain readability
+		# This keeps text horizontal while following the radial layout
+		var label_offset: Vector2 = target_pos.normalized() * LABEL_DISTANCE
+		
 		# Animate container position
-		tween.tween_property(container, "position", target_pos, ANIMATION_DURATION)
+		tween.tween_property(
+			container,
+			"position",
+			target_pos,
+			ANIMATION_DURATION
+		)
 
-		# Animate container rotation, keeping text upright
-		var target_rotation = angle + PI/2
-		tween.tween_property(container, "rotation", target_rotation, ANIMATION_DURATION)
-
+## Constant for label distance from button center
+const LABEL_DISTANCE: float = 20.0  # Adjust based on your UI needs
 func close() -> void:
 	if is_open:
 		_animate_close()
@@ -175,8 +210,12 @@ func _animate_close() -> void:
 	tween.tween_property(self, "scale", Vector2.ZERO, ANIMATION_DURATION)
 
 	# Reset positions and rotations
-	for container in _button_containers:
+	for i in range(_button_containers.size()):
+		var container = _button_containers[i]
+		var label_container = _menu_buttons[i].get_meta("label_container")
+		
 		tween.tween_property(container, "position", Vector2.ZERO, ANIMATION_DURATION)
 		tween.tween_property(container, "rotation", 0.0, ANIMATION_DURATION)
+		tween.tween_property(label_container, "rotation", 0.0, ANIMATION_DURATION)
 
 	tween.tween_callback(queue_free)

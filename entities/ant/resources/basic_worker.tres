@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="AntProfile" load_steps=10 format=3 uid="uid://bqf6p88g1j2ax"]
 
-[ext_resource type="Script" uid="uid://dw3hray8v777s" path="res://logic/influence/influence_profile.gd" id="1_cwn33"]
+[ext_resource type="Script" path="res://logic/influence/influence_profile.gd" id="1_cwn33"]
 [ext_resource type="Resource" uid="uid://ch0lb2jhvsc1y" path="res://resources/influences/profiles/look_for_food.tres" id="2_lahj1"]
-[ext_resource type="Script" uid="uid://7n8rpcil0b7c" path="res://entities/ant/ant_profile.gd" id="2_wi06i"]
+[ext_resource type="Script" path="res://entities/ant/ant_profile.gd" id="2_wi06i"]
 [ext_resource type="Resource" uid="uid://b2tn5yjt7gso5" path="res://resources/influences/profiles/go_home.tres" id="3_nw4e2"]
 [ext_resource type="Script" uid="uid://dvmsu7ath6cdc" path="res://entities/pheromone/pheromone.gd" id="4_gooye"]
 [ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/food_pheromone.tres" id="5_vc4ou"]
 [ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/home_pheromone.tres" id="6_qm3s6"]
-[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="8_l7mvj"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="8_l7mvj"]
 
 [sub_resource type="Resource" id="Resource_b6ghj"]
 script = ExtResource("8_l7mvj")

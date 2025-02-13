@@ -64,9 +64,8 @@ func _update_ui() -> void:
 	update_status_bars()
 	if current_ant and current_ant != null:
 		# Update action text
-		action_label.text = "Action: %s" % (current_ant.action_manager._current_action_id if current_ant.action_manager else "None")
 		# Update food text
-		food_label.text = "Carried Food: %.1f units" % (current_ant.foods.mass if current_ant.foods else 0.0)
+		food_label.text = "Carrying Food: %s" % ("true" if current_ant.is_carrying_food() else "false")
 		# Update role text
 		role_label.text = "Role: %s" % current_ant.role
 	else:
@@ -107,13 +106,12 @@ func show_ant_info(ant: Ant) -> void:
 	# Update basic info
 	title_label.text = "Ant #%d" % ant.id
 	colony_label.text = "Colony: %s" % (str(ant.colony.name) if ant.colony else "None")
-	action_label.text = "Action: %s" % (ant.action_manager._current_action_id if ant.action_manager else "None")
 
 	# Update status bars
 	update_status_bars()
 
 	# Update food info
-	food_label.text = "Carried Food: %.1f units" % (ant.foods.mass if ant.foods else 0.0)
+	food_label.text = "Carrying Food: %s" % ("true" if ant.is_carrying_food() else "false")
 
 	# Queue redraw for selection circle
 	queue_redraw()
