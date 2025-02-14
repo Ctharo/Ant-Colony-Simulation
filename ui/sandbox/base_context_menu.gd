@@ -14,7 +14,9 @@ const SELECTION_STYLE = {
 const ANIMATION_DURATION = 0.3
 ## Angular gap between buttons in radians
 @export var BUTTON_GAP = 0.05
-
+## Hover animation properties
+const HOVER_SCALE = 1.05
+const HOVER_DURATION = 0.1
 signal button_pressed(index: int)
 
 #region Public Properties
@@ -96,10 +98,37 @@ func _create_button(text: String, style_normal: StyleBox,
 		style_hover: StyleBox) -> Button:
 	var button = Button.new()
 	button.custom_minimum_size = BUTTON_SIZE
-	button.add_theme_stylebox_override("normal", style_normal)
-	button.add_theme_stylebox_override("hover", style_hover)	
+	
+	# Clone the styles to modify them
+	var normal_style = style_normal.duplicate()
+	var hover_style = style_hover.duplicate()
+	
+	# Set up the hover style with black border
+	hover_style.border_color = Color.BLACK
+	hover_style.border_width_left = 2
+	hover_style.border_width_top = 2
+	hover_style.border_width_right = 2
+	hover_style.border_width_bottom = 2
+	
+	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("hover", hover_style)
 	button.text = text
+	
+	# Add hover animations
+	button.mouse_entered.connect(func(): _on_button_hover(button, true))
+	button.mouse_exited.connect(func(): _on_button_hover(button, false))
+	
 	return button
+
+## Handles button hover state changes
+func _on_button_hover(button: Button, is_hover: bool) -> void:
+	var target_scale = Vector2.ONE * HOVER_SCALE if is_hover else Vector2.ONE
+	
+	# Create hover animation tween
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(button, "scale", target_scale, HOVER_DURATION)
 
 ## Animates the radial menu opening, calculating screen positions for buttons
 ## without rotating them for better readability
