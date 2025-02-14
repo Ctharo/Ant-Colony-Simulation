@@ -1,23 +1,24 @@
 class_name BaseContextMenu
 extends Control
 
+
+signal button_pressed(index: int)
 ## Radius of the circular menu layout
-@export var RADIUS = 70.0
+@export var radius = 70.0
 ## Styling for selection indicator
 const SELECTION_STYLE = {
 	"CIRCLE_COLOR": Color(Color.WHITE, 0.5),
 	"CIRCLE_WIDTH": 2.0
 }
 ## Standard button dimensions
-@export var BUTTON_SIZE = Vector2(125, 40)
+@export var button_size = Vector2(125, 40)
 ## Duration of open/close animations
 const ANIMATION_DURATION = 0.3
 ## Angular gap between buttons in radians
-@export var BUTTON_GAP = 0.05
+@export var button_gap = 0.05
 ## Hover animation properties
 const HOVER_SCALE = 1.05
 const HOVER_DURATION = 0.1
-signal button_pressed(index: int)
 
 #region Public Properties
 ## Whether the menu is currently open
@@ -97,7 +98,7 @@ func _draw() -> void:
 func _create_button(text: String, style_normal: StyleBox,
 		style_hover: StyleBox) -> Button:
 	var button = Button.new()
-	button.custom_minimum_size = BUTTON_SIZE
+	button.custom_minimum_size = button_size
 	
 	# Clone the styles to modify them
 	var normal_style = style_normal.duplicate()
@@ -140,7 +141,7 @@ func _animate_open() -> void:
 	
 	# Calculate layout parameters
 	var num_buttons: int = _menu_buttons.size()
-	var angle_per_button: float = (TAU - (BUTTON_GAP * num_buttons)) / num_buttons
+	var angle_per_button: float = (TAU - (button_gap * num_buttons)) / num_buttons
 	
 	# Setup animation tween
 	var tween: Tween = create_tween()
@@ -157,13 +158,13 @@ func _animate_open() -> void:
 		var button: Button = _menu_buttons[i]
 		
 		# Calculate the angle for this button
-		var angle: float = -PI/2 + i * (angle_per_button + BUTTON_GAP)
+		var angle: float = -PI/2 + i * (angle_per_button + button_gap)
 		
 		# Calculate target position using polar coordinates
 		var target_pos: Vector2 = Vector2(
-			cos(angle) * RADIUS,
-			sin(angle) * RADIUS
-		) - BUTTON_SIZE/2
+			cos(angle) * radius,
+			sin(angle) * radius
+		) - button_size/2
 				
 		# Animate container position
 		tween.tween_property(

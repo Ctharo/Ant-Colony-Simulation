@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://example"]
 
-[ext_resource type="Script" path="res://ui/expression_editor/expression_editor.gd" id="1_abcde"]
-[ext_resource type="PackedScene" uid="uid://example" path="res://ui/expression_editor/expression_test_environment.tscn" id="2_715mj"]
+[ext_resource type="Script" uid="uid://dy4uh4iqhf32b" path="res://ui/expression_editor/expression_editor.gd" id="1_abcde"]
+[ext_resource type="PackedScene" uid="uid://example" path="res://ui/sandbox/new/colony_profile_panel.tscn" id="2_715mj"]
 
 [node name="ExpressionEditor" type="Control"]
 layout_mode = 3

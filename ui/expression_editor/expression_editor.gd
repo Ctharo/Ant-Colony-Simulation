@@ -3,7 +3,6 @@ extends Control
 ## Reference to the expression being edited
 var current_expression: Logic
 ## Reference to the expression cache manager
-var cache_manager: Cache
 
 
 @onready var type_option: OptionButton = %TypeOption
@@ -41,8 +40,6 @@ func _ready() -> void:
 
 func _setup_type_options() -> void:
 	type_option.clear()
-
-
 
 func _setup_signals() -> void:
 	type_option.item_selected.connect(_on_type_selected)

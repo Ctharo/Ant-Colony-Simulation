@@ -42,7 +42,7 @@ func _spawn_test_ant() -> void:
 	_clear_test_environment()
 
 	var colony := ColonyManager.spawn_colony()
-	current_test_ant = AntManager.spawn_ant()
+	current_test_ant = AntManager.spawn_ant(colony)
 	colony.add_ant(current_test_ant)
 
 	# Place ant and colony randomly
