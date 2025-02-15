@@ -1,13 +1,9 @@
 class_name AntAction
-extends Node
+extends Resource
+## Base level action resource
 
-enum ACTION { 
-	MOVE = 0, 
-	HARVEST = 1,
-	STORE = 2,
-	REST = 3
-}
-
-var action_map: Dictionary[ACTION, Callable] = {
-	ACTION.MOVE: Callable(Ant, "move_to")
-}
+@export var action_method: Callable
+@export var duration: float = 1.0
+@export var refractory_period: float = 0.0
+@export var is_active: bool = false
+@export var is_interruptable: bool = true

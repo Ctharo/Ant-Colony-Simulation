@@ -36,7 +36,6 @@ var camera: CameraController
 #region Private Variables
 var _screen_position: Vector2
 var _selection_radius := 12.0
-var _button_containers: Array[Control] = []
 var _menu_buttons: Array[Button] = []
 var _tracked_object = null  # Generic tracked object reference
 #endregion
