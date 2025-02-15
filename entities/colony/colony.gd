@@ -90,32 +90,6 @@ func get_ants() -> Array:
 func get_ants_by_profile(profile_id: String) -> Array:
 	return _profile_ant_map.get(profile_id, [])
 
-func _draw() -> void:
-	# Rich brown/dirt color with some transparency
-	var inner_radius = radius * inner_radius_ratio
-
-	# Draw the darker rim first
-	draw_arc(Vector2.ZERO, radius, 0, TAU, 32, darker_dirt, 3.0)
-	draw_arc(Vector2.ZERO, inner_radius, 0, TAU, 32, darker_dirt, 2.0)
-
-	# Create points for the filled area
-	var points_outer = []
-	var points_inner = []
-	var num_points = 32
-
-	# Create outer circle points
-	for i in range(num_points + 1):
-		var angle = i * TAU / num_points
-		points_outer.append(Vector2(cos(angle), sin(angle)) * radius)
-
-	# Create inner circle points (in reverse order)
-	for i in range(num_points + 1):
-		var angle = (num_points - i) * TAU / num_points
-		points_inner.append(Vector2(cos(angle), sin(angle)) * inner_radius)
-
-	# Combine points and draw filled polygon
-	var points = points_outer + points_inner
-	draw_colored_polygon(points, dirt_color)
 
 func add_ant(ant: Ant) -> Result:
 	if not ant:
