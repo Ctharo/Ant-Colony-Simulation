@@ -54,6 +54,19 @@ var _carried_food: Food
 @onready var mouth_marker: Marker2D = %MouthMarker
 #endregion
 
+#region Actions
+enum Action { 
+	MOVE = 0, 
+	HARVEST = 1,
+	STORE = 2,
+	REST = 3
+}
+
+var action_map: Dictionary[Action, Callable] = {
+	Action.MOVE: move_to
+}
+#endregion
+
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position
