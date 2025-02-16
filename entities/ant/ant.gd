@@ -16,13 +16,7 @@ signal movement_completed(success: bool)
 @export var pheromones: Array[Pheromone]
 var pheromone_memories: Dictionary[String, PheromoneMemory] = {}  # String -> PheromoneMemory
 #region Movement
-const STUCK_THRESHOLD: float = 5.0  # Distance to consider as "not moving"
-const STUCK_TIME_THRESHOLD: float = 2.0  # Time before considering ant as stuck
 enum PHEROMONE_TYPES { HOME, FOOD }
-var _last_position: Vector2
-var _time_at_position: float = 0.0
-var _was_stuck: bool = false
-
 ## Movement target position
 var movement_target: Vector2
 #endregion
@@ -34,15 +28,11 @@ const DEFAULT_CONFIG_ROOT = "res://config/"
 #region Member Variables
 ## The unique identifier for this ant
 var id: int
-
 ## The role of this ant in the colony
 var role: String
-
-
 var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
-
 var _carried_food: Food
 
 #region Components
@@ -72,7 +62,6 @@ var target_position: Vector2 :
 		return nav_agent.target_position
 	set(value):
 		nav_agent.set_target_position(value)
-
 
 ## Task update timer
 var task_update_timer: float = 0.0
@@ -237,15 +226,6 @@ func _process_movement(delta: float) -> void:
 	var current_pos = global_position
 	_process_pheromones(delta)
 
-	# Stuck detection logic
-	if _check_if_stuck(current_pos, delta):
-		# Enable best direction pathfinding
-		influence_manager.use_best_direction = true
-		_was_stuck = true
-	else:
-		# If not stuck, disable best direction
-		influence_manager.use_best_direction = false
-		_was_stuck = false
 
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
@@ -264,25 +244,6 @@ func _process_movement(delta: float) -> void:
 func _process_pheromones(delta: float):
 	for pheromone: Pheromone in pheromones:
 		pheromone.check_and_emit(self, delta)
-
-func _check_if_stuck(current_pos: Vector2, delta: float) -> bool:
-	if not _last_position:
-		_last_position = current_pos
-		return false
-
-	# Check if we've moved less than the threshold
-	if current_pos.distance_to(_last_position) < STUCK_THRESHOLD:
-		_time_at_position += delta
-
-		# Check if we've been stuck for longer than the threshold
-		if _time_at_position >= STUCK_THRESHOLD:
-			return true
-	else:
-		# Reset stuck timer if we've moved
-		_time_at_position = 0.0
-		_last_position = current_pos
-
-	return false
 
 func calculate_energy_cost(delta: float) -> float:
 	var movement_cost = energy_drain * velocity.length()
