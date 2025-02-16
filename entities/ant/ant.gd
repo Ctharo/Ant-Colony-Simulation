@@ -301,8 +301,6 @@ func set_colony(p_colony: Colony) -> void:
 func is_carrying_food() -> bool:
 	return is_instance_valid(_carried_food)
 
-func is_carrying_max() -> bool:
-	return is_carrying_food()
 
 func is_navigation_finished() -> bool:
 	return nav_agent.is_navigation_finished()
