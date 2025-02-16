@@ -143,12 +143,6 @@ func init_profile(p_profile: AntProfile) -> void:
 	for influence: InfluenceProfile in p_profile.movement_influences:
 		influence_manager.add_profile(influence)
 
-## Takes care of basic actions/processes without input.
-## Harvests food if possible
-## Stores food if possible
-## TODO fights if possible?
-## Rests if possible and necessary
-## Moves otherwise
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
 	# Don't process movement if dead
