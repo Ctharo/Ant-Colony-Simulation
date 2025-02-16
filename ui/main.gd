@@ -56,8 +56,6 @@ func create_ui():
 
 	# Create buttons
 	create_button("Start Simulation", button_container)
-	create_button("Logic Editor", button_container)
-	create_button("Property Browser", button_container)
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
 
@@ -118,18 +116,6 @@ func animate_ui_elements():
 func _on_start_simulation_button_pressed():
 	logger.info("Start Simulation pressed")
 	transition_to_scene("sandbox","sandbox")
-
-func _on_property_browser_button_pressed():
-	# Instead of transitioning to a scene, create the PropertyBrowser directly
-	var property_browser = load("res://ui/property_browser/property_browser.gd").new()
-	get_tree().root.add_child(property_browser)
-	# Fade out main menu
-	var tween = create_tween()
-	tween.tween_property(self, "modulate:a", 0.0, 0.5)
-
-func _on_logic_editor_button_pressed():
-	logger.info("Logic Editor pressed")
-	transition_to_scene("logic_editor_ui", "logic_editor")
 
 func _on_settings_button_pressed():
 	logger.info("Settings pressed")
