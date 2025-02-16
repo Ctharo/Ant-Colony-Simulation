@@ -195,7 +195,7 @@ func ant_count_by_role(role: String) -> int:
 		return 0
 		
 	var result = 0
-	for ant: Ant in ants:
+	for ant in ants:
 		if not is_instance_valid(ant):
 			continue
 			
