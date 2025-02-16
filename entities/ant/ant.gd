@@ -410,12 +410,6 @@ func get_nearest_item(list: Array) -> Variant:
 
 	return nearest
 
-func get_nearest_food_direction() -> Vector2:
-	var nearest_food: Food = get_nearest_item(get_food_in_view())
-	if nearest_food and nearest_food is Food:
-		return global_position.direction_to(nearest_food.global_position)
-	return Vector2.ZERO
-
 func show_nav_path(enabled: bool):
 	nav_agent.debug_enabled = enabled
 

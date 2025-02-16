@@ -1,13 +1,16 @@
-[gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://blm4y5t2y8bg4"]
+[gd_resource type="Resource" script_class="Influence" load_steps=5 format=3 uid="uid://blm4y5t2y8bg4"]
 
-[ext_resource type="Script" path="res://logic/influence/influence.gd" id="1_gqta8"]
-[ext_resource type="Script" path="res://logic/logic.gd" id="2_tcg3g"]
+[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influence/influence.gd" id="1_gqta8"]
+[ext_resource type="Resource" uid="uid://b6jri4s7ybdvb" path="res://resources/expressions/conditions/can_see_food.tres" id="1_omik2"]
+[ext_resource type="Resource" uid="uid://ctwly6vgk7gwo" path="res://resources/expressions/sense/vision/food/nearest_food.tres" id="2_omik2"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="2_tcg3g"]
 
 [resource]
 script = ExtResource("1_gqta8")
 color = Color(0, 1, 0, 1)
+condition = ExtResource("1_omik2")
 name = "food influence"
-expression_string = "get_nearest_food_direction() * 15"
-nested_expressions = Array[ExtResource("2_tcg3g")]([])
+expression_string = "global_position.direction_to(nearest_food.global_position) * 15"
+nested_expressions = Array[ExtResource("2_tcg3g")]([ExtResource("2_omik2")])
 description = ""
 type = 5
