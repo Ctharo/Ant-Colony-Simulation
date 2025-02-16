@@ -191,6 +191,7 @@ func move_to(target_pos: Vector2) -> bool:
 	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
 	return true
+	
 ## Stops the current movement
 func stop_movement() -> void:
 	velocity = Vector2.ZERO
