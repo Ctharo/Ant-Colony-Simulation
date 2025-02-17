@@ -108,8 +108,7 @@ func add_ant(ant: Ant) -> Result:
 	return Result.new()
 
 func store_food(food: Food) -> void:
-	food.stored = true
-	food.carried = false
+	food.set_state(Food.State.STORED)
 	foods.add_food(food)
 
 func spawn_ants(num: int, p_profile: AntProfile = null) -> Array[Ant]:
@@ -150,7 +149,6 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
 	ant.pheromones = ant_profile.pheromones
-	ant.size = ant_profile.size
 	ant.role = ant_profile.name.to_snake_case()
 	
 	# Initialize position and rotation
@@ -176,13 +174,14 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 	return ant
 #endregion
 
+
 func _on_ant_died(ant: Ant) -> void:
 	if ant in ants.elements:
 		ants.elements.erase(ant)
 		# Remove from profile tracking
 		if ant.role in _profile_ant_map:
 			_profile_ant_map[ant.role].erase(ant)
-	AntManager.remove_ant(ant)
+
 
 ## Returns the count of ants with a specific role
 ## The role parameter can be a partial match

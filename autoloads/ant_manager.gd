@@ -78,10 +78,10 @@ func start_ant(ant: Ant, enable: bool = true) -> void:
 
 func remove_ant(ant: Ant) -> void:
 	if not ant:
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant is null")
+		return
 
 	if not ants.has(ant):
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant not managed by this manager")
+		return 
 
 	# Stop ant processing
 	AntManager.start_ant(ant, false)
@@ -97,7 +97,7 @@ func remove_ant(ant: Ant) -> void:
 	ant.queue_free()
 
 	logger.debug("Removed ant: %s" % ant.name)
-	return Result.new()
+
 
 func delete_all() -> void:
 	for ant in AntManager.ants.duplicate():  # Duplicate array to avoid modification during iteration

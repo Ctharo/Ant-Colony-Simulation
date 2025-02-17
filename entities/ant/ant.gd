@@ -68,13 +68,7 @@ var task_update_timer: float = 0.0
 var logger: Logger
 #endregion
 
-var dead: bool = false :
-	set(value):
-		if dead:
-			return
-		dead = value
-		if dead:
-			died.emit(self)
+var is_dead: bool = false
 
 var vision_range: float = 100.0 :
 	set(value):
@@ -82,16 +76,13 @@ var vision_range: float = 100.0 :
 		$SightArea/CollisionShape2D.shape.radius = vision_range
 		
 var movement_rate: float = 25.0
-var harvesting_rate: float = 60.0
-var storing_rate: float = 60.0
 var resting_rate: float = 20.0
 
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
-		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + size) * pow(movement_rate, 1.2)
+		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + 1) * pow(movement_rate, 1.2)
 
-var size: float = 1
 var energy_max: float = 100
 var energy_level: float = energy_max :
 	set(value):
@@ -99,14 +90,16 @@ var energy_level: float = energy_max :
 		energy_level = min(maxf(value, 0.0), energy_max)
 		if first != int(energy_level):
 			energy_changed.emit()
-		dead = energy_level == 0.0
+		if energy_level == 0.0:
+			suicide()
 
 var carry_max: int = 1
 var health_max: float = 100
 var health_level: float = health_max :
 	set(value):
 		health_level = min(maxf(value, 0.0), health_max)
-		dead = health_level == 0.0
+		if health_level == 0.0:
+			suicide()
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -145,8 +138,8 @@ func init_profile(p_profile: AntProfile) -> void:
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
-	# Don't process movement if dead
-	if dead:
+	# Don't process movement if is_dead
+	if is_dead:
 		return
 
 	_process_carrying()
@@ -278,7 +271,7 @@ func harvest_food():
 
 	var food = foods_in_reach[0]
 	if is_instance_valid(food) and food.is_available:
-		food.carried = true # Mark as carried so another doesn't try to take it
+		food.set_state(Food.State.CARRIED)
 		await get_tree().create_timer(1).timeout
 		food.global_position = mouth_marker.global_position
 		_carried_food = food
@@ -292,6 +285,13 @@ func set_colony(p_colony: Colony) -> void:
 		colony = p_colony
 #endregion
 
+## Cleans up from this perspective, AntManager receives signal and clears from all tracking
+func _on_died() -> void:
+	if is_carrying_food():
+		_carried_food.set_state(Food.State.AVAILABLE)
+	is_dead = true
+	died.emit(self)
+
 func is_carrying_food() -> bool:
 	return is_instance_valid(_carried_food)
 
@@ -303,7 +303,7 @@ func should_rest() -> bool:
 	return health_level < 0.9 * health_max or energy_level < 0.9 * energy_max
 
 func suicide():
-	dead = true
+	self._on_died()
 
 func is_fully_rested() -> bool:
 	return health_level == health_max and energy_level == energy_max

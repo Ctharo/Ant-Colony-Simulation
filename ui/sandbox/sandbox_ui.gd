@@ -318,7 +318,7 @@ func _on_ant_info_requested(ant: Ant) -> void:
 
 func _on_ant_destroy_requested(ant: Ant) -> void:
 	if is_instance_valid(ant):
-		ant_manager.remove_ant(ant)
+		ant.suicide()
 
 func _on_ant_track_requested(ant: Ant) -> void:
 	if is_instance_valid(ant):

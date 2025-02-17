@@ -2,23 +2,18 @@
 class_name Food
 extends Node2D
 
-## Whether this food unit is stored in a colony
-var stored: bool = false
-## Whether this food unit is being carried by an ant
-var carried: bool = false
-## Whether this food unit is targeted for pickup
-var targeted: bool = false
-
+enum State { STORED = 0, CARRIED = 1, TARGETED = 2, AVAILABLE = 3 }
+var _state = State.AVAILABLE : set = set_state
 var size: float
 ## Whether this food unit is available for pickup
-var is_available: bool :
-	get:
-		return not carried and not stored and not targeted
+@export var is_available: bool
 
 func _init() -> void:
 	add_to_group("food")
 
-
+func set_state(value: State):
+	_state = value
+	is_available = (_state == State.AVAILABLE)
 
 func get_size() -> float:
 	return %CollisionShape2D.shape.radius
