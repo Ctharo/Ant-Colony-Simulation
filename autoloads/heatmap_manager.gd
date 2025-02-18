@@ -205,7 +205,7 @@ func debug_draw(entity: Node2D, enabled: bool) -> void:
 #region Heat Management
 ## Adds heat from an entity to a cell
 func update_entity_heat(entity: Node2D, delta: float, heat_type: String, factor: float = 1.0) -> void:
-	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
+	if not _heatmaps.has(heat_type):
 		return
 
 	# Prepare data outside lock
@@ -251,37 +251,20 @@ func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat
 	cell.add_heat(entity_id, amount, STYLE.MAX_HEAT)
 
 #region Heat Direction Calculation
-func _find_best_navigable_direction(base_direction: Vector2, world_pos: Vector2, base_weight: float) -> Vector2:
-	var normalized_direction = base_direction.normalized()
-	var check_distance = STYLE.CELL_SIZE * 2
-	var base_target = world_pos + normalized_direction * check_distance
-
-	if is_cell_navigable(base_target):
-		return base_direction
-
-	var test_angles = [PI/12, -PI/12, PI/6, -PI/6, PI/4, -PI/4, PI/3, -PI/3]
-
-	for angle in test_angles:
-		var test_direction = normalized_direction.rotated(angle)
-		var test_target = world_pos + test_direction * check_distance
-
-		if is_cell_navigable(test_target):
-			return test_direction * base_weight
-
-	return normalized_direction * (base_weight * 0.1)
 
 func _calculate_cell_influence(cell_data: Dictionary, query_data: Dictionary) -> float:
 	var cell: HeatCell = cell_data.cell
 	var total_heat: float = 0.0
 
 	for source_id in cell.sources:
-		if source_id != query_data.entity_id:  # Don't be influenced by own heat
-			total_heat += cell.sources[source_id]
+		if source_id == query_data.entity_id:  # Don't be influenced by own heat
+			continue
+		total_heat += cell.sources[source_id]
 
 	return total_heat
 
 func get_heat_at_position(entity: Node2D, heat_type: String) -> float:
-	if not is_instance_valid(entity) or not _heatmaps.has(heat_type):
+	if not _heatmaps.has(heat_type):
 		return 0.0
 
 	var query_data = {
