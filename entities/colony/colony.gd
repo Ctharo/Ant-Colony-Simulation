@@ -24,7 +24,7 @@ var _last_spawn_ticks: int
 ## Inner radius as a ratio of the main radius
 var inner_radius_ratio: float = 0.2
 ## Collection of food resources
-var foods: Foods = Foods.new([])
+var foods: Foods = Foods.new()
 ## Ants belonging to this colony
 var ants: Ants = Ants.new([])
 ## Whether this colony is highlighted
@@ -75,7 +75,7 @@ func _process_spawning(_delta: float) -> void:
 func delete_all():
 	for ant in ants:
 		if ant != null:
-			ant.suicide()
+			AntManager.remove_ant(ant)
 	_profile_ant_map.clear()
 
 ## Returns the time in milliseconds since the last ant spawn
@@ -181,3 +181,25 @@ func _on_ant_died(ant: Ant) -> void:
 		# Remove from profile tracking
 		if ant.role in _profile_ant_map:
 			_profile_ant_map[ant.role].erase(ant)
+
+
+## Returns the count of ants with a specific role
+## The role parameter can be a partial match
+func ant_count_by_role(role: String) -> int:
+	if role.is_empty():
+		return 0
+		
+	var normalized_role = role.to_lower().strip_edges()
+	if normalized_role.is_empty():
+		return 0
+		
+	var result = 0
+	for ant in ants:
+		if not is_instance_valid(ant):
+			continue
+			
+		var ant_role = ant.role.to_lower()
+		# Check both if role contains ant's role or ant's role contains the search role
+		if ant_role.contains(normalized_role) or normalized_role.contains(ant_role):
+			result += 1
+	return result
