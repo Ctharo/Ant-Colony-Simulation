@@ -241,7 +241,7 @@ func harvest_food():
 
 	# Extract positions and sort them
 	var positions: Array[Vector2] = foods_in_reach.map(func(f): return f.global_position)
-	var sorted_positions = NavigationUtils.sort_positions_by_distance(positions, global_position)
+	var sorted_positions = NavigationUtils.PositionUtils.sort_positions_by_distance(positions, global_position)
 	
 	# Reorder foods array based on sorted positions
 	var sorted_foods: Array = []
@@ -329,7 +329,7 @@ func get_foods_in_reach() -> Array:
 	return _foods
 
 func is_colony_in_range() -> bool:
-	return NavigationUtils.is_point_in_range(
+	return NavigationUtils.PositionUtils.is_point_in_range(
 		global_position,
 		colony.global_position,
 		colony.radius
@@ -340,7 +340,7 @@ func get_nearest_item(list: Array) -> Variant:
 		return null
 		
 	var positions: Array[Vector2] = list.map(func(item): return item.global_position)
-	var nearest_pos = NavigationUtils.get_nearest_point(global_position, positions)
+	var nearest_pos = NavigationUtils.PositionUtils.get_nearest_point(global_position, positions)
 	
 	for item in list:
 		if item.global_position == nearest_pos:
