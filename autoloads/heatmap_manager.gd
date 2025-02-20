@@ -20,6 +20,87 @@ var _last_decay_time: int = 0
 var update_interval: float = 1.0
 #endregion
 
+#region Inner Classes
+class HeatCell:
+	var heat: float = 0.0
+	var sources: Dictionary[int, float] = {}  # entity_id -> heat_value
+
+	func add_heat(entity_id: int, amount: float, max_heat: float) -> void:
+		if not sources.has(entity_id):
+			sources[entity_id] = 0.0
+		sources[entity_id] = minf(sources[entity_id] + amount, max_heat)
+		heat = HeatmapUtils.calculate_total_heat(sources.values())
+
+	func remove_source(entity_id: int) -> void:
+		sources.erase(entity_id)
+		heat = HeatmapUtils.calculate_total_heat(sources.values())
+
+	func decay(delta: float, decay_rate: float) -> bool:
+		var any_active = false
+		for entity_id in sources:
+			sources[entity_id] = HeatmapUtils.apply_decay(
+				sources[entity_id],
+				decay_rate,
+				delta
+			)
+			if sources[entity_id] > 0:
+				any_active = true
+		heat = HeatmapUtils.calculate_total_heat(sources.values())
+		return any_active
+
+	func get_total_heat_for_colony(colony_id: int) -> float:
+		var colony_sources: Array[float] = []
+		for source_id in sources:
+			var source: Node2D = instance_from_id(source_id)
+			if is_instance_valid(source):
+				var source_colony_id: int = source.colony.get_instance_id() if source is Ant else source.get_instance_id()
+				if source_colony_id == colony_id:
+					colony_sources.append(sources[source_id])
+		return HeatmapUtils.calculate_total_heat(colony_sources)
+
+class HeatChunk:
+	var cells: Dictionary[Vector2i, HeatCell] = {}  # Vector2i -> HeatCell
+	var active_cells: int = 0
+	var last_update_time: int = 0
+
+	func get_or_create_cell(local_pos: Vector2i) -> HeatCell:
+		if not cells.has(local_pos):
+			cells[local_pos] = HeatCell.new()
+		return cells[local_pos]
+
+	func update(delta: float, decay_rate: float) -> bool:
+		active_cells = 0
+		var cells_to_remove: Array = []
+		var cell_heats: Array[float] = []
+
+		for pos in cells:
+			if not cells[pos].decay(delta, decay_rate):
+				cells_to_remove.append(pos)
+			else:
+				active_cells += 1
+				cell_heats.append(cells[pos].heat)
+
+		for pos in cells_to_remove:
+			cells.erase(pos)
+
+		last_update_time = Time.get_ticks_msec()
+		return true ## What should this return?
+
+class HeatmapInstance:
+	var chunks: Dictionary[Vector2i, HeatChunk] = {}  # Vector2i -> HeatChunk
+	var config: Pheromone
+	
+	func _init(p_config: Pheromone) -> void:
+		config = p_config
+	
+	func get_or_create_chunk(chunk_pos: Vector2i) -> HeatChunk:
+		if not chunks.has(chunk_pos):
+			chunks[chunk_pos] = HeatChunk.new()
+		return chunks[chunk_pos]
+#endregion
+
+
+
 func _init() -> void:
 	logger = Logger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
 	update_lock = Mutex.new()
@@ -124,8 +205,8 @@ func _add_heat_to_cell(
 	heat_type: String
 ) -> void:
 	var coords := HeatmapUtils.world_to_chunk_coords(world_cell, STYLE.CHUNK_SIZE)
-	var chunk_pos := coords.chunk
-	var local_pos := coords.local
+	var chunk_pos: Vector2i = coords.chunk
+	var local_pos: Vector2i = coords.local
 	
 	# Ensure chunk exists
 	if not _heatmaps[heat_type].chunks.has(chunk_pos):
@@ -134,7 +215,7 @@ func _add_heat_to_cell(
 			"last_update": Time.get_ticks_msec()
 		}
 	
-	var chunk := _heatmaps[heat_type].chunks[chunk_pos]
+	var chunk: Dictionary = _heatmaps[heat_type].chunks[chunk_pos]
 	
 	# Ensure cell exists
 	if not chunk.cells.has(local_pos):
@@ -143,7 +224,7 @@ func _add_heat_to_cell(
 			"heat": 0.0
 		}
 	
-	var cell := chunk.cells[local_pos]
+	var cell: Dictionary = chunk.cells[local_pos]
 	cell.sources = HeatmapUtils.add_heat_source(
 		cell.sources,
 		entity_id,
@@ -177,11 +258,11 @@ func _process_decay(delta: float) -> void:
 		var chunks_to_remove := []
 		
 		for chunk_pos in heatmap_data.chunks:
-			var chunk := heatmap_data.chunks[chunk_pos]
+			var chunk: Dictionary = heatmap_data.chunks[chunk_pos]
 			var cells_to_remove := []
 			
 			for local_pos in chunk.cells:
-				var cell := chunk.cells[local_pos]
+				var cell : Dictionary = chunk.cells[local_pos]
 				cell.sources = HeatmapUtils.update_heat_sources(
 					cell.sources,
 					heatmap_data.config.decay_rate,
@@ -220,7 +301,7 @@ func get_heat_at_position(entity: Node2D, heat_type: String) -> float:
 	if not _heatmaps.has(heat_type):
 		return 0.0
 
-	var entity_data := _entities[entity.get_instance_id()]
+	var entity_data: Dictionary = _entities[entity.get_instance_id()]
 	var world_cell := HeatmapUtils.world_to_grid(
 		entity.global_position,
 		STYLE.CELL_SIZE
@@ -240,17 +321,17 @@ func _get_cell_heat(
 	colony_id: int
 ) -> float:
 	var coords := HeatmapUtils.world_to_chunk_coords(world_cell, STYLE.CHUNK_SIZE)
-	var chunk_pos := coords.chunk
-	var local_pos := coords.local
+	var chunk_pos:Vector2i= coords.chunk
+	var local_pos :Vector2i= coords.local
 	
 	if not _heatmaps[heat_type].chunks.has(chunk_pos):
 		return 0.0
 		
-	var chunk := _heatmaps[heat_type].chunks[chunk_pos]
+	var chunk :Dictionary= _heatmaps[heat_type].chunks[chunk_pos]
 	if not chunk.cells.has(local_pos):
 		return 0.0
 		
-	var cell := chunk.cells[local_pos]
+	var cell :Dictionary= chunk.cells[local_pos]
 	return HeatmapUtils.get_colony_heat(cell.sources, _entities, colony_id)
 #endregion
 
