@@ -109,7 +109,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	_start_update_thread()
-
+	
 ## Create a new heatmap type from pheromone configuration
 func create_heatmap_type(pheromone: Pheromone) -> void:
 	var heatmap_name := pheromone.name.to_lower()
