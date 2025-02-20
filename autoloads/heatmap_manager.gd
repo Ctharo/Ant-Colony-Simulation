@@ -31,34 +31,35 @@ class HeatCell:
 		if not sources.has(entity_id):
 			sources[entity_id] = 0.0
 		sources[entity_id] = minf(sources[entity_id] + amount, max_heat)
-		heat = HeatmapUtils.HeatCalculator.calculate_total_heat(sources.values())
+		_update_total_heat()
 
 	func remove_source(entity_id: int) -> void:
 		sources.erase(entity_id)
-		heat = HeatmapUtils.HeatCalculator.calculate_total_heat(sources.values())
+		_update_total_heat()
 
 	func decay(delta: float, decay_rate: float) -> bool:
 		var any_active = false
 		for entity_id in sources:
-			sources[entity_id] = HeatmapUtils.HeatCalculator.apply_decay(
-				sources[entity_id],
-				decay_rate,
-				delta
-			)
+			sources[entity_id] = maxf(0.0, sources[entity_id] - decay_rate * delta)
 			if sources[entity_id] > 0:
 				any_active = true
-		heat = HeatmapUtils.HeatCalculator.calculate_total_heat(sources.values())
+		_update_total_heat()
 		return any_active
 
 	func get_total_heat_for_colony(colony_id: int) -> float:
-		var colony_sources: Array[float] = []
+		var total: float = 0.0
 		for source_id in sources:
 			var source: Node2D = instance_from_id(source_id)
 			if is_instance_valid(source):
 				var source_colony_id: int = source.colony.get_instance_id() if source is Ant else source.get_instance_id()
 				if source_colony_id == colony_id:
-					colony_sources.append(sources[source_id])
-		return HeatmapUtils.HeatCalculator.calculate_total_heat(colony_sources)
+					total += sources[source_id]
+		return total
+
+	func _update_total_heat() -> void:
+		heat = 0.0
+		for contribution in sources.values():
+			heat += contribution
 
 class HeatChunk:
 	var cells: Dictionary[Vector2i, HeatCell] = {}  # Vector2i -> HeatCell
@@ -73,20 +74,18 @@ class HeatChunk:
 	func update(delta: float, decay_rate: float) -> bool:
 		active_cells = 0
 		var cells_to_remove: Array = []
-		var cell_heats: Array[float] = []
 
 		for pos in cells:
 			if not cells[pos].decay(delta, decay_rate):
 				cells_to_remove.append(pos)
 			else:
 				active_cells += 1
-				cell_heats.append(cells[pos].heat)
 
 		for pos in cells_to_remove:
 			cells.erase(pos)
 
 		last_update_time = Time.get_ticks_msec()
-		return HeatmapUtils.StateUtils.is_chunk_active(cell_heats)
+		return active_cells > 0
 
 class HeatmapInstance:
 	var chunks: Dictionary[Vector2i, HeatChunk] = {}  # Vector2i -> HeatChunk
@@ -212,7 +211,7 @@ func update_entity_heat(entity: Node2D, delta: float, heat_type: String, factor:
 	# Prepare data outside lock
 	var update_data = {
 		"entity_id": entity.get_instance_id(),
-		"center_cell": NavigationUtils.GridUtils.world_to_cell(entity.global_position, STYLE["CELL_SIZE"]),
+		"center_cell": world_to_cell(entity.global_position),
 		"base_heat": _heatmaps[heat_type].config.generating_rate * delta * factor,
 		"heat_type": heat_type
 	}
@@ -222,27 +221,33 @@ func update_entity_heat(entity: Node2D, delta: float, heat_type: String, factor:
 	update_lock.unlock()
 
 func _update_movement_heat(data: Dictionary) -> void:
-	var heatmap := _heatmaps[data.heat_type]
-	var cells_to_update := HeatmapUtils.StateUtils.get_cells_to_update(
-		data.center_cell,
-		heatmap.config.heat_radius
-	)
+	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
+	var radius: int = heatmap.config.heat_radius
+	var center_cell: Vector2i = data.center_cell
 
-	for cell in cells_to_update:
-		var distance: float = data.center_cell.distance_to(cell)
-		var heat := HeatmapUtils.HeatCalculator.calculate_cell_heat(
-			data.base_heat,
-			distance,
-			STYLE.MAX_HEAT
-		)
-		_add_heat_to_cell(data.entity_id, cell, heat, data.heat_type)
-		
+	var updates: Array[Dictionary] = []
+	# Gather all updates without modifying data
+	for dx in range(-radius, radius + 1):
+		for dy in range(-radius, radius + 1):
+			var cell: Vector2i = center_cell + Vector2i(dx, dy)
+			var distance: float = center_cell.distance_to(cell)
+
+			if distance <= radius:
+				updates.append({
+					"cell": cell,
+					"heat": data.base_heat / (1 + distance * distance)
+				})
+
+	# Apply all updates at once
+	for update in updates:
+		_add_heat_to_cell(data.entity_id, update.cell, update.heat, data.heat_type)
+
 func _add_heat_to_cell(entity_id: int, world_cell: Vector2i, amount: float, heat_type: String) -> void:
-	var chunk_pos := NavigationUtils.GridUtils.world_to_chunk(world_cell, STYLE.CHUNK_SIZE)
-	var local_pos := NavigationUtils.GridUtils.world_to_local_cell(world_cell, STYLE.CHUNK_SIZE)
-	var heatmap := _heatmaps[heat_type]
-	var chunk := heatmap.get_or_create_chunk(chunk_pos)
-	var cell := chunk.get_or_create_cell(local_pos)
+	var chunk_pos: Vector2i = world_to_chunk(world_cell)
+	var local_pos: Vector2i = world_to_local_cell(world_cell)
+	var heatmap: HeatmapInstance = _heatmaps[heat_type]
+	var chunk: HeatChunk = heatmap.get_or_create_chunk(chunk_pos)
+	var cell: HeatCell = chunk.get_or_create_cell(local_pos)
 	cell.add_heat(entity_id, amount, STYLE.MAX_HEAT)
 
 #region Heat Direction Calculation
@@ -264,7 +269,7 @@ func get_heat_at_position(entity: Node2D, heat_type: String) -> float:
 
 	var query_data = {
 		"colony_id": entity.colony.get_instance_id() if entity is Ant else entity.get_instance_id(),
-		"world_cell": NavigationUtils.GridUtils.world_to_cell(entity.global_position, STYLE.CELL_SIZE),
+		"world_cell": world_to_cell(entity.global_position),
 		"heat_type": heat_type
 	}
 
@@ -276,8 +281,8 @@ func get_heat_at_position(entity: Node2D, heat_type: String) -> float:
 	return result
 
 func _get_heat_for_query(data: Dictionary) -> float:
-	var chunk_pos: Vector2i = NavigationUtils.GridUtils.world_to_chunk(data.world_cell, STYLE.CHUNK_SIZE)
-	var local_pos: Vector2i = NavigationUtils.GridUtils.world_to_local_cell(data.world_cell, STYLE.CHUNK_SIZE)
+	var chunk_pos: Vector2i = world_to_chunk(data.world_cell)
+	var local_pos: Vector2i = world_to_local_cell(data.world_cell)
 	var heatmap: HeatmapInstance = _heatmaps[data.heat_type]
 
 	if not heatmap.chunks.has(chunk_pos):
@@ -307,13 +312,13 @@ func _draw_heatmap(heatmap: HeatmapInstance) -> void:
 		var chunk: HeatChunk = heatmap.chunks[chunk_pos]
 		for local_pos in chunk.cells:
 			var cell: HeatCell = chunk.cells[local_pos]
-			var world_cell: Vector2i = NavigationUtils.GridUtils.chunk_to_world_cell(chunk_pos, local_pos, STYLE.CHUNK_SIZE)
+			var world_cell: Vector2i = chunk_to_world_cell(chunk_pos, local_pos)
 			var visible_heat: float = _calculate_visible_heat(cell)
 
 			if visible_heat <= 0:
 				continue
 
-			var world_pos: Vector2 = NavigationUtils.GridUtils.cell_to_world(world_cell, STYLE.CELL_SIZE)
+			var world_pos: Vector2 = cell_to_world(world_cell)
 			var rect: Rect2 = Rect2(
 				world_pos,
 				Vector2.ONE * STYLE.CELL_SIZE
@@ -339,6 +344,42 @@ func _calculate_visible_heat(cell: HeatCell) -> float:
 func _get_cell_color(t: float, config: Pheromone) -> Color:
 	return config.start_color.lerp(config.end_color, t)
 
+#region Coordinate Conversions
+func world_to_cell(world_pos: Vector2) -> Vector2i:
+	return Vector2i(world_pos / STYLE.CELL_SIZE)
+
+func cell_to_world(cell: Vector2i) -> Vector2:
+	return Vector2(cell * STYLE.CELL_SIZE)
+
+func world_to_chunk(world_cell: Vector2i) -> Vector2i:
+	var x = world_cell.x
+	var y = world_cell.y
+	if x < 0:
+		x = x - STYLE.CHUNK_SIZE + 1
+	if y < 0:
+		y = y - STYLE.CHUNK_SIZE + 1
+	@warning_ignore("integer_division")
+	return Vector2i(x / STYLE.CHUNK_SIZE, y / STYLE.CHUNK_SIZE)
+
+func world_to_local_cell(world_cell: Vector2i) -> Vector2i:
+	var x = world_cell.x
+	var y = world_cell.y
+	if x < 0:
+		x = STYLE.CHUNK_SIZE + (x % STYLE.CHUNK_SIZE)
+	if y < 0:
+		y = STYLE.CHUNK_SIZE + (y % STYLE.CHUNK_SIZE)
+	@warning_ignore("integer_division")
+	return Vector2i(x % STYLE.CHUNK_SIZE, y % STYLE.CHUNK_SIZE)
+
+func chunk_to_world_cell(chunk_pos: Vector2i, local_pos: Vector2i) -> Vector2i:
+	return Vector2i(
+		chunk_pos.x * STYLE.CHUNK_SIZE + local_pos.x,
+		chunk_pos.y * STYLE.CHUNK_SIZE + local_pos.y
+	)
+
+func chunk_to_world(chunk_pos: Vector2i) -> Vector2:
+	return Vector2(chunk_pos * STYLE.CHUNK_SIZE * STYLE.CELL_SIZE)
+
 #region Utility Functions
 func is_cell_navigable(pos: Vector2) -> bool:
 	if _nav_map == RID() or _nav_map == null or not NavigationServer2D.map_is_active(_nav_map):
@@ -355,12 +396,12 @@ func is_cell_navigable(pos: Vector2) -> bool:
 	return false
 
 func get_cells_in_radius(world_pos: Vector2, radius: float, heat_type: String) -> Array[Dictionary]:
-	var center_cell: Vector2i = NavigationUtils.GridUtils.world_to_cell(world_pos, STYLE.CELL_SIZE)
+	var center_cell: Vector2i = world_to_cell(world_pos)
 	var cells_radius: int = ceili(radius / STYLE.CELL_SIZE)
 	var found_cells: Array[Dictionary] = []
 
 	var chunk_radius: int = ceili(float(cells_radius) / STYLE.CHUNK_SIZE)
-	var center_chunk: Vector2i = NavigationUtils.GridUtils.world_to_chunk(center_cell, STYLE.CHUNK_SIZE)
+	var center_chunk: Vector2i = world_to_chunk(center_cell)
 
 	var heatmap: HeatmapInstance = _heatmaps[heat_type]
 	for dx in range(-chunk_radius, chunk_radius + 1):
@@ -372,8 +413,8 @@ func get_cells_in_radius(world_pos: Vector2, radius: float, heat_type: String) -
 			var chunk: HeatChunk = heatmap.chunks[check_chunk]
 			for local_pos in chunk.cells:
 				var cell: HeatCell = chunk.cells[local_pos]
-				var world_cell: Vector2i = NavigationUtils.GridUtils.chunk_to_world_cell(check_chunk, local_pos, STYLE.CHUNK_SIZE)
-				var cell_pos: Vector2 = NavigationUtils.GridUtils.cell_to_world(world_cell, STYLE.CELL_SIZE)
+				var world_cell: Vector2i = chunk_to_world_cell(check_chunk, local_pos)
+				var cell_pos: Vector2 = cell_to_world(world_cell)
 
 				if cell.heat > 0 and world_pos.distance_to(cell_pos) <= radius:
 					found_cells.append({

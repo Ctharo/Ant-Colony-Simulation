@@ -2,8 +2,7 @@
 class_name Ant
 extends CharacterBody2D
 
-## Ant implementation using functional programming principles
-## Complex calculations are delegated to utility functions that operate on primitives
+## TODO: Functional programming
 
 #region Signals
 signal spawned
@@ -11,14 +10,16 @@ signal energy_changed
 @warning_ignore("unused_signal")
 signal damaged
 signal died(ant: Ant)
+## Signal emitted when movement is completed
 signal movement_completed(success: bool)
+
 #endregion
 
 @export var pheromones: Array[Pheromone]
 var pheromone_memories: Dictionary[String, PheromoneMemory] = {}  # String -> PheromoneMemory
-
 #region Movement
 enum PHEROMONE_TYPES { HOME, FOOD }
+## Movement target position
 var movement_target: Vector2
 #endregion
 
@@ -27,9 +28,12 @@ const DEFAULT_CONFIG_ROOT = "res://config/"
 #endregion
 
 #region Member Variables
+## The unique identifier for this ant
 var id: int
+## The role of this ant in the colony
 var role: String
 var profile: AntProfile
+## The colony this ant belongs to
 var colony: Colony : set = set_colony
 var _carried_food: Food
 
@@ -61,8 +65,11 @@ var target_position: Vector2 :
 	set(value):
 		nav_agent.set_target_position(value)
 
+## Task update timer
 var task_update_timer: float = 0.0
 var logger: Logger
+#endregion
+
 var is_dead: bool = false
 
 var vision_range: float = 100.0 :
@@ -73,10 +80,10 @@ var vision_range: float = 100.0 :
 var movement_rate: float = 25.0
 var resting_rate: float = 20.0
 
+const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
-		var carrying_weight: float = 50.0 if is_carrying_food() else 0.0
-		return AntUtils.EnergyCalculator.calculate_energy_drain(movement_rate, carrying_weight)
+		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + 1) * pow(movement_rate, 1.2)
 
 var energy_max: float = 100
 var energy_level: float = energy_max :
@@ -97,17 +104,20 @@ var health_level: float = health_max :
 			suicide()
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
 var doing_task: bool = false
 
 func _init() -> void:
 	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
+	# Initialize influence manager
 	influence_manager.initialize(self)
 	
 	if profile:
 		init_profile(profile)
 	
+	# Register to heatmap
 	HeatmapManager.register_entity(self)
 	for pheromone in pheromones:
 		HeatmapManager.create_heatmap_type(pheromone)
@@ -117,6 +127,7 @@ func _ready() -> void:
 	$ReachArea/CollisionShape2D.shape.radius = mouth_marker.position.x - food.get_size()
 	food.queue_free()
 
+	# Emit ready signal
 	spawned.emit()
 
 func init_profile(p_profile: AntProfile) -> void:
@@ -129,12 +140,13 @@ func init_profile(p_profile: AntProfile) -> void:
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
+	# Don't process movement if is_dead
 	if is_dead:
 		return
 
 	_process_carrying()
 	
-	# Energy consumption using functional utility
+	# Energy consumption
 	if energy_level > 0 and not is_colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
@@ -142,27 +154,34 @@ func _physics_process(delta: float) -> void:
 	if doing_task:
 		return
 
-	# Task priority checks
+	# Attempt actions based on immediate conditions
 	if get_foods_in_reach() and not is_carrying_food():
 		harvest_food()
 		return
 
+	# If we're at colony with food, store it
 	if is_colony_in_range() and is_carrying_food():
 		store_food()
 		return
 
+	# Rest at colony if needed
 	if is_colony_in_range() and should_rest():
 		rest_until_full()
 		return
 
 	if not doing_task:
+		# Basic movement processing if we're moving
 		_process_movement(delta)
 
+## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> bool:
 	movement_target = target_pos
+
+	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
 	return true
 	
+## Stops the current movement
 func stop_movement() -> void:
 	velocity = Vector2.ZERO
 	movement_completed.emit(false)
@@ -197,6 +216,7 @@ func _process_movement(delta: float) -> void:
 	var current_pos = global_position
 	_process_pheromones(delta)
 
+
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
 
@@ -210,27 +230,32 @@ func _process_movement(delta: float) -> void:
 		target_velocity = velocity.lerp(target_velocity, 0.15)
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
+## Pheromone handles checking condition and emitting if necessary
 func _process_pheromones(delta: float):
 	for pheromone: Pheromone in pheromones:
 		pheromone.check_and_emit(self, delta)
 
 func calculate_energy_cost(delta: float) -> float:
-	return AntUtils.EnergyCalculator.calculate_movement_energy_cost(
-		energy_drain,
-		velocity.length(),
-		delta
-	)
+	var movement_cost = energy_drain * velocity.length()
+	return movement_cost * delta
 
 #region Navigation Agent Callbacks
 func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 	velocity = safe_velocity
 	if safe_velocity.length() > 0.0:
-		global_rotation = safe_velocity.angle()
+		var target_angle = safe_velocity.angle()
+		global_rotation = target_angle
 	move_and_slide()
 
 func _on_navigation_agent_2d_target_reached() -> void:
 	if velocity != Vector2.ZERO:
 		movement_completed.emit(true)
+
+func _on_navigation_agent_2d_path_changed() -> void:
+	# Could update path visualization here
+	if nav_agent.debug_enabled:
+		show_nav_path(true)
+	# Path changed, continue movement
 #endregion
 
 func harvest_food():
@@ -239,18 +264,12 @@ func harvest_food():
 	if foods_in_reach.is_empty():
 		return
 
-	# Extract positions and sort them
-	var positions: Array[Vector2] = foods_in_reach.map(func(f): return f.global_position)
-	var sorted_positions = NavigationUtils.sort_positions_by_distance(positions, global_position)
-	
-	# Reorder foods array based on sorted positions
-	var sorted_foods: Array = []
-	for pos in sorted_positions:
-		for food in foods_in_reach:
-			if food.global_position == pos:
-				sorted_foods.append(food)
-				break
-	foods_in_reach = sorted_foods
+	# Sort foods by distance
+	foods_in_reach.sort_custom(func(a: Food, b: Food) -> bool:
+		var dist_a = global_position.distance_squared_to(a.global_position)
+		var dist_b = global_position.distance_squared_to(b.global_position)
+		return dist_a < dist_b
+	)
 
 	var food = foods_in_reach[0]
 	if is_instance_valid(food) and food.is_available:
@@ -261,10 +280,14 @@ func harvest_food():
 		doing_task = false
 	return
 
+
+#region Colony Management
 func set_colony(p_colony: Colony) -> void:
 	if colony != p_colony:
 		colony = p_colony
+#endregion
 
+## Cleans up from this perspective, AntManager receives signal and clears from all tracking
 func _on_died() -> void:
 	if is_carrying_food():
 		_carried_food.set_state(Food.State.AVAILABLE)
@@ -274,17 +297,24 @@ func _on_died() -> void:
 func is_carrying_food() -> bool:
 	return is_instance_valid(_carried_food)
 
+
 func is_navigation_finished() -> bool:
 	return nav_agent.is_navigation_finished()
 
 func should_rest() -> bool:
-	return AntUtils.StatusUtils.should_rest(health_level, health_max, energy_level, energy_max)
-
-func is_fully_rested() -> bool:
-	return AntUtils.StatusUtils.is_fully_rested(health_level, health_max, energy_level, energy_max)
+	return health_level < 0.9 * health_max or energy_level < 0.9 * energy_max
 
 func suicide():
 	self._on_died()
+
+func is_fully_rested() -> bool:
+	return health_level == health_max and energy_level == energy_max
+
+func _get_random_position() -> Vector2:
+	var viewport_rect := get_viewport_rect()
+	var x := randf_range(0, viewport_rect.size.x)
+	var y := randf_range(0, viewport_rect.size.y)
+	return Vector2(x, y)
 
 func get_food_in_view() -> Array:
 	var fiv: Array = []
@@ -293,22 +323,32 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
+## Samples heat at a location (i.e., single cell) and moves on. Develops a 
+## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
 	if not is_instance_valid(colony):
 		return Vector2.ZERO
 		
+	# Initialize memory for this pheromone type if needed
 	if not pheromone_memories.has(pheromone_name):
 		pheromone_memories[pheromone_name] = PheromoneMemory.new()
 	
+	# Get current cell position
 	var current_cell: Vector2i = HeatmapManager.world_to_cell(global_position)
+	
+	# Sample current position
 	var current_concentration: float = HeatmapManager.get_heat_at_position(
 		self,
 		pheromone_name
 	)
 	
+	# Add to memory using cell coordinates
 	pheromone_memories[pheromone_name].add_sample(current_cell, current_concentration)
+	
+	# Get direction based on concentration history
 	var direction: Vector2 = pheromone_memories[pheromone_name].get_concentration_vector()
 	
+	# Invert direction if not following concentration
 	return direction if follow_concentration else -direction
 	
 func get_ants_in_view() -> Array:
@@ -317,6 +357,20 @@ func get_ants_in_view() -> Array:
 		if ant is Ant and ant != null:
 			ants.append(ant)
 	return ants
+
+func get_colonies_in_view() -> Array:
+	var colonies: Array = []
+	for p_colony in sight_area.get_overlapping_bodies():
+		if p_colony is Colony:
+			colonies.append(p_colony)
+	return colonies
+
+func get_colonies_in_reach() -> Array:
+	var colonies: Array = []
+	for p_colony in reach_area.get_overlapping_bodies():
+		if p_colony is Colony:
+			colonies.append(p_colony)
+	return colonies
 
 func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
 	return ants.filter(func(ant): return friendly == (ant.colony == colony))
@@ -328,27 +382,33 @@ func get_foods_in_reach() -> Array:
 			_foods.append(food)
 	return _foods
 
+func is_colony_in_sight() -> bool:
+	var a = colony.global_position.distance_to(global_position) - colony.radius
+	var b = %SightArea.get_child(0).shape.radius
+	return a <= b
+
 func is_colony_in_range() -> bool:
-	return NavigationUtils.is_point_in_range(
-		global_position,
-		colony.global_position,
-		colony.radius
-	)
+	return colony.global_position.distance_to(global_position) < colony.radius
 
 func get_nearest_item(list: Array) -> Variant:
-	if list.is_empty():
-		return null
-		
-	var positions: Array[Vector2] = list.map(func(item): return item.global_position)
-	var nearest_pos = NavigationUtils.get_nearest_point(global_position, positions)
-	
-	for item in list:
-		if item.global_position == nearest_pos:
-			return item
-			
-	return null
+	# Filter out nulls and find nearest item by distance
+	var valid_items = list.filter(func(item): return item != null)
+	var nearest = null
+	var min_distance = INF
 
-#region Pheromone Memory Class
+	for item in valid_items:
+		var distance = global_position.distance_to(item.global_position)
+		if distance < min_distance:
+			min_distance = distance
+			nearest = item
+
+	return nearest
+
+func show_nav_path(enabled: bool):
+	nav_agent.debug_enabled = enabled
+
+
+#region Pheromone Sensing
 class ConcentrationSample:
 	var cell_pos: Vector2i
 	var concentration: float
@@ -363,20 +423,23 @@ class PheromoneMemory:
 	var samples: Array[ConcentrationSample] = []
 	var max_samples: int = 20
 	var memory_duration: int = 60000  # 60 seconds
-	var current_cell: Vector2i
+	var current_cell: Vector2i  # Track current cell to avoid duplicate samples
 	
 	func add_sample(cell_pos: Vector2i, concentration: float) -> void:
 		var current_time: int = Time.get_ticks_msec()
 		
+		# Don't add sample if we're in the same cell
 		if current_cell == cell_pos:
 			return
 			
 		current_cell = cell_pos
 		
+		# Clean old samples
 		samples = samples.filter(func(sample): 
 			return current_time - sample.timestamp < memory_duration
 		)
 		
+		# Only store unique cell positions, replace if exists
 		var existing_index = -1
 		for i in range(samples.size()):
 			if samples[i].cell_pos == cell_pos:
@@ -391,23 +454,34 @@ class PheromoneMemory:
 			samples.push_back(ConcentrationSample.new(cell_pos, concentration))
 	
 	func get_concentration_vector() -> Vector2:
-		var current_time: int = Time.get_ticks_msec()
-		
-		# Extract primitive arrays from samples
-		var positions: Array[Vector2] = []
-		var concentrations: Array[float] = []
-		var timestamps: Array[int] = []
-		
-		for sample in samples:
-			positions.append(HeatmapManager.cell_to_world(sample.cell_pos))
-			concentrations.append(sample.concentration)
-			timestamps.append(sample.timestamp)
+		if samples.size() < 2:
+			return Vector2.ZERO
 			
-		return AntUtils.PheromoneUtils.calculate_concentration_vector(
-			positions,
-			concentrations,
-			timestamps,
-			current_time,
-			memory_duration
-		)
-#endregion
+		var current_time: int = Time.get_ticks_msec()
+		var direction: Vector2 = Vector2.ZERO
+		var total_weight: float = 0.0
+		
+		# Compare each sample with more recent samples
+		for i in range(samples.size() - 1):
+			for j in range(i + 1, samples.size()):
+				var sample1: ConcentrationSample = samples[i]
+				var sample2: ConcentrationSample = samples[j]
+				
+				var concentration_diff: float = sample2.concentration - sample1.concentration
+				if concentration_diff == 0:
+					continue
+					
+				# Calculate time weight - more recent comparisons have higher weight
+				var time_factor: float = 1.0 - float(current_time - sample2.timestamp) / memory_duration
+				var weight: float = time_factor * absf(concentration_diff)
+				
+				# Convert cell positions to world coordinates for direction
+				var world_pos1: Vector2 = HeatmapManager.cell_to_world(sample1.cell_pos)
+				var world_pos2: Vector2 = HeatmapManager.cell_to_world(sample2.cell_pos)
+				
+				# Direction from lower to higher concentration
+				var sample_direction: Vector2 = (world_pos2 - world_pos1).normalized()
+				direction += sample_direction * weight * signf(concentration_diff)
+				total_weight += weight
+		
+		return direction.normalized() if total_weight > 0 else Vector2.ZERO
