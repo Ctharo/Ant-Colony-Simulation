@@ -2,6 +2,8 @@
 class_name Ant
 extends CharacterBody2D
 
+## TODO: Functional programming
+
 #region Signals
 signal spawned
 signal energy_changed
