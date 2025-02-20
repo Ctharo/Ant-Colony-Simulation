@@ -41,7 +41,6 @@ func initialize() -> bool:
 		logger.error("Problem setting up heatmap")
 		return false
 	
-	heatmap_manager.map_size = map_size
 
 	# Center both camera position and target
 
@@ -60,8 +59,6 @@ func generate_map(size: Vector2) -> bool:
 
 func setup_heatmap() -> bool:
 	heatmap_manager = HeatmapManager
-	heatmap_manager.setup_navigation()
-	heatmap_manager.setup_camera(camera)
 	return true
 
 func _exit_tree() -> void:
