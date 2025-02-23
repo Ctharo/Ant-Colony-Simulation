@@ -1,7 +1,6 @@
 class_name ColonyInfoPanel
 extends PanelContainer
 
-signal button_pressed(button_id)
 signal spawn_ants_requested(colony, num_to_spawn)
 signal highlight_ants(colony: Colony, enable: bool)
 
