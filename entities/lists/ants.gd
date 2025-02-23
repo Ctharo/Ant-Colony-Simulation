@@ -21,5 +21,5 @@ static func in_range(_entity: Node, _range: float) -> Ants:
 				a.append(ant)
 	return a
 
-static func all() -> Ants:
+static func all() -> Array[Ant]:
 	return AntManager.get_all()

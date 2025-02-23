@@ -1,6 +1,8 @@
 class_name ColonyInfoPanel
 extends PanelContainer
 
+signal button_pressed(button_id)
+signal spawn_ants_requested(colony, num_to_spawn)
 signal highlight_ants(colony: Colony, enable: bool)
 
 #region Constants
@@ -26,14 +28,7 @@ const ANT_HIGHLIGHT_COLOR = Color(Color.WHITE, 0.5)
 @onready var highlight_ants_check: CheckButton = %HighlightAntsCheck
 
 var heatmap: HeatmapManager
-# Spawning parameters
-const BATCH_SIZE = 10  # Number of ants to spawn per batch
-const FRAMES_BETWEEN_BATCHES = 5  # Frames to wait between batches
 
-# Spawning state
-var pending_spawns: int = 0
-var frames_until_next_batch: int = 0
-var is_spawning: bool = false
 #endregion
 
 
@@ -47,9 +42,8 @@ func _ready() -> void:
 	top_level = true
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	update_colony_info()
-	handle_spawning(delta)
 	queue_redraw()
 
 func show_colony_info(colony: Colony) -> void:
@@ -83,8 +77,8 @@ func update_colony_info() -> void:
 
 
 func _on_spawn_ants_pressed() -> void:
-	if current_colony:
-		start_spawning(int(ant_count_edit.value))
+	spawn_ants_requested.emit(current_colony, int(ant_count_edit.value))
+
 
 func _on_highlight_ants_toggled(enabled: bool) -> void:
 	if current_colony:
@@ -99,40 +93,8 @@ func _on_nav_debug_toggled(enabled: bool) -> void:
 			if ant.nav_agent:
 				ant.nav_agent.debug_enabled = enabled
 
-func start_spawning(num_to_spawn: int) -> void:
-	pending_spawns = num_to_spawn
-	is_spawning = true
-	frames_until_next_batch = 0
 
-func handle_spawning(_delta: float) -> void:
-	if not is_spawning:
-		return
 
-	if frames_until_next_batch > 0:
-		frames_until_next_batch -= 1
-		return
-
-	if pending_spawns <= 0:
-		_finish_spawning()
-		return
-
-	var batch_size = mini(BATCH_SIZE, pending_spawns)
-	spawn_batch(batch_size)
-	frames_until_next_batch = FRAMES_BETWEEN_BATCHES
-
-func spawn_batch(p_size: int) -> void:
-	var ant_profile: AntProfile = load("res://entities/ant/resources/basic_worker.tres")
-	var ants = current_colony.spawn_ants(p_size, ant_profile)
-	pending_spawns -= p_size
-
-	# Apply current nav debug state to new ants
-	if current_colony.nav_debug_enabled:
-		for ant in ants:
-			if ant.navigation_agent:
-				ant.navigation_agent.debug_enabled = true
-
-func _finish_spawning() -> void:
-	is_spawning = false
 
 func _on_close_pressed() -> void:
 	queue_free()

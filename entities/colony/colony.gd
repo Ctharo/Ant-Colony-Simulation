@@ -2,8 +2,6 @@ class_name Colony
 extends Node2D
 ## Colony class managing ant spawning, tracking, and role management
 
-signal ant_spawned(ant: Ant, colony: Colony)
-
 #region Member Variables
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
@@ -62,15 +60,55 @@ func init_colony_profile(p_profile: ColonyProfile) -> void:
 func _physics_process(delta: float) -> void:
 	_process_spawning(delta)
 
-func _exit_tree() -> void:
-	HeatmapManager.unregister_entity(self)
-	EvaluationSystem.cleanup_entity(self)
-	delete_all()
+#region Spawning Methods
+## Spawns multiple ants with optional profile
+func spawn_ants(num: int, p_profile: AntProfile = null) -> Array[Ant]:
+	if num <= 0:
+		logger.error("Cannot spawn non-positive number of ants")
+		return []
 
+	return AntManager.spawn_ants(self, num, p_profile)
+
+## Spawns a single ant with the given profile
+func spawn_ant(ant_profile: AntProfile) -> Ant:
+	if not ant_profile:
+		logger.error("Invalid ant profile provided")
+		return null
+
+	var _ants = AntManager.spawn_ants(self, 1, ant_profile)
+	return _ants[0] if _ants.size() > 0 else null
+
+## Processes automatic ant spawning based on profiles
 func _process_spawning(_delta: float) -> void:
 	for p_profile: AntProfile in ant_profiles:
 		if p_profile.spawn_condition.get_value(self):
 			spawn_ant(p_profile)
+#endregion
+
+## Adds an ant to this colony's management
+func add_ant(ant: Ant) -> Result:
+	if not ant:
+		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
+
+	ants.append(ant)
+
+	# Track ant in profile map
+	if ant.role in _profile_ant_map:
+		_profile_ant_map[ant.role].append(ant)
+
+	# Add to scene tree
+	if sandbox:
+		sandbox.ant_container.add_child(ant)
+	else:
+		add_child(ant)
+
+	ant.set_colony(self)
+	return Result.new()
+
+func _exit_tree() -> void:
+	HeatmapManager.unregister_entity(self)
+	EvaluationSystem.cleanup_entity(self)
+	delete_all()
 
 func delete_all():
 	for ant in ants:
@@ -91,87 +129,10 @@ func get_ants_by_profile(profile_id: String) -> Array:
 	return _profile_ant_map.get(profile_id, [])
 
 
-func add_ant(ant: Ant) -> Result:
-	if not ant:
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
-	ants.append(ant)
-
-	# Track ant in profile map
-	if ant.role in _profile_ant_map:
-		_profile_ant_map[ant.role].append(ant)
-
-	if sandbox:
-		sandbox.ant_container.add_child(ant)
-	else:
-		add_child(ant)
-	ant.set_colony(self)
-	return Result.new()
-
 func store_food(food: Food) -> void:
 	food.set_state(Food.State.STORED)
 	foods.add_food(food)
 
-func spawn_ants(num: int, p_profile: AntProfile = null) -> Array[Ant]:
-	var spawned_ants: Array[Ant] = []
-
-	var spawn_profile := p_profile
-	if not spawn_profile and ant_profiles.size() > 0:
-		spawn_profile = ant_profiles[0]
-
-	if not spawn_profile:
-		logger.error("No ant profile available for spawning")
-		return spawned_ants
-
-	for i in range(num):
-		var ant = spawn_ant(spawn_profile)
-		if ant:
-			spawned_ants.append(ant)
-
-	logger.info("Spawned %s %s from %s" % [
-		spawned_ants.size(),
-		"ant" if spawned_ants.size() == 1 else "ants",
-		name
-	])
-
-	return spawned_ants
-
-func spawn_ant(ant_profile: AntProfile) -> Ant:
-	if not ant_profile:
-		logger.error("Invalid ant profile provided")
-		return null
-
-	var ant: Ant = AntManager.spawn_ant(self)
-	if not ant:
-		logger.error("Failed to spawn ant from AntManager")
-		return null
-
-	# Apply profile attributes
-	ant.movement_rate = ant_profile.movement_rate
-	ant.vision_range = ant_profile.vision_range
-	ant.pheromones = ant_profile.pheromones
-	ant.role = ant_profile.name.to_snake_case()
-
-	# Initialize position and rotation
-	randomize()
-	var spawn_position := Vector2(
-		randf_range(-15, 15),
-		randf_range(-15, 15)
-	)
-
-	var result := add_ant(ant)
-	if result.is_error():
-		logger.error("Failed to add ant to colony: %s" % result.message)
-		return null
-
-	ant.global_rotation = randf_range(-PI, PI)
-	ant.global_position = global_position + spawn_position
-	_last_spawn_ticks = Time.get_ticks_msec()
-
-	# Connect signals
-	ant.died.connect(_on_ant_died)
-	ant_spawned.emit(ant, self)
-
-	return ant
 #endregion
 
 
