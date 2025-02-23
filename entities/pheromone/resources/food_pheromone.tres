@@ -6,7 +6,7 @@
 [sub_resource type="Resource" id="Resource_e0ucx"]
 script = ExtResource("1_66unx")
 name = "food pheromone condition"
-expression_string = "is_carrying_food()	"
+expression_string = "is_carrying_food"
 nested_expressions = Array[ExtResource("1_66unx")]([])
 description = ""
 type = 1

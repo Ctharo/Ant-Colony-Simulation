@@ -65,19 +65,19 @@ func _ready() -> void:
 	setup_selection_circle()
 	setup_buttons()
 	connect_signals()
-	
+
 func setup_buttons() -> void:
 	# Set consistent button sizes
 	for button in [expand_button, destroy_button, track_button, influence_button, nav_debug_button]:
 		if button: button.custom_minimum_size = Vector2(30, 30)
-		
-	
+
+
 	# Set initial button colors
 	destroy_button.modulate = STYLE.BUTTON_COLORS.DESTROY
 	track_button.modulate = STYLE.BUTTON_COLORS.TRACK
 	influence_button.modulate = STYLE.BUTTON_COLORS.INFLUENCE.DISABLED
 	if nav_debug_button: nav_debug_button.modulate = STYLE.BUTTON_COLORS.NAV_DEBUG.DISABLED
-	
+
 
 func connect_signals() -> void:
 	expand_button.pressed.connect(_on_expand_pressed)
@@ -85,8 +85,8 @@ func connect_signals() -> void:
 	track_button.pressed.connect(_on_track_pressed)
 	influence_button.pressed.connect(_on_influence_pressed)
 	if nav_debug_button: nav_debug_button.pressed.connect(_on_nav_debug_pressed)
-	
-	
+
+
 func _process(_delta: float) -> void:
 	if current_ant and is_instance_valid(current_ant):
 		_update_display()
@@ -102,34 +102,34 @@ func show_ant_info(ant: Ant, p_camera: Camera2D) -> void:
 	camera = p_camera
 	current_ant = ant
 	current_ant.influence_manager.camera = camera
-	
+
 	if not is_instance_valid(ant):
 		return
 
 	title_label.text = "Ant #%d" % ant.id
 	selection_circle.show()
 	show()
-	
+
 	# Connect to influence visibility changes
 	if current_ant.influence_manager.influence_visibility_changed.is_connected(_on_influence_visibility_changed):
 		current_ant.influence_manager.influence_visibility_changed.disconnect(_on_influence_visibility_changed)
 	current_ant.influence_manager.influence_visibility_changed.connect(_on_influence_visibility_changed)
-	
+
 	_update_influence_button_state()
-	
+
 	# Update nav debug button state
 	if current_ant.nav_agent:
 		if nav_debug_button: nav_debug_button.modulate = STYLE.BUTTON_COLORS.NAV_DEBUG.ENABLED \
 			if current_ant.nav_agent.debug_enabled \
 			else STYLE.BUTTON_COLORS.NAV_DEBUG.DISABLED
-		
-		
+
+
 ## Clear current ant and hide panel
 func clear() -> void:
 	if current_ant and is_instance_valid(current_ant):
 		if current_ant.influence_manager.influence_visibility_changed.is_connected(_on_influence_visibility_changed):
 			current_ant.influence_manager.influence_visibility_changed.disconnect(_on_influence_visibility_changed)
-	
+
 	current_ant = null
 	selection_circle.hide()
 	hide()
@@ -205,7 +205,7 @@ func _update_display() -> void:
 	_update_bar_color(energy_bar, energy_percent, STYLE.ENERGY_COLOR)
 
 	# Update labels
-	food_label.text = "Carrying food" if current_ant.is_carrying_food() else "Not carrying food"
+	food_label.text = "Carrying food" if current_ant.is_carrying_food else "Not carrying food"
 	profile_label.text = "Active Profile: %s" % current_ant.influence_manager.active_profile.name
 	# Update influences if expanded
 	if is_expanded:
@@ -228,7 +228,7 @@ func _update_influences() -> void:
 	# Clear existing entries
 	for child in influences_container.get_children():
 		child.queue_free()
-		
+
 	# Calculate total magnitude
 	var total_magnitude = 0.0
 	for influence in current_ant.influence_manager.active_profile.influences:
@@ -236,7 +236,7 @@ func _update_influences() -> void:
 			continue
 		var magnitude = influence.get_value(current_ant).length()
 		total_magnitude += magnitude
-	
+
 	# Add entries with relative weights
 	for influence in current_ant.influence_manager.active_profile.influences:
 		if _skip_influence(influence):
@@ -246,23 +246,23 @@ func _update_influences() -> void:
 ## Add a single influence entry to the influences container
 func _add_influence_entry(influence: Influence, total_magnitude: float) -> void:
 	var entry = HBoxContainer.new()
-	
+
 	# Color indicator
 	var color_rect = ColorRect.new()
 	color_rect.custom_minimum_size = Vector2(16, 16)
 	color_rect.color = influence.color
 	entry.add_child(color_rect)
-	
+
 	# Add spacing after color
 	var spacer = Control.new()
 	spacer.custom_minimum_size = Vector2(5, 0)
 	entry.add_child(spacer)
-	
+
 	# Name label
 	var name_label = Label.new()
 	name_label.text = influence.name.trim_suffix("_influence").capitalize()
 	entry.add_child(name_label)
-	
+
 	# Weight percentage label
 	var weight_label = Label.new()
 	var magnitude = influence.get_value(current_ant).length()
@@ -271,7 +271,7 @@ func _add_influence_entry(influence: Influence, total_magnitude: float) -> void:
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weight_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	entry.add_child(weight_label)
-	
+
 	influences_container.add_child(entry)
 #endregion
 
@@ -294,11 +294,11 @@ func _on_destroy_pressed() -> void:
 	if current_ant and is_instance_valid(current_ant):
 		current_ant.queue_free()
 		clear()
-		
+
 func _on_nav_debug_pressed() -> void:
 	if not current_ant or not is_instance_valid(current_ant):
 		return
-		
+
 	if current_ant.nav_agent:
 		current_ant.nav_agent.debug_enabled = !current_ant.nav_agent.debug_enabled
 		nav_debug_button.modulate = STYLE.BUTTON_COLORS.NAV_DEBUG.ENABLED \
@@ -315,22 +315,22 @@ func _on_track_pressed() -> void:
 			camera.stop_tracking()
 		else:
 			camera.track_entity(current_ant)
-			
+
 func _on_influence_visibility_changed(_enabled: bool) -> void:
 	_update_influence_button_state()
-	
+
 func _on_influence_pressed() -> void:
 	if not current_ant or not is_instance_valid(current_ant):
 		return
-		
+
 	current_ant.influence_manager.toggle_visualization()
 	_update_influence_button_state()
-	
+
 ## Update influence button state based on visualization state
 func _update_influence_button_state() -> void:
 	if not current_ant or not is_instance_valid(current_ant):
 		return
-		
+
 	influence_button.modulate = STYLE.BUTTON_COLORS.INFLUENCE.ENABLED \
 		if current_ant.influence_manager.is_visualization_enabled() \
 		else STYLE.BUTTON_COLORS.INFLUENCE.DISABLED

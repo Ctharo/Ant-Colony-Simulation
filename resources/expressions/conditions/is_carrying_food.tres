@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_7mq7g")
 name = "is carrying food"
-expression_string = "is_instance_valid(_carried_food)"
+expression_string = "is_carrying_food"
 nested_expressions = Array[ExtResource("1_7mq7g")]([])
 description = ""
 type = 19

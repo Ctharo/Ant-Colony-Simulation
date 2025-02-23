@@ -37,6 +37,6 @@ func _should_emit(ant: Ant) -> bool:
 		return true
 	return _evaluate_condition(ant)
 
-	
+
 func _evaluate_condition(ant: Ant):
 	return EvaluationSystem.get_value(condition, ant)

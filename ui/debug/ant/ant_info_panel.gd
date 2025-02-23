@@ -65,7 +65,7 @@ func _update_ui() -> void:
 	if current_ant and current_ant != null:
 		# Update action text
 		# Update food text
-		food_label.text = "Carrying Food: %s" % ("true" if current_ant.is_carrying_food() else "false")
+		food_label.text = "Carrying Food: %s" % ("true" if current_ant.is_carrying_food else "false")
 		# Update role text
 		role_label.text = "Role: %s" % current_ant.role
 	else:
@@ -111,7 +111,7 @@ func show_ant_info(ant: Ant) -> void:
 	update_status_bars()
 
 	# Update food info
-	food_label.text = "Carrying Food: %s" % ("true" if ant.is_carrying_food() else "false")
+	food_label.text = "Carrying Food: %s" % ("true" if ant.is_carrying_food else "false")
 
 	# Queue redraw for selection circle
 	queue_redraw()
@@ -139,45 +139,45 @@ func update_legend(influences: Array) -> void:
 	# Calculate total magnitude for normalization
 	var total_magnitude = 0.0
 	var influence_data = []
-	
+
 	# First pass: collect data and calculate total magnitude
 	for influence in influences:
 		if _should_ignore_influence(influence):
 			continue
-			
+
 		var direction = eval_system.get_value(influence)
 		var magnitude = direction.length()
-		
+
 		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
 			continue
-			
+
 		total_magnitude += magnitude
 		influence_data.append({
 			"influence": influence,
 			"magnitude": magnitude
 		})
-	
+
 	# Sort by magnitude for consistent ordering
 	influence_data.sort_custom(
 		func(a, b): return a.magnitude > b.magnitude
 	)
-	
+
 	# Second pass: add legend entries with normalized weights
 	for data in influence_data:
 		var influence = data.influence
 		var normalized_weight = data.magnitude / total_magnitude if total_magnitude > 0 else 0.0
-		
+
 		add_legend_entry(
 			influence.name,
 			influence.color,
 			normalized_weight
 		)
-		
+
 # Modified legend entry function with weight display
 func add_legend_entry(p_name: String, color: Color, normalized_weight: float) -> void:
 	var entry = HBoxContainer.new()
 	var spacer = Control.new()
-	
+
 	# Color indicator
 	var influence_type = p_name.to_snake_case().trim_suffix("_influence")
 	if not influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
@@ -204,12 +204,12 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	# Display percentage with one decimal place
 	weight_label.text = "%.1f%%" % (normalized_weight * 100)
-	
+
 	# Add some spacing before the percentage
 	var weight_spacer = Control.new()
 	weight_spacer.custom_minimum_size = Vector2(10, 0)
 	entry.add_child(weight_spacer)
-	
+
 	entry.add_child(weight_label)
 
 	influences_legend.add_child(entry)

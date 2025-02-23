@@ -35,7 +35,14 @@ var role: String
 var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
-var _carried_food: Food
+var is_carrying_food: bool
+var _carried_food: Food :
+	set(value):
+		_carried_food = value
+		if _carried_food:
+			is_carrying_food = true
+		else:
+			is_carrying_food = false
 
 #region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
@@ -83,7 +90,7 @@ var resting_rate: float = 20.0
 const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
-		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food() else 0) + 1) * pow(movement_rate, 1.2)
+		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food else 0) + 1) * pow(movement_rate, 1.2)
 
 var energy_max: float = 100
 var energy_level: float = energy_max :
@@ -155,12 +162,12 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Attempt actions based on immediate conditions
-	if get_foods_in_reach() and not is_carrying_food():
+	if get_foods_in_reach() and not is_carrying_food:
 		harvest_food()
 		return
 
 	# If we're at colony with food, store it
-	if is_colony_in_range() and is_carrying_food():
+	if is_colony_in_range() and is_carrying_food:
 		store_food()
 		return
 
@@ -289,13 +296,10 @@ func set_colony(p_colony: Colony) -> void:
 
 ## Cleans up from this perspective, AntManager receives signal and clears from all tracking
 func _on_died() -> void:
-	if is_carrying_food():
+	if is_carrying_food:
 		_carried_food.set_state(Food.State.AVAILABLE)
 	is_dead = true
 	died.emit(self)
-
-func is_carrying_food() -> bool:
-	return is_instance_valid(_carried_food)
 
 
 func is_navigation_finished() -> bool:
