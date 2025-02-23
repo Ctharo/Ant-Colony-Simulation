@@ -47,8 +47,8 @@ var _carried_food: Food
 #endregion
 
 #region Actions
-enum Action { 
-	MOVE = 0, 
+enum Action {
+	MOVE = 0,
 	HARVEST = 1,
 	STORE = 2,
 	REST = 3
@@ -76,7 +76,7 @@ var vision_range: float = 100.0 :
 	set(value):
 		vision_range = value
 		$SightArea/CollisionShape2D.shape.radius = vision_range
-		
+
 var movement_rate: float = 25.0
 var resting_rate: float = 20.0
 
@@ -113,10 +113,10 @@ func _init() -> void:
 func _ready() -> void:
 	# Initialize influence manager
 	influence_manager.initialize(self)
-	
+
 	if profile:
 		init_profile(profile)
-	
+
 	# Register to heatmap
 	HeatmapManager.register_entity(self)
 	for pheromone in pheromones:
@@ -134,7 +134,7 @@ func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
 	if not influence_manager:
 		return
-	
+
 	for influence: InfluenceProfile in p_profile.movement_influences:
 		influence_manager.add_profile(influence)
 
@@ -145,7 +145,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_process_carrying()
-	
+
 	# Energy consumption
 	if energy_level > 0 and not is_colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
@@ -180,7 +180,7 @@ func move_to(target_pos: Vector2) -> bool:
 	# Set the navigation target
 	nav_agent.set_target_position(target_pos)
 	return true
-	
+
 ## Stops the current movement
 func stop_movement() -> void:
 	velocity = Vector2.ZERO
@@ -197,7 +197,7 @@ func _process_carrying() -> void:
 	if is_instance_valid(_carried_food):
 		_carried_food.global_position = mouth_marker.global_position
 		_carried_food.rotation = rotation
-		
+
 func _process_resting(delta: float) -> void:
 	health_level += resting_rate * delta
 	energy_level += resting_rate * delta
@@ -323,34 +323,34 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
-## Samples heat at a location (i.e., single cell) and moves on. Develops a 
+## Samples heat at a location (i.e., single cell) and moves on. Develops a
 ## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
 	if not is_instance_valid(colony):
 		return Vector2.ZERO
-		
+
 	# Initialize memory for this pheromone type if needed
 	if not pheromone_memories.has(pheromone_name):
 		pheromone_memories[pheromone_name] = PheromoneMemory.new()
-	
+
 	# Get current cell position
 	var current_cell: Vector2i = HeatmapManager.world_to_cell(global_position)
-	
+
 	# Sample current position
 	var current_concentration: float = HeatmapManager.get_heat_at_position(
 		self,
 		pheromone_name
 	)
-	
+
 	# Add to memory using cell coordinates
 	pheromone_memories[pheromone_name].add_sample(current_cell, current_concentration)
-	
+
 	# Get direction based on concentration history
 	var direction: Vector2 = pheromone_memories[pheromone_name].get_concentration_vector()
-	
+
 	# Invert direction if not following concentration
 	return direction if follow_concentration else -direction
-	
+
 func get_ants_in_view() -> Array:
 	var ants: Array = []
 	for ant in sight_area.get_overlapping_bodies():
@@ -413,7 +413,7 @@ class ConcentrationSample:
 	var cell_pos: Vector2i
 	var concentration: float
 	var timestamp: int
-	
+
 	func _init(p_cell_pos: Vector2i, p_concentration: float) -> void:
 		cell_pos = p_cell_pos
 		concentration = p_concentration
@@ -424,64 +424,64 @@ class PheromoneMemory:
 	var max_samples: int = 20
 	var memory_duration: int = 60000  # 60 seconds
 	var current_cell: Vector2i  # Track current cell to avoid duplicate samples
-	
+
 	func add_sample(cell_pos: Vector2i, concentration: float) -> void:
 		var current_time: int = Time.get_ticks_msec()
-		
+
 		# Don't add sample if we're in the same cell
 		if current_cell == cell_pos:
 			return
-			
+
 		current_cell = cell_pos
-		
+
 		# Clean old samples
-		samples = samples.filter(func(sample): 
+		samples = samples.filter(func(sample):
 			return current_time - sample.timestamp < memory_duration
 		)
-		
+
 		# Only store unique cell positions, replace if exists
 		var existing_index = -1
 		for i in range(samples.size()):
 			if samples[i].cell_pos == cell_pos:
 				existing_index = i
 				break
-				
+
 		if existing_index != -1:
 			samples[existing_index] = ConcentrationSample.new(cell_pos, concentration)
 		else:
 			if samples.size() >= max_samples:
 				samples.pop_front()
 			samples.push_back(ConcentrationSample.new(cell_pos, concentration))
-	
+
 	func get_concentration_vector() -> Vector2:
 		if samples.size() < 2:
 			return Vector2.ZERO
-			
+
 		var current_time: int = Time.get_ticks_msec()
 		var direction: Vector2 = Vector2.ZERO
 		var total_weight: float = 0.0
-		
+
 		# Compare each sample with more recent samples
 		for i in range(samples.size() - 1):
 			for j in range(i + 1, samples.size()):
 				var sample1: ConcentrationSample = samples[i]
 				var sample2: ConcentrationSample = samples[j]
-				
+
 				var concentration_diff: float = sample2.concentration - sample1.concentration
 				if concentration_diff == 0:
 					continue
-					
+
 				# Calculate time weight - more recent comparisons have higher weight
 				var time_factor: float = 1.0 - float(current_time - sample2.timestamp) / memory_duration
 				var weight: float = time_factor * absf(concentration_diff)
-				
+
 				# Convert cell positions to world coordinates for direction
 				var world_pos1: Vector2 = HeatmapManager.cell_to_world(sample1.cell_pos)
 				var world_pos2: Vector2 = HeatmapManager.cell_to_world(sample2.cell_pos)
-				
+
 				# Direction from lower to higher concentration
 				var sample_direction: Vector2 = (world_pos2 - world_pos1).normalized()
 				direction += sample_direction * weight * signf(concentration_diff)
 				total_weight += weight
-		
+
 		return direction.normalized() if total_weight > 0 else Vector2.ZERO

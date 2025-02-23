@@ -93,7 +93,7 @@ func _get_or_create_state(expression: Logic, entity: Node) -> ExpressionState:
 	var states := _get_entity_states(entity)
 	if not states.has(expression.id):
 		states[expression.id] = ExpressionState.new(expression, entity)
-		
+
 	return states[expression.id]
 
 ## Registers an expression for a specific entity context
@@ -113,7 +113,7 @@ func register_expression(expression: Logic, entity: Node) -> void:
 		register_expression(nested, entity)
 
 	logger.trace("Completed registration of %s for entity %s" % [
-		expression.id, 
+		expression.id,
 		entity.name
 	])
 #endregion
@@ -129,17 +129,17 @@ func get_value(expression: Logic, entity: Node) -> Variant:
 			entity.name
 		])
 		register_expression(expression, entity)
-	
+
 	# Get expression state if available
 	var state: ExpressionState = states[expression.id]
 	if not state:
 		logger.error("Failed to get/create state for expression %s" % expression.id)
 		return null
-		
+
 	# Lazy parsing if needed
 	if not state.is_parsed:
 		_parse_expression(expression, entity)
-	
+
 	# Calculate new value
 	var result = _calculate(expression.id, entity)
 	return result
@@ -171,7 +171,7 @@ func _parse_expression(expression: Logic, entity: Node) -> void:
 	var error = state.parse(PackedStringArray(variable_names))
 	if error != OK:
 		logger.error('Failed to parse expression "%s": %s' % [
-			expression.name, 
+			expression.name,
 			expression.expression_string
 		])
 		return
@@ -217,7 +217,7 @@ func _calculate(expression_id: String, entity: Node) -> Variant:
 
 	if logger.is_debug_enabled():
 		logger.debug("Final result for %s (entity %s) = %s" % [
-			expression_id, 
+			expression_id,
 			entity.name,
 			result
 		])

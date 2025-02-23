@@ -90,7 +90,7 @@ func handle_left_click(_screen_position: Vector2) -> void:
 
 func handle_right_click(screen_position: Vector2) -> void:
 	clear_active_menu()
-	
+
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		if camera.hovered_entity is Ant:
 			show_ant_context_menu(camera.hovered_entity, screen_position)
@@ -98,7 +98,7 @@ func handle_right_click(screen_position: Vector2) -> void:
 			show_colony_context_menu(camera.hovered_entity, screen_position)
 	else:
 		show_empty_context_menu(screen_position)
-		
+
 #endregion
 
 
@@ -108,7 +108,7 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	
+
 	# Add buttons
 	active_context_menu.add_button("Spawn Ants",
 		preload("res://ui/styles/spawn_normal.tres"),
@@ -122,7 +122,7 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 	active_context_menu.add_button("Destroy",
 		preload("res://ui/styles/destroy_normal.tres"),
 		preload("res://ui/styles/destroy_hover.tres"))
-	
+
 	# Connect signal
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_colony_menu_button_pressed(index, colony))
@@ -131,7 +131,7 @@ func show_colony_context_menu(colony: Colony, world_pos: Vector2) -> void:
 func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 	if not is_instance_valid(colony):
 		return
-		
+
 	match index:
 		0: # Spawn Ants
 			var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
@@ -144,16 +144,16 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 			colony.heatmap_enabled = !colony.heatmap_enabled
 		3: # Destroy
 			colony_manager.remove_colony(colony)
-	
+
 	clear_active_menu()
-	
+
 #region Context Menu Management
 func show_empty_context_menu(world_pos: Vector2) -> void:
 	clear_active_menu()
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	
+
 	# Add buttons
 	active_context_menu.add_button("Spawn Colony",
 		preload("res://ui/styles/spawn_normal.tres"),
@@ -161,7 +161,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 	active_context_menu.add_button("Spawn Food",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
-	
+
 	# Connect signal
 	active_context_menu.button_pressed.connect(_on_empty_menu_button_pressed.bind(world_pos))
 	active_context_menu.show_at(world_pos)
@@ -180,7 +180,7 @@ func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	
+
 	# Add buttons
 	active_context_menu.add_button("Track Ant",
 		preload("res://ui/styles/info_normal.tres"),
@@ -191,7 +191,7 @@ func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	active_context_menu.add_button("Destroy",
 		preload("res://ui/styles/destroy_normal.tres"),
 		preload("res://ui/styles/destroy_hover.tres"))
-	
+
 	# Connect signal
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
@@ -200,7 +200,7 @@ func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 	if not is_instance_valid(ant):
 		return
-		
+
 	match index:
 		0: # Track Ant
 			if is_instance_valid(camera.tracked_entity) and ant == camera.tracked_entity:
@@ -211,7 +211,7 @@ func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 			pass
 		2: # Destroy
 			ant_manager.remove_ant(ant)
-	
+
 	clear_active_menu()
 
 func clear_active_menu() -> void:
@@ -283,7 +283,7 @@ func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 
 	colony.sandbox = sandbox
 	$"../../ColonyContainer".add_child(colony)
-	
+
 
 func _on_colony_spawn_ants_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
@@ -291,7 +291,7 @@ func _on_colony_spawn_ants_requested(colony: Colony) -> void:
 		for ant in ants:
 			if not ant.is_inside_tree():
 				$"../../AntContainer".add_child(ant)
-				
+
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		show_info_panel(colony)
@@ -341,7 +341,7 @@ func _on_spawn_food_requested(screen_position: Vector2) -> void:
 		)
 		$"../../FoodContainer".add_child(food)
 		food.global_position = world_position + wiggle
-		
+
 func _on_menu_item_selected(id: Variant, pos: Vector2):
 	if id == "arc_id1":
 		_on_spawn_colony_requested(pos)

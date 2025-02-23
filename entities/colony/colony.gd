@@ -46,7 +46,7 @@ var sandbox
 #region Initialization
 func _init() -> void:
 	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
-	
+
 func _ready() -> void:
 	HeatmapManager.register_entity(self)
 
@@ -54,7 +54,7 @@ func init_colony_profile(p_profile: ColonyProfile) -> void:
 	profile = p_profile
 	ant_profiles.clear()
 	_profile_ant_map.clear()
-	
+
 	for ant_profile: AntProfile in p_profile.ant_profiles:
 		ant_profiles.append(ant_profile)
 		_profile_ant_map[ant_profile.id] = []
@@ -95,11 +95,11 @@ func add_ant(ant: Ant) -> Result:
 	if not ant:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
 	ants.append(ant)
-	
+
 	# Track ant in profile map
 	if ant.role in _profile_ant_map:
 		_profile_ant_map[ant.role].append(ant)
-	
+
 	if sandbox:
 		sandbox.ant_container.add_child(ant)
 	else:
@@ -113,64 +113,64 @@ func store_food(food: Food) -> void:
 
 func spawn_ants(num: int, p_profile: AntProfile = null) -> Array[Ant]:
 	var spawned_ants: Array[Ant] = []
-	
+
 	var spawn_profile := p_profile
 	if not spawn_profile and ant_profiles.size() > 0:
 		spawn_profile = ant_profiles[0]
-	
+
 	if not spawn_profile:
 		logger.error("No ant profile available for spawning")
 		return spawned_ants
-	
+
 	for i in range(num):
 		var ant = spawn_ant(spawn_profile)
 		if ant:
 			spawned_ants.append(ant)
-	
+
 	logger.info("Spawned %s %s from %s" % [
-		spawned_ants.size(), 
-		"ant" if spawned_ants.size() == 1 else "ants", 
+		spawned_ants.size(),
+		"ant" if spawned_ants.size() == 1 else "ants",
 		name
 	])
-	
+
 	return spawned_ants
-	
+
 func spawn_ant(ant_profile: AntProfile) -> Ant:
 	if not ant_profile:
 		logger.error("Invalid ant profile provided")
 		return null
-		
+
 	var ant: Ant = AntManager.spawn_ant(self)
 	if not ant:
 		logger.error("Failed to spawn ant from AntManager")
 		return null
-		
+
 	# Apply profile attributes
 	ant.movement_rate = ant_profile.movement_rate
 	ant.vision_range = ant_profile.vision_range
 	ant.pheromones = ant_profile.pheromones
 	ant.role = ant_profile.name.to_snake_case()
-	
+
 	# Initialize position and rotation
 	randomize()
 	var spawn_position := Vector2(
 		randf_range(-15, 15),
 		randf_range(-15, 15)
 	)
-	
+
 	var result := add_ant(ant)
 	if result.is_error():
 		logger.error("Failed to add ant to colony: %s" % result.message)
 		return null
-		
+
 	ant.global_rotation = randf_range(-PI, PI)
 	ant.global_position = global_position + spawn_position
 	_last_spawn_ticks = Time.get_ticks_msec()
-	
+
 	# Connect signals
 	ant.died.connect(_on_ant_died)
 	ant_spawned.emit(ant, self)
-	
+
 	return ant
 #endregion
 
@@ -188,16 +188,16 @@ func _on_ant_died(ant: Ant) -> void:
 func ant_count_by_role(role: String) -> int:
 	if role.is_empty():
 		return 0
-		
+
 	var normalized_role = role.to_lower().strip_edges()
 	if normalized_role.is_empty():
 		return 0
-		
+
 	var result = 0
 	for ant in ants:
 		if not is_instance_valid(ant):
 			continue
-			
+
 		var ant_role = ant.role.to_lower()
 		# Check both if role contains ant's role or ant's role contains the search role
 		if ant_role.contains(normalized_role) or normalized_role.contains(ant_role):

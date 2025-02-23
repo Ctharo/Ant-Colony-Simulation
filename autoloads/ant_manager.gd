@@ -81,7 +81,7 @@ func remove_ant(ant: Ant) -> void:
 		return
 
 	if not ants.has(ant):
-		return 
+		return
 
 	# Stop ant processing
 	AntManager.start_ant(ant, false)
@@ -89,10 +89,10 @@ func remove_ant(ant: Ant) -> void:
 	# Remove from tracking
 	AntManager.ants.erase(ant)
 	AntManager.ant_removed.emit(ant)
-	
+
 	HeatmapManager.unregister_entity(ant)
 	EvaluationSystem.cleanup_entity(ant)
-	
+
 	# Clean up node
 	ant.queue_free()
 
