@@ -24,7 +24,7 @@ static func create_basic_worker() -> AntProfile:
 	profile.size = 1.0
 	profile.spawn_condition = Logic.new()
 	profile.spawn_condition.expression_string = 'ant_count_by_role("basic_worker") < 5 and ticks_since_spawn() > 1000'
-
+	profile.spawn_condition.name = "name"
 	# Add pheromones
 	profile.pheromones = [
 		load("res://entities/pheromone/resources/food_pheromone.tres"),
