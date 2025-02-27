@@ -26,22 +26,22 @@ static func create_basic_worker() -> AntProfile:
 	profile.movement_rate = 25.0
 	profile.vision_range = 100.0
 	profile.size = 1.0
-	
+
 	# Add pheromones
 	profile.pheromones = [
 		load("res://entities/pheromone/resources/food_pheromone.tres"),
 		load("res://entities/pheromone/resources/home_pheromone.tres")
 	]
-	
+
 	# Add movement influences
 	profile.movement_influences = [
 		load("res://resources/influences/profiles/look_for_food.tres"),
 		load("res://resources/influences/profiles/go_home.tres")
 	]
-	
+
 	# Add action profiles
 	profile.action_profiles = [
 		ForagerActionProfile.create_standard()
 	]
-	
+
 	return profile

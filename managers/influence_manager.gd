@@ -17,7 +17,7 @@ const STYLE = {
 	}
 }
 
-var use_best_direction: bool = true  
+var use_best_direction: bool = true
 
 var _visualization_enabled: bool = false
 var camera: Camera2D
@@ -55,7 +55,7 @@ var logger: Logger
 func _init() -> void:
 	name = "influence_manager"
 	logger = Logger.new(name, DebugLogger.Category.INFLUENCE)
-	
+
 func _ready() -> void:
 	top_level = true
 	camera = get_tree().get_first_node_in_group("camera")
@@ -67,7 +67,7 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	_profile_check_timer += delta
 	_target_recalc_timer += delta
-	
+
 	if _profile_check_timer >= profile_check_interval:
 		for profile: InfluenceProfile in profiles:
 			if is_profile_valid(profile):
@@ -120,7 +120,7 @@ func remove_profile(influence_profile: InfluenceProfile) -> void:
 
 	if active_profile == influence_profile:
 		active_profile = null
-	
+
 func _on_active_profile_changed() -> void:
 	profile_changed.emit()
 #endregion
@@ -129,7 +129,7 @@ func _on_active_profile_changed() -> void:
 func should_recalculate_target() -> bool:
 	if _target_recalc_timer < target_recalculation_cooldown:
 		return false
-		
+
 	var nav_agent: NavigationAgent2D = entity.nav_agent
 	if not nav_agent:
 		return false
@@ -150,7 +150,7 @@ func update_movement_target() -> void:
 	_target_recalc_timer = 0.0
 	var new_target = _calculate_target_position()
 	entity.move_to(new_target)
-		
+
 	# Only update if we have a meaningful new target
 	if new_target and new_target != entity.global_position and entity.has_method("move_to"):
 		# Ensure the target is different enough to warrant movement
@@ -162,15 +162,15 @@ func update_movement_target() -> void:
 func _calculate_target_position() -> Vector2:
 	if not entity or not active_profile:
 		return Vector2.ZERO
-	
+
 	var base_direction = _calculate_direction(active_profile.influences)
 	if base_direction == Vector2.ZERO:
 		return Vector2.ZERO
-		
+
 	var nav_region = entity.get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
 	if not nav_region:
 		return entity.global_position + base_direction * TARGET_DISTANCE
-		
+
 	# Choose between simple or best direction calculation
 	if use_best_direction:
 		return _get_best_navigable_target(base_direction, nav_region)
@@ -178,7 +178,7 @@ func _calculate_target_position() -> Vector2:
 		return _get_simple_navigable_target(base_direction, nav_region)
 
 func _get_simple_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
-	var target_pos = entity.global_position + direction * TARGET_DISTANCE 
+	var target_pos = entity.global_position + direction * TARGET_DISTANCE
 	return NavigationServer2D.map_get_closest_point(nav_region.get_navigation_map(), target_pos)
 
 func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
@@ -187,24 +187,24 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 	var test_angles = [0,PI/16, -PI/16, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
 	var best_target: Vector2 = entity.global_position
 	var best_distance: float = 0.0
-	
+
 	for angle in test_angles:
 		var test_direction = direction.rotated(angle)
-		var test_target = entity.global_position + test_direction * TARGET_DISTANCE 
+		var test_target = entity.global_position + test_direction * TARGET_DISTANCE
 		var navigable_point = NavigationServer2D.map_get_closest_point(map_rid, test_target)
-		
+
 		if NavigationServer2D.map_get_path(
-			map_rid, 
+			map_rid,
 			entity.global_position,
 			navigable_point,
 			true
 		).size() > 0:
 			var dist_to_original = (test_target - navigable_point).length()
-			
+
 			if best_distance == 0.0 or dist_to_original < best_distance:
 				best_target = navigable_point
 				best_distance = dist_to_original
-				
+
 				if dist_to_original < 5.0:
 					break
 	assert(best_distance > 0)
@@ -213,30 +213,30 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 func _calculate_direction(influences: Array[Logic]) -> Vector2:
 	if not influences:
 		return Vector2.ZERO
-		
+
 	var resultant_vector := Vector2.ZERO
-	
+
 	for influence in influences:
 		if not influence:
 			continue
-		
+
 		# If has condition and it evaluates to false, skip
 		if influence.condition and not EvaluationSystem.get_value(influence.condition, entity):
 			continue
-		
+
 		# Get the direction vector which includes magnitude as weight
 		var direction = EvaluationSystem.get_value(influence, entity)
 		if not direction:
 			continue
-			
+
 		resultant_vector += direction
-		
+
 		logger.trace("Influence %s evaluated: Direction: %s, Magnitude: %s" % [
 			influence.id,
 			str(direction.normalized()),
 			str(direction.length())
 		])
-	
+
 	return resultant_vector.normalized()
 #endregion
 
@@ -258,51 +258,51 @@ func should_ignore_influence(influence: Logic) -> bool:
 func draw_influences() -> void:
 	if not active_profile:
 		return
-		
+
 	# Collect influence data and calculate total magnitude
 	var total_magnitude = 0.0
 	var influence_data = []
-	
+
 	for influence in active_profile.influences:
 		if should_ignore_influence(influence):
 			continue
-			
+
 		if not influence.is_valid(entity):
 			continue
-			
+
 		var direction = EvaluationSystem.get_value(influence, entity)
 		var magnitude = direction.length()
-		
+
 		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
 			continue
-			
+
 		total_magnitude += magnitude
-		
+
 		# Check for existing color in meta, create if not exists
 		var influence_color: Color = influence.color
-	
+
 		influence_data.append({
 			"magnitude": magnitude,
 			"direction": direction.normalized(),
 			"color": influence_color,
 			"name": influence.name
 		})
-	
+
 	if total_magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
 		return
-		
+
 	# Calculate normalized weights and total direction
 	var total_direction = Vector2.ZERO
 	for data in influence_data:
 		data.normalized_weight = data.magnitude / total_magnitude
 		data.weighted_direction = data.direction * data.normalized_weight
 		total_direction += data.weighted_direction
-	
+
 	# Sort by magnitude for layered rendering
 	influence_data.sort_custom(
 		func(a, b): return a.magnitude < b.magnitude
 	)
-	
+
 	# Draw overall influence arrow
 	var overall_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
 	draw_arrow(
@@ -312,7 +312,7 @@ func draw_influences() -> void:
 		STYLE.INFLUENCE_SETTINGS.ARROW_WIDTH * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE,
 		STYLE.INFLUENCE_SETTINGS.ARROW_HEAD_SIZE * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
 	)
-	
+
 	# Draw individual influence arrows
 	for data in influence_data:
 		var arrow_length = STYLE.INFLUENCE_SETTINGS.ARROW_LENGTH * data.normalized_weight * STYLE.INFLUENCE_SETTINGS.OVERALL_SCALE
@@ -327,16 +327,16 @@ func draw_influences() -> void:
 
 func draw_arrow(start: Vector2, end: Vector2, color: Color, width: float, head_size: float) -> void:
 	draw_line(start, end, color, width)
-	
+
 	var direction = (end - start)
 	var length = direction.length()
 	if length <= head_size:
 		return
-		
+
 	direction = direction.normalized()
 	var right = direction.rotated(PI * 3/4) * head_size
 	var left = direction.rotated(-PI * 3/4) * head_size
-	
+
 	var arrow_points = PackedVector2Array([
 		end,
 		end + right,

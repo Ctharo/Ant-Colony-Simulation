@@ -140,12 +140,14 @@ func _ready() -> void:
 
    # Initialize action manager
 	action_manager.initialize(self)
-	
+
+
+
 	# Apply action profiles from ant profile
 	if profile and profile.action_profiles:
 		for profile in profile.action_profiles:
 			apply_action_profile(profile)
-	
+
 	# Connect signals
 	action_manager.action_started.connect(_on_action_started)
 	action_manager.action_completed.connect(_on_action_completed)
@@ -158,6 +160,9 @@ func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
 	if not influence_manager:
 		return
+
+	var p: ForagerActionProfile = load("res://logic/actions/profiles/forager_action_profile.gd").create_standard()
+	profile.action_profiles.append(p)
 
 	for influence: InfluenceProfile in p_profile.movement_influences:
 		influence_manager.add_profile(influence)
@@ -174,10 +179,10 @@ func _physics_process(delta: float) -> void:
 	if energy_level > 0 and not is_colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
-	
+
 	# Process action profiles to add/remove profiles as conditions change
 	_process_action_profiles(delta)
-	
+
 	# The action manager handles action execution
 	# No need for manual action handling
 
@@ -189,7 +194,7 @@ func _physics_process(delta: float) -> void:
 func apply_action_profile(profile: AntActionProfile) -> void:
 	if not is_instance_valid(profile) or profile in active_profiles:
 		return
-		
+
 	profile.apply_to(self)
 	active_profiles.append(profile)
 	logger.debug("Applied action profile: %s" % profile.name)
@@ -198,7 +203,7 @@ func apply_action_profile(profile: AntActionProfile) -> void:
 func remove_action_profile(profile: AntActionProfile) -> void:
 	if not is_instance_valid(profile) or not profile in active_profiles:
 		return
-		
+
 	profile.remove_from(self)
 	active_profiles.erase(profile)
 	logger.debug("Removed action profile: %s" % profile.name)
@@ -210,17 +215,15 @@ func _process_action_profiles(delta: float) -> void:
 			if is_instance_valid(profile):
 				var is_active = profile.is_active_for(self)
 				var is_applied = profile in active_profiles
-				
+
 				if is_active and not is_applied:
 					apply_action_profile(profile)
 				elif not is_active and is_applied:
 					remove_action_profile(profile)
 
-
-
 func _on_action_started(action: AntAction) -> void:
 	logger.debug("Ant %s started action: %s" % [name, action.name])
-	
+
 	# Special handling for movement actions
 	if action is MoveToAction and action.name == "Return To Colony":
 		# Dynamically set colony as target
