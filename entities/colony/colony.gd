@@ -121,7 +121,7 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 func _process_spawning(_delta: float) -> void:
 	for p_profile: AntProfile in ant_profiles:
 		if p_profile.spawn_condition and p_profile.spawn_condition.get_value(self):
-			spawn_ant(p_profile)
+			add_ant(spawn_ant(p_profile))
 #endregion
 
 ## Adds an ant to this colony's management
