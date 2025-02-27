@@ -38,28 +38,28 @@ func initialize(p_ant: Ant) -> void:
 	if not is_instance_valid(p_ant):
 		logger.error("Cannot initialize with invalid ant")
 		return
-		
+
 	ant = p_ant
 	logger.debug("Initialized action manager for " + ant.name)
 
 func _physics_process(delta: float) -> void:
 	if not is_processing_enabled or not is_instance_valid(ant) or ant.is_dead:
 		return
-	
+
 	# Update cooldowns for all actions
 	for action in available_actions:
 		action.update_cooldown(delta)
-	
+
 	# Process forced action if one is set
 	if forced_action:
 		_process_forced_action(delta)
 		return
-	
+
 	# Check if current action is running
 	if active_action and active_action.status == AntAction.ActionStatus.RUNNING:
 		active_action.update(delta)
 		return
-	
+
 	# Find the highest priority action that can start
 	var next_action = _find_next_action()
 	if next_action:
@@ -86,12 +86,12 @@ func _process_forced_action(delta: float) -> void:
 func _find_next_action() -> AntAction:
 	var candidate: AntAction
 	var highest_priority: int = -99999
-	
+
 	for action in available_actions:
 		if action.can_start() and action.priority > highest_priority:
 			candidate = action
 			highest_priority = action.priority
-	
+
 	return candidate
 
 ## Add an action to the available actions
@@ -99,28 +99,28 @@ func add_action(action: AntAction) -> void:
 	if not is_instance_valid(action):
 		logger.error("Cannot add null action")
 		return
-		
+
 	if action in available_actions:
 		return
-	
+
 	action.initialize(ant)
 	available_actions.append(action)
 	_connect_action_signals(action)
-	
+
 	logger.debug("Added action: " + action.name)
 
 ## Remove an action from available actions
 func remove_action(action: AntAction) -> void:
 	if not action in available_actions:
 		return
-	
+
 	if action == active_action:
 		action.interrupt()
 		active_action = null
-	
+
 	available_actions.erase(action)
 	_disconnect_action_signals(action)
-	
+
 	logger.debug("Removed action: " + action.name)
 
 ## Force a specific action to run
@@ -128,13 +128,13 @@ func force_action(action: AntAction) -> bool:
 	if not action in available_actions:
 		logger.error("Cannot force action " + action.name + ": not in available actions")
 		return false
-	
+
 	if active_action and active_action != action and active_action.status == AntAction.ActionStatus.RUNNING:
 		active_action.interrupt()
-	
+
 	forced_action = action
 	_change_active_action(action)
-	
+
 	logger.debug("Forced action: " + action.name)
 	return true
 
@@ -142,16 +142,16 @@ func force_action(action: AntAction) -> bool:
 func cancel_active_action() -> void:
 	if active_action and active_action.status == AntAction.ActionStatus.RUNNING:
 		active_action.interrupt()
-		
+
 	forced_action = null
-	
+
 	logger.debug("Cancelled active action")
 
 ## Change the active action
 func _change_active_action(new_action: AntAction) -> void:
 	var old_action = active_action
 	active_action = new_action
-	
+
 	if old_action != new_action:
 		active_action_changed.emit(old_action, new_action)
 
@@ -187,39 +187,39 @@ func get_action_by_name(action_name: String) -> AntAction:
 ## Enable or disable action processing
 func set_processing_enabled(enabled: bool) -> void:
 	is_processing_enabled = enabled
-	
+
 	if not enabled and active_action and active_action.status == AntAction.ActionStatus.RUNNING:
 		active_action.interrupt()
 		active_action = null
 		forced_action = null
 
 ## Signal handlers
-func _on_action_started(ant: Ant, action: AntAction) -> void:
+func _on_action_started(_ant: Ant, action: AntAction) -> void:
 	logger.debug("Action started: " + action.name)
 	action_started.emit(action)
 
-func _on_action_completed(ant: Ant, action: AntAction) -> void:
+func _on_action_completed(_ant: Ant, action: AntAction) -> void:
 	logger.debug("Action completed: " + action.name)
 	action_completed.emit(action)
-	
+
 	if action == forced_action:
 		forced_action = null
 	if action == active_action:
 		active_action = null
 
-func _on_action_failed(ant: Ant, reason: String, action: AntAction) -> void:
+func _on_action_failed(_ant: Ant, reason: String, action: AntAction) -> void:
 	logger.debug("Action failed: " + action.name + " - " + reason)
 	action_failed.emit(action, reason)
-	
+
 	if action == forced_action:
 		forced_action = null
 	if action == active_action:
 		active_action = null
 
-func _on_action_interrupted(ant: Ant, action: AntAction) -> void:
+func _on_action_interrupted(_ant: Ant, action: AntAction) -> void:
 	logger.debug("Action interrupted: " + action.name)
 	action_interrupted.emit(action)
-	
+
 	if action == forced_action:
 		forced_action = null
 	if action == active_action:

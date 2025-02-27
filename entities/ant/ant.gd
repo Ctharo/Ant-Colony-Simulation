@@ -214,35 +214,35 @@ func _physics_process(delta: float) -> void:
 		_process_movement(delta)
 
 ## Apply an action profile
-func apply_action_profile(profile: AntActionProfile) -> void:
-	if not is_instance_valid(profile) or profile in active_profiles:
+func apply_action_profile(p_profile: AntActionProfile) -> void:
+	if not is_instance_valid(p_profile) or p_profile in active_profiles:
 		return
 
-	profile.apply_to(self)
-	active_profiles.append(profile)
-	logger.debug("Applied action profile: %s" % profile.name)
+	p_profile.apply_to(self)
+	active_profiles.append(p_profile)
+	logger.debug("Applied action profile: %s" % p_profile.name)
 
 ## Remove an action profile
-func remove_action_profile(profile: AntActionProfile) -> void:
-	if not is_instance_valid(profile) or not profile in active_profiles:
+func remove_action_profile(p_profile: AntActionProfile) -> void:
+	if not is_instance_valid(p_profile) or not p_profile in active_profiles:
 		return
 
-	profile.remove_from(self)
-	active_profiles.erase(profile)
-	logger.debug("Removed action profile: %s" % profile.name)
+	p_profile.remove_from(self)
+	active_profiles.erase(p_profile)
+	logger.debug("Removed action profile: %s" % p_profile.name)
 
 ## Process action profiles (call in _physics_process)
-func _process_action_profiles(delta: float) -> void:
+func _process_action_profiles(_delta: float) -> void:
 	if profile and profile.action_profiles:
-		for profile in profile.action_profiles:
-			if is_instance_valid(profile):
-				var is_active = profile.is_active_for(self)
-				var is_applied = profile in active_profiles
+		for p_profile in profile.action_profiles:
+			if is_instance_valid(p_profile):
+				var is_active = p_profile.is_active_for(self)
+				var is_applied = p_profile in active_profiles
 
 				if is_active and not is_applied:
-					apply_action_profile(profile)
+					apply_action_profile(p_profile)
 				elif not is_active and is_applied:
-					remove_action_profile(profile)
+					remove_action_profile(p_profile)
 
 func _on_action_started(action: AntAction) -> void:
 	logger.debug("Ant %s started action: %s" % [name, action.name])

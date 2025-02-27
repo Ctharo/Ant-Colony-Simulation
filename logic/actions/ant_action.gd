@@ -73,16 +73,16 @@ func initialize(p_ant: Ant) -> void:
 func can_start() -> bool:
 	if not is_instance_valid(ant):
 		return false
-	
+
 	if cooldown_time > 0.0:
 		return false
-		
+
 	if status == ActionStatus.RUNNING:
 		return false
-	
+
 	if start_condition and not start_condition.get_value(ant):
 		return false
-		
+
 	return _can_start_internal()
 
 ## Internal method for specific action start conditions
@@ -93,14 +93,14 @@ func _can_start_internal() -> bool:
 func start() -> bool:
 	if not can_start():
 		return false
-		
+
 	status = ActionStatus.RUNNING
 	elapsed_time = 0.0
-	
+
 	# Apply energy cost when starting
 	if energy_cost > 0 and is_instance_valid(ant):
 		ant.energy_level -= energy_cost
-	
+
 	action_started.emit(ant)
 	return _start_internal()
 
@@ -112,32 +112,32 @@ func _start_internal() -> bool:
 func update(delta: float) -> void:
 	if status != ActionStatus.RUNNING:
 		return
-	
+
 	# Check for interruption
 	if is_interruptable and interrupt_condition and interrupt_condition.get_value(ant):
 		interrupt()
 		return
-		
+
 	# Update elapsed time
 	elapsed_time += delta
-	
+
 	# Check for duration completion
 	if duration > 0.0 and elapsed_time >= duration:
 		complete()
 		return
-		
+
 	# Update the internal action state
 	_update_internal(delta)
 
 ## Internal method for specific action update implementation
-func _update_internal(delta: float) -> void:
+func _update_internal(_delta: float) -> void:
 	pass
 
 ## Complete the action successfully
 func complete() -> void:
 	if status != ActionStatus.RUNNING:
 		return
-		
+
 	status = ActionStatus.COMPLETED
 	cooldown_time = cooldown
 	_complete_internal()
@@ -151,7 +151,7 @@ func _complete_internal() -> void:
 func fail(reason: String = "") -> void:
 	if status != ActionStatus.RUNNING:
 		return
-		
+
 	status = ActionStatus.FAILED
 	cooldown_time = cooldown
 	_fail_internal()
@@ -165,7 +165,7 @@ func _fail_internal() -> void:
 func interrupt() -> void:
 	if status != ActionStatus.RUNNING or not is_interruptable:
 		return
-		
+
 	status = ActionStatus.INACTIVE
 	_interrupt_internal()
 	action_interrupted.emit(ant)
