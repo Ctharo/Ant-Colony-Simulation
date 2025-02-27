@@ -211,33 +211,24 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 	return best_target if best_distance > 0.0 else entity.global_position
 
 func _calculate_direction(influences: Array[Logic]) -> Vector2:
-	if not influences:
-		return Vector2.ZERO
+	# Filter valid influences
+	var valid_influences = influences.filter(func(influence):
+		return influence.is_valid(entity)
+	)
 
-	var resultant_vector := Vector2.ZERO
+	# Map influences to direction vectors
+	var direction_vectors = valid_influences.map(func(influence):
+		return EvaluationSystem.get_value(influence, entity)
+	)
 
-	for influence in influences:
-		if not influence:
-			continue
+	# Reduce to a single resultant vector
+	var resultant = direction_vectors.reduce(
+		func(accum, vector): return accum + vector,
+		Vector2.ZERO
+	)
 
-		# If has condition and it evaluates to false, skip
-		if influence.condition and not EvaluationSystem.get_value(influence.condition, entity):
-			continue
+	return resultant.normalized()
 
-		# Get the direction vector which includes magnitude as weight
-		var direction = EvaluationSystem.get_value(influence, entity)
-		if not direction:
-			continue
-
-		resultant_vector += direction
-
-		logger.trace("Influence %s evaluated: Direction: %s, Magnitude: %s" % [
-			influence.id,
-			str(direction.normalized()),
-			str(direction.length())
-		])
-
-	return resultant_vector.normalized()
 #endregion
 
 #region Visualization
