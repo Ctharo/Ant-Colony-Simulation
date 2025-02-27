@@ -1,5 +1,3 @@
-### Updates needed in the AntProfile class
-
 class_name AntProfile
 extends Resource
 
@@ -17,8 +15,6 @@ var id: String
 @export var vision_range: float = 100.0
 @export var size: float
 
-# You could also add a factory method to create common profiles
-
 ## Create a basic worker ant profile
 static func create_basic_worker() -> AntProfile:
 	var profile = AntProfile.new()
@@ -26,22 +22,24 @@ static func create_basic_worker() -> AntProfile:
 	profile.movement_rate = 25.0
 	profile.vision_range = 100.0
 	profile.size = 1.0
+	profile.spawn_condition = Logic.new()
+	profile.spawn_condition.expression_string = 'ant_count_by_role("basic_worker") < 5 and ticks_since_spawn() > 1000'
 
 	# Add pheromones
 	profile.pheromones = [
 		load("res://entities/pheromone/resources/food_pheromone.tres"),
 		load("res://entities/pheromone/resources/home_pheromone.tres")
-	]
+	] as Array[Pheromone]
 
 	# Add movement influences
 	profile.movement_influences = [
 		load("res://resources/influences/profiles/look_for_food.tres"),
 		load("res://resources/influences/profiles/go_home.tres")
-	]
+	] as Array[InfluenceProfile]
 
 	# Add action profiles
 	profile.action_profiles = [
 		ForagerActionProfile.create_standard()
-	]
+	] as Array[AntActionProfile]
 
 	return profile

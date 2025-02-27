@@ -48,14 +48,53 @@ func _init() -> void:
 func _ready() -> void:
 	HeatmapManager.register_entity(self)
 
+	# If a profile was set before _ready, spawn initial ants now
+	if profile:
+		_spawn_initial_ants()
+
 func init_colony_profile(p_profile: ColonyProfile) -> void:
+	if not is_instance_valid(p_profile):
+		logger.error("Cannot initialize with invalid profile")
+		return
+
+	# Store reference to profile
 	profile = p_profile
+
+	# Apply colony properties from profile
+	radius = profile.radius
+	dirt_color = profile.dirt_color
+	darker_dirt = profile.darker_dirt
+
+	# Setup ant profiles
 	ant_profiles.clear()
 	_profile_ant_map.clear()
 
-	for ant_profile: AntProfile in p_profile.ant_profiles:
-		ant_profiles.append(ant_profile)
-		_profile_ant_map[ant_profile.id] = []
+	for ant_profile in profile.ant_profiles:
+		if is_instance_valid(ant_profile):
+			ant_profiles.append(ant_profile)
+			_profile_ant_map[ant_profile.id] = []
+
+	logger.debug("Colony profile applied: %s" % profile.name)
+
+	# Spawn initial ants if we're already in the tree
+	if is_inside_tree():
+		_spawn_initial_ants()
+
+## Spawn initial ants based on profile configuration
+func _spawn_initial_ants() -> void:
+	if not is_instance_valid(profile) or profile.initial_ants.is_empty():
+		return
+
+	logger.debug("Spawning initial ants for colony %s" % name)
+
+	# Spawn initial ants according to profile
+	for profile_id in profile.initial_ants:
+		var count = profile.initial_ants[profile_id]
+		var ant_profile = profile.get_ant_profile_by_id(profile_id)
+
+		if is_instance_valid(ant_profile) and count > 0:
+			var spawned = spawn_ants(count, ant_profile)
+			logger.debug("Spawned %d %s ants" % [spawned.size(), ant_profile.name])
 
 func _physics_process(delta: float) -> void:
 	_process_spawning(delta)
@@ -81,7 +120,7 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 ## Processes automatic ant spawning based on profiles
 func _process_spawning(_delta: float) -> void:
 	for p_profile: AntProfile in ant_profiles:
-		if p_profile.spawn_condition.get_value(self):
+		if p_profile.spawn_condition and p_profile.spawn_condition.get_value(self):
 			spawn_ant(p_profile)
 #endregion
 

@@ -16,7 +16,7 @@ name = "basic worker spawn condition"
 expression_string = "ant_count_by_role(\"basic_worker\") < 5 and ticks_since_spawn() > 1000"
 nested_expressions = Array[ExtResource("8_l7mvj")]([])
 description = ""
-type = 3
+type = 1
 
 [resource]
 script = ExtResource("2_wi06i")

@@ -61,17 +61,13 @@ func _create_ant(profile: AntProfile) -> Ant:
 		logger.error("Failed to instantiate ant scene")
 		return null
 
-	# Set basic properties
+	# Set basic identity properties
 	ants_created += 1
 	ant.id = ants_created
 	ant.name = "Ant%s" % ant.id
 
-	# Apply profile
+	# Apply profile - this handles all profile-related setup
 	ant.init_profile(profile)
-	ant.movement_rate = profile.movement_rate
-	ant.vision_range = profile.vision_range
-	ant.pheromones = profile.pheromones
-	ant.role = profile.name.to_snake_case()
 
 	return ant
 

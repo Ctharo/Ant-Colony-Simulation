@@ -289,17 +289,17 @@ func _on_colony_spawn_ants_requested(colony: Colony, num_to_spawn: int) -> void:
 
 func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
-	var colony = colony_manager.spawn_colony_at(world_position)
+	var colony: Colony = colony_manager.spawn_colony_at(world_position)
 
 	if colony:
 		colony.sandbox = sandbox
 		$"../../ColonyContainer".add_child(colony)
 
-		#HACK
-		# Immediately spawn ants on colony spawn
-		_on_colony_info_requested(colony)
-		colony_info_panel._on_spawn_ants_pressed()
-		close_info_panel(colony)
+		##HACK
+		## Immediately spawn ants on colony spawn
+		#_on_colony_info_requested(colony)
+		#colony_info_panel._on_spawn_ants_pressed()
+		#close_info_panel(colony)
 
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):

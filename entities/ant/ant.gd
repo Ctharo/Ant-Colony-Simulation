@@ -125,9 +125,6 @@ func _ready() -> void:
 	# Initialize influence manager
 	influence_manager.initialize(self)
 
-	if profile:
-		init_profile(profile)
-
 	# Register to heatmap
 	HeatmapManager.register_entity(self)
 	for pheromone in pheromones:
@@ -138,15 +135,12 @@ func _ready() -> void:
 	$ReachArea/CollisionShape2D.shape.radius = mouth_marker.position.x - food.get_size()
 	food.queue_free()
 
-   # Initialize action manager
+	# Initialize action manager
 	action_manager.initialize(self)
 
-
-
-	# Apply action profiles from ant profile
-	if profile and profile.action_profiles:
-		for profile in profile.action_profiles:
-			apply_action_profile(profile)
+	# If profile was set before _ready, apply action profiles now
+	if profile:
+		_apply_action_profiles()
 
 	# Connect signals
 	action_manager.action_started.connect(_on_action_started)
@@ -157,15 +151,44 @@ func _ready() -> void:
 	spawned.emit()
 
 func init_profile(p_profile: AntProfile) -> void:
-	profile = p_profile
-	if not influence_manager:
+	if not is_instance_valid(p_profile):
+		logger.error("Cannot initialize with invalid profile")
 		return
 
-	var p: ForagerActionProfile = load("res://logic/actions/profiles/forager_action_profile.gd").create_standard()
-	profile.action_profiles.append(p)
+	# Store reference to profile
+	profile = p_profile
 
-	for influence: InfluenceProfile in p_profile.movement_influences:
-		influence_manager.add_profile(influence)
+	# Set basic properties from profile
+	movement_rate = profile.movement_rate
+	vision_range = profile.vision_range
+	role = profile.name.to_snake_case()
+
+	# Copy pheromones (avoid using reference to prevent modifying original)
+	pheromones.clear()
+	for pheromone in profile.pheromones:
+		pheromones.append(pheromone)
+
+	# Initialize influence system if available
+	if influence_manager:
+		for influence_profile in profile.movement_influences:
+			influence_manager.add_profile(influence_profile)
+
+	# Setup action system - will be completed in _ready if not ready yet
+	if is_inside_tree() and is_instance_valid(action_manager):
+		_apply_action_profiles()
+
+	logger.debug("Profile applied to %s: %s" % [name, profile.name])
+
+# Helper method to apply action profiles, called from init_profile and _ready
+func _apply_action_profiles() -> void:
+	if not is_instance_valid(profile) or not is_instance_valid(action_manager):
+		return
+
+	# Apply all action profiles from the ant profile
+	if profile.action_profiles:
+		for action_profile in profile.action_profiles:
+			if is_instance_valid(action_profile):
+				apply_action_profile(action_profile)
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
