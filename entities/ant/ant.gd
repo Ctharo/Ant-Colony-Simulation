@@ -64,6 +64,10 @@ enum Action {
 var action_map: Dictionary[Action, Callable] = {
 	Action.MOVE: move_to
 }
+## Action manager for handling actions
+@onready var action_manager: AntActionManager = $ActionManager
+## Currently active action profiles
+var active_profiles: Array[AntActionProfile] = []
 #endregion
 
 var target_position: Vector2 :
@@ -134,6 +138,19 @@ func _ready() -> void:
 	$ReachArea/CollisionShape2D.shape.radius = mouth_marker.position.x - food.get_size()
 	food.queue_free()
 
+   # Initialize action manager
+	action_manager.initialize(self)
+	
+	# Apply action profiles from ant profile
+	if profile and profile.action_profiles:
+		for profile in profile.action_profiles:
+			apply_action_profile(profile)
+	
+	# Connect signals
+	action_manager.action_started.connect(_on_action_started)
+	action_manager.action_completed.connect(_on_action_completed)
+	action_manager.action_failed.connect(_on_action_failed)
+
 	# Emit ready signal
 	spawned.emit()
 
@@ -157,28 +174,64 @@ func _physics_process(delta: float) -> void:
 	if energy_level > 0 and not is_colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
-
-	if doing_task:
-		return
-
-	# Attempt actions based on immediate conditions
-	if get_foods_in_reach() and not is_carrying_food:
-		harvest_food()
-		return
-
-	# If we're at colony with food, store it
-	if is_colony_in_range() and is_carrying_food:
-		store_food()
-		return
-
-	# Rest at colony if needed
-	if is_colony_in_range() and should_rest():
-		rest_until_full()
-		return
+	
+	# Process action profiles to add/remove profiles as conditions change
+	_process_action_profiles(delta)
+	
+	# The action manager handles action execution
+	# No need for manual action handling
 
 	if not doing_task:
 		# Basic movement processing if we're moving
 		_process_movement(delta)
+
+## Apply an action profile
+func apply_action_profile(profile: AntActionProfile) -> void:
+	if not is_instance_valid(profile) or profile in active_profiles:
+		return
+		
+	profile.apply_to(self)
+	active_profiles.append(profile)
+	logger.debug("Applied action profile: %s" % profile.name)
+
+## Remove an action profile
+func remove_action_profile(profile: AntActionProfile) -> void:
+	if not is_instance_valid(profile) or not profile in active_profiles:
+		return
+		
+	profile.remove_from(self)
+	active_profiles.erase(profile)
+	logger.debug("Removed action profile: %s" % profile.name)
+
+## Process action profiles (call in _physics_process)
+func _process_action_profiles(delta: float) -> void:
+	if profile and profile.action_profiles:
+		for profile in profile.action_profiles:
+			if is_instance_valid(profile):
+				var is_active = profile.is_active_for(self)
+				var is_applied = profile in active_profiles
+				
+				if is_active and not is_applied:
+					apply_action_profile(profile)
+				elif not is_active and is_applied:
+					remove_action_profile(profile)
+
+
+
+func _on_action_started(action: AntAction) -> void:
+	logger.debug("Ant %s started action: %s" % [name, action.name])
+	
+	# Special handling for movement actions
+	if action is MoveToAction and action.name == "Return To Colony":
+		# Dynamically set colony as target
+		if is_instance_valid(colony):
+			action.target_position = colony.global_position
+
+func _on_action_completed(action: AntAction) -> void:
+	logger.debug("Ant %s completed action: %s" % [name, action.name])
+
+func _on_action_failed(action: AntAction, reason: String) -> void:
+	logger.debug("Ant %s failed action: %s - %s" % [name, action.name, reason])
 
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> bool:
