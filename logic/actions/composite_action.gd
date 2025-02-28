@@ -21,6 +21,42 @@ var _running_children: Array[AntAction] = []
 var _completed_children: Array[AntAction] = []
 var _failed_children: Array[AntAction] = []
 
+#region Movement Integration
+## Movement profiles for specific child actions
+## Dictionary mapping action name or index to movement profile
+@export var action_movement_profiles: Dictionary = {}
+
+## Override to handle profile changes during action transitions
+func _change_child_action(old_action: AntAction, new_action: AntAction) -> void:
+	if not is_instance_valid(ant) or not is_instance_valid(ant.influence_manager):
+		return
+		
+	# Find the appropriate movement profile for the new action
+	var profile: InfluenceProfile = null
+	
+	# Try by action reference
+	if action_movement_profiles.has(new_action):
+		profile = action_movement_profiles[new_action]
+	
+	# Try by action name
+	elif action_movement_profiles.has(new_action.name):
+		profile = action_movement_profiles[new_action.name]
+	
+	# Try by action index
+	else:
+		var index = child_actions.find(new_action)
+		if index >= 0 and action_movement_profiles.has(index):
+			profile = action_movement_profiles[index]
+	
+	# Apply the profile if found
+	if is_instance_valid(profile):
+		ant.influence_manager.active_profile = profile
+		logger.debug("Changed movement profile to %s for child action %s" % [
+			profile.name,
+			new_action.name
+		])
+#endregion
+
 ## Override initialize to also initialize children
 func initialize(p_ant: Ant) -> void:
 	super.initialize(p_ant)
@@ -75,6 +111,10 @@ func _start_sequence() -> bool:
 		return false
 		
 	var child = child_actions[_current_child_index]
+	
+	# Apply initial movement profile
+	_change_child_action(null, child)
+	
 	if child.start():
 		_running_children.append(child)
 		return true
@@ -86,6 +126,10 @@ func _start_sequence() -> bool:
 func _start_selector() -> bool:
 	for i in range(child_actions.size()):
 		var child = child_actions[i]
+		
+		# Apply movement profile before trying to start
+		_change_child_action(null, child)
+		
 		if child.can_start() and child.start():
 			_current_child_index = i
 			_running_children.append(child)
@@ -99,9 +143,13 @@ func _start_parallel() -> bool:
 	var any_started = false
 	
 	for child in child_actions:
-		if child.can_start() and child.start():
-			_running_children.append(child)
-			any_started = true
+		# For parallel actions, we apply profiles to each one that starts
+		if child.can_start():
+			_change_child_action(null, child)
+			
+			if child.start():
+				_running_children.append(child)
+				any_started = true
 			
 	if not any_started:
 		fail("No actions in parallel could start")
@@ -130,6 +178,11 @@ func _update_sequence(delta: float) -> void:
 			return
 			
 		var next_child = child_actions[_current_child_index]
+		
+		# Handle profile change before starting next action
+		var previous_child = child_actions[_current_child_index - 1] if _current_child_index > 0 else null
+		_change_child_action(previous_child, next_child)
+		
 		if next_child.start():
 			_running_children.append(next_child)
 		else:
@@ -150,7 +203,7 @@ func _update_sequence(delta: float) -> void:
 			_running_children.erase(child)
 			_failed_children.append(child)
 			fail("Child action failed: " + child.name)
-
+			
 ## Update selector behavior
 func _update_selector(delta: float) -> void:
 	if _running_children.is_empty():
@@ -159,6 +212,11 @@ func _update_selector(delta: float) -> void:
 		
 		while _current_child_index < child_actions.size():
 			var next_child = child_actions[_current_child_index]
+			
+			# Handle profile change before starting next action
+			var previous_child = child_actions[_current_child_index - 1] if _current_child_index > 0 else null
+			_change_child_action(previous_child, next_child)
+			
 			if next_child.start():
 				_running_children.append(next_child)
 				break

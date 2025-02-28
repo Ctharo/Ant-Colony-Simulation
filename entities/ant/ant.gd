@@ -173,9 +173,9 @@ func init_profile(p_profile: AntProfile) -> void:
 		for influence_profile in profile.movement_influences:
 			influence_manager.add_profile(influence_profile)
 
-	# Setup action system - will be completed in _ready if not ready yet
+	# Setup action system with contextual behaviors
 	if is_inside_tree() and is_instance_valid(action_manager):
-		_apply_action_profiles()
+		_setup_contextual_actions()
 
 	logger.debug("Profile applied to %s: %s" % [name, profile.name])
 
@@ -189,6 +189,47 @@ func _apply_action_profiles() -> void:
 		for action_profile in profile.action_profiles:
 			if is_instance_valid(action_profile):
 				apply_action_profile(action_profile)
+
+## Set up contextual actions based on ant role
+func _setup_contextual_actions() -> void:
+	# Clear existing actions
+	action_manager.available_actions.clear()
+	
+	# Create role-specific behavior actions
+	match role:
+		"forager":
+			var foraging = ActionProfileFactory.create_foraging_behavior()
+			action_manager.add_action(foraging)
+			
+		"scout":
+			# For scouts we might want different behaviors
+			var patrol_action = PatrolAction.new()
+			patrol_action.name = "Patrol"
+			patrol_action.use_random_waypoints = true
+			patrol_action.random_waypoint_radius = 200.0
+			patrol_action.priority = 60
+			patrol_action.movement_profile = load("res://resources/influences/profiles/look_for_food.tres")
+			action_manager.add_action(patrol_action)
+			
+		"soldier":
+			# For soldiers, specialized behaviors
+			var defend_action = CompositeAction.new()
+			defend_action.name = "DefendColony"
+			defend_action.priority = 70
+			# Set up soldier behaviors...
+			action_manager.add_action(defend_action)
+			
+		_:  # Default/fallback for all ant types
+			# Always add these basic behaviors
+			var foraging = ActionProfileFactory.create_foraging_behavior()
+			action_manager.add_action(foraging)
+	
+	# Add common actions for all ant types
+	var flee_action = ActionProfileFactory.create_flee_behavior()
+	action_manager.add_action(flee_action)
+	
+	var rest_action = ActionProfileFactory.create_rest_behavior()
+	action_manager.add_action(rest_action)
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
@@ -457,6 +498,54 @@ func get_colonies_in_reach() -> Array:
 
 func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
 	return ants.filter(func(ant): return friendly == (ant.colony == colony))
+
+## Returns a vector pointing away from the nearest enemy ant
+func get_enemy_avoidance_vector() -> Vector2:
+	var enemy_ants = get_ants_in_view().filter(func(other_ant): 
+		return other_ant.colony != colony
+	)
+	
+	if enemy_ants.is_empty():
+		return Vector2.ZERO
+	
+	# Find the nearest enemy
+	var nearest_enemy = null
+	var min_distance = INF
+	
+	for enemy in enemy_ants:
+		var distance = global_position.distance_to(enemy.global_position)
+		if distance < min_distance:
+			nearest_enemy = enemy
+			min_distance = distance
+	
+	if not nearest_enemy:
+		return Vector2.ZERO
+	
+	# Vector pointing away from enemy, strength inversely proportional to distance
+	var direction = global_position.direction_to(nearest_enemy.global_position) * -1
+	var strength = 1.0 / max(min_distance / 50.0, 0.1)  # Normalize by expected range
+	
+	return direction * strength
+
+## Returns a weighted sum of vectors pointing away from all nearby enemies
+func get_enemy_group_avoidance_vector() -> Vector2:
+	var enemy_ants = get_ants_in_view().filter(func(other_ant): 
+		return other_ant.colony != colony
+	)
+	
+	if enemy_ants.is_empty():
+		return Vector2.ZERO
+	
+	var avoidance = Vector2.ZERO
+	
+	for enemy in enemy_ants:
+		var direction = global_position.direction_to(enemy.global_position) * -1
+		var distance = global_position.distance_to(enemy.global_position)
+		var strength = 1.0 / max(distance / 50.0, 0.1)
+		avoidance += direction * strength
+	
+	return avoidance.normalized()
+
 
 func get_foods_in_reach() -> Array:
 	var _foods: Array = []

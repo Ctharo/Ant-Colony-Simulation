@@ -61,6 +61,47 @@ var cooldown_time: float = 0.0
 ## Logger for debugging
 var logger: Logger
 
+#region Movement Integration
+## Movement profile to use while this action is running
+@export var movement_profile: InfluenceProfile
+
+## Whether to restore the previous profile when this action completes/fails
+@export var restore_previous_profile: bool = true
+
+## Temporarily stores the previous profile to restore later
+var _previous_profile: InfluenceProfile
+
+## Set up the movement profile for this action
+func _setup_movement_profile() -> void:
+	if not is_instance_valid(ant) or not is_instance_valid(movement_profile):
+		return
+		
+	if is_instance_valid(ant.influence_manager):
+		# Store current profile for later restoration
+		_previous_profile = ant.influence_manager.active_profile
+		
+		# Set our action's movement profile
+		ant.influence_manager.active_profile = movement_profile
+		
+		logger.debug("Set movement profile to %s for action %s" % [
+			movement_profile.name, 
+			name
+		])
+
+## Restore the previous movement profile
+func _restore_movement_profile() -> void:
+	if not is_instance_valid(ant) or not is_instance_valid(ant.influence_manager):
+		return
+		
+	if restore_previous_profile and is_instance_valid(_previous_profile):
+		ant.influence_manager.active_profile = _previous_profile
+		
+		logger.debug("Restored movement profile to %s after action %s" % [
+			_previous_profile.name,
+			name
+		])
+#endregion
+
 ## Initialize the action with an ant
 func initialize(p_ant: Ant) -> void:
 	ant = p_ant
@@ -101,8 +142,16 @@ func start() -> bool:
 	if energy_cost > 0 and is_instance_valid(ant):
 		ant.energy_level -= energy_cost
 
+	# Set up movement profile before starting internal implementation
+	_setup_movement_profile()
+	
+	var result = _start_internal()
+	if not result:
+		status = ActionStatus.FAILED
+		_restore_movement_profile()
+		
 	action_started.emit(ant)
-	return _start_internal()
+	return result
 
 ## Internal method for specific action start implementation
 func _start_internal() -> bool:
@@ -141,6 +190,10 @@ func complete() -> void:
 	status = ActionStatus.COMPLETED
 	cooldown_time = cooldown
 	_complete_internal()
+	
+	# Restore movement profile after completing
+	_restore_movement_profile()
+	
 	action_completed.emit(ant)
 
 ## Internal method for specific action completion implementation
@@ -155,6 +208,10 @@ func fail(reason: String = "") -> void:
 	status = ActionStatus.FAILED
 	cooldown_time = cooldown
 	_fail_internal()
+	
+	# Restore movement profile after failing
+	_restore_movement_profile()
+	
 	action_failed.emit(ant, reason)
 
 ## Internal method for specific action failure implementation
@@ -168,6 +225,10 @@ func interrupt() -> void:
 
 	status = ActionStatus.INACTIVE
 	_interrupt_internal()
+	
+	# Restore movement profile after interruption
+	_restore_movement_profile()
+	
 	action_interrupted.emit(ant)
 
 ## Internal method for specific action interruption implementation
