@@ -1,8 +1,9 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://c14c2ty4as0jm"]
 
 [ext_resource type="Resource" uid="uid://drleodpwy1qvk" path="res://resources/movement/weights/colony_weight.tres" id="2_0sghm"]
-[ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_sie77"]
-[ext_resource type="Script" path="res://logic/logic.gd" id="2_vcmuw"]
+[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influences/influence.gd" id="2_sie77"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="2_vcmuw"]
+
 
 [resource]
 script = ExtResource("2_sie77")

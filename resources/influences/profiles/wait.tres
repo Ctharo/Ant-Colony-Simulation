@@ -1,9 +1,10 @@
 [gd_resource type="Resource" script_class="InfluenceProfile" load_steps=6 format=3 uid="uid://3qu1vytb5p8i"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_ru1mi"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_ru1mi"]
 [ext_resource type="Resource" uid="uid://c6fh5yuhbmhyb" path="res://resources/expressions/conditions/is_in_colony.tres" id="2_8ergy"]
-[ext_resource type="Script" path="res://logic/influence/influence_profile.gd" id="2_dcisu"]
-[ext_resource type="Script" path="res://logic/influence/influence.gd" id="3_agmy1"]
+[ext_resource type="Script" uid="uid://dw3hray8v777s" path="res://logic/influences/influence_profile.gd" id="2_dcisu"]
+[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influences/influence.gd" id="3_agmy1"]
+
 
 [sub_resource type="Resource" id="Resource_l4nqg"]
 script = ExtResource("3_agmy1")

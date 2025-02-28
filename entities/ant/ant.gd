@@ -45,7 +45,10 @@ var _carried_food: Food :
 			is_carrying_food = false
 
 #region Components
+## Action manager for handling actions
+@onready var action_manager: AntActionManager = $ActionManager
 @onready var influence_manager: InfluenceManager = $InfluenceManager
+@onready var behavior_manager: AntBehaviorManager
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 @onready var sight_area: Area2D = %SightArea
 @onready var sense_area: Area2D = %SenseArea
@@ -64,8 +67,7 @@ enum Action {
 var action_map: Dictionary[Action, Callable] = {
 	Action.MOVE: move_to
 }
-## Action manager for handling actions
-@onready var action_manager: AntActionManager = $ActionManager
+
 ## Currently active action profiles
 var active_profiles: Array[AntActionProfile] = []
 #endregion
@@ -124,7 +126,12 @@ func _init() -> void:
 func _ready() -> void:
 	# Initialize influence manager
 	influence_manager.initialize(self)
+	behavior_manager = AntBehaviorManager.new()
+	add_child(behavior_manager)
 
+	# Add behaviors based on ant profile
+	_setup_behaviors()
+	
 	# Register to heatmap
 	HeatmapManager.register_entity(self)
 	for pheromone in pheromones:
@@ -179,6 +186,8 @@ func init_profile(p_profile: AntProfile) -> void:
 
 	logger.debug("Profile applied to %s: %s" % [name, profile.name])
 
+
+
 # Helper method to apply action profiles, called from init_profile and _ready
 func _apply_action_profiles() -> void:
 	if not is_instance_valid(profile) or not is_instance_valid(action_manager):
@@ -189,6 +198,47 @@ func _apply_action_profiles() -> void:
 		for action_profile in profile.action_profiles:
 			if is_instance_valid(action_profile):
 				apply_action_profile(action_profile)
+
+func _setup_behaviors() -> void:
+	# Common behaviors for all ant types
+	behavior_manager.add_behavior(create_flee_behavior())
+	behavior_manager.add_behavior(create_rest_behavior())
+	
+	# Role-specific behaviors
+	match role:
+		"forager":
+			behavior_manager.add_behavior(create_foraging_behavior())
+			behavior_manager.add_behavior(create_return_behavior())
+		"scout":
+			behavior_manager.add_behavior(create_scouting_behavior())
+		"soldier":
+			behavior_manager.add_behavior(create_patrol_behavior())
+			behavior_manager.add_behavior(create_attack_behavior())
+
+func create_foraging_behavior() -> AntBehavior:
+	var behavior = AntBehavior.new()
+	behavior.name = "Foraging"
+	behavior.priority = 50
+	
+	# Conditions to activate this behavior
+	behavior.activation_conditions = [
+		load("res://resources/expressions/conditions/should_look_for_food.tres")
+	]
+	
+	# Movement profile for exploration
+	behavior.movement_profile = load("res://resources/influences/profiles/look_for_food.tres")
+	
+	# Available actions during foraging
+	behavior.available_actions = [
+		create_harvest_food_action()  # Action to pick up food when found
+	]
+	
+	# Pheromones to emit while foraging
+	behavior.active_pheromones = [
+		load("res://entities/pheromone/resources/home_pheromone.tres")
+	]
+	
+	return behavior
 
 ## Set up contextual actions based on ant role
 func _setup_contextual_actions() -> void:

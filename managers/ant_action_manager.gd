@@ -123,6 +123,19 @@ func remove_action(action: AntAction) -> void:
 
 	logger.debug("Removed action: " + action.name)
 
+func clear_actions() -> void:
+	# Cancel any running actions
+	if active_action and active_action.status == AntAction.ActionStatus.RUNNING:
+		active_action.interrupt()
+	
+	# Clear all actions
+	for action in available_actions.duplicate():
+		remove_action(action)
+	
+	available_actions.clear()
+	active_action = null
+	forced_action = null
+
 ## Force a specific action to run
 func force_action(action: AntAction) -> bool:
 	if not action in available_actions:
