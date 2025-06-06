@@ -666,4 +666,3 @@ class PheromoneMemory:
 				total_weight += weight
 
 		return direction.normalized() if total_weight > 0 else Vector2.ZERO
-
