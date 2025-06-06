@@ -1,0 +1,81 @@
+[gd_resource type="Resource" script_class="SelectorNode" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://logic/behavior_tree/composite_nodes/selector_node.gd" id="1_selector"]
+[ext_resource type="Script" path="res://logic/behavior_tree/composite_nodes/sequence_node.gd" id="2_sequence"]
+[ext_resource type="Script" path="res://logic/behavior_tree/decorator_nodes/condition_node.gd" id="3_condition"]
+[ext_resource type="Resource" uid="uid://b6jri4s7ybdvb" path="res://resources/expressions/conditions/can_see_food.tres" id="4_can_see_food"]
+[ext_resource type="Script" path="res://logic/behavior_tree/leaf_nodes/harvest_food_node.gd" id="5_harvest_food"]
+[ext_resource type="Resource" uid="uid://m3jl4m64djj5" path="res://resources/expressions/sense/vision/food/food_in_view.tres" id="6_food_in_view"]
+[ext_resource type="Script" path="res://logic/behavior_tree/leaf_nodes/set_influence_profile_node.gd" id="7_set_profile"]
+[ext_resource type="Resource" path="res://resources/influences/profiles/look_for_food.tres" id="8_look_for_food"]
+[ext_resource type="Script" path="res://logic/behavior_tree/leaf_nodes/update_movement_node.gd" id="9_update_movement"]
+[ext_resource type="Resource" path="res://resources/expressions/conditions/should_return home.tres" id="10_should_return"]
+[ext_resource type="Resource" path="res://resources/influences/profiles/go_home.tres" id="11_go_home"]
+[ext_resource type="Script" path="res://logic/behavior_tree/leaf_nodes/store_food_node.gd" id="12_store_food"]
+[ext_resource type="Resource" path="res://resources/expressions/conditions/low_energy.tres" id="13_low_energy"]
+[ext_resource type="Script" path="res://logic/behavior_tree/leaf_nodes/follow_pheromone_node.gd" id="14_follow_pheromone"]
+
+# Harvest Food Sequence
+[sub_resource type="Resource" id="Resource_harvest"]
+script = ExtResource("5_harvest_food")
+harvest_time = 1.0
+
+[sub_resource type="Resource" id="Resource_harvest_condition"]
+script = ExtResource("3_condition")
+condition = ExtResource("4_can_see_food")
+child = SubResource("Resource_harvest")
+
+# Follow Food Pheromone
+[sub_resource type="Resource" id="Resource_follow_food"]
+script = ExtResource("14_follow_pheromone")
+pheromone_type = "food"
+follow_increasing = true
+influence_weight = 2.5
+
+# Look For Food Sequence
+[sub_resource type="Resource" id="Resource_set_look_profile"]
+script = ExtResource("7_set_profile")
+influence_profile = ExtResource("8_look_for_food")
+
+[sub_resource type="Resource" id="Resource_update_look_movement"]
+script = ExtResource("9_update_movement")
+
+[sub_resource type="Resource" id="Resource_look_sequence"]
+script = ExtResource("2_sequence")
+children = [SubResource("Resource_set_look_profile"), SubResource("Resource_follow_food"), SubResource("Resource_update_look_movement")]
+
+# Return Home Sequence
+[sub_resource type="Resource" id="Resource_set_home_profile"]
+script = ExtResource("7_set_profile")
+influence_profile = ExtResource("11_go_home")
+
+[sub_resource type="Resource" id="Resource_update_home_movement"]
+script = ExtResource("9_update_movement")
+
+[sub_resource type="Resource" id="Resource_store_food"]
+script = ExtResource("12_store_food")
+store_time = 1.0
+
+[sub_resource type="Resource" id="Resource_return_sequence"]
+script = ExtResource("2_sequence")
+children = [SubResource("Resource_set_home_profile"), SubResource("Resource_update_home_movement"), SubResource("Resource_store_food")]
+
+[sub_resource type="Resource" id="Resource_return_condition"]
+script = ExtResource("3_condition")
+condition = ExtResource("10_should_return")
+child = SubResource("Resource_return_sequence")
+
+# Rest Sequence
+[sub_resource type="Resource" id="Resource_rest_sequence"]
+script = ExtResource("2_sequence")
+children = []  # Rest implementation would go here
+
+[sub_resource type="Resource" id="Resource_rest_condition"]
+script = ExtResource("3_condition")
+condition = ExtResource("13_low_energy")
+child = SubResource("Resource_rest_sequence")
+
+# Root Selector
+[resource]
+script = ExtResource("1_selector")
+children = [SubResource("Resource_harvest_condition"), SubResource("Resource_return_condition"), SubResource("Resource_rest_condition"), SubResource("Resource_look_sequence")]
