@@ -176,8 +176,12 @@ func init_profile(p_profile: AntProfile) -> void:
 
 	# Initialize influence system if available
 	if influence_manager:
+		logger.debug("Adding %d influence profiles" % profile.movement_influences.size())
 		for influence_profile in profile.movement_influences:
+			logger.debug("Adding influence profile: %s" % influence_profile.name)
 			influence_manager.add_profile(influence_profile)
+	else:
+		logger.error("No influence manager available!")
 
 	# Setup action system with contextual behaviors
 	if is_inside_tree() and is_instance_valid(action_manager):
@@ -347,14 +351,21 @@ func store_food() -> void:
 
 func _process_movement(delta: float) -> void:
 	if not is_instance_valid(nav_agent):
+		logger.trace("No nav agent available")
 		return
 
 	var current_pos = global_position
 	_process_pheromones(delta)
 
+	if not is_instance_valid(influence_manager):
+		logger.error("No influence manager available for movement!")
+		return
 
 	if influence_manager.should_recalculate_target():
+		logger.trace("Recalculating movement target")
 		influence_manager.update_movement_target()
+	else:
+		logger.trace("Not recalculating target yet")
 
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()

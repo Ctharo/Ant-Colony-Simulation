@@ -23,4 +23,5 @@ change_threshold = 0.0
 script = ExtResource("2_dcisu")
 name = "wait"
 enter_conditions = Array[ExtResource("1_ru1mi")]([ExtResource("2_8ergy")])
+exit_conditions = Array[ExtResource("1_ru1mi")]([])
 influences = Array[ExtResource("1_ru1mi")]([SubResource("Resource_l4nqg")])

@@ -55,6 +55,8 @@ var logger: Logger
 func _init() -> void:
 	name = "influence_manager"
 	logger = Logger.new(name, DebugLogger.Category.INFLUENCE)
+	# Enable influence logging for debugging
+	DebugLogger.set_category_enabled(DebugLogger.Category.INFLUENCE, true)
 
 func _ready() -> void:
 	top_level = true
@@ -69,10 +71,26 @@ func _physics_process(delta: float) -> void:
 	_target_recalc_timer += delta
 
 	if _profile_check_timer >= profile_check_interval:
+		logger.trace("Checking %d profiles for validity" % profiles.size())
+		var previous_profile = active_profile
+		var found_valid_profile = false
+
 		for profile: InfluenceProfile in profiles:
 			if is_profile_valid(profile):
+				if active_profile != profile:
+					logger.trace("Switching from '%s' to '%s'" % [
+						previous_profile.name if previous_profile else "none",
+						profile.name
+					])
 				active_profile = profile
+				found_valid_profile = true
 				break
+
+		# If no valid profile found, try to use default profile
+		if not found_valid_profile and profiles.size() > 0:
+			logger.trace("No valid profiles found, using first profile as fallback")
+			active_profile = profiles[0]
+
 		_profile_check_timer = 0.0
 
 ## Sets the entity reference
@@ -89,13 +107,18 @@ func initialize(p_entity: Node) -> void:
 func is_profile_valid(profile: InfluenceProfile) -> bool:
 	## Default is true
 	if profile.enter_conditions.is_empty():
+		logger.trace("Profile '%s' has no enter conditions, considering valid" % profile.name)
 		return true
 
 	## Otherwise check each condition and if any are true, then return true
 	for condition: Logic in profile.enter_conditions:
-		if condition.get_value(entity):
+		var result = condition.get_value(entity)
+		logger.trace("Profile '%s' condition '%s': %s" % [profile.name, condition.name, result])
+		if result:
+			logger.trace("Profile '%s' is valid" % profile.name)
 			return true
 
+	logger.trace("Profile '%s' is not valid" % profile.name)
 	return false
 
 ## Add resource InfluenceProfile to [member profiles]
@@ -149,7 +172,6 @@ func update_movement_target() -> void:
 	entity = entity as Ant
 	_target_recalc_timer = 0.0
 	var new_target = _calculate_target_position()
-	entity.move_to(new_target)
 
 	# Only update if we have a meaningful new target
 	if new_target and new_target != entity.global_position and entity.has_method("move_to"):
@@ -157,18 +179,33 @@ func update_movement_target() -> void:
 		if new_target.distance_to(entity.global_position) > 1.0:
 			entity.move_to(new_target)
 			logger.trace("New target set: %s" % new_target)
+		else:
+			logger.trace("Target too close, skipping: %s" % new_target)
+	else:
+		logger.trace("Invalid target or same position: %s" % new_target)
 
 
 func _calculate_target_position() -> Vector2:
-	if not entity or not active_profile:
+	if not entity:
+		logger.trace("No entity")
 		return Vector2.ZERO
+
+	if not active_profile:
+		logger.trace("No active profile, using fallback movement")
+		# Fallback: basic forward movement
+		var fallback_direction = Vector2(1, 0).rotated(entity.global_rotation)
+		return entity.global_position + fallback_direction * TARGET_DISTANCE
 
 	var base_direction = _calculate_direction(active_profile.influences)
 	if base_direction == Vector2.ZERO:
+		logger.trace("Base direction is zero")
 		return Vector2.ZERO
+
+	logger.trace("Base direction calculated: %s" % base_direction)
 
 	var nav_region = entity.get_tree().get_first_node_in_group("navigation") as NavigationRegion2D
 	if not nav_region:
+		logger.trace("No navigation region found, using direct calculation")
 		return entity.global_position + base_direction * TARGET_DISTANCE
 
 	# Choose between simple or best direction calculation
@@ -184,9 +221,9 @@ func _get_simple_navigable_target(direction: Vector2, nav_region: NavigationRegi
 func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion2D) -> Vector2:
 	entity = entity as Ant
 	var map_rid = nav_region.get_navigation_map()
-	var test_angles = [0,PI/16, -PI/16, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
+	var test_angles = [0, PI/16, -PI/16, PI/8, -PI/8, PI/4, -PI/4, PI/2, -PI/2]
 	var best_target: Vector2 = entity.global_position
-	var best_distance: float = 0.0
+	var best_distance: float = INF
 
 	for angle in test_angles:
 		var test_direction = direction.rotated(angle)
@@ -201,14 +238,19 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 		).size() > 0:
 			var dist_to_original = (test_target - navigable_point).length()
 
-			if best_distance == 0.0 or dist_to_original < best_distance:
+			if dist_to_original < best_distance:
 				best_target = navigable_point
 				best_distance = dist_to_original
 
 				if dist_to_original < 5.0:
 					break
-	assert(best_distance > 0)
-	return best_target if best_distance > 0.0 else entity.global_position
+
+	# If no valid path found, fall back to simple navigation
+	if best_distance == INF:
+		logger.trace("No valid path found in best navigation, falling back to simple")
+		return _get_simple_navigable_target(direction, nav_region)
+
+	return best_target
 
 func _calculate_direction(influences: Array[Logic]) -> Vector2:
 	# Filter valid influences
@@ -216,16 +258,36 @@ func _calculate_direction(influences: Array[Logic]) -> Vector2:
 		return influence.is_valid(entity)
 	)
 
-	# Map influences to direction vectors
-	var direction_vectors = valid_influences.map(func(influence):
-		return EvaluationSystem.get_value(influence, entity)
-	)
+	logger.trace("Valid influences: %d/%d" % [valid_influences.size(), influences.size()])
+
+	# Map influences to direction vectors with null checking
+	var direction_vectors = []
+	for influence in valid_influences:
+		var vector = EvaluationSystem.get_value(influence, entity)
+		if vector != null and vector is Vector2:
+			direction_vectors.append(vector)
+			logger.trace("Influence '%s': %s" % [influence.name, vector])
+		else:
+			logger.trace("Influence '%s' returned invalid vector: %s" % [influence.name, vector])
+
+	if direction_vectors.is_empty():
+		logger.trace("No valid direction vectors found, using fallback")
+		# Fallback: provide a basic forward movement
+		var fallback_direction = Vector2(1, 0).rotated(entity.global_rotation)
+		logger.trace("Fallback direction: %s" % fallback_direction)
+		return fallback_direction
 
 	# Reduce to a single resultant vector
 	var resultant = direction_vectors.reduce(
 		func(accum, vector): return accum + vector,
 		Vector2.ZERO
 	)
+
+	logger.trace("Resultant vector before normalization: %s" % resultant)
+
+	if resultant.length_squared() < 0.001:
+		logger.trace("Resultant vector too small, returning zero")
+		return Vector2.ZERO
 
 	return resultant.normalized()
 
