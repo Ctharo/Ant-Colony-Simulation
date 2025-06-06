@@ -2,6 +2,21 @@ class_name Colony
 extends Node2D
 ## Colony class managing ant spawning, tracking, and role management
 
+#region Signals
+signal food_added(amount: int)
+signal ant_added(ant: Ant)
+#endregion
+
+#region Properties
+@export var radius: float = 60.0
+@export var max_food_capacity: float = 1000.0
+@export var current_food: float = 0.0
+@export var ant_spawn_cost: float = 10.0
+#endregion
+
+var ants: Array[Ant] = []
+var logger: Logger
+
 #region Member Variables
 @onready var collision_area: Area2D = $CollisionArea
 @export var dirt_color = Color(Color.SADDLE_BROWN, 0.8)  # Earthy brown
@@ -234,3 +249,105 @@ func spawn_ant_with_profile(profile_type: String = "") -> Ant:
 	get_parent().add_child(ant)
 	
 	return ant
+
+func spawn_ant(role: String = "forager") -> Ant:
+	# Check if we have enough food
+	if current_food < ant_spawn_cost:
+		logger.warning("Not enough food to spawn ant")
+		return null
+	
+	# Deduct food cost
+	current_food -= ant_spawn_cost
+	
+	var ant_scene = load("res://entities/ant/ant.tscn")
+	var ant = ant_scene.instantiate() as Ant
+	
+	# Position the ant at the colony
+	ant.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+	
+	# Set the colony reference
+	ant.colony = self
+	
+	# Create profile based on role
+	var profile: AntProfile
+	match role.to_lower():
+		"forager":
+			profile = AntProfile.create_forager()
+		"scout":
+			profile = AntProfile.create_scout()
+		"soldier":
+			profile = AntProfile.create_soldier()
+		_:
+			# Default to forager
+			profile = AntProfile.create_forager()
+	
+	# Initialize ant with profile
+	ant.init_profile(profile)
+	
+	# Add to scene
+	get_parent().add_child(ant)
+	
+	# Track ant
+	ants.append(ant)
+	ant_added.emit(ant)
+	
+	# Connect to ant signals
+	ant.died.connect(_on_ant_died)
+	
+	return ant
+
+func spawn_initial_ants(foragers: int = 5, scouts: int = 2, soldiers: int = 1) -> void:
+	# Spawn initial ants without food cost
+	for i in range(foragers):
+		_spawn_ant_without_cost("forager")
+	
+	for i in range(scouts):
+		_spawn_ant_without_cost("scout")
+	
+	for i in range(soldiers):
+		_spawn_ant_without_cost("soldier")
+
+func _spawn_ant_without_cost(role: String) -> Ant:
+	var ant_scene = load("res://entities/ant/ant.tscn")
+	var ant = ant_scene.instantiate() as Ant
+	
+	# Position the ant at the colony
+	ant.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+	
+	# Set the colony reference
+	ant.colony = self
+	
+	# Create profile based on role
+	var profile: AntProfile
+	match role.to_lower():
+		"forager":
+			profile = AntProfile.create_forager()
+		"scout":
+			profile = AntProfile.create_scout()
+		"soldier":
+			profile = AntProfile.create_soldier()
+		_:
+			# Default to forager
+			profile = AntProfile.create_forager()
+	
+	# Initialize ant with profile
+	ant.init_profile(profile)
+	
+	# Add to scene
+	get_parent().add_child(ant)
+	
+	# Track ant
+	ants.append(ant)
+	ant_added.emit(ant)
+	
+	# Connect to ant signals
+	ant.died.connect(_on_ant_died)
+	
+	return ant
+
+func add_food(amount: int) -> void:
+	current_food = min(current_food + amount, max_food_capacity)
+	food_added.emit(amount)
+
+func is_entity_in_range(entity: Node2D) -> bool:
+	return entity.global_position.distance_to(global_position) <= radius
