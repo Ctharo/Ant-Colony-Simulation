@@ -203,3 +203,34 @@ func ant_count_by_role(role: String) -> int:
 		if ant_role.contains(normalized_role) or normalized_role.contains(ant_role):
 			result += 1
 	return result
+
+func spawn_ant_with_profile(profile_type: String = "") -> Ant:
+	var ant_scene = load("res://entities/ant/ant.tscn")
+	var ant = ant_scene.instantiate() as Ant
+	
+	# Position the ant at the colony
+	ant.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+	
+	# Set the colony reference
+	ant.colony = self
+	
+	# Create profile based on type
+	var profile: AntProfile
+	match profile_type.to_lower():
+		"forager":
+			profile = AntProfile.create_forager_with_behavior_tree()
+		"scout":
+			profile = AntProfile.create_scout()
+		"soldier":
+			profile = AntProfile.create_soldier()
+		_:
+			# Default to forager with behavior tree
+			profile = AntProfile.create_forager_with_behavior_tree()
+	
+	# Initialize ant with profile
+	ant.init_profile(profile)
+	
+	# Add to scene
+	get_parent().add_child(ant)
+	
+	return ant
