@@ -28,10 +28,10 @@ var forced_action: AntAction
 var is_processing_enabled: bool = true
 
 ## Logger instance
-var logger: Logger
+var logger: iLogger
 
 func _init() -> void:
-	logger = Logger.new("action_manager", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("action_manager", DebugLogger.Category.ENTITY)
 
 ## Initialize with an ant reference
 func initialize(p_ant: Ant) -> void:
@@ -127,11 +127,11 @@ func clear_actions() -> void:
 	# Cancel any running actions
 	if active_action and active_action.status == AntAction.ActionStatus.RUNNING:
 		active_action.interrupt()
-	
+
 	# Clear all actions
 	for action in available_actions.duplicate():
 		remove_action(action)
-	
+
 	available_actions.clear()
 	active_action = null
 	forced_action = null

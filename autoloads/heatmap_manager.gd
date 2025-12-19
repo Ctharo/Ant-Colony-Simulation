@@ -35,7 +35,7 @@ var _heatmaps: Dictionary = {}  # Dictionary[String, HeatmapData]
 var _debug_settings: Dictionary = {}
 var update_timer: float = 0.0
 var update_interval: float = 1.0
-var logger: Logger
+var logger: iLogger
 var _is_quitting: bool = false
 var _last_decay_time: int = 0
 #endregion
@@ -209,7 +209,7 @@ static func get_cell_color(t: float, config: Pheromone) -> Color:
 
 #region Instance Management
 func _init() -> void:
-	logger = Logger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
+	logger = iLogger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
 	update_lock = Mutex.new()
 	top_level = true
 	_last_decay_time = Time.get_ticks_msec()

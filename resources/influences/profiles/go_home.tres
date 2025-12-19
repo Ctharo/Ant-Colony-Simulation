@@ -1,25 +1,21 @@
-[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=9 format=3 uid="uid://b2tn5yjt7gso5"]
+[gd_resource type="Resource" script_class="InfluenceProfile" format=3 uid="uid://b2tn5yjt7gso5"]
 
 [ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_1581i"]
 [ext_resource type="Resource" uid="uid://58ocb4u00nd1" path="res://resources/expressions/conditions/should_return home.tres" id="2_fx3cv"]
-[ext_resource type="Script" uid="uid://dw3hray8v777s" path="res://logic/influences/influence_profile.gd" id="3_08wql"]
+[ext_resource type="Script" uid="uid://0i12e71p4i35" path="res://resources/influences/influence_profile.gd" id="3_08wql"]
 [ext_resource type="Resource" uid="uid://b5yij3nkbk2v" path="res://resources/influences/home_pheromone_influence.tres" id="6_24re6"]
 [ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influences/forward_influence.tres" id="6_86eyg"]
 [ext_resource type="Resource" uid="uid://eputxwmi1wkt" path="res://resources/influences/colony_in_sight_influence.tres" id="6_lmovu"]
 [ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="7_82mjd"]
 
-
 [sub_resource type="Resource" id="Resource_kg0fn"]
 script = ExtResource("1_1581i")
 name = "die"
 expression_string = "suicide()"
-nested_expressions = Array[ExtResource("1_1581i")]([])
-description = ""
 type = 1
 
 [resource]
 script = ExtResource("3_08wql")
 name = "go home"
 enter_conditions = Array[ExtResource("1_1581i")]([ExtResource("2_fx3cv"), SubResource("Resource_kg0fn")])
-exit_conditions = Array[ExtResource("1_1581i")]([])
-influences = Array[ExtResource("1_1581i")]([ExtResource("6_86eyg"), ExtResource("7_82mjd"), ExtResource("6_24re6"), ExtResource("6_lmovu")])
+influences = [ExtResource("6_86eyg"), ExtResource("7_82mjd"), ExtResource("6_24re6"), ExtResource("6_lmovu")]

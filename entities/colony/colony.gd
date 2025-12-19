@@ -50,12 +50,12 @@ var heatmap_enabled: bool = false :
 		HeatmapManager.debug_draw(self, value)
 #endregion
 
-var logger: Logger
+var logger: iLogger
 var sandbox
 
 #region Initialization
 func _init() -> void:
-	logger = Logger.new("colony", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("colony", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
 	HeatmapManager.register_entity(self)

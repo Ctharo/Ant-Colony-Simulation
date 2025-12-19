@@ -18,10 +18,10 @@ var id: String
 @export var priority: int = 0
 
 ## Logger instance
-var logger: Logger
+var logger: iLogger
 
 func _init() -> void:
-	logger = Logger.new("ant_action_profile", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("ant_action_profile", DebugLogger.Category.ENTITY)
 
 ## Check if this profile is active for the given ant
 func is_active_for(ant: Ant) -> bool:

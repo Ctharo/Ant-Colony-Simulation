@@ -11,7 +11,7 @@ var _evaluation_cache: Dictionary = {}
 const CACHE_TTL = 0.5
 
 ## Logger instance
-var logger: Logger
+var logger: iLogger
 
 ## Performance monitoring enabled state
 var _perf_monitor_enabled := false
@@ -76,7 +76,7 @@ class ExpressionState:
 
 #region Initialization
 func _init() -> void:
-	logger = Logger.new("expr_mgr", DebugLogger.Category.LOGIC)
+	logger = iLogger.new("expr_mgr", DebugLogger.Category.LOGIC)
 	_controller = EvaluationController.new()
 
 ## Gets or creates the state dictionary for an entity

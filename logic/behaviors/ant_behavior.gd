@@ -15,14 +15,14 @@ extends Resource
 
 var is_active: bool = false
 var ant: Ant
-var logger: Logger
+var logger: iLogger
 
 func _init() -> void:
-	logger = Logger.new("ant_behavior", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("ant_behavior", DebugLogger.Category.ENTITY)
 
 func initialize(p_ant: Ant) -> void:
 	ant = p_ant
-	
+
 	# Initialize all actions with this ant
 	for action in available_actions:
 		action.initialize(ant)
@@ -31,32 +31,32 @@ func initialize(p_ant: Ant) -> void:
 func should_be_active() -> bool:
 	if activation_conditions.is_empty():
 		return false
-		
+
 	# All conditions must be true to activate
 	for condition in activation_conditions:
 		if not condition.get_value(ant):
 			return false
-			
+
 	return true
 
 ## Activate this behavior
 func activate() -> void:
 	if is_active:
 		return
-		
+
 	is_active = true
 	logger.debug("Activating behavior: " + name)
-	
+
 	# Set movement profile
 	if is_instance_valid(movement_profile) and is_instance_valid(ant.influence_manager):
 		ant.influence_manager.active_profile = movement_profile
-		
+
 	# Set available actions (but don't force any to start)
 	if is_instance_valid(ant.action_manager):
 		ant.action_manager.clear_actions()
 		for action in available_actions:
 			ant.action_manager.add_action(action)
-	
+
 	# Activate pheromones
 	for pheromone in active_pheromones:
 		if not pheromone in ant.pheromones:
@@ -66,12 +66,12 @@ func activate() -> void:
 func deactivate() -> void:
 	if not is_active:
 		return
-		
+
 	logger.debug("Deactivating behavior: " + name)
 	is_active = false
-	
+
 	# No need to clear actions - the next behavior will set its own
-	
+
 	# Remove behavior-specific pheromones
 	for pheromone in active_pheromones:
 		if pheromone in ant.pheromones:

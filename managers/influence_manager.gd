@@ -48,13 +48,13 @@ var active_profile: InfluenceProfile:
 @export var profile_check_interval: float = 1.0
 var _profile_check_timer: float = 0.0
 ## Logger instance for debugging
-var logger: Logger
+var logger: iLogger
 #endregion
 
 #region Initialization and Process
 func _init() -> void:
 	name = "influence_manager"
-	logger = Logger.new(name, DebugLogger.Category.INFLUENCE)
+	logger = iLogger.new(name, DebugLogger.Category.INFLUENCE)
 	# Enable influence logging for debugging
 	DebugLogger.set_category_enabled(DebugLogger.Category.INFLUENCE, true)
 

@@ -1,17 +1,7 @@
-[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=8 format=3 uid="uid://ch0lb2jhvsc1y"]
+[gd_resource type="Resource" script_class="InfluenceProfile" format=3 uid="uid://ch0lb2jhvsc1y"]
 
 [ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_4qa5u"]
-[ext_resource type="Resource" uid="uid://cm2ne8isnu1rq" path="res://resources/expressions/conditions/should_look_for_food.tres" id="2_3uo55"]
-[ext_resource type="Script" uid="uid://dw3hray8v777s" path="res://logic/influences/influence_profile.gd" id="2_w5f3a"]
-[ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influences/forward_influence.tres" id="3_ik3v7"]
-[ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="5_caqf5"]
-[ext_resource type="Resource" uid="uid://duar8dik4bi45" path="res://resources/influences/food_pheromone_influence.tres" id="7_iowas"]
-[ext_resource type="Resource" uid="uid://blm4y5t2y8bg4" path="res://resources/influences/food_influence.tres" id="8_wjawk"]
-
+[ext_resource type="Script" uid="uid://0i12e71p4i35" path="res://resources/influences/influence_profile.gd" id="2_yrwn0"]
 
 [resource]
-script = ExtResource("2_w5f3a")
-name = "look for food"
-enter_conditions = Array[ExtResource("1_4qa5u")]([ExtResource("2_3uo55")])
-exit_conditions = Array[ExtResource("1_4qa5u")]([])
-influences = Array[ExtResource("1_4qa5u")]([ExtResource("3_ik3v7"), ExtResource("5_caqf5"), ExtResource("8_wjawk"), ExtResource("7_iowas")])
+script = ExtResource("2_yrwn0")

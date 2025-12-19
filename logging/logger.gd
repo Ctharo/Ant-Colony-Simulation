@@ -1,4 +1,4 @@
-class_name Logger
+class_name iLogger
 extends RefCounted
 
 var _log_from: String

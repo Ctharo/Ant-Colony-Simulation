@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="Pheromone" load_steps=4 format=3 uid="uid://n55uv4uui3sc"]
+[gd_resource type="Resource" script_class="Pheromone" format=3 uid="uid://n55uv4uui3sc"]
 
 [ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_y3lfs"]
 [ext_resource type="Script" uid="uid://dvmsu7ath6cdc" path="res://entities/pheromone/pheromone.gd" id="2_didfl"]
@@ -7,8 +7,6 @@
 script = ExtResource("1_y3lfs")
 name = "home pheromone condition"
 expression_string = "not is_carrying_food"
-nested_expressions = Array[ExtResource("1_y3lfs")]([])
-description = ""
 type = 1
 
 [resource]

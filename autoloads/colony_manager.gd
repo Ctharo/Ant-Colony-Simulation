@@ -8,11 +8,11 @@ const MAX_COLONIES := 10
 
 # Maintain list of active colonies
 var colonies: Array[Colony] = []
-var logger: Logger
+var logger: iLogger
 
 #region Initialization
 func _init() -> void:
-	logger = Logger.new("colony_manager", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("colony_manager", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
 	# Ensure we're in colony group for easy access

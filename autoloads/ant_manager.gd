@@ -7,7 +7,7 @@ signal ant_removed(ant: Ant)
 #endregion
 
 #region Member Variables
-var logger: Logger
+var logger: iLogger
 var ants: Array[Ant] = []
 var ants_created: int = 0
 
@@ -18,7 +18,7 @@ var current_ant_count: int:
 #endregion
 
 func _init() -> void:
-	logger = Logger.new("ant_manager", DebugLogger.Category.PROGRAM)
+	logger = iLogger.new("ant_manager", DebugLogger.Category.PROGRAM)
 
 ## Spawns multiple ants at a colony
 ## Returns an array of spawned ants

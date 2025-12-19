@@ -206,7 +206,7 @@ func _update_display() -> void:
 
 	# Update labels
 	food_label.text = "Carrying food" if current_ant.is_carrying_food else "Not carrying food"
-	profile_label.text = "Active Profile: %s" % current_ant.influence_manager.active_profile.name
+	#profile_label.text = "Active Profile: %s" % current_ant.influence_manager.active_profile.name
 	# Update influences if expanded
 	if is_expanded:
 		_update_influences()
