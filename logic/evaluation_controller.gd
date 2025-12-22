@@ -22,11 +22,11 @@ var evaluation_queue: Array = []
 ## Map of expression IDs to their priorities
 var _priorities: Dictionary = {}
 ## Logger instance
-var logger: Logger
+var logger: iLogger
 #endregion
 
 func _init() -> void:
-	logger = Logger.new("eval_controller", DebugLogger.Category.LOGIC)
+	logger = iLogger.new("eval_controller", DebugLogger.Category.LOGIC)
 	logger.trace("EvaluationController initialized")
 
 ## Register an expression with a specific evaluation priority

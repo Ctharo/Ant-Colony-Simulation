@@ -120,7 +120,7 @@ static func set_category_enabled(category: Category, enabled: bool = true, from:
 			{"from": from if from else "debug_logger"}
 		)
 	enabled_categories[category] = enabled
-	
+
 
 ## Set the global log level
 static func set_log_level(level: LogLevel, from: String = "") -> void:

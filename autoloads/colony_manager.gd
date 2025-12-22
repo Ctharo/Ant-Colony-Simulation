@@ -8,11 +8,11 @@ const MAX_COLONIES := 10
 
 # Maintain list of active colonies
 var colonies: Array[Colony] = []
-var logger: Logger
+var logger: iLogger
 
 #region Initialization
 func _init() -> void:
-	logger = Logger.new("colony_manager", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("colony_manager", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
 	# Ensure we're in colony group for easy access
@@ -71,7 +71,7 @@ func spawn_colony() -> Colony:
 		return null
 
 	var colony: Colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
-	
+
 	var profile = load("res://entities/colony/resources/base_colony_profile.tres") as ColonyProfile
 	colony.init_colony_profile(profile)
 

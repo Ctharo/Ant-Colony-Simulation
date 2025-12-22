@@ -9,7 +9,7 @@ extends Node
 var _entity_states: Dictionary = {}
 
 ## Logger instance
-var logger: Logger
+var logger: iLogger
 
 ## Performance monitoring enabled state
 var _perf_monitor_enabled := false
@@ -74,7 +74,7 @@ class ExpressionState:
 
 #region Initialization
 func _init() -> void:
-	logger = Logger.new("expr_mgr", DebugLogger.Category.LOGIC)
+	logger = iLogger.new("expr_mgr", DebugLogger.Category.LOGIC)
 	_controller = EvaluationController.new()
 
 ## Gets or creates the state dictionary for an entity

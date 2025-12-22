@@ -31,7 +31,7 @@ const DEFAULT_SETTINGS = {
 }
 
 ## Logger instance for debugging
-var logger: Logger
+var logger: iLogger
 
 ## Current settings values
 var _settings: Dictionary = {}
@@ -40,7 +40,7 @@ var _settings: Dictionary = {}
 var _is_initialized: bool = false
 
 func _init() -> void:
-	logger = Logger.new("settings_manager", DebugLogger.Category.PROGRAM)
+	logger = iLogger.new("settings_manager", DebugLogger.Category.PROGRAM)
 	_is_initialized = false
 
 func _ready() -> void:

@@ -74,7 +74,7 @@ var target_position: Vector2 :
 
 ## Task update timer
 var task_update_timer: float = 0.0
-var logger: Logger
+var logger: iLogger
 #endregion
 
 var is_dead: bool = false
@@ -115,7 +115,7 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var doing_task: bool = false
 
 func _init() -> void:
-	logger = Logger.new("ant", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("ant", DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
 	# Initialize influence manager

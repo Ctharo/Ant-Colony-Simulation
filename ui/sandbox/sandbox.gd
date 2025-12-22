@@ -4,7 +4,7 @@ const MAP_SIZE_COEF = 4.0
 var settings_manager = SettingsManager
 var map_generator: MapGenerator
 var map_size: Vector2
-var logger: Logger
+var logger: iLogger
 var source_geometry: NavigationMeshSourceGeometryData2D
 @onready var camera = $Camera2D
 
@@ -17,7 +17,7 @@ var initializing: bool = false
 @onready var ant_container = $AntContainer
 
 func _init() -> void:
-	logger = Logger.new("sandbox", DebugLogger.Category.PROGRAM)
+	logger = iLogger.new("sandbox", DebugLogger.Category.PROGRAM)
 
 func _ready() -> void:
 	map_size = get_viewport_rect().size * MAP_SIZE_COEF

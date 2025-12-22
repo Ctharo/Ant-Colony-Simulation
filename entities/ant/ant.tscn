@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://csrvvfq3x0u3r"]
+[gd_scene format=3 uid="uid://csrvvfq3x0u3r"]
 
 [ext_resource type="Script" uid="uid://cilwxwsbq42xq" path="res://entities/ant/ant.gd" id="1_6htid"]
 [ext_resource type="Script" uid="uid://c57claf8kvfrf" path="res://managers/influence_manager.gd" id="2_2mgsy"]
@@ -20,7 +20,7 @@ radius = 100.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_epip7"]
 radius = 14.0
 
-[node name="Ant" type="CharacterBody2D" groups=["ant"]]
+[node name="Ant" type="CharacterBody2D" unique_id=92061244 groups=["ant"]]
 disable_mode = 1
 collision_layer = 0
 collision_mask = 0
@@ -29,24 +29,24 @@ motion_mode = 1
 script = ExtResource("1_6htid")
 pheromones = Array[ExtResource("2_tscyr")]([ExtResource("3_bxdt5"), ExtResource("4_x6xol")])
 
-[node name="InfluenceManager" type="Node2D" parent="."]
+[node name="InfluenceManager" type="Node2D" parent="." unique_id=1578250875]
 script = ExtResource("2_2mgsy")
 
-[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=2032330689]
 unique_name_in_owner = true
 simplify_path = true
 simplify_epsilon = 1.5
 avoidance_layers = 0
 avoidance_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1613621964]
 unique_name_in_owner = true
 visible = false
 rotation = 1.5708
 shape = SubResource("CapsuleShape2D_ikxuy")
 debug_color = Color(0.552941, 0.752941, 0, 0.419608)
 
-[node name="SenseArea" type="Area2D" parent="."]
+[node name="SenseArea" type="Area2D" parent="." unique_id=1356064129]
 unique_name_in_owner = true
 visible = false
 rotation = 1.5708
@@ -54,11 +54,11 @@ collision_layer = 0
 collision_mask = 10
 input_pickable = false
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SenseArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SenseArea" unique_id=209562809]
 position = Vector2(-1.07288e-05, 0.125512)
 shape = SubResource("CircleShape2D_bgmjh")
 
-[node name="SightArea" type="Area2D" parent="."]
+[node name="SightArea" type="Area2D" parent="." unique_id=29716589]
 unique_name_in_owner = true
 visible = false
 rotation = 1.5708
@@ -66,20 +66,20 @@ collision_layer = 0
 collision_mask = 14
 input_pickable = false
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SightArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SightArea" unique_id=500355983]
 shape = SubResource("CircleShape2D_2p8x4")
 
-[node name="ReachArea" type="Area2D" parent="."]
+[node name="ReachArea" type="Area2D" parent="." unique_id=1018192646]
 unique_name_in_owner = true
 modulate = Color(0.678431, 0.678431, 0, 1)
 collision_layer = 2
 collision_mask = 15
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ReachArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ReachArea" unique_id=654797355]
 shape = SubResource("CircleShape2D_epip7")
 debug_color = Color(0.321569, 0.25098, 0.027451, 0.419608)
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=173114793]
 unique_name_in_owner = true
 self_modulate = Color(0.462745, 0.678431, 0.94902, 1)
 position = Vector2(0.0969868, 0.10746)
@@ -87,7 +87,7 @@ rotation = 1.5708
 scale = Vector2(0.0961376, 0.124693)
 texture = ExtResource("2_wmt1h")
 
-[node name="MouthMarker" type="Marker2D" parent="."]
+[node name="MouthMarker" type="Marker2D" parent="." unique_id=1903881674]
 unique_name_in_owner = true
 modulate = Color(0.352941, 0.513726, 0.172549, 1)
 position = Vector2(14, 0)

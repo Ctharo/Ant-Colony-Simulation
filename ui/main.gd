@@ -3,11 +3,11 @@ extends Control
 var title_label: Label
 var button_container: VBoxContainer
 
-var logger: Logger
+var logger: iLogger
 
 
 func _init() -> void:
-	logger = Logger.new("main", DebugLogger.Category.PROGRAM)
+	logger = iLogger.new("main", DebugLogger.Category.PROGRAM)
 
 
 func _ready():
