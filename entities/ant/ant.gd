@@ -141,11 +141,14 @@ func _ready() -> void:
 
 func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
-	if not influence_manager:
-		return
-
-	for influence: InfluenceProfile in p_profile.movement_influences:
-		influence_manager.add_profile(influence)
+	movement_rate = p_profile.movement_rate
+	vision_range = p_profile.vision_range
+	pheromones = p_profile.pheromones
+	role = p_profile.name.to_snake_case()
+	
+	if influence_manager:
+		for influence in p_profile.movement_influences:
+			influence_manager.add_profile(influence)
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta

@@ -127,6 +127,8 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 		return null
 
 	var _ants = AntManager.spawn_ants(self, 1, ant_profile)
+	if _ants.size() > 0:
+		_last_spawn_ticks = Time.get_ticks_msec()  # ADD THIS
 	return _ants[0] if _ants.size() > 0 else null
 
 ## Processes automatic ant spawning based on profiles

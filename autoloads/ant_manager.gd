@@ -61,14 +61,11 @@ func _create_ant(profile: AntProfile) -> Ant:
 		logger.error("Failed to instantiate ant scene")
 		return null
 
-	# Set basic identity properties
 	ants_created += 1
 	ant.id = ants_created
 	ant.name = "Ant%s" % ant.id
-
-	# Apply profile - this handles all profile-related setup
-	ant.init_profile(profile)
-
+	ant.init_profile(profile)  # All profile setup happens here now
+	
 	return ant
 
 ## Initializes ant position relative to colony
@@ -83,16 +80,16 @@ func _initialize_ant_position(ant: Ant, colony: Colony) -> void:
 
 ## Registers ant with necessary systems
 func _register_ant(ant: Ant, colony: Colony) -> void:
-	# Add to tracking
+	# Add to AntManager tracking
 	ants.append(ant)
 	ant.add_to_group("ant")
-
-	# Set colony reference
-	ant.set_colony(colony)
-
+	
+	# Add to colony's tracking (THIS IS THE FIX)
+	colony.add_ant(ant)
+	
 	# Connect signals
 	ant.died.connect(_on_ant_died)
-
+	
 	# Emit spawn signal
 	ant_spawned.emit(ant, colony)
 
