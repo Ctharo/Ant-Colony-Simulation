@@ -63,7 +63,7 @@ static var enabled_categories := {
 	Category.CONDITION: false,
 	Category.PROPERTY: false,
 	Category.CONTEXT: false,
-	Category.ENTITY: false,
+	Category.ENTITY: true,
 	Category.TRANSITION: false,
 	Category.HIERARCHY: false,
 	Category.UI: false,

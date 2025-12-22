@@ -5,7 +5,7 @@ const SETTINGS_PATH = "user://settings.json"
 
 
 ## Logger instance for this class
-var logger: Logger
+var logger: iLogger
 var settings_manager: SettingsManager = SettingsManager
 
 
@@ -34,7 +34,7 @@ var settings_manager: SettingsManager = SettingsManager
 @onready var category_grid: GridContainer = %CategoryGrid
 
 func _init() -> void:
-	logger = Logger.new("settings", DebugLogger.Category.PROGRAM)
+	logger = iLogger.new("settings", DebugLogger.Category.PROGRAM)
 
 func _ready() -> void:
 	logger.info("Initializing Settings UI")

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ColonyProfile" format=3 uid="uid://v3foecoawkgp"]
+[gd_resource type="Resource" script_class="ColonyProfile" load_steps=0 format=3 uid="uid://v3foecoawkgp"]
 
 [ext_resource type="Script" uid="uid://7n8rpcil0b7c" path="res://entities/ant/ant_profile.gd" id="1_eyh8a"]
 [ext_resource type="Script" uid="uid://bas0qudmxtkln" path="res://entities/colony/colony_profile.gd" id="2_1epkk"]

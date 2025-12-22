@@ -45,10 +45,7 @@ var _carried_food: Food :
 			is_carrying_food = false
 
 #region Components
-## Action manager for handling actions
-@onready var action_manager: AntActionManager = $ActionManager
-@onready var influence_manager: InfluenceManager = $InfluenceManager
-@onready var behavior_manager: AntBehaviorManager
+var influence_manager: InfluenceManager
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 @onready var sight_area: Area2D = %SightArea
 @onready var sense_area: Area2D = %SenseArea
@@ -67,9 +64,6 @@ enum Action {
 var action_map: Dictionary[Action, Callable] = {
 	Action.MOVE: move_to
 }
-
-## Currently active action profiles
-var active_profiles: Array[AntActionProfile] = []
 #endregion
 
 var target_position: Vector2 :
@@ -122,14 +116,15 @@ var doing_task: bool = false
 
 func _init() -> void:
 	logger = iLogger.new("ant", DebugLogger.Category.ENTITY)
+	influence_manager = InfluenceManager.new()
+	
 
 func _ready() -> void:
 	# Initialize influence manager
 	influence_manager.initialize(self)
-	behavior_manager = AntBehaviorManager.new()
-	add_child(behavior_manager)
 
-
+	if profile:
+		init_profile(profile)
 
 	# Register to heatmap
 	HeatmapManager.register_entity(self)
@@ -141,108 +136,16 @@ func _ready() -> void:
 	$ReachArea/CollisionShape2D.shape.radius = mouth_marker.position.x - food.get_size()
 	food.queue_free()
 
-	# Initialize action manager
-	action_manager.initialize(self)
-
-	# If profile was set before _ready, apply action profiles now
-	if profile:
-		_apply_action_profiles()
-
-	# Connect signals
-	action_manager.action_started.connect(_on_action_started)
-	action_manager.action_completed.connect(_on_action_completed)
-	action_manager.action_failed.connect(_on_action_failed)
-
 	# Emit ready signal
 	spawned.emit()
 
 func init_profile(p_profile: AntProfile) -> void:
-	if not is_instance_valid(p_profile):
-		logger.error("Cannot initialize with invalid profile")
-		return
-
-	# Store reference to profile
 	profile = p_profile
-
-	# Set basic properties from profile
-	movement_rate = profile.movement_rate
-	vision_range = profile.vision_range
-	role = profile.name.to_snake_case()
-
-	# Copy pheromones (avoid using reference to prevent modifying original)
-	pheromones.clear()
-	for pheromone in profile.pheromones:
-		pheromones.append(pheromone)
-
-	# Initialize influence system if available
-	if influence_manager:
-		logger.debug("Adding %d influence profiles" % profile.movement_influences.size())
-		for influence_profile in profile.movement_influences:
-			logger.debug("Adding influence profile: %s" % influence_profile.name)
-			influence_manager.add_profile(influence_profile)
-	else:
-		logger.error("No influence manager available!")
-
-	# Setup action system with contextual behaviors
-	if is_inside_tree() and is_instance_valid(action_manager):
-		_setup_contextual_actions()
-
-	logger.debug("Profile applied to %s: %s" % [name, profile.name])
-
-
-
-# Helper method to apply action profiles, called from init_profile and _ready
-func _apply_action_profiles() -> void:
-	if not is_instance_valid(profile) or not is_instance_valid(action_manager):
+	if not influence_manager:
 		return
 
-	# Apply all action profiles from the ant profile
-	if profile.action_profiles:
-		for action_profile in profile.action_profiles:
-			if is_instance_valid(action_profile):
-				apply_action_profile(action_profile)
-
-
-## Set up contextual actions based on ant role
-func _setup_contextual_actions() -> void:
-	# Clear existing actions
-	action_manager.available_actions.clear()
-
-	# Create role-specific behavior actions
-	match role:
-		"forager":
-			var foraging = ActionProfileFactory.create_foraging_behavior()
-			action_manager.add_action(foraging)
-
-		"scout":
-			# For scouts we might want different behaviors
-			var patrol_action = PatrolAction.new()
-			patrol_action.name = "Patrol"
-			patrol_action.use_random_waypoints = true
-			patrol_action.random_waypoint_radius = 200.0
-			patrol_action.priority = 60
-			patrol_action.movement_profile = load("res://resources/influences/profiles/look_for_food.tres")
-			action_manager.add_action(patrol_action)
-
-		"soldier":
-			# For soldiers, specialized behaviors
-			var defend_action = CompositeAction.new()
-			defend_action.name = "DefendColony"
-			defend_action.priority = 70
-			# Set up soldier behaviors...
-			action_manager.add_action(defend_action)
-
-		_:  # Default/fallback for all ant types
-			# Always add these basic behaviors
-			var foraging = ActionProfileFactory.create_foraging_behavior()
-			action_manager.add_action(foraging)
-
-	# Add common actions for all ant types
-	var flee_action = ActionProfileFactory.create_flee_behavior()
-	action_manager.add_action(flee_action)
-
-	var rest_action = ActionProfileFactory.create_rest_behavior()
-	action_manager.add_action(rest_action)
+	for influence: InfluenceProfile in p_profile.movement_influences:
+		influence_manager.add_profile(influence)
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
@@ -257,61 +160,27 @@ func _physics_process(delta: float) -> void:
 		var energy_cost = calculate_energy_cost(delta)
 		energy_level -= energy_cost
 
-	# Process action profiles to add/remove profiles as conditions change
-	_process_action_profiles(delta)
+	if doing_task:
+		return
 
-	# The action manager handles action execution
-	# No need for manual action handling
+	# Attempt actions based on immediate conditions
+	if get_foods_in_reach() and not is_carrying_food:
+		harvest_food()
+		return
+
+	# If we're at colony with food, store it
+	if is_colony_in_range() and is_carrying_food:
+		store_food()
+		return
+
+	# Rest at colony if needed
+	if is_colony_in_range() and should_rest():
+		rest_until_full()
+		return
 
 	if not doing_task:
 		# Basic movement processing if we're moving
 		_process_movement(delta)
-
-## Apply an action profile
-func apply_action_profile(p_profile: AntActionProfile) -> void:
-	if not is_instance_valid(p_profile) or p_profile in active_profiles:
-		return
-
-	p_profile.apply_to(self)
-	active_profiles.append(p_profile)
-	logger.debug("Applied action profile: %s" % p_profile.name)
-
-## Remove an action profile
-func remove_action_profile(p_profile: AntActionProfile) -> void:
-	if not is_instance_valid(p_profile) or not p_profile in active_profiles:
-		return
-
-	p_profile.remove_from(self)
-	active_profiles.erase(p_profile)
-	logger.debug("Removed action profile: %s" % p_profile.name)
-
-## Process action profiles (call in _physics_process)
-func _process_action_profiles(_delta: float) -> void:
-	if profile and profile.action_profiles:
-		for p_profile in profile.action_profiles:
-			if is_instance_valid(p_profile):
-				var is_active = p_profile.is_active_for(self)
-				var is_applied = p_profile in active_profiles
-
-				if is_active and not is_applied:
-					apply_action_profile(p_profile)
-				elif not is_active and is_applied:
-					remove_action_profile(p_profile)
-
-func _on_action_started(action: AntAction) -> void:
-	logger.debug("Ant %s started action: %s" % [name, action.name])
-
-	# Special handling for movement actions
-	if action is MoveToAction and action.name == "Return To Colony":
-		# Dynamically set colony as target
-		if is_instance_valid(colony):
-			action.target_position = colony.global_position
-
-func _on_action_completed(action: AntAction) -> void:
-	logger.debug("Ant %s completed action: %s" % [name, action.name])
-
-func _on_action_failed(action: AntAction, reason: String) -> void:
-	logger.debug("Ant %s failed action: %s - %s" % [name, action.name, reason])
 
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> bool:
@@ -351,21 +220,14 @@ func store_food() -> void:
 
 func _process_movement(delta: float) -> void:
 	if not is_instance_valid(nav_agent):
-		logger.trace("No nav agent available")
 		return
 
 	var current_pos = global_position
 	_process_pheromones(delta)
 
-	if not is_instance_valid(influence_manager):
-		logger.error("No influence manager available for movement!")
-		return
 
 	if influence_manager.should_recalculate_target():
-		logger.trace("Recalculating movement target")
 		influence_manager.update_movement_target()
-	else:
-		logger.trace("Not recalculating target yet")
 
 	var next_pos = nav_agent.get_next_path_position()
 	var move_direction = (next_pos - current_pos).normalized()
@@ -518,54 +380,6 @@ func get_colonies_in_reach() -> Array:
 
 func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
 	return ants.filter(func(ant): return friendly == (ant.colony == colony))
-
-## Returns a vector pointing away from the nearest enemy ant
-func get_enemy_avoidance_vector() -> Vector2:
-	var enemy_ants = get_ants_in_view().filter(func(other_ant):
-		return other_ant.colony != colony
-	)
-
-	if enemy_ants.is_empty():
-		return Vector2.ZERO
-
-	# Find the nearest enemy
-	var nearest_enemy = null
-	var min_distance = INF
-
-	for enemy in enemy_ants:
-		var distance = global_position.distance_to(enemy.global_position)
-		if distance < min_distance:
-			nearest_enemy = enemy
-			min_distance = distance
-
-	if not nearest_enemy:
-		return Vector2.ZERO
-
-	# Vector pointing away from enemy, strength inversely proportional to distance
-	var direction = global_position.direction_to(nearest_enemy.global_position) * -1
-	var strength = 1.0 / max(min_distance / 50.0, 0.1)  # Normalize by expected range
-
-	return direction * strength
-
-## Returns a weighted sum of vectors pointing away from all nearby enemies
-func get_enemy_group_avoidance_vector() -> Vector2:
-	var enemy_ants = get_ants_in_view().filter(func(other_ant):
-		return other_ant.colony != colony
-	)
-
-	if enemy_ants.is_empty():
-		return Vector2.ZERO
-
-	var avoidance = Vector2.ZERO
-
-	for enemy in enemy_ants:
-		var direction = global_position.direction_to(enemy.global_position) * -1
-		var distance = global_position.distance_to(enemy.global_position)
-		var strength = 1.0 / max(distance / 50.0, 0.1)
-		avoidance += direction * strength
-
-	return avoidance.normalized()
-
 
 func get_foods_in_reach() -> Array:
 	var _foods: Array = []
