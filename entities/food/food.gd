@@ -10,6 +10,7 @@ var size: float
 
 func _init() -> void:
 	add_to_group("food")
+	set_state(State.AVAILABLE)
 
 func set_state(value: State):
 	_state = value
