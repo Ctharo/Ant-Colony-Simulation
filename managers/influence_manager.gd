@@ -44,7 +44,7 @@ var active_profile: InfluenceProfile:
 			_on_active_profile_changed()
 
 ## Available influence profiles
-@export var profiles: Array[InfluenceProfile] = []
+@export var profiles: Array[InfluenceProfile] = [] as Array[InfluenceProfile]
 @export var profile_check_interval: float = 1.0
 var _profile_check_timer: float = 0.0
 ## Logger instance for debugging

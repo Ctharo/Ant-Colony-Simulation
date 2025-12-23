@@ -43,6 +43,9 @@ func spawn_ants(colony: Colony, num: int = 1, profile: AntProfile = null) -> Arr
 		if ant:
 			_initialize_ant_position(ant, colony)
 			_register_ant(ant, colony)
+			# FIX: Apply profile AFTER ant is added to scene tree
+			# so that @onready vars like influence_manager are valid
+			_apply_profile(ant, spawn_profile)
 			spawned_ants.append(ant)
 
 	if spawned_ants.size() > 0:
@@ -61,12 +64,28 @@ func _create_ant(profile: AntProfile) -> Ant:
 		logger.error("Failed to instantiate ant scene")
 		return null
 
+	# Set basic properties
 	ants_created += 1
 	ant.id = ants_created
 	ant.name = "Ant%s" % ant.id
-	ant.init_profile(profile)  # All profile setup happens here now
-	
+
+	# Set profile reference (but don't init yet - @onready vars not ready)
+	ant.profile = profile
+	ant.movement_rate = profile.movement_rate
+	ant.vision_range = profile.vision_range
+	ant.pheromones = profile.pheromones
+	ant.role = profile.name.to_snake_case()
+
 	return ant
+
+## Applies profile to ant AFTER it's in the scene tree
+func _apply_profile(ant: Ant, profile: AntProfile) -> void:
+	# Now that ant is in scene tree, influence_manager is valid
+	if ant.influence_manager:
+		for influence: InfluenceProfile in profile.movement_influences:
+			ant.influence_manager.add_profile(influence)
+	else:
+		logger.error("Ant influence_manager still null after scene tree add")
 
 ## Initializes ant position relative to colony
 func _initialize_ant_position(ant: Ant, colony: Colony) -> void:
@@ -80,16 +99,19 @@ func _initialize_ant_position(ant: Ant, colony: Colony) -> void:
 
 ## Registers ant with necessary systems
 func _register_ant(ant: Ant, colony: Colony) -> void:
-	# Add to AntManager tracking
+	# Add to tracking
 	ants.append(ant)
 	ant.add_to_group("ant")
+
+	# Set colony reference and add to scene tree
+	ant.set_colony(colony)
 	
-	# Add to colony's tracking (THIS IS THE FIX)
+	# Add to scene tree via colony - this makes @onready vars valid
 	colony.add_ant(ant)
-	
+
 	# Connect signals
 	ant.died.connect(_on_ant_died)
-	
+
 	# Emit spawn signal
 	ant_spawned.emit(ant, colony)
 
@@ -108,58 +130,9 @@ func remove_ant(ant: Ant) -> void:
 
 	# Cleanup systems
 	HeatmapManager.unregister_entity(ant)
-	EvaluationSystem.cleanup_entity(ant)
 
-	# Delete node
+	# Queue free
 	ant.queue_free()
-	logger.debug("Removed ant: %s" % ant.name)
 
-## Signal handler for ant death
 func _on_ant_died(ant: Ant) -> void:
 	remove_ant(ant)
-
-## Enables/disables ant processing
-func start_ant(ant: Ant, enable: bool = true) -> Result:
-	if not ant:
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant is null")
-	if not ants.has(ant):
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Ant not managed by AntManager")
-
-	ant.set_physics_process(enable)
-	ant.set_process(enable)
-	logger.debug("Ant %s %s" % [ant.name, "started" if enable else "stopped"])
-
-	return Result.new()
-
-## Enables/disables all ant processing
-func start_ants(enable: bool = true) -> Result:
-	var count := 0
-	for ant in ants:
-		ant.set_physics_process(enable)
-		ant.set_process(enable)
-		count += 1
-
-	logger.info("Ant processing %s for %s %s" % [
-		"enabled" if enable else "disabled",
-		count,
-		"ant" if count == 1 else "ants"
-	])
-
-	return Result.new()
-
-## Returns all ants for a specific colony
-func by_colony(colony: Colony) -> Array[Ant]:
-	var colony_ants: Array[Ant] = []
-	for ant in ants:
-		if ant.colony == colony:
-			colony_ants.append(ant)
-	return colony_ants
-
-## Returns all managed ants
-func get_all() -> Array[Ant]:
-	return ants.duplicate()
-
-## Removes all ants
-func delete_all() -> void:
-	for ant in ants.duplicate():
-		remove_ant(ant)

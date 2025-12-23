@@ -45,7 +45,7 @@ var _carried_food: Food :
 			is_carrying_food = false
 
 #region Components
-var influence_manager: InfluenceManager
+@onready var influence_manager: InfluenceManager = $InfluenceManager
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 @onready var sight_area: Area2D = %SightArea
 @onready var sense_area: Area2D = %SenseArea
@@ -82,7 +82,8 @@ var is_dead: bool = false
 var vision_range: float = 100.0 :
 	set(value):
 		vision_range = value
-		$SightArea/CollisionShape2D.shape.radius = vision_range
+		if is_inside_tree() and $SightArea/CollisionShape2D:
+			$SightArea/CollisionShape2D.shape.radius = vision_range
 
 var movement_rate: float = 25.0
 var resting_rate: float = 20.0
@@ -113,18 +114,21 @@ var health_level: float = health_max :
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var doing_task: bool = false
+var _profile_pending: AntProfile = null  # Store profile for deferred init
 
 func _init() -> void:
 	logger = iLogger.new("ant", DebugLogger.Category.ENTITY)
-	influence_manager = InfluenceManager.new()
-	
 
 func _ready() -> void:
 	# Initialize influence manager
 	influence_manager.initialize(self)
 
-	if profile:
-		init_profile(profile)
+	# Apply pending profile if set before ready
+	if _profile_pending:
+		_apply_profile_internal(_profile_pending)
+		_profile_pending = null
+	elif profile:
+		_apply_profile_internal(profile)
 
 	# Register to heatmap
 	HeatmapManager.register_entity(self)
@@ -139,16 +143,25 @@ func _ready() -> void:
 	# Emit ready signal
 	spawned.emit()
 
+## Initialize with profile - handles both before and after _ready
 func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
-	movement_rate = p_profile.movement_rate
-	vision_range = p_profile.vision_range
-	pheromones = p_profile.pheromones
-	role = p_profile.name.to_snake_case()
 	
-	if influence_manager:
-		for influence in p_profile.movement_influences:
-			influence_manager.add_profile(influence)
+	# If not in tree yet, defer the influence setup
+	if not is_inside_tree() or not influence_manager:
+		_profile_pending = p_profile
+		return
+	
+	_apply_profile_internal(p_profile)
+
+## Internal method to apply profile when influence_manager is ready
+func _apply_profile_internal(p_profile: AntProfile) -> void:
+	if not influence_manager:
+		push_error("Cannot apply profile - influence_manager not ready")
+		return
+	
+	for influence: InfluenceProfile in p_profile.movement_influences:
+		influence_manager.add_profile(influence)
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
@@ -274,6 +287,7 @@ func harvest_food():
 	doing_task = true
 	var foods_in_reach = get_foods_in_reach()
 	if foods_in_reach.is_empty():
+		doing_task = false
 		return
 
 	# Sort foods by distance
@@ -332,6 +346,65 @@ func get_food_in_view() -> Array:
 			fiv.append(food)
 	return fiv
 
+func get_foods_in_reach() -> Array:
+	var foods: Array = []
+	for body in reach_area.get_overlapping_bodies():
+		if body is Food and body.is_available:
+			foods.append(body)
+	return foods
+
+func is_colony_in_range() -> bool:
+	if not colony:
+		return false
+	return global_position.distance_to(colony.global_position) < colony.radius
+
+func show_nav_path(enabled: bool) -> void:
+	nav_agent.debug_enabled = enabled
+
+func get_ants_in_view() -> Array:
+	var ants_arr: Array = []
+	for ant in sight_area.get_overlapping_bodies():
+		if ant is Ant and ant != null:
+			ants_arr.append(ant)
+	return ants_arr
+
+func get_colonies_in_view() -> Array:
+	var colonies: Array = []
+	for p_colony in sight_area.get_overlapping_bodies():
+		if p_colony is Colony:
+			colonies.append(p_colony)
+	return colonies
+
+func get_colonies_in_reach() -> Array:
+	var colonies: Array = []
+	for p_colony in reach_area.get_overlapping_bodies():
+		if p_colony is Colony:
+			colonies.append(p_colony)
+	return colonies
+
+func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
+	return ants_arr.filter(func(ant): return friendly == (ant.colony == colony))
+
+func is_colony_in_sight() -> bool:
+	var a = colony.global_position.distance_to(global_position) - colony.radius
+	var b = %SightArea.get_child(0).shape.radius
+	return a <= b
+
+func get_nearest_item(list: Array) -> Variant:
+	# Filter out nulls and find nearest item by distance
+	var valid_items = list.filter(func(item): return item != null)
+	var nearest = null
+	var min_distance = INF
+
+	for item in valid_items:
+		var distance = global_position.distance_to(item.global_position)
+		if distance < min_distance:
+			min_distance = distance
+			nearest = item
+
+	return nearest
+
+#region Pheromone Sensing
 ## Samples heat at a location (i.e., single cell) and moves on. Develops a
 ## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
@@ -360,64 +433,6 @@ func get_pheromone_direction(pheromone_name: String, follow_concentration: bool 
 	# Invert direction if not following concentration
 	return direction if follow_concentration else -direction
 
-func get_ants_in_view() -> Array:
-	var ants: Array = []
-	for ant in sight_area.get_overlapping_bodies():
-		if ant is Ant and ant != null:
-			ants.append(ant)
-	return ants
-
-func get_colonies_in_view() -> Array:
-	var colonies: Array = []
-	for p_colony in sight_area.get_overlapping_bodies():
-		if p_colony is Colony:
-			colonies.append(p_colony)
-	return colonies
-
-func get_colonies_in_reach() -> Array:
-	var colonies: Array = []
-	for p_colony in reach_area.get_overlapping_bodies():
-		if p_colony is Colony:
-			colonies.append(p_colony)
-	return colonies
-
-func filter_friendly_ants(ants: Array, friendly: bool = true) -> Array:
-	return ants.filter(func(ant): return friendly == (ant.colony == colony))
-
-func get_foods_in_reach() -> Array:
-	var _foods: Array = []
-	for food in reach_area.get_overlapping_bodies():
-		if food is Food and food != null and food.is_available:
-			_foods.append(food)
-	return _foods
-
-func is_colony_in_sight() -> bool:
-	var a = colony.global_position.distance_to(global_position) - colony.radius
-	var b = %SightArea.get_child(0).shape.radius
-	return a <= b
-
-func is_colony_in_range() -> bool:
-	return colony.global_position.distance_to(global_position) < colony.radius
-
-func get_nearest_item(list: Array) -> Variant:
-	# Filter out nulls and find nearest item by distance
-	var valid_items = list.filter(func(item): return item != null)
-	var nearest = null
-	var min_distance = INF
-
-	for item in valid_items:
-		var distance = global_position.distance_to(item.global_position)
-		if distance < min_distance:
-			min_distance = distance
-			nearest = item
-
-	return nearest
-
-func show_nav_path(enabled: bool):
-	nav_agent.debug_enabled = enabled
-
-
-#region Pheromone Sensing
 class ConcentrationSample:
 	var cell_pos: Vector2i
 	var concentration: float
@@ -448,49 +463,46 @@ class PheromoneMemory:
 			return current_time - sample.timestamp < memory_duration
 		)
 
-		# Only store unique cell positions, replace if exists
-		var existing_index = -1
-		for i in range(samples.size()):
-			if samples[i].cell_pos == cell_pos:
-				existing_index = i
-				break
+		# Only store unique cell positions
+		for sample in samples:
+			if sample.cell_pos == cell_pos:
+				sample.concentration = concentration
+				sample.timestamp = current_time
+				return
 
-		if existing_index != -1:
-			samples[existing_index] = ConcentrationSample.new(cell_pos, concentration)
-		else:
-			if samples.size() >= max_samples:
-				samples.pop_front()
-			samples.push_back(ConcentrationSample.new(cell_pos, concentration))
+		# Add new sample
+		var new_sample = ConcentrationSample.new(cell_pos, concentration)
+		samples.append(new_sample)
+
+		# Trim if over max
+		while samples.size() > max_samples:
+			samples.pop_front()
 
 	func get_concentration_vector() -> Vector2:
 		if samples.size() < 2:
 			return Vector2.ZERO
 
-		var current_time: int = Time.get_ticks_msec()
-		var direction: Vector2 = Vector2.ZERO
-		var total_weight: float = 0.0
+		var weighted_direction := Vector2.ZERO
+		var total_weight := 0.0
 
-		# Compare each sample with more recent samples
+		# Compare each sample to find gradient
 		for i in range(samples.size() - 1):
-			for j in range(i + 1, samples.size()):
-				var sample1: ConcentrationSample = samples[i]
-				var sample2: ConcentrationSample = samples[j]
+			var from_sample = samples[i]
+			var to_sample = samples[i + 1]
 
-				var concentration_diff: float = sample2.concentration - sample1.concentration
-				if concentration_diff == 0:
-					continue
+			# Direction from older to newer sample
+			var direction = Vector2(to_sample.cell_pos - from_sample.cell_pos).normalized()
 
-				# Calculate time weight - more recent comparisons have higher weight
-				var time_factor: float = 1.0 - float(current_time - sample2.timestamp) / memory_duration
-				var weight: float = time_factor * absf(concentration_diff)
+			# Weight by concentration difference (positive = increasing concentration)
+			var concentration_diff = to_sample.concentration - from_sample.concentration
 
-				# Convert cell positions to world coordinates for direction
-				var world_pos1: Vector2 = HeatmapManager.cell_to_world(sample1.cell_pos)
-				var world_pos2: Vector2 = HeatmapManager.cell_to_world(sample2.cell_pos)
+			# More recent samples have higher weight
+			var recency_weight = float(i + 1) / samples.size()
 
-				# Direction from lower to higher concentration
-				var sample_direction: Vector2 = (world_pos2 - world_pos1).normalized()
-				direction += sample_direction * weight * signf(concentration_diff)
-				total_weight += weight
+			weighted_direction += direction * concentration_diff * recency_weight
+			total_weight += abs(concentration_diff) * recency_weight
 
-		return direction.normalized() if total_weight > 0 else Vector2.ZERO
+		if total_weight > 0:
+			return weighted_direction.normalized()
+		return Vector2.ZERO
+#endregion
