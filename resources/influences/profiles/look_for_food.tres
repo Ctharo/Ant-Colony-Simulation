@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=7 format=3 uid="uid://ch0lb2jhvsc1y"]
+[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=8 format=3 uid="uid://ch0lb2jhvsc1y"]
 
 [ext_resource type="Resource" uid="uid://cm2ne8isnu1rq" path="res://resources/expressions/conditions/should_look_for_food.tres" id="1_8spje"]
+[ext_resource type="Resource" uid="uid://dorntljrvg8e6" path="res://resources/expressions/conditions/is_carrying_food.tres" id="2_4ou88"]
 [ext_resource type="Resource" uid="uid://blm4y5t2y8bg4" path="res://resources/influences/food_influence.tres" id="2_gym3k"]
 [ext_resource type="Script" uid="uid://0i12e71p4i35" path="res://resources/influences/influence_profile.gd" id="2_yrwn0"]
 [ext_resource type="Resource" uid="uid://duar8dik4bi45" path="res://resources/influences/food_pheromone_influence.tres" id="3_4ou88"]
@@ -10,5 +11,5 @@
 [resource]
 script = ExtResource("2_yrwn0")
 enter_conditions = Array[Object]([ExtResource("1_8spje")])
-exit_conditions = Array[Object]([])
+exit_conditions = Array[Object]([ExtResource("2_4ou88")])
 influences = Array[Object]([ExtResource("2_gym3k"), ExtResource("3_4ou88"), ExtResource("4_d4j81"), ExtResource("5_tqb37")])
