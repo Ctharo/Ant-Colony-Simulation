@@ -405,6 +405,9 @@ func get_nearest_item(list: Array) -> Variant:
 	return nearest
 
 #region Pheromone Sensing
+func get_pheromone_concentration(pheromone_name: String) -> float:
+	return HeatmapManager.get_heat_at_position(self, pheromone_name)
+
 ## Samples heat at a location (i.e., single cell) and moves on. Develops a
 ## concentration vector as it continues to move and sample.
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:

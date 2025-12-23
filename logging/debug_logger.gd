@@ -55,7 +55,7 @@ static var source_filters: Dictionary = {}
 ## Enabled categories (whitelist)
 static var enabled_categories := {
 	Category.TASK: false,
-	Category.LOGIC: false,
+	Category.LOGIC: true,
 	Category.INFLUENCE: false,
 	Category.MOVEMENT: false,
 	Category.ACTION: false,
