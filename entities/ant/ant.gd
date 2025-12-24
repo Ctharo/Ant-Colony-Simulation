@@ -48,7 +48,6 @@ var _carried_food: Food :
 @onready var influence_manager: InfluenceManager = $InfluenceManager
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 @onready var sight_area: Area2D = %SightArea
-@onready var sense_area: Area2D = %SenseArea
 @onready var reach_area: Area2D = %ReachArea
 @onready var mouth_marker: Marker2D = %MouthMarker
 #endregion
