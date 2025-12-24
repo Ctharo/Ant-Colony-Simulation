@@ -46,6 +46,8 @@ func spawn_ants(colony: Colony, num: int = 1, profile: AntProfile = null) -> Arr
 			spawned_ants.append(ant)
 
 	if spawned_ants.size() > 0:
+		if spawned_ants.size() == 5:
+			pass
 		logger.info("Spawned %s %s at colony %s" % [
 			spawned_ants.size(),
 			"ant" if spawned_ants.size() == 1 else "ants",

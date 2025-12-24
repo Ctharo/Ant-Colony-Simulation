@@ -37,7 +37,7 @@ static func create_standard() -> ColonyProfile:
 
 	# Set initial ant counts
 	profile.initial_ants = {
-		"basic_worker": 5
+		"basic_worker": 1
 	}
 
 	return profile

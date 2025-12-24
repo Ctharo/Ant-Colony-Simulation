@@ -10,7 +10,6 @@ var id: String
 @export var pheromones: Array[Pheromone]
 @export var movement_influences: Array[InfluenceProfile]
 # Add action profiles to support the new action system
-@export var action_profiles: Array[AntActionProfile]
 @export var movement_rate: float
 @export var vision_range: float = 100.0
 @export var size: float
@@ -36,10 +35,5 @@ static func create_basic_worker() -> AntProfile:
 		load("res://resources/influences/profiles/look_for_food.tres"),
 		load("res://resources/influences/profiles/go_home.tres")
 	] as Array[InfluenceProfile]
-
-	# Add action profiles
-	profile.action_profiles = [
-		ForagerActionProfile.create_standard()
-	] as Array[AntActionProfile]
 
 	return profile
