@@ -49,7 +49,7 @@ func start_colony(colony: Colony, enable: bool = true) -> Result:
 	return Result.new()
 
 ## Spawn multiple colonies
-func spawn_colonies(count: int = 1, profile_type: String = "standard") -> Colonies:
+func spawn_colonies(count: int = 1, profile: ColonyProfile = null) -> Colonies:
 	var new_colonies := Colonies.new()
 
 	# Check if we would exceed max colonies
@@ -58,14 +58,15 @@ func spawn_colonies(count: int = 1, profile_type: String = "standard") -> Coloni
 		count = MAX_COLONIES - colonies.size()
 
 	for i in range(count):
-		var colony = spawn_colony(profile_type)
+		var colony = spawn_colony(profile)
 		if colony:
 			new_colonies.append(colony)
 
 	return new_colonies
 
-## Spawn a single colony with the specified profile type
-func spawn_colony(profile_type: String = "standard") -> Colony:
+## Spawn a single colony with the specified profile
+## If no profile provided, uses the one from SettingsManager (source of truth)
+func spawn_colony(profile: ColonyProfile = null) -> Colony:
 	if colonies.size() >= MAX_COLONIES:
 		logger.warn("Cannot spawn colony - maximum of %d reached" % MAX_COLONIES)
 		return null
@@ -76,19 +77,18 @@ func spawn_colony(profile_type: String = "standard") -> Colony:
 		logger.error("Failed to instantiate colony scene")
 		return null
 
-	# Create appropriate profile based on type
-	var profile: ColonyProfile
-
-	match profile_type.to_lower():
-		"starter":
-			profile = ColonyProfile.create_starter()
-		"advanced":
-			profile = ColonyProfile.create_advanced()
-		_: # Default to standard
-			profile = ColonyProfile.create_standard()
+	# Use provided profile or get from SettingsManager (source of truth)
+	var colony_profile: ColonyProfile = profile
+	if not colony_profile:
+		colony_profile = SettingsManager.get_colony_profile()
+	
+	# Fallback to standard if still null
+	if not colony_profile:
+		logger.warn("No colony profile available, using standard")
+		colony_profile = ColonyProfile.create_standard()
 
 	# Apply profile to colony
-	colony.init_colony_profile(profile)
+	colony.init_colony_profile(colony_profile)
 
 	# Add to tracking
 	colonies.append(colony)
@@ -96,65 +96,44 @@ func spawn_colony(profile_type: String = "standard") -> Colony:
 	colony_spawned.emit(colony)
 	colony.add_to_group("colony")
 
-	logger.info("Spawned new colony: %s with profile %s" % [colony.name, profile.name])
+	logger.info("Spawned new colony: %s with profile %s" % [colony.name, colony_profile.name])
 	return colony
 
 ## Spawn colony at a specific position
-func spawn_colony_at(position: Vector2, profile_type: String = "standard") -> Colony:
-	var colony = spawn_colony(profile_type)
+func spawn_colony_at(position: Vector2, profile: ColonyProfile = null) -> Colony:
+	var colony = spawn_colony(profile)
 	if colony:
 		colony.global_position = position
 	return colony
 
-## Remove a colony and clean up its resources
+## Remove a colony from management
 func remove_colony(colony: Colony) -> Result:
 	if not colony:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Colony is null")
 
 	if not colonies.has(colony):
-		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Colony not managed by this manager")
+		return Result.new(Result.ErrorType.NOT_FOUND, "Colony not managed by this manager")
 
-	# Stop colony processing
-	start_colony(colony, false)
-
-	# Remove from tracking
 	colonies.erase(colony)
 	colony_removed.emit(colony)
-
-	# Clean up node
-	colony.delete_all()
 	colony.queue_free()
 
-	logger.debug("Removed colony: %s" % colony.name)
+	logger.info("Removed colony: %s" % colony.name)
 	return Result.new()
 
-## Get all valid colonies
-func get_all() -> Colonies:
-	var valid_colonies: = Colonies.new([])
+## Remove all colonies
+func delete_all() -> void:
+	for colony in colonies.duplicate():
+		remove_colony(colony)
 
-	for colony in colonies:
-		if is_instance_valid(colony) and not colony.is_queued_for_deletion():
-			valid_colonies.append(colony)
-		else:
-			# Clean up invalid reference
-			colonies.erase(colony)
-
-	return valid_colonies
+## Get all managed colonies
+func get_all() -> Array[Colony]:
+	return colonies.duplicate()
 
 ## Get colony by name
-func get_colony_by_name(colony_name: String) -> Colony:
+func get_by_name(colony_name: String) -> Colony:
 	for colony in colonies:
 		if colony.name == colony_name:
 			return colony
 	return null
-#endregion
-
-func delete_all() -> void:
-	for colony in colonies.duplicate():  # Duplicate array to avoid modification during iteration
-		remove_colony(colony)
-
-#region Cleanup
-func _exit_tree() -> void:
-	# Clean up all colonies when manager is removed
-	delete_all()
 #endregion

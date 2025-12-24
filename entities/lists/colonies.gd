@@ -10,5 +10,5 @@ func _init(initial_colonies: Variant = []):
 		push_error("Unhandled argument for Colonies.new() call")
 
 
-static func all() -> Colonies:
+static func all() -> Array[Colony]:
 	return ColonyManager.get_all()

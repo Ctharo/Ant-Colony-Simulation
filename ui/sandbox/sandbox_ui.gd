@@ -26,7 +26,7 @@ var sandbox: Node2D
 #endregion
 
 #region Default Spawn Values
-var DEFAULT_SPAWN_NUM = settings_manager.get_setting("ant_spawn_count", 1)
+## Food spawn count comes from settings
 var DEFAULT_FOOD_SPAWN_NUM = settings_manager.get_setting("food_spawn_count", 50)
 #endregion
 
@@ -133,8 +133,13 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 		return
 
 	match index:
-		0: # Spawn Ants - uses DEFAULT_SPAWN_NUM from settings
-			var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
+		0: # Spawn Ants - get count from colony profile
+			var profile = settings_manager.get_colony_profile()
+			var spawn_count = 5  # fallback default
+			if profile and not profile.initial_ants.is_empty():
+				# Use the first profile's initial count as spawn amount
+				spawn_count = profile.initial_ants.values()[0]
+			var ants = colony.spawn_ants(spawn_count)
 			for ant in ants:
 				if not ant.is_inside_tree():
 					$"../../AntContainer".add_child(ant)
@@ -162,15 +167,17 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 		preload("res://ui/styles/spawn_hover.tres"))
 
 	# Connect signal
-	active_context_menu.button_pressed.connect(_on_empty_menu_button_pressed.bind(world_pos))
+	active_context_menu.button_pressed.connect(
+		func(index: int): _on_empty_menu_button_pressed(index, world_pos))
 	active_context_menu.show_at(world_pos)
 
-func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
+func _on_empty_menu_button_pressed(index: int, screen_pos: Vector2) -> void:
 	match index:
 		0: # Spawn Colony
-			_on_spawn_colony_requested(pos)
+			_on_spawn_colony_requested(screen_pos)
 		1: # Spawn Food
-			_on_spawn_food_requested(pos)
+			_on_spawn_food_requested(screen_pos)
+
 	clear_active_menu()
 
 func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
@@ -180,10 +187,10 @@ func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	add_child(active_context_menu)
 
 	# Add buttons
-	active_context_menu.add_button("Track Ant",
+	active_context_menu.add_button("Info",
 		preload("res://ui/styles/info_normal.tres"),
 		preload("res://ui/styles/info_hover.tres"))
-	active_context_menu.add_button("Info",
+	active_context_menu.add_button("Track",
 		preload("res://ui/styles/info_normal.tres"),
 		preload("res://ui/styles/info_hover.tres"))
 	active_context_menu.add_button("Destroy",
@@ -193,22 +200,19 @@ func show_ant_context_menu(ant: Ant, world_pos: Vector2) -> void:
 	# Connect signal
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
-	active_context_menu.show_at(world_pos)
+	active_context_menu.show_at(world_pos, 12.0)
 
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 	if not is_instance_valid(ant):
 		return
 
 	match index:
-		0: # Track Ant
-			if is_instance_valid(camera.tracked_entity) and ant == camera.tracked_entity:
-				camera.stop_tracking()
-			else:
-				camera.track_entity(ant)
-		1: # Info
-			pass
+		0: # Info
+			show_info_panel(ant)
+		1: # Track
+			_on_ant_track_requested(ant)
 		2: # Destroy
-			ant_manager.remove_ant(ant)
+			_on_ant_destroy_requested(ant)
 
 	clear_active_menu()
 
@@ -218,21 +222,40 @@ func clear_active_menu() -> void:
 		active_context_menu = null
 #endregion
 
-#region Entity Info Management
+#region Ant Handlers
 func show_ant_info(ant: Ant) -> void:
-	close_ant_info()
-	if not is_instance_valid(ant):
-		return
-	var info: AntInfo = preload("res://ui/ant/ant_info.tscn").instantiate()
-	add_child(info)
-	info.show_ant_info(ant, camera)
-	active_ant_info = info
+	if is_instance_valid(active_ant_info):
+		if active_ant_info.ant == ant:
+			active_ant_info.queue_free()
+			return
+		active_ant_info.queue_free()
+
+	active_ant_info = preload("res://ui/debug/ant/ant_info_panel.tscn").instantiate()
+	add_child(active_ant_info)
+	active_ant_info.setup(ant)
 
 func close_ant_info() -> void:
 	if is_instance_valid(active_ant_info):
 		active_ant_info.queue_free()
 	active_ant_info = null
 
+func _on_ant_info_requested(ant: Ant) -> void:
+	if is_instance_valid(ant):
+		show_info_panel(ant)
+
+func _on_ant_destroy_requested(ant: Ant) -> void:
+	if is_instance_valid(ant):
+		ant.suicide()
+
+func _on_ant_track_requested(ant: Ant) -> void:
+	if is_instance_valid(ant):
+		if is_instance_valid(camera.tracked_entity) and ant == camera.tracked_entity:
+			camera.stop_tracking()
+			return
+		camera.track_entity(ant)
+#endregion
+
+#region Info Panel Management
 func show_info_panel(entity: Node) -> void:
 	var panel: Control
 	if entity is Colony and is_instance_valid(entity):
@@ -244,7 +267,6 @@ func show_info_panel(entity: Node) -> void:
 		colony_info_panel = preload("res://ui/debug/colony/colony_info_panel.tscn").instantiate()
 		info_panels_container.add_child(colony_info_panel)
 		colony_info_panel.highlight_ants.connect(_on_colony_highlight_ants_requested)
-		# REMOVED: spawn_ants_requested signal connection - use settings/context menu instead
 		colony_info_panel.show_colony_info(entity)
 		panel = colony_info_panel
 
@@ -283,12 +305,8 @@ func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	if colony:
 		colony.sandbox = sandbox
 		$"../../ColonyContainer".add_child(colony)
-		
-		# Spawn initial ants using settings value
-		var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
-		for ant in ants:
-			if not ant.is_inside_tree():
-				$"../../AntContainer".add_child(ant)
+		# Colony profile handles initial ant spawning via _spawn_initial_ants()
+		# No need to manually spawn ants here - the profile is the source of truth
 
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
@@ -309,30 +327,13 @@ func _on_colony_heatmap_requested(colony: Colony) -> void:
 		colony.heatmap_enabled = !colony.heatmap_enabled
 #endregion
 
-#region Ant Handlers
-func _on_ant_info_requested(ant: Ant) -> void:
-	if is_instance_valid(ant):
-		show_info_panel(ant)
-
-func _on_ant_destroy_requested(ant: Ant) -> void:
-	if is_instance_valid(ant):
-		ant.suicide()
-
-func _on_ant_track_requested(ant: Ant) -> void:
-	if is_instance_valid(ant):
-		if is_instance_valid(camera.tracked_entity) and ant == camera.tracked_entity:
-			camera.stop_tracking()
-			return
-		camera.track_entity(ant)
-#endregion
-
 #region Food Handlers
 func _on_spawn_food_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
 	var foods = FoodManager.spawn_foods(DEFAULT_FOOD_SPAWN_NUM)
 	for food: Food in foods:
 		var radius = randf_range(0, 50)
-		var angle = randf_range(0, TAU)  # TAU is 2π, a full circle
+		var angle = randf_range(0, TAU)
 		var wiggle = Vector2(
 			radius * cos(angle),
 			radius * sin(angle)
@@ -358,10 +359,10 @@ func _draw() -> void:
 			draw_arc(
 				   camera.global_to_ui(ant.global_position),
 				   12,
-				   0,          # Start angle (radians)
-				   TAU,        # End angle (full circle)
-				   32,         # Number of points
-				   Color.WHITE # Circle color
+				   0,
+				   TAU,
+				   32,
+				   Color.WHITE
 				)
 
 	if (is_instance_valid(hovered_colony) and hovered_colony is Colony):
@@ -371,8 +372,8 @@ func _draw() -> void:
 			draw_arc(
 				   camera.global_to_ui(ant.global_position),
 				   12,
-				   0,          # Start angle (radians)
-				   TAU,        # End angle (full circle)
-				   32,         # Number of points
-				   Color.WHITE # Circle color
+				   0,
+				   TAU,
+				   32,
+				   Color.WHITE
 				)

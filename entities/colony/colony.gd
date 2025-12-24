@@ -107,6 +107,7 @@ func _spawn_initial_ants() -> void:
 		if is_instance_valid(ant_profile) and count > 0:
 			var spawned = spawn_ants(count, ant_profile)
 			logger.debug("Spawned %d %s ants" % [spawned.size(), ant_profile.name])
+#endregion
 
 func _physics_process(delta: float) -> void:
 	_process_spawning(delta)
@@ -128,20 +129,28 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 
 	var _ants = AntManager.spawn_ants(self, 1, ant_profile)
 	if _ants.size() > 0:
-		_last_spawn_ticks = Time.get_ticks_msec()  # ADD THIS
+		_last_spawn_ticks = Time.get_ticks_msec()
 	return _ants[0] if _ants.size() > 0 else null
 
 ## Processes automatic ant spawning based on profiles
+## Note: spawn_ant() -> AntManager.spawn_ants() -> _register_ant() -> colony.add_ant()
+## So we do NOT call add_ant() here - it's already handled in the chain
 func _process_spawning(_delta: float) -> void:
 	for p_profile: AntProfile in ant_profiles:
 		if p_profile.spawn_condition and p_profile.spawn_condition.get_value(self):
-			add_ant(spawn_ant(p_profile))
+			spawn_ant(p_profile)  # Don't wrap in add_ant - already handled by AntManager
 #endregion
 
 ## Adds an ant to this colony's management
+## Called by AntManager._register_ant() - this is the single point of colony registration
 func add_ant(ant: Ant) -> Result:
 	if not ant:
 		return Result.new(Result.ErrorType.INVALID_ARGUMENT, "Invalid ant")
+
+	# Prevent duplicate registration
+	if ant in ants.elements:
+		logger.warn("Ant %s already registered to colony" % ant.name)
+		return Result.new()
 
 	ants.append(ant)
 
@@ -156,6 +165,7 @@ func add_ant(ant: Ant) -> Result:
 		add_child(ant)
 
 	ant.set_colony(self)
+	ant_added.emit(ant)
 	return Result.new()
 
 func _exit_tree() -> void:
