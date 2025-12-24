@@ -232,7 +232,7 @@ func show_ant_info(ant: Ant) -> void:
 
 	active_ant_info = preload("res://ui/debug/ant/ant_info_panel.tscn").instantiate()
 	add_child(active_ant_info)
-	active_ant_info.show_ant_info(ant, camera)
+	active_ant_info.show_ant_info(ant)
 
 func close_ant_info() -> void:
 	if is_instance_valid(active_ant_info):
@@ -278,7 +278,7 @@ func show_info_panel(entity: Node) -> void:
 			ant_info_panel.queue_free()
 		ant_info_panel = preload("res://ui/debug/ant/ant_info_panel.tscn").instantiate()
 		info_panels_container.add_child(ant_info_panel)
-		ant_info_panel.show_ant_info(entity, camera)
+		ant_info_panel.show_ant_info(entity)
 		panel = ant_info_panel
 
 	if panel:
