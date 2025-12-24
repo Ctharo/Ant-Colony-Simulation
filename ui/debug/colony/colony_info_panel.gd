@@ -1,11 +1,12 @@
 class_name ColonyInfoPanel
 extends PanelContainer
 
+signal spawn_ants_requested(colony, num_to_spawn)
 signal highlight_ants(colony: Colony, enable: bool)
 
 #region Constants
 const STYLE = {
-	"PANEL_SIZE": Vector2(300, 250),
+	"PANEL_SIZE": Vector2(300, 300),
 	"SELECTION_CIRCLE_COLOR": Color(Color.WHITE, 0.5),
 	"SELECTION_CIRCLE_WIDTH": 2.0
 }
@@ -18,6 +19,8 @@ const ANT_HIGHLIGHT_COLOR = Color(Color.WHITE, 0.5)
 @onready var ant_count_label: Label = %AntCountLabel
 @onready var food_collected_label: Label = %FoodCollectedLabel
 @onready var radius_label: Label = %RadiusLabel
+@onready var ant_count_edit: SpinBox = %AntCountEdit
+@onready var spawn_ants_button: Button = %SpawnAntsButton
 @onready var close_button: Button = %CloseButton
 @onready var show_heatmap_check: CheckButton = %ShowHeatmapCheck
 @onready var nav_debug_check: CheckButton = %NavDebugCheck
@@ -72,6 +75,10 @@ func update_colony_info() -> void:
 	radius_label.text = "Colony Radius: %.1f" % current_colony.radius
 
 
+func _on_spawn_ants_pressed() -> void:
+	spawn_ants_requested.emit(current_colony, int(ant_count_edit.value))
+
+
 func _on_highlight_ants_toggled(enabled: bool) -> void:
 	if current_colony:
 		current_colony.highlight_ants_enabled = enabled
@@ -84,6 +91,8 @@ func _on_nav_debug_toggled(enabled: bool) -> void:
 		for ant in current_colony.ants:
 			if ant.nav_agent:
 				ant.nav_agent.debug_enabled = enabled
+
+
 
 
 func _on_close_pressed() -> void:

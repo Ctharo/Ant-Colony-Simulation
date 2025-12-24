@@ -40,4 +40,10 @@ func warn(message: String, category: DebugLogger.Category = _log_category) -> vo
 
 func error(message: String, category: DebugLogger.Category = _log_category) -> void:
 	DebugLogger.error(category, message, {"from": _log_from})
+
+func set_logging_category(category: DebugLogger.Category, enabled: bool = true) -> void:
+	DebugLogger.set_category_enabled(category, enabled, _log_from)
+
+func set_logging_level(level: DebugLogger.LogLevel) -> void:
+	DebugLogger.set_log_level(level, _log_from)
 #endregion

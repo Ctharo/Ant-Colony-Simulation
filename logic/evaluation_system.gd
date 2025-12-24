@@ -7,8 +7,6 @@ extends Node
 ## Dictionary mapping entity instance IDs to their expression states
 ## Structure: { entity_id: { expression_id: ExpressionState } }
 var _entity_states: Dictionary = {}
-var _evaluation_cache: Dictionary = {}
-const CACHE_TTL = 0.5
 
 ## Logger instance
 var logger: iLogger
@@ -179,14 +177,6 @@ func _parse_expression(expression: Logic, entity: Node) -> void:
 		return
 
 func _calculate(expression_id: String, entity: Node) -> Variant:
-	var cache_key = "%s_%s" % [expression_id, entity.get_instance_id()]
-
-	# Check cache
-	if _evaluation_cache.has(cache_key):
-		var cache_entry = _evaluation_cache[cache_key]
-		if Time.get_ticks_msec() - cache_entry.timestamp < CACHE_TTL:
-			return cache_entry.value
-
 	var start_time := 0.0
 	if _perf_monitor_enabled and logger.is_debug_enabled():
 		start_time = Time.get_ticks_usec()
@@ -231,12 +221,6 @@ func _calculate(expression_id: String, entity: Node) -> Variant:
 			entity.name,
 			result
 		])
-
-	# Store in cache
-	_evaluation_cache[cache_key] = {
-		"value": result,
-		"timestamp": Time.get_ticks_msec()
-	}
 
 	return result
 #endregion

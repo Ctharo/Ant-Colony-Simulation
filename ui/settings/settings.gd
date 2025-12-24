@@ -141,7 +141,7 @@ func _on_food_spawn_count_changed(value: float) -> void:
 	logger.trace("Changing food spawn count to: %d" % value)
 	settings_manager.set_setting("food_spawn_count", value)
 
-func _on_map_size_changed(_value: float) -> void:
+func _on_map_size_changed(value: float) -> void:
 	logger.trace("Updating map size to: %d x %d" % [map_size_x.value, map_size_y.value])
 	settings_manager.set_setting("map_size_x", map_size_x.value)
 	settings_manager.set_setting("map_size_y", map_size_y.value)
@@ -174,10 +174,12 @@ func _on_log_level_changed(index: int) -> void:
 	var level = log_level_option.get_item_id(index)
 	logger.info("Changing log level to: %s" % DebugLogger.LogLevel.keys()[level])
 	settings_manager.set_setting("log_level", level)
+	DebugLogger.set_log_level(level)
 
 func _on_show_context_toggled(button_pressed: bool) -> void:
 	logger.info("%s context display" % ["Enabling" if button_pressed else "Disabling"])
 	settings_manager.set_setting("show_context", button_pressed)
+	DebugLogger.set_show_context(button_pressed)
 
 func _on_category_toggled(button_pressed: bool, category: DebugLogger.Category) -> void:
 	var category_name = DebugLogger.Category.keys()[category]
@@ -185,6 +187,7 @@ func _on_category_toggled(button_pressed: bool, category: DebugLogger.Category) 
 		category_name])
 	var setting_key = "category_" + category_name.to_lower()
 	settings_manager.set_setting(setting_key, button_pressed)
+	DebugLogger.set_category_enabled(category, button_pressed)
 #endregion
 
 #region Navigation

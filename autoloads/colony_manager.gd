@@ -49,7 +49,7 @@ func start_colony(colony: Colony, enable: bool = true) -> Result:
 	return Result.new()
 
 ## Spawn multiple colonies
-func spawn_colonies(count: int = 1, profile_type: String = "standard") -> Colonies:
+func spawn_colonies(count: int = 1) -> Colonies:
 	var new_colonies := Colonies.new()
 
 	# Check if we would exceed max colonies
@@ -58,19 +58,18 @@ func spawn_colonies(count: int = 1, profile_type: String = "standard") -> Coloni
 		count = MAX_COLONIES - colonies.size()
 
 	for i in range(count):
-		var colony = spawn_colony(profile_type)
+		var colony = spawn_colony()
 		if colony:
 			new_colonies.append(colony)
 
 	return new_colonies
 
-## Spawn a single colony with the specified profile type
-func spawn_colony(profile_type: String = "standard") -> Colony:
+## Spawn a single colony
+func spawn_colony() -> Colony:
 	if colonies.size() >= MAX_COLONIES:
 		logger.warn("Cannot spawn colony - maximum of %d reached" % MAX_COLONIES)
 		return null
 
-	# Create new colony instance
 	var colony: Colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
 
 	var profile = load("res://entities/colony/resources/base_colony_profile.tres") as ColonyProfile
@@ -81,15 +80,11 @@ func spawn_colony(profile_type: String = "standard") -> Colony:
 	colony.name = "Colony_%d" % colonies.size()
 	colony_spawned.emit(colony)
 	colony.add_to_group("colony")
-
-	logger.info("Spawned new colony: %s with profile %s" % [colony.name, profile.name])
 	return colony
 
-## Spawn colony at a specific position
-func spawn_colony_at(position: Vector2, profile_type: String = "standard") -> Colony:
-	var colony = spawn_colony(profile_type)
-	if colony:
-		colony.global_position = position
+func spawn_colony_at(position: Vector2) -> Colony:
+	var colony = spawn_colony()
+	colony.global_position = position
 	return colony
 
 ## Remove a colony and clean up its resources

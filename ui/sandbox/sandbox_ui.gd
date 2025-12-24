@@ -148,7 +148,7 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 		return
 
 	match index:
-		0: # Spawn Ants - uses DEFAULT_SPAWN_NUM from settings
+		0: # Spawn Ants
 			var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
 			for ant in ants:
 				if not ant.is_inside_tree():
@@ -162,6 +162,7 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 
 	clear_active_menu()
 
+#region Context Menu Management
 func show_empty_context_menu(world_pos: Vector2) -> void:
 	clear_active_menu()
 	active_context_menu = BaseContextMenu.new()
@@ -180,6 +181,7 @@ func show_empty_context_menu(world_pos: Vector2) -> void:
 	active_context_menu.button_pressed.connect(_on_empty_menu_button_pressed.bind(world_pos))
 	active_context_menu.show_at(world_pos)
 
+# Add this new method to handle empty menu button presses
 func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
 	match index:
 		0: # Spawn Colony
@@ -259,7 +261,7 @@ func show_info_panel(entity: Node) -> void:
 		colony_info_panel = preload("res://ui/debug/colony/colony_info_panel.tscn").instantiate()
 		info_panels_container.add_child(colony_info_panel)
 		colony_info_panel.highlight_ants.connect(_on_colony_highlight_ants_requested)
-		# REMOVED: spawn_ants_requested signal connection - use settings/context menu instead
+		colony_info_panel.spawn_ants_requested.connect(_on_colony_spawn_ants_requested)
 		colony_info_panel.show_colony_info(entity)
 		panel = colony_info_panel
 
@@ -291,6 +293,15 @@ func deselect_all() -> void:
 #endregion
 
 #region Colony Handlers
+func _on_colony_spawn_ants_requested(colony: Colony, num_to_spawn: int) -> void:
+	if not is_instance_valid(colony):
+		return
+
+	var ants = colony.spawn_ants(num_to_spawn)
+	for ant in ants:
+		if not ant.is_inside_tree():
+			$"../../AntContainer".add_child(ant)
+
 func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	var world_position = camera.ui_to_global(screen_position)
 	var colony = colony_manager.spawn_colony_at(world_position)
@@ -298,12 +309,12 @@ func _on_spawn_colony_requested(screen_position: Vector2) -> void:
 	if colony:
 		colony.sandbox = sandbox
 		$"../../ColonyContainer".add_child(colony)
-		
-		# Spawn initial ants using settings value
-		var ants = colony.spawn_ants(DEFAULT_SPAWN_NUM)
-		for ant in ants:
-			if not ant.is_inside_tree():
-				$"../../AntContainer".add_child(ant)
+
+		#HACK
+		# Immediately spawn ants on colony spawn
+		_on_colony_info_requested(colony)
+		colony_info_panel._on_spawn_ants_pressed()
+		close_info_panel(colony)
 
 func _on_colony_info_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):

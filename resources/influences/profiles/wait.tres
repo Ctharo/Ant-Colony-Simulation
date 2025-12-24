@@ -1,18 +1,25 @@
-[gd_resource type="Resource" script_class="InfluenceProfile" format=3 uid="uid://3qu1vytb5p8i"]
+[gd_resource type="Resource" script_class="InfluenceProfile" load_steps=6 format=3 uid="uid://3qu1vytb5p8i"]
 
-[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_ru1mi"]
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_ru1mi"]
 [ext_resource type="Resource" uid="uid://c6fh5yuhbmhyb" path="res://resources/expressions/conditions/is_in_colony.tres" id="2_8ergy"]
-[ext_resource type="Script" uid="uid://0i12e71p4i35" path="res://resources/influences/influence_profile.gd" id="2_dcisu"]
-[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influences/influence.gd" id="3_agmy1"]
+[ext_resource type="Script" path="res://logic/influence/influence_profile.gd" id="2_dcisu"]
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="3_agmy1"]
 
 [sub_resource type="Resource" id="Resource_l4nqg"]
 script = ExtResource("3_agmy1")
+color = Color(0, 0, 0, 1)
 name = "none"
 expression_string = "Vector2(0,0)"
+nested_expressions = Array[ExtResource("1_ru1mi")]([])
+description = ""
 type = 5
+min_eval_interval = 0.016
+max_eval_interval = 0.5
+evaluate_when_idle = false
+change_threshold = 0.0
 
 [resource]
 script = ExtResource("2_dcisu")
 name = "wait"
 enter_conditions = Array[ExtResource("1_ru1mi")]([ExtResource("2_8ergy")])
-influences = [SubResource("Resource_l4nqg")]
+influences = Array[ExtResource("1_ru1mi")]([SubResource("Resource_l4nqg")])

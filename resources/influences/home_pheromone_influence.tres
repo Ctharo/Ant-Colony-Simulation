@@ -1,8 +1,7 @@
 [gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://b5yij3nkbk2v"]
 
-[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_lcngw"]
-[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influences/influence.gd" id="2_68yne"]
-
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_lcngw"]
+[ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_68yne"]
 
 [resource]
 script = ExtResource("2_68yne")
