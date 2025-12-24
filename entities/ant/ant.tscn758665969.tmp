@@ -1,12 +1,19 @@
-[gd_scene load_steps=7 format=3 uid="uid://csrvvfq3x0u3r"]
+[gd_scene load_steps=12 format=3 uid="uid://csrvvfq3x0u3r"]
 
 [ext_resource type="Script" uid="uid://cilwxwsbq42xq" path="res://entities/ant/ant.gd" id="1_6htid"]
-[ext_resource type="Script" uid="uid://c57claf8kvfrf" path="res://entities/ant/managers/influence_manager.gd" id="2_2mgsy"]
+[ext_resource type="Script" uid="uid://c57claf8kvfrf" path="res://managers/influence_manager.gd" id="2_2mgsy"]
+[ext_resource type="Script" uid="uid://bggt77ddehqv5" path="res://managers/ant_action_manager.gd" id="2_3mgs4"]
+[ext_resource type="Script" uid="uid://dvmsu7ath6cdc" path="res://entities/pheromone/pheromone.gd" id="2_tscyr"]
 [ext_resource type="Texture2D" uid="uid://djfp7c852qxaq" path="res://entities/ant/Ant.svg" id="2_wmt1h"]
+[ext_resource type="Resource" uid="uid://bqym7fdwwu5m4" path="res://entities/pheromone/resources/food_pheromone.tres" id="3_bxdt5"]
+[ext_resource type="Resource" uid="uid://n55uv4uui3sc" path="res://entities/pheromone/resources/home_pheromone.tres" id="4_x6xol"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_ikxuy"]
 radius = 4.0
 height = 18.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bgmjh"]
+radius = 9.00089
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_2p8x4"]
 radius = 100.0
@@ -14,16 +21,20 @@ radius = 100.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_epip7"]
 radius = 14.0
 
-[node name="Ant" type="CharacterBody2D" unique_id=1910451240 groups=["ant"]]
+[node name="Ant2" type="CharacterBody2D" unique_id=1910451240 groups=["ant"]]
 disable_mode = 1
 collision_layer = 0
 collision_mask = 0
 input_pickable = true
 motion_mode = 1
 script = ExtResource("1_6htid")
+pheromones = Array[ExtResource("2_tscyr")]([ExtResource("3_bxdt5"), ExtResource("4_x6xol")])
 
 [node name="InfluenceManager" type="Node2D" parent="." unique_id=1799090186]
 script = ExtResource("2_2mgsy")
+
+[node name="ActionManager" type="Node" parent="." unique_id=1186143951]
+script = ExtResource("2_3mgs4")
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=1330697362]
 unique_name_in_owner = true
@@ -38,6 +49,18 @@ visible = false
 rotation = 1.5708
 shape = SubResource("CapsuleShape2D_ikxuy")
 debug_color = Color(0.552941, 0.752941, 0, 0.419608)
+
+[node name="SenseArea" type="Area2D" parent="." unique_id=1565290863]
+unique_name_in_owner = true
+visible = false
+rotation = 1.5708
+collision_layer = 0
+collision_mask = 10
+input_pickable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SenseArea" unique_id=1491513503]
+position = Vector2(-1.07288e-05, 0.125512)
+shape = SubResource("CircleShape2D_bgmjh")
 
 [node name="SightArea" type="Area2D" parent="." unique_id=59645929]
 unique_name_in_owner = true

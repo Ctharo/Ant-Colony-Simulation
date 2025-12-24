@@ -417,32 +417,3 @@ func is_cell_navigable(pos: Vector2) -> bool:
 			return true
 
 	return false
-#region Tooltip Support
-## Returns all visible heat values at a specific cell position for tooltip display
-func get_all_heat_at_cell(world_cell: Vector2i) -> Dictionary:
-	var heat_values: Dictionary = {}
-	var chunk_pos := world_to_chunk(world_cell)
-	var local_pos := world_to_local_cell(world_cell)
-
-	update_lock.lock()
-
-	for heat_type in _heatmaps:
-		var heatmap = _heatmaps[heat_type]
-		if heatmap.chunks.has(chunk_pos):
-			var chunk = heatmap.chunks[chunk_pos]
-			if chunk.cells.has(local_pos):
-				var cell = chunk.cells[local_pos]
-				var visible_heat := calculate_visible_heat(cell, _debug_settings)
-				if visible_heat > 0:
-					heat_values[heat_type] = visible_heat
-
-	update_lock.unlock()
-	return heat_values
-
-## Check if any heatmap visualization is currently enabled
-func is_any_heatmap_visible() -> bool:
-	for key in _debug_settings:
-		if _debug_settings[key]:
-			return true
-	return false
-#endregion

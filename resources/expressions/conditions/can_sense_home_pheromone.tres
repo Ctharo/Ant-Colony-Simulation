@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3 uid="uid://bx6sbk5w1rol"]
+
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_3ai1e"]
+
+[resource]
+script = ExtResource("1_3ai1e")
+metadata/_custom_type_script = "uid://c4blfafbl73rr"
