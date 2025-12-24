@@ -88,19 +88,16 @@ theme_override_constants/separation = 20
 
 [node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.8, 0, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 48
 text = "Settings"
-
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
+horizontal_alignment = 1
 
 [node name="TabContainer" type="TabContainer" parent="MarginContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_font_sizes/font_size = 18
 theme_override_styles/panel = SubResource("StyleBoxFlat_tab_panel")
-current_tab = 0
 
 [node name="Game" type="ScrollContainer" parent="MarginContainer/VBoxContainer/TabContainer"]
 layout_mode = 2
@@ -112,21 +109,30 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 20
 
-[node name="GameplaySection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer"]
+[node name="GameSection" type="PanelContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameplaySection"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameSection"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameplaySection/VBoxContainer"]
+[node name="SectionTitle" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameSection/VBoxContainer"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "Gameplay"
+text = "Game"
 
-[node name="DifficultyOption" type="OptionButton" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameplaySection/VBoxContainer"]
+[node name="DifficultyRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameSection/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameSection/VBoxContainer/DifficultyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Difficulty"
+
+[node name="DifficultyOption" type="OptionButton" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/GameSection/VBoxContainer/DifficultyRow"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
@@ -145,23 +151,6 @@ theme_override_constants/separation = 10
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Simulation"
-
-[node name="AntSpawnCount" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/AntSpawnCount"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Ant Spawn Count"
-
-[node name="SpinBox" type="SpinBox" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer/AntSpawnCount"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.08
-min_value = 1.0
-max_value = 1000.0
-value = 10.0
 
 [node name="FoodSpawnCount" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer/Game/VBoxContainer/SimulationSection/VBoxContainer"]
 unique_name_in_owner = true

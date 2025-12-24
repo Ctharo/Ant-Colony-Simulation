@@ -14,15 +14,15 @@ enum LogLevel {
 ## Categories for different components
 enum Category {
 	TASK,           ## Task-related messages
-	LOGIC,
-	MOVEMENT,
-	INFLUENCE,
+	LOGIC,          ## Logic evaluation messages
+	MOVEMENT,       ## Movement-related messages
+	INFLUENCE,      ## Influence system messages
 	ACTION,         ## Action-related messages
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages
 	CONTEXT,        ## Context building messages
 	ENTITY,         ## Ant, colony, pheromone, etc. related messages
-	PROPERTY,       ## Property-related messsages
+	PROPERTY,       ## Property-related messages
 	TRANSITION,     ## State transition messages
 	HIERARCHY,      ## Tree hierarchy messages
 	UI,             ## UI-related messages
@@ -30,13 +30,16 @@ enum Category {
 	DATA,           ## Data-related messages
 }
 
+
 #region Configuration
-## Current log level
+
+## Current log level - default to TRACE, SettingsManager will set the actual value
 static var log_level := LogLevel.TRACE
 
 ## Show context in logs
 static var show_context: bool = false
 
+## Registered logic expressions (for debugging)
 static var registered_logic: PackedStringArray = []
 static var parsed_expression_strings: PackedStringArray = []
 
@@ -52,27 +55,24 @@ class SourceFilter:
 ## Maps source identifiers to their filter configuration
 static var source_filters: Dictionary = {}
 
-## Enabled categories (whitelist)
-static var enabled_categories := {
-	Category.TASK: false,
-	Category.LOGIC: true,
-	Category.INFLUENCE: false,
-	Category.MOVEMENT: false,
-	Category.ACTION: false,
-	Category.BEHAVIOR: false,
-	Category.CONDITION: false,
-	Category.PROPERTY: false,
-	Category.CONTEXT: false,
-	Category.ENTITY: true,
-	Category.TRANSITION: false,
-	Category.HIERARCHY: false,
-	Category.UI: false,
-	Category.PROGRAM: false,
-	Category.DATA: false
-}
+## Enabled categories - initialized to allow PROGRAM logging before SettingsManager runs
+## SettingsManager.apply_debug_settings() will set the actual values on startup
+static var enabled_categories: Dictionary = _create_initial_categories()
+
+## Create initial category states - only PROGRAM enabled by default
+## This ensures we can log during startup before SettingsManager applies real settings
+static func _create_initial_categories() -> Dictionary:
+	var categories := {}
+	for category in Category.keys():
+		# Only enable PROGRAM by default for startup logging
+		categories[Category[category]] = (category == "PROGRAM")
+	return categories
+
 #endregion
 
+
 #region Formatting Constants
+
 ## Color codes for different log levels
 const COLORS := {
 	LogLevel.ERROR: "ff5555",
@@ -98,55 +98,67 @@ const CATEGORY_NAMES := {
 	Category.HIERARCHY: "HIERARCHY",
 	Category.UI: "UI",
 	Category.DATA: "DATA",
-	Category.PROGRAM: "PROGRAM" # Should always be on?
+	Category.PROGRAM: "PROGRAM"
 }
+
 #endregion
 
+
 #region Configuration Methods
+
 ## Configure source filtering
 static func configure_source(source: String, enabled: bool = true, categories: Array[Category] = []) -> void:
 	source_filters[source] = SourceFilter.new(enabled, categories)
-	#info(Category.PROGRAM, "Configured source '%s' (enabled: %s, categories: %s)" % [
-		#source, enabled, categories
-	#])
+
 
 ## Enable or disable specific categories
 static func set_category_enabled(category: Category, enabled: bool = true, from: String = "") -> void:
-	if enabled_categories.get(category) == null or enabled_categories.get(category) != enabled:
+	var current_state: bool = enabled_categories.get(category, false)
+	if current_state != enabled:
+		enabled_categories[category] = enabled
+		# Only log the change if it's actually different
 		info(Category.PROGRAM, "%s logging category %s" % [
 			"Enabled" if enabled else "Disabled",
 			CATEGORY_NAMES[category]
-		],
-			{"from": from if from else "debug_logger"}
-		)
-	enabled_categories[category] = enabled
+		], {"from": from if from else "debug_logger"})
 
 
 ## Set the global log level
 static func set_log_level(level: LogLevel, from: String = "") -> void:
 	if DebugLogger.log_level != level:
-		info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], {"from": from if from else "debug_logger"})
+		info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], 
+			{"from": from if from else "debug_logger"})
 	DebugLogger.log_level = level
 
-## Enable or disable context print
+
+## Enable or disable context printing
 static func set_show_context(enabled: bool = true, from: String = "") -> void:
 	if DebugLogger.show_context != enabled:
-		info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], {"from": from if from else "debug_logger"})
+		info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], 
+			{"from": from if from else "debug_logger"})
 	DebugLogger.show_context = enabled
+
+
+## Check if a category is enabled
+static func is_category_enabled(category: Category) -> bool:
+	return enabled_categories.get(category, false)
+
 #endregion
 
+
 #region Logging Implementation
+
 ## Determine if a message should be logged based on source and category
 static func should_log(source: String, category: Category) -> bool:
 	# First check if the category is enabled globally
-	if not DebugLogger.enabled_categories.get(category, false):
+	if not enabled_categories.get(category, false):
 		return false
 
 	# If no source filter exists, allow logging
-	if not DebugLogger.source_filters.has(source):
+	if not source_filters.has(source):
 		return true
 
-	var filter: SourceFilter = DebugLogger.source_filters[source]
+	var filter: SourceFilter = source_filters[source]
 
 	# If source is disabled, block logging
 	if not filter.enabled:
@@ -158,29 +170,30 @@ static func should_log(source: String, category: Category) -> bool:
 
 	return true
 
+
 ## Log a message with specified level and category
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:
 	# Check log level first
 	if level > DebugLogger.log_level:
 		return
 
-	var source = context.get("from", "")
+	var source: String = context.get("from", "")
 
 	# Check if this combination of source and category should be logged
-	if not DebugLogger.should_log(source, category):
+	if not should_log(source, category):
 		return
 
-	var timestamp = Time.get_datetime_string_from_system()
-	var level_name = LogLevel.keys()[level]
-	var category_name = CATEGORY_NAMES[category]
-	var color = COLORS.get(level, "ffffff")
+	var timestamp: String = Time.get_datetime_string_from_system()
+	var level_name: String = LogLevel.keys()[level]
+	var category_name: String = CATEGORY_NAMES[category]
+	var color: String = COLORS.get(level, "ffffff")
 
 	# Split message into lines and format each line
-	var lines = message.split("\n")
-	var formatted_message = ""
+	var lines: PackedStringArray = message.split("\n")
+	var formatted_message := ""
 
 	for i in range(lines.size()):
-		var line = lines[i]
+		var line: String = lines[i]
 		if i == 0:
 			# First line gets full header
 			formatted_message += "[color=#%s][%s][%s][%s]%s %s" % [
@@ -193,10 +206,7 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 			]
 		else:
 			# Subsequent lines get indented and colored
-			formatted_message += "\n[color=#%s]    %s" % [
-				color,
-				line
-			]
+			formatted_message += "\n[color=#%s]    %s" % [color, line]
 
 	# Add context information if provided and enabled
 	if show_context and not context.is_empty():
@@ -209,25 +219,38 @@ static func log(level: LogLevel, category: Category, message: String, context: D
 
 #endregion
 
+
 #region Convenience Methods
+
 static func error(category: Category, message: String, context: Dictionary = {}) -> void:
 	DebugLogger.log(LogLevel.ERROR, category, message, context)
+
 
 static func warn(category: Category, message: String, context: Dictionary = {}) -> void:
 	DebugLogger.log(LogLevel.WARN, category, message, context)
 
+
 static func info(category: Category, message: String, context: Dictionary = {}) -> void:
 	DebugLogger.log(LogLevel.INFO, category, message, context)
+
 
 static func debug(category: Category, message: String, context: Dictionary = {}) -> void:
 	DebugLogger.log(LogLevel.DEBUG, category, message, context)
 
+
 static func trace(category: Category, message: String, context: Dictionary = {}) -> void:
 	DebugLogger.log(LogLevel.TRACE, category, message, context)
+
 #endregion
+
+
+#region Level Check Methods
 
 static func is_trace_enabled() -> bool:
 	return LogLevel.TRACE <= log_level
 
+
 static func is_debug_enabled() -> bool:
 	return LogLevel.DEBUG <= log_level
+
+#endregion
