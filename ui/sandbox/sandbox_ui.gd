@@ -8,7 +8,7 @@ var camera: CameraController
 ## Active context menu
 var active_context_menu: BaseContextMenu
 ## Active ant info
-var active_ant_info: AntInfo
+var active_ant_info: AntInfoPanel
 
 @onready var overlay: ColorRect = %InitializingRect
 var highlight_ants: bool = false
@@ -232,7 +232,7 @@ func show_ant_info(ant: Ant) -> void:
 
 	active_ant_info = preload("res://ui/debug/ant/ant_info_panel.tscn").instantiate()
 	add_child(active_ant_info)
-	active_ant_info.setup(ant)
+	active_ant_info.show_ant_info(ant)
 
 func close_ant_info() -> void:
 	if is_instance_valid(active_ant_info):
