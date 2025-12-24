@@ -66,8 +66,11 @@ func _create_ant(profile: AntProfile) -> Ant:
 	ant.id = ants_created
 	ant.name = "Ant%s" % ant.id
 
-	# Apply profile
-	ant.init_profile(profile)
+	# Store profile reference for _ready() to use
+	# Note: We set these properties here, but init_profile() will be called
+	# again in _ready() after the ant enters the scene tree, which is when
+	# influence_manager becomes available via @onready
+	ant.profile = profile
 	ant.movement_rate = profile.movement_rate
 	ant.vision_range = profile.vision_range
 	ant.pheromones = profile.pheromones
@@ -91,8 +94,10 @@ func _register_ant(ant: Ant, colony: Colony) -> void:
 	ants.append(ant)
 	ant.add_to_group("ant")
 
-	# Set colony reference
-	ant.set_colony(colony)
+	# Add to colony - this adds to scene tree AND sets colony reference
+	# colony.add_ant() calls add_child() which triggers _ready(),
+	# allowing influence_manager to initialize properly
+	colony.add_ant(ant)
 
 	# Connect signals
 	ant.died.connect(_on_ant_died)

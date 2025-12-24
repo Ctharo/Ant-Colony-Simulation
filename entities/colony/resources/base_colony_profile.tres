@@ -8,3 +8,9 @@
 script = ExtResource("2_1epkk")
 name = "base colony profile"
 ant_profiles = Array[ExtResource("1_eyh8a")]([ExtResource("2_w05kn")])
+radius = 60.0
+max_ants = 25
+spawn_rate = 10.0
+dirt_color = Color(0.545098, 0.270588, 0.0745098, 0.8)
+darker_dirt = Color(0.647059, 0.164706, 0.164706, 0.9)
+initial_ants = {}

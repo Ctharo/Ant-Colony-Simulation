@@ -1,13 +1,13 @@
-[gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://duar8dik4bi45"]
+[gd_resource type="Resource" script_class="Influence" load_steps=4 format=3 uid="uid://duar8dik4bi45"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_ivw4h"]
-[ext_resource type="Script" path="res://logic/influence/influence.gd" id="2_borkh"]
+[ext_resource type="Resource" uid="uid://nxmrfprua2hj" path="res://resources/expressions/conditions/can_sense_food_pheromone.tres" id="1_47i7c"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_ivw4h"]
+[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influences/influence.gd" id="2_borkh"]
 
 [resource]
 script = ExtResource("2_borkh")
 color = Color(0, 0, 0.831373, 1)
+condition = ExtResource("1_47i7c")
 name = "food pheromone influence"
 expression_string = "get_pheromone_direction(\"food\").normalized() * 2.5"
-nested_expressions = Array[ExtResource("1_ivw4h")]([])
-description = ""
 type = 5

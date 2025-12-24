@@ -76,6 +76,15 @@ func set_setting(setting_name: String, value: Variant) -> void:
 				DebugLogger.set_log_level(value)
 			"show_context":
 				DebugLogger.set_show_context(value)
+			_:
+				# Handle category settings (category_task, category_entity, etc.)
+				if setting_name.begins_with("category_"):
+					var category_name = setting_name.trim_prefix("category_").to_upper()
+					if DebugLogger.Category.has(category_name):
+						DebugLogger.set_category_enabled(
+							DebugLogger.Category[category_name],
+							value
+						)
 
 		setting_changed.emit(setting_name, value)
 		logger.trace("Setting changed: %s = %s" % [setting_name, str(value)])
