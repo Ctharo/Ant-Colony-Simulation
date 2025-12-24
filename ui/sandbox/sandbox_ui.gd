@@ -10,6 +10,9 @@ var active_context_menu: BaseContextMenu
 ## Active ant info
 var active_ant_info: AntInfo
 
+var heatmap_tooltip: HeatmapTooltip
+
+
 @onready var overlay: ColorRect = %InitializingRect
 var highlight_ants: bool = false
 #region Node References
@@ -44,6 +47,18 @@ func _ready() -> void:
 	sandbox = get_node("../..")
 	if is_instance_valid(overlay):
 		overlay.visible = true
+	_setup_heatmap_tooltip()
+
+func _setup_heatmap_tooltip() -> void:
+	heatmap_tooltip = HeatmapTooltip.new()
+	heatmap_tooltip.name = "HeatmapTooltip"
+	add_child(heatmap_tooltip)
+
+	var heatmap_mgr = get_tree().get_first_node_in_group("heatmap")
+	if heatmap_mgr:
+		heatmap_tooltip.setup(camera, heatmap_mgr)
+
+	heatmap_tooltip.set_enabled(false)
 
 func _process(_delta: float) -> void:
 	queue_redraw()
@@ -318,6 +333,15 @@ func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
 func _on_colony_heatmap_requested(colony: Colony) -> void:
 	if is_instance_valid(colony):
 		colony.heatmap_enabled = !colony.heatmap_enabled
+		_update_heatmap_tooltip_visibility()
+
+func _update_heatmap_tooltip_visibility() -> void:
+	if not is_instance_valid(heatmap_tooltip):
+		return
+
+	var heatmap_mgr = get_tree().get_first_node_in_group("heatmap")
+	if heatmap_mgr and heatmap_mgr.has_method("is_any_heatmap_visible"):
+		heatmap_tooltip.set_enabled(heatmap_mgr.is_any_heatmap_visible())
 #endregion
 
 #region Ant Handlers

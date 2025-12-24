@@ -1,16 +1,16 @@
-[gd_scene load_steps=4 format=3 uid="uid://dwotv13xethd6"]
+[gd_scene format=3 uid="uid://dwotv13xethd6"]
 
 [ext_resource type="Script" uid="uid://djqkcefe5iivg" path="res://ui/sandbox/sandbox.gd" id="1_dcr83"]
 [ext_resource type="Script" uid="uid://dh3yubpmm3qjd" path="res://camera/camera_controls.gd" id="2_wv2im"]
 [ext_resource type="Script" uid="uid://bh81runofdlhq" path="res://ui/sandbox/sandbox_ui.gd" id="3_jqwh7"]
 
-[node name="Sandbox" type="Node2D"]
+[node name="Sandbox" type="Node2D" unique_id=1639952078]
 script = ExtResource("1_dcr83")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=60932575]
 unique_name_in_owner = true
 
-[node name="UI" type="Control" parent="CanvasLayer"]
+[node name="UI" type="Control" parent="CanvasLayer" unique_id=1260014025]
 unique_name_in_owner = true
 layout_mode = 3
 anchors_preset = 15
@@ -20,7 +20,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_jqwh7")
 
-[node name="ControlPanel" type="PanelContainer" parent="CanvasLayer/UI"]
+[node name="ControlPanel" type="PanelContainer" parent="CanvasLayer/UI" unique_id=107257179]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 1
 anchors_preset = 10
@@ -31,17 +31,17 @@ grow_horizontal = 2
 size_flags_horizontal = 3
 mouse_filter = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/UI/ControlPanel"]
+[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/UI/ControlPanel" unique_id=21895748]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 
-[node name="BackButton" type="Button" parent="CanvasLayer/UI/ControlPanel/HBoxContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/UI/ControlPanel/HBoxContainer" unique_id=537773306]
 custom_minimum_size = Vector2(100, 50)
 layout_mode = 2
 size_flags_horizontal = 0
 text = "Back"
 
-[node name="InfoPanelsContainer" type="HBoxContainer" parent="CanvasLayer/UI"]
+[node name="InfoPanelsContainer" type="HBoxContainer" parent="CanvasLayer/UI" unique_id=976417831]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 1
@@ -53,7 +53,7 @@ grow_horizontal = 0
 theme_override_constants/separation = 10
 alignment = 2
 
-[node name="InitializingRect" type="ColorRect" parent="CanvasLayer/UI"]
+[node name="InitializingRect" type="ColorRect" parent="CanvasLayer/UI" unique_id=53539738]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -67,7 +67,7 @@ size_flags_vertical = 3
 mouse_filter = 2
 color = Color(0, 0, 0, 1)
 
-[node name="InitLabel" type="Label" parent="CanvasLayer/UI/InitializingRect"]
+[node name="InitLabel" type="Label" parent="CanvasLayer/UI/InitializingRect" unique_id=52464816]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -78,14 +78,14 @@ text = "Initializing..."
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1786290946]
 script = ExtResource("2_wv2im")
 
-[node name="ColonyContainer" type="Node2D" parent="."]
+[node name="ColonyContainer" type="Node2D" parent="." unique_id=1822813186]
 
-[node name="FoodContainer" type="Node2D" parent="."]
+[node name="FoodContainer" type="Node2D" parent="." unique_id=1986622597]
 
-[node name="AntContainer" type="Node2D" parent="."]
+[node name="AntContainer" type="Node2D" parent="." unique_id=2084276215]
 
 [connection signal="gui_input" from="CanvasLayer/UI" to="CanvasLayer/UI" method="_on_gui_input"]
 [connection signal="pressed" from="CanvasLayer/UI/ControlPanel/HBoxContainer/BackButton" to="." method="_on_back_button_pressed"]
