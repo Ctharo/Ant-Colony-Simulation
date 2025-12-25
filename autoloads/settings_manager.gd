@@ -44,7 +44,6 @@ const DEFAULT_CATEGORY_STATES := {
 	"category_logic": true,
 	"category_movement": false,
 	"category_influence": false,
-	"category_action": false,
 	"category_behavior": false,
 	"category_condition": false,
 	"category_context": false,
