@@ -313,8 +313,9 @@ func deselect_all() -> void:
 
 #region Colony Handlers
 func _on_spawn_colony_requested(screen_position: Vector2) -> void:
-	var world_position = camera.screen_to_world(screen_position)
-	colony_manager.spawn_colony(world_position)
+	var world_position = camera.ui_to_global(screen_position)
+	var colony = colony_manager.spawn_colony()
+	colony.global_position = world_position
 
 
 func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
