@@ -36,6 +36,7 @@ func _ready() -> void:
 
 func _setup_managers() -> void:
 	ColonyManager.set_colony_container(colony_container)
+	FoodManager.set_food_container(food_container)
 
 
 func _exit_tree() -> void:
