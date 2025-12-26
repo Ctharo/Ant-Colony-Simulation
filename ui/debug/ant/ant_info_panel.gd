@@ -72,11 +72,11 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	if close_button:
+	if close_button and not close_button.pressed.is_connected(_on_close_pressed):
 		close_button.pressed.connect(_on_close_pressed)
-	if edit_profile_button:
+	if edit_profile_button and not edit_profile_button.pressed.is_connected(_on_edit_profile_pressed):
 		edit_profile_button.pressed.connect(_on_edit_profile_pressed)
-	if view_influence_profile_button:
+	if view_influence_profile_button and not view_influence_profile_button.pressed.is_connected(_on_view_influence_profile_pressed):
 		view_influence_profile_button.pressed.connect(_on_view_influence_profile_pressed)
 
 
