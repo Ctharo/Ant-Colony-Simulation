@@ -115,11 +115,11 @@ func animate_ui_elements():
 
 func _on_start_simulation_button_pressed():
 	logger.info("Start Simulation pressed")
-	transition_to_scene("sandbox","sandbox")
+	transition_to_scene("sandbox")
 
 func _on_settings_button_pressed():
 	logger.info("Settings pressed")
-	transition_to_scene("settings", "settings")
+	transition_to_scene("settings")
 
 func _on_quit_button_pressed():
 	get_tree().quit()

@@ -1,6 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://example3"]
 
-[ext_resource type="Script" uid="uid://bc2e41if4kv6n" path="res://ui/sandbox/new/ant_profile_selector.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://bc2e41if4kv6n" path="res://ui/ant_profile_selector.gd" id="1_script"]
+
 
 [node name="AntProfileSelector" type="Window"]
 title = "Select Ant Profile"

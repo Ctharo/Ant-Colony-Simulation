@@ -1,6 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://example"]
 
-[ext_resource type="Script" uid="uid://dxaucoolae8o2" path="res://ui/sandbox/new/colony_profile_panel.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://dxaucoolae8o2" path="res://ui/colony_profile_panel.gd" id="1_script"]
+
 
 [node name="ColonyProfilePanel" type="PanelContainer"]
 anchors_preset = 15

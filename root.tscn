@@ -1,10 +1,11 @@
 [gd_scene load_steps=7 format=3]
 
-[ext_resource type="Script" path="res://autoloads/ant_manager.gd" id="1_1tyuu"]
-[ext_resource type="Script" path="res://autoloads/food_manager.gd" id="2_7382l"]
-[ext_resource type="Script" path="res://autoloads/colony_manager.gd" id="3_81fhs"]
-[ext_resource type="Script" path="res://autoloads/heatmap_manager.gd" id="4_58hng"]
-[ext_resource type="PackedScene" path="res://ui/sandbox/sandbox.tscn" id="5_3hx3e"]
+[ext_resource type="Script" uid="uid://b4oq6wlmgg5bb" path="res://autoloads/ant_manager.gd" id="1_1tyuu"]
+[ext_resource type="Script" uid="uid://clemth6jj80j2" path="res://autoloads/food_manager.gd" id="2_7382l"]
+[ext_resource type="Script" uid="uid://bbemkxy81mofm" path="res://autoloads/colony_manager.gd" id="3_81fhs"]
+[ext_resource type="Script" uid="uid://6grrqln1k67t" path="res://autoloads/heatmap_manager.gd" id="4_58hng"]
+[ext_resource type="PackedScene" uid="uid://dwotv13xethd6" path="res://ui/sandbox.tscn" id="5_3hx3e"]
+
 
 [sub_resource type="World3D" id="World3D_4j5cy"]
 

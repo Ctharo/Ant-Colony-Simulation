@@ -15,6 +15,7 @@ const ANT_HIGHLIGHT_COLOR = Color(Color.WHITE, 0.5)
 #endregion
 
 #region UI Components
+@onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var title_label: Label = %TitleLabel
 @onready var close_button: Button = %CloseButton
 
@@ -60,6 +61,27 @@ func _ready() -> void:
 	top_level = true
 	
 	_connect_signals()
+	_setup_scroll_handling()
+
+
+func _setup_scroll_handling() -> void:
+	## Consume scroll events to prevent camera zoom
+	if scroll_container:
+		scroll_container.gui_input.connect(_on_scroll_gui_input)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _on_scroll_gui_input(event: InputEvent) -> void:
+	## Stop scroll events from propagating to camera
+	if event is InputEventMouseButton:
+		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			accept_event()
+
+
+func _gui_input(event: InputEvent) -> void:
+	## Stop all mouse events from propagating to camera
+	if event is InputEventMouseButton:
+		accept_event()
 
 
 func _connect_signals() -> void:
@@ -129,11 +151,11 @@ func _populate_profile_options() -> void:
 	if not current_colony or not current_colony.profile:
 		return
 	
-	for i in range(current_colony.profile.ant_profiles.size()):
-		var ant_profile = current_colony.profile.ant_profiles[i]
-		if ant_profile:
-			profile_option.add_item(ant_profile.name, i)
-			_profile_map[i] = ant_profile
+	var idx := 0
+	for ant_profile in current_colony.profile.ant_profiles:
+		profile_option.add_item(ant_profile.name, idx)
+		_profile_map[idx] = ant_profile
+		idx += 1
 	
 	if profile_option.item_count > 0:
 		profile_option.select(0)
@@ -143,13 +165,11 @@ func _populate_colony_profile_values() -> void:
 	if not current_colony or not current_colony.profile:
 		return
 	
-	var profile = current_colony.profile
-	
-	radius_spin.set_value_no_signal(profile.radius)
-	max_ants_spin.set_value_no_signal(profile.max_ants)
-	spawn_rate_spin.set_value_no_signal(profile.spawn_rate)
-	dirt_color_picker.color = profile.dirt_color
-	darker_dirt_color_picker.color = profile.darker_dirt
+	radius_spin.set_value_no_signal(current_colony.profile.radius)
+	max_ants_spin.set_value_no_signal(current_colony.profile.max_ants)
+	spawn_rate_spin.set_value_no_signal(current_colony.profile.spawn_rate)
+	dirt_color_picker.color = current_colony.profile.dirt_color
+	darker_dirt_color_picker.color = current_colony.profile.darker_dirt
 
 
 func _populate_ant_profiles_list() -> void:
@@ -158,10 +178,10 @@ func _populate_ant_profiles_list() -> void:
 	if not current_colony or not current_colony.profile:
 		return
 	
-	for ant_profile in current_colony.profile.ant_profiles:
-		if ant_profile:
-			var initial_count = current_colony.profile.initial_ants.get(ant_profile.id, 0)
-			ant_profiles_list.add_item("%s (Initial: %d)" % [ant_profile.name, initial_count])
+	for i in range(current_colony.profile.ant_profiles.size()):
+		var ant_profile = current_colony.profile.ant_profiles[i]
+		var initial_count = current_colony.profile.initial_ants.get(ant_profile, 0)
+		ant_profiles_list.add_item("%s (initial: %d)" % [ant_profile.name, initial_count])
 	
 	edit_ant_profile_button.disabled = true
 #endregion
@@ -174,11 +194,16 @@ func _on_spawn_pressed() -> void:
 	
 	var count = int(spawn_count_spin.value)
 	var selected_idx = profile_option.selected
-	var profile: AntProfile = _profile_map.get(selected_idx)
+	var selected_profile: AntProfile = _profile_map.get(selected_idx)
 	
-	if profile and count > 0:
-		var spawned = current_colony.spawn_ants(count, profile)
-		spawn_requested.emit(current_colony, count, profile)
+	if selected_profile:
+		var ants = current_colony.spawn_ants(count, selected_profile)
+		for ant in ants:
+			if not ant.is_inside_tree():
+				var ant_container = get_tree().get_first_node_in_group("ant_container")
+				if ant_container:
+					ant_container.add_child(ant)
+		spawn_requested.emit(current_colony, count, selected_profile)
 
 
 func _on_profile_selected(_index: int) -> void:
@@ -191,6 +216,7 @@ func _on_radius_changed(value: float) -> void:
 	if current_colony and current_colony.profile:
 		current_colony.profile.radius = value
 		current_colony.radius = value
+		current_colony.queue_redraw()
 
 
 func _on_max_ants_changed(value: float) -> void:

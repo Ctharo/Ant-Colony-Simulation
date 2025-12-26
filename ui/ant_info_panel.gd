@@ -31,6 +31,7 @@ var current_ant: Ant
 #endregion
 
 #region UI Components
+@onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var title_label: Label = %TitleLabel
 @onready var role_label: Label = %RoleLabel
 @onready var colony_label: Label = %ColonyLabel
@@ -67,8 +68,30 @@ func _ready() -> void:
 	clear_legend()
 	
 	heatmap = get_tree().get_first_node_in_group("heatmap")
+	top_level = true
 	
 	_connect_signals()
+	_setup_scroll_handling()
+
+
+func _setup_scroll_handling() -> void:
+	## Consume scroll events to prevent camera zoom
+	if scroll_container:
+		scroll_container.gui_input.connect(_on_scroll_gui_input)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func _on_scroll_gui_input(event: InputEvent) -> void:
+	## Stop scroll events from propagating to camera
+	if event is InputEventMouseButton:
+		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			accept_event()
+
+
+func _gui_input(event: InputEvent) -> void:
+	## Stop all mouse events from propagating to camera
+	if event is InputEventMouseButton:
+		accept_event()
 
 
 func _connect_signals() -> void:
@@ -78,6 +101,12 @@ func _connect_signals() -> void:
 		edit_profile_button.pressed.connect(_on_edit_profile_pressed)
 	if view_influence_profile_button and not view_influence_profile_button.pressed.is_connected(_on_view_influence_profile_pressed):
 		view_influence_profile_button.pressed.connect(_on_view_influence_profile_pressed)
+	if show_nav_path_check and not show_nav_path_check.toggled.is_connected(_on_show_nav_path_check_toggled):
+		show_nav_path_check.toggled.connect(_on_show_nav_path_check_toggled)
+	if show_heatmap_check and not show_heatmap_check.toggled.is_connected(_on_show_heatmap_toggled):
+		show_heatmap_check.toggled.connect(_on_show_heatmap_toggled)
+	if show_influence_vectors_check and not show_influence_vectors_check.toggled.is_connected(_on_show_influence_vectors_check_toggled):
+		show_influence_vectors_check.toggled.connect(_on_show_influence_vectors_check_toggled)
 
 
 func _process(_delta: float) -> void:
@@ -288,7 +317,6 @@ func add_legend_entry(p_name: String, color: Color, normalized_weight: float) ->
 	entry.add_child(weight_spacer)
 	
 	entry.add_child(weight_label)
-	
 	influences_legend.add_child(entry)
 
 
@@ -326,16 +354,13 @@ func _on_view_influence_profile_pressed() -> void:
 
 #region Signal Handlers - Visualization
 func _on_show_nav_path_check_toggled(toggled_on: bool) -> void:
-	if current_ant:
+	if current_ant and current_ant.nav_agent:
 		current_ant.nav_agent.debug_enabled = toggled_on
 
 
 func _on_show_heatmap_toggled(enabled: bool) -> void:
-	if current_ant:
-		if enabled:
-			heatmap.debug_draw(current_ant, true)
-		else:
-			heatmap.debug_draw(current_ant, false)
+	if current_ant and heatmap:
+		heatmap.debug_draw(current_ant, enabled)
 
 
 func _on_show_influence_vectors_check_toggled(toggled_on: bool) -> void:
