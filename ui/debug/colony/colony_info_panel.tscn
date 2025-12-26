@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://dngmxoipygrgu"]
+[gd_scene load_steps=2 format=3 uid="uid://dmyh5ke6vq2ay"]
 
-[ext_resource type="Script" uid="uid://by40mfkjvbnjy" path="res://ui/debug/colony/colony_info_panel.gd" id="1_panel"]
+[ext_resource type="Script" path="res://ui/debug/colony/colony_info_panel.gd" id="1_panel"]
 
 [node name="ColonyInfoPanel" type="PanelContainer"]
 size_flags_horizontal = 3
@@ -13,79 +13,229 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+horizontal_scroll_mode = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="TitleLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/HeaderContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "Colony #1"
+vertical_alignment = 1
 
-[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer"]
+[node name="CloseButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/HeaderContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "×"
 
-[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="AntCountLabel" type="Label" parent="MarginContainer/VBoxContainer/InfoContainer"]
+[node name="AntCountLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/InfoContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Ants: 0"
+text = "Ants: 0 / 25"
 
-[node name="FoodCollectedLabel" type="Label" parent="MarginContainer/VBoxContainer/InfoContainer"]
+[node name="FoodCollectedLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/InfoContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Food Collected: 0.0 units"
 
-[node name="RadiusLabel" type="Label" parent="MarginContainer/VBoxContainer/InfoContainer"]
+[node name="RadiusLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/InfoContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Colony Radius: 30.0"
+text = "Colony Radius: 60.0"
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="VisualizationContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="SpawnSectionLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "Spawn Ants"
+horizontal_alignment = 1
+
+[node name="SpawnContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/VisualizationContainer"]
+[node name="ProfileRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer"]
+layout_mode = 2
+
+[node name="ProfileLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer/ProfileRow"]
+layout_mode = 2
+text = "Profile:"
+
+[node name="ProfileOption" type="OptionButton" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer/ProfileRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CountRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer"]
+layout_mode = 2
+
+[node name="CountLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer/CountRow"]
+layout_mode = 2
+text = "Count:"
+
+[node name="SpawnCountSpin" type="SpinBox" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer/CountRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 50.0
+value = 5.0
+
+[node name="SpawnButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/SpawnContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Spawn Ants"
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ColonyProfileLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "Colony Profile"
+horizontal_alignment = 1
+
+[node name="ColonyProfileContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="RadiusRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/RadiusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Radius:"
+
+[node name="RadiusSpin" type="SpinBox" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/RadiusRow"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 20.0
+max_value = 200.0
+value = 60.0
+
+[node name="MaxAntsRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/MaxAntsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Max Ants:"
+
+[node name="MaxAntsSpin" type="SpinBox" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/MaxAntsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 1.0
+max_value = 200.0
+value = 25.0
+
+[node name="SpawnRateRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/SpawnRateRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Spawn Rate (s):"
+
+[node name="SpawnRateSpin" type="SpinBox" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/SpawnRateRow"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 1.0
+max_value = 60.0
+step = 0.5
+value = 10.0
+
+[node name="DirtColorRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/DirtColorRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Dirt Color:"
+
+[node name="DirtColorPicker" type="ColorPickerButton" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/DirtColorRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+
+[node name="DarkerDirtRow" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/DarkerDirtRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Darker Dirt:"
+
+[node name="DarkerDirtColorPicker" type="ColorPickerButton" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonyProfileContainer/DarkerDirtRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+
+[node name="HSeparator3" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="AntProfilesLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "Ant Profiles"
+horizontal_alignment = 1
+
+[node name="AntProfilesContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="AntProfilesList" type="ItemList" parent="MarginContainer/ScrollContainer/VBoxContainer/AntProfilesContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+select_mode = 1
+
+[node name="EditAntProfileButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/AntProfilesContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Edit Selected Profile"
+
+[node name="HSeparator4" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="VisualizationLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 text = "Visualization"
 horizontal_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/VisualizationContainer"]
+[node name="VisualizationContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer"]
+[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Heatmap"
 
-[node name="HighlightAntsCheck" type="CheckButton" parent="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer"]
+[node name="HighlightAntsCheck" type="CheckButton" parent="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Highlight Ants"
+text = "Highlight"
 
-[node name="NavDebugCheck" type="CheckButton" parent="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer"]
+[node name="NavDebugCheck" type="CheckButton" parent="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Nav Debug"
-
-[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer/CloseButton" to="." method="_on_close_pressed"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/ShowHeatmapCheck" to="." method="_on_show_heatmap_toggled"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/HighlightAntsCheck" to="." method="_on_highlight_ants_toggled"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/VisualizationContainer/HBoxContainer/NavDebugCheck" to="." method="_on_nav_debug_toggled"]
+text = "Nav"

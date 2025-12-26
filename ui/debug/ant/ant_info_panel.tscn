@@ -13,14 +13,19 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+horizontal_scroll_mode = 0
 
-[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+[node name="TitleLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/HeaderContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -28,128 +33,169 @@ theme_override_font_sizes/font_size = 18
 text = "Ant #1"
 vertical_alignment = 1
 
-[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer/HeaderContainer"]
+[node name="CloseButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/HeaderContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "×"
 
-[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="RoleLabel" type="Label" parent="MarginContainer/VBoxContainer/InfoContainer"]
+[node name="RoleLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/InfoContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Role: Worker"
 
-[node name="ColonyLabel" type="Label" parent="MarginContainer/VBoxContainer/InfoContainer"]
+[node name="ColonyLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/InfoContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Colony: Colony-1"
 
-[node name="ActionLabel" type="Label" parent="MarginContainer/VBoxContainer/InfoContainer"]
+[node name="ActionLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/InfoContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Action: None"
 
-[node name="StatusContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="StatusContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="HealthContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/StatusContainer"]
+[node name="HealthContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer"]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/StatusContainer/HealthContainer"]
+[node name="HealthLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer/HealthContainer"]
 layout_mode = 2
-alignment = 2
-
-[node name="HealthLabel" type="Label" parent="MarginContainer/VBoxContainer/StatusContainer/HealthContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
 text = "Health:"
 
-[node name="HealthValueLabel" type="Label" parent="MarginContainer/VBoxContainer/StatusContainer/HealthContainer/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "100/100"
-
-[node name="HealthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/StatusContainer/HealthContainer"]
+[node name="HealthBar" type="ProgressBar" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer/HealthContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-value = 100.0
-show_percentage = false
-
-[node name="EnergyContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer/StatusContainer"]
-layout_mode = 2
-
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/StatusContainer/EnergyContainer"]
-layout_mode = 2
-alignment = 2
-
-[node name="EnergyLabel" type="Label" parent="MarginContainer/VBoxContainer/StatusContainer/EnergyContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Energy:"
-
-[node name="EnergyValueLabel" type="Label" parent="MarginContainer/VBoxContainer/StatusContainer/EnergyContainer/HBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "100/100"
-
-[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/StatusContainer/EnergyContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name="FoodLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="HealthValueLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer/HealthContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "100/100"
+horizontal_alignment = 2
+
+[node name="EnergyContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer"]
+layout_mode = 2
+
+[node name="EnergyLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer/EnergyContainer"]
+layout_mode = 2
+text = "Energy:"
+
+[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer/EnergyContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+value = 100.0
+show_percentage = false
+
+[node name="EnergyValueLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/StatusContainer/EnergyContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "100/100"
+horizontal_alignment = 2
+
+[node name="FoodLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Carried Food: 0 units"
+text = "Carrying Food: No"
 
-[node name="HSeparator" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="ProfileSectionLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "Ant Profile"
+horizontal_alignment = 1
+
+[node name="ProfileContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ProfileNameLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ProfileContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Profile: Basic Worker"
+
+[node name="EditProfileButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/ProfileContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Edit Ant Profile"
+
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="MovementSectionLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+text = "Movement Influences"
+horizontal_alignment = 1
+
+[node name="MovementContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ActiveProfileLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/MovementContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Active: Look For Food"
+
+[node name="ViewInfluenceProfileButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/MovementContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "View Influence Profile"
+
+[node name="HSeparator3" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="VisualizationLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 text = "Visualization"
 horizontal_alignment = 1
 
-[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/VBoxContainer"]
+[node name="VisualizationContainer" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Heatmap"
 
-[node name="ShowInfluenceVectorsCheck" type="CheckButton" parent="MarginContainer/VBoxContainer"]
+[node name="ShowInfluenceVectorsCheck" type="CheckButton" parent="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 button_pressed = true
 text = "Influence Vectors"
 
-[node name="ShowNavPathCheck" type="CheckButton" parent="MarginContainer/VBoxContainer"]
+[node name="ShowNavPathCheck" type="CheckButton" parent="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
 text = "Navigation Path"
 
-[node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer"]
+[node name="HSeparator4" type="HSeparator" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="InfluencesLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="InfluencesLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 layout_mode = 2
-text = "Movement Influences:"
+text = "Active Influences"
 horizontal_alignment = 1
 
-[node name="InfluencesLegend" type="VBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="InfluencesLegend" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[connection signal="pressed" from="MarginContainer/VBoxContainer/HeaderContainer/CloseButton" to="." method="_on_close_pressed"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/ShowHeatmapCheck" to="." method="_on_show_heatmap_toggled"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/ShowInfluenceVectorsCheck" to="." method="_on_show_influence_vectors_check_toggled"]
-[connection signal="toggled" from="MarginContainer/VBoxContainer/ShowNavPathCheck" to="." method="_on_show_nav_path_check_toggled"]
+[connection signal="pressed" from="MarginContainer/ScrollContainer/VBoxContainer/HeaderContainer/CloseButton" to="." method="_on_close_pressed"]
+[connection signal="toggled" from="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer/ShowHeatmapCheck" to="." method="_on_show_heatmap_toggled"]
+[connection signal="toggled" from="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer/ShowInfluenceVectorsCheck" to="." method="_on_show_influence_vectors_check_toggled"]
+[connection signal="toggled" from="MarginContainer/ScrollContainer/VBoxContainer/VisualizationContainer/ShowNavPathCheck" to="." method="_on_show_nav_path_check_toggled"]
