@@ -7,7 +7,7 @@ signal closed
 
 #region Constants
 const STYLE = {
-	"PANEL_SIZE": Vector2(340, 550),
+	"PANEL_SIZE": Vector2(340, 700),
 	"BAR_BG_COLOR": Color(0.2, 0.2, 0.2),
 	"HEALTH_COLOR": Color(0.2, 0.8, 0.2),
 	"ENERGY_COLOR": Color(0.2, 0.2, 0.8),
@@ -31,6 +31,8 @@ var current_entity: Node
 var _profile_map: Dictionary = {}
 var _influence_colors: Dictionary = {}
 var heatmap: HeatmapManager
+## Tracks if we enabled influence visualization so we can disable on close
+var _influence_vis_enabled_by_panel: bool = false
 #endregion
 
 #region UI Components - Header
@@ -217,6 +219,26 @@ func _setup_ant_view(ant: Ant) -> void:
 	_sync_ant_visualization()
 	
 	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
+	
+	# Automatically enable influence arrows when viewing ant info
+	_enable_influence_visualization(ant)
+
+
+func _enable_influence_visualization(ant: Ant) -> void:
+	## Automatically show influence arrows when ant info panel opens
+	if ant and ant.influence_manager:
+		ant.influence_manager.set_visualization_enabled(true)
+		show_influence_vectors_check.button_pressed = true
+		_influence_vis_enabled_by_panel = true
+
+
+func _disable_influence_visualization() -> void:
+	## Disable influence arrows when panel closes (if we enabled them)
+	if _influence_vis_enabled_by_panel and current_entity is Ant:
+		var ant := current_entity as Ant
+		if is_instance_valid(ant) and ant.influence_manager:
+			ant.influence_manager.set_visualization_enabled(false)
+		_influence_vis_enabled_by_panel = false
 
 
 func _update_ant_info() -> void:
@@ -298,24 +320,23 @@ func _sync_ant_visualization() -> void:
 #endregion
 
 
-
 #region Colony View Setup
 func _setup_colony_view(colony: Colony) -> void:
 	ant_section.visible = false
 	colony_section.visible = true
 	
-	title_label.text = "Colony %s" % colony.name
+	title_label.text = colony.name
 	
 	# Show colony-specific visualization options
 	show_influence_vectors_check.visible = false
 	highlight_check.visible = true
 	highlight_check.text = "Highlight Ants"
 	
-	_sync_colony_visualization()
-	_populate_profile_options()
-	_populate_colony_profile_values()
-	_populate_colony_ant_profiles_list()
 	_update_colony_info()
+	_populate_spawn_profiles(colony)
+	_sync_colony_profile_controls(colony)
+	_populate_colony_ant_profiles_list()
+	_sync_colony_visualization(colony)
 
 
 func _update_colony_info() -> void:
@@ -323,47 +344,35 @@ func _update_colony_info() -> void:
 	if not colony:
 		return
 	
-	ant_count_label.text = "Ants: %d / %d" % [colony.ants.size(), colony.profile.max_ants if colony.profile else 0]
-	food_collected_label.text = "Food Collected: %.1f units" % (colony.foods.mass if colony.foods else 0.0)
+	ant_count_label.text = "Ants: %d / %d" % [colony.ants.size(), colony.max_ants]
+	food_collected_label.text = "Food Collected: %.1f units" % colony.food_collected
 	radius_label.text = "Colony Radius: %.1f" % colony.radius
 
 
-func _sync_colony_visualization() -> void:
-	var colony := current_entity as Colony
-	if not colony:
-		return
-	
-	show_heatmap_check.button_pressed = colony.heatmap_enabled
-	highlight_check.button_pressed = colony.highlight_ants_enabled
-	nav_debug_check.button_pressed = colony.nav_debug_enabled
-
-
-func _populate_profile_options() -> void:
+func _populate_spawn_profiles(colony: Colony) -> void:
 	profile_option.clear()
 	_profile_map.clear()
 	
-	var colony := current_entity as Colony
-	if not colony or not colony.profile:
+	if not colony.profile:
 		return
 	
 	var idx := 0
 	for ant_profile in colony.profile.ant_profiles:
-		profile_option.add_item(ant_profile.name, idx)
+		profile_option.add_item(ant_profile.name)
 		_profile_map[idx] = ant_profile
 		idx += 1
 	
 	if profile_option.item_count > 0:
-		profile_option.select(0)
+		profile_option.selected = 0
 
 
-func _populate_colony_profile_values() -> void:
-	var colony := current_entity as Colony
-	if not colony or not colony.profile:
+func _sync_colony_profile_controls(colony: Colony) -> void:
+	if not colony.profile:
 		return
 	
-	radius_spin.set_value_no_signal(colony.profile.radius)
-	max_ants_spin.set_value_no_signal(colony.profile.max_ants)
-	spawn_rate_spin.set_value_no_signal(colony.profile.spawn_rate)
+	radius_spin.value = colony.profile.radius
+	max_ants_spin.value = colony.profile.max_ants
+	spawn_rate_spin.value = colony.profile.spawn_rate
 	dirt_color_picker.color = colony.profile.dirt_color
 	darker_dirt_color_picker.color = colony.profile.darker_dirt
 
@@ -377,10 +386,16 @@ func _populate_colony_ant_profiles_list() -> void:
 	
 	for i in range(colony.profile.ant_profiles.size()):
 		var ant_profile = colony.profile.ant_profiles[i]
-		var initial_count = colony.profile.initial_ants.get(ant_profile, 0)
+		var initial_count = colony.profile.initial_ants.get(ant_profile.name, 0)
 		colony_ant_profiles_list.add_item("%s (initial: %d)" % [ant_profile.name, initial_count])
 	
 	edit_colony_ant_profile_button.disabled = true
+
+
+func _sync_colony_visualization(colony: Colony) -> void:
+	show_heatmap_check.button_pressed = colony.heatmap_enabled
+	highlight_check.button_pressed = colony.highlight_ants_enabled
+	nav_debug_check.button_pressed = colony.nav_debug_enabled
 #endregion
 
 
@@ -605,7 +620,7 @@ func _open_ant_profile_editor(ant_profile: AntProfile) -> void:
 func _on_show_heatmap_toggled(enabled: bool) -> void:
 	if current_entity is Ant:
 		var ant := current_entity as Ant
-		if enabled:
+		if enabled: # FIXME heatmap is null
 			heatmap.debug_draw(ant, true)
 		else:
 			heatmap.debug_draw(ant, false)
@@ -639,17 +654,23 @@ func _on_show_influence_vectors_toggled(toggled_on: bool) -> void:
 		var ant := current_entity as Ant
 		if ant.influence_manager:
 			ant.influence_manager.set_visualization_enabled(toggled_on)
+			# Track if we're toggling off manually
+			if not toggled_on:
+				_influence_vis_enabled_by_panel = false
 #endregion
 
 
 #region Signal Handlers - Panel
 func _on_close_pressed() -> void:
+	_disable_influence_visualization()
 	closed.emit()
 	queue_free()
 #endregion
 
 
 func _exit_tree() -> void:
+	_disable_influence_visualization()
+	
 	if current_entity is Ant:
 		var ant := current_entity as Ant
 		if is_instance_valid(ant):

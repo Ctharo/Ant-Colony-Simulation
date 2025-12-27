@@ -9,7 +9,7 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -170.0
-offset_top = -550.0
+offset_top = -700.0
 offset_right = 170.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -88,18 +88,15 @@ text = "Health:"
 
 [node name="HealthBar" type="ProgressBar" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-max_value = 100.0
-value = 100.0
 show_percentage = false
 
 [node name="HealthValueLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(60, 0)
 text = "100/100"
-horizontal_alignment = 2
 
 [node name="EnergyContainer" type="HBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection"]
 layout_mode = 2
@@ -110,18 +107,15 @@ text = "Energy:"
 
 [node name="EnergyBar" type="ProgressBar" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-max_value = 100.0
-value = 100.0
 show_percentage = false
 
 [node name="EnergyValueLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(60, 0)
 text = "100/100"
-horizontal_alignment = 2
 
 [node name="FoodLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection"]
 unique_name_in_owner = true
@@ -139,7 +133,7 @@ horizontal_alignment = 1
 [node name="AntProfileNameLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Profile: Basic Worker"
+text = "Profile: Worker"
 
 [node name="EditAntProfileButton" type="Button" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection"]
 unique_name_in_owner = true
@@ -175,6 +169,7 @@ horizontal_alignment = 1
 [node name="InfluencesLegend" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/AntSection"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 4
 
 [node name="ColonySection" type="VBoxContainer" parent="MarginContainer/ScrollContainer/VBoxContainer"]
@@ -256,9 +251,11 @@ horizontal_alignment = 1
 
 [node name="ColonyProfileContainer" type="GridContainer" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonySection"]
 layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 5
 columns = 2
 
-[node name="RadiusEditLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonySection/ColonyProfileContainer"]
+[node name="RadiusSpinLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonySection/ColonyProfileContainer"]
 layout_mode = 2
 text = "Radius:"
 
@@ -279,7 +276,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 min_value = 1.0
-max_value = 1000.0
+max_value = 500.0
 value = 25.0
 
 [node name="SpawnRateLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonySection/ColonyProfileContainer"]
@@ -291,7 +288,6 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 step = 0.1
-max_value = 10.0
 value = 1.0
 
 [node name="DirtColorLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonySection/ColonyProfileContainer"]
@@ -302,7 +298,7 @@ text = "Dirt Color:"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-color = Color(0.545098, 0.270588, 0.0745098, 1)
+color = Color(0.4, 0.2, 0.05, 1)
 
 [node name="DarkerDirtLabel" type="Label" parent="MarginContainer/ScrollContainer/VBoxContainer/ColonySection/ColonyProfileContainer"]
 layout_mode = 2
