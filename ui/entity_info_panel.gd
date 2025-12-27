@@ -340,12 +340,12 @@ func _setup_colony_view(colony: Colony) -> void:
 
 
 func _update_colony_info() -> void:
-	var colony := current_entity as Colony
+	var colony: Colony = current_entity as Colony
 	if not colony:
 		return
 	
-	ant_count_label.text = "Ants: %d / %d" % [colony.ants.size(), colony.max_ants]
-	food_collected_label.text = "Food Collected: %.1f units" % colony.food_collected
+	ant_count_label.text = "Ants: %d" % [colony.ants.size()]
+	food_collected_label.text = "Food Collected: %.1f units" % colony.foods.count
 	radius_label.text = "Colony Radius: %.1f" % colony.radius
 
 
@@ -621,9 +621,9 @@ func _on_show_heatmap_toggled(enabled: bool) -> void:
 	if current_entity is Ant:
 		var ant := current_entity as Ant
 		if enabled: # FIXME heatmap is null
-			heatmap.debug_draw(ant, true)
+			HeatmapManager.debug_draw(ant, true)
 		else:
-			heatmap.debug_draw(ant, false)
+			HeatmapManager.debug_draw(ant, false)
 	elif current_entity is Colony:
 		var colony := current_entity as Colony
 		colony.heatmap_enabled = enabled

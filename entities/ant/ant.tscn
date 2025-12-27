@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://csrvvfq3x0u3r"]
+[gd_scene format=3 uid="uid://csrvvfq3x0u3r"]
 
 [ext_resource type="Script" uid="uid://cilwxwsbq42xq" path="res://entities/ant/ant.gd" id="1_6htid"]
 [ext_resource type="Script" uid="uid://c57claf8kvfrf" path="res://entities/ant/managers/influence_manager.gd" id="2_2mgsy"]
