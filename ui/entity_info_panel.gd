@@ -294,8 +294,9 @@ func _sync_ant_visualization() -> void:
 		return
 	
 	nav_debug_check.button_pressed = ant.nav_agent.debug_enabled if ant.nav_agent else false
-	show_influence_vectors_check.button_pressed = ant.influence_manager.visualization_enabled if ant.influence_manager else false
+	show_influence_vectors_check.button_pressed = ant.influence_manager.is_visualization_enabled() if ant.influence_manager else false
 #endregion
+
 
 
 #region Colony View Setup
@@ -400,7 +401,11 @@ func _update_legend(influences: Array) -> void:
 	var total_magnitude = 0.0
 	var influence_data = []
 	
-	for influence in influences:
+	for logic in influences:
+		var influence := logic as Influence
+		if not influence:
+			continue
+			
 		if _should_ignore_influence(influence):
 			continue
 		
