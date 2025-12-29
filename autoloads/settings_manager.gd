@@ -111,16 +111,16 @@ func get_setting(setting_name: String, default_value: Variant = null) -> Variant
 	# Priority: stored value -> explicit default -> DEFAULT_SETTINGS -> DEFAULT_CATEGORY_STATES
 	if _settings.has(setting_name):
 		return _settings[setting_name]
-	
+
 	if default_value != null:
 		return default_value
-	
+
 	if DEFAULT_SETTINGS.has(setting_name):
 		return DEFAULT_SETTINGS[setting_name]
-	
+
 	if DEFAULT_CATEGORY_STATES.has(setting_name):
 		return DEFAULT_CATEGORY_STATES[setting_name]
-	
+
 	return null
 
 
@@ -211,11 +211,11 @@ func get_obstacle_size_range() -> Vector2:
 ## Try to load the colony profile - gracefully handles missing files
 func _try_load_colony_profile() -> void:
 	var profile_path: String = get_setting("colony_profile_path")
-	
+
 	if not ResourceLoader.exists(profile_path):
 		logger.debug("Colony profile not found at: %s (this is OK if not using profiles)" % profile_path)
 		return
-	
+
 	_colony_profile = load(profile_path) as ColonyProfile
 	if _colony_profile:
 		logger.info("Loaded colony profile: %s" % _colony_profile.name)
@@ -233,10 +233,10 @@ func get_colony_profile() -> ColonyProfile:
 func update_colony_profile_property(property: String, value: Variant) -> Result:
 	if not _colony_profile:
 		return Result.new(Result.ErrorType.INVALID_RESOURCE, "No colony profile loaded")
-	
+
 	if not property in _colony_profile:
 		return Result.new(Result.ErrorType.VALIDATION_FAILED, "Invalid property: %s" % property)
-	
+
 	_colony_profile.set(property, value)
 	colony_profile_changed.emit(_colony_profile)
 	return save_colony_profile()
@@ -246,7 +246,7 @@ func update_colony_profile_property(property: String, value: Variant) -> Result:
 func update_colony_initial_ants(profile_id: String, count: int) -> Result:
 	if not _colony_profile:
 		return Result.new(Result.ErrorType.INVALID_RESOURCE, "No colony profile loaded")
-	
+
 	_colony_profile.initial_ants[profile_id] = count
 	colony_profile_changed.emit(_colony_profile)
 	return save_colony_profile()
@@ -256,9 +256,9 @@ func update_colony_initial_ants(profile_id: String, count: int) -> Result:
 func save_colony_profile() -> Result:
 	if not _colony_profile:
 		return Result.new(Result.ErrorType.INVALID_RESOURCE, "No colony profile to save")
-	
+
 	var profile_path: String = get_setting("colony_profile_path")
-	
+
 	# Only save to user:// paths or if in editor
 	if Engine.is_editor_hint() or profile_path.begins_with("user://"):
 		var error := ResourceSaver.save(_colony_profile, profile_path)
@@ -273,11 +273,11 @@ func save_colony_profile() -> Result:
 		if error != OK:
 			logger.error("Failed to save colony profile: %s" % error)
 			return Result.new(Result.ErrorType.ACCESS_ERROR, "Failed to save: %s" % error)
-		
+
 		# Update setting to point to user path
 		set_setting("colony_profile_path", user_path)
 		logger.info("Saved colony profile to user directory: %s" % user_path)
-	
+
 	return Result.new()
 
 #endregion

@@ -145,12 +145,12 @@ func _ready() -> void:
 ## Initialize with profile - handles both before and after _ready
 func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
-	
+
 	# If not in tree yet, defer the influence setup
 	if not is_inside_tree() or not influence_manager:
 		_profile_pending = p_profile
 		return
-	
+
 	_apply_profile_internal(p_profile)
 
 ## Internal method to apply profile when influence_manager is ready
@@ -158,7 +158,7 @@ func _apply_profile_internal(p_profile: AntProfile) -> void:
 	if not influence_manager:
 		push_error("Cannot apply profile - influence_manager not ready")
 		return
-	
+
 	for influence: InfluenceProfile in p_profile.movement_influences:
 		influence_manager.add_profile(influence)
 

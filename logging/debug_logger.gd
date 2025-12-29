@@ -126,7 +126,7 @@ static func set_category_enabled(category: Category, enabled: bool = true, from:
 ## Set the global log level
 static func set_log_level(level: LogLevel, from: String = "") -> void:
 	if DebugLogger.log_level != level:
-		info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level], 
+		info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level],
 			{"from": from if from else "debug_logger"})
 	DebugLogger.log_level = level
 
@@ -134,7 +134,7 @@ static func set_log_level(level: LogLevel, from: String = "") -> void:
 ## Enable or disable context printing
 static func set_show_context(enabled: bool = true, from: String = "") -> void:
 	if DebugLogger.show_context != enabled:
-		info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"], 
+		info(Category.PROGRAM, "%s context display" % ["Enabled" if enabled else "Disabled"],
 			{"from": from if from else "debug_logger"})
 	DebugLogger.show_context = enabled
 
