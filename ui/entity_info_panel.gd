@@ -34,6 +34,10 @@ var _influence_colors: Dictionary = {}
 var heatmap: HeatmapManager
 ## Tracks if we enabled influence visualization so we can disable on close
 var _influence_vis_enabled_by_panel: bool = false
+## Tracks if show was requested before panel was ready
+var _pending_show: bool = false
+## Tracks if panel initialization is complete
+var _panel_ready: bool = false
 #endregion
 
 #region UI Components - Header
@@ -111,12 +115,20 @@ func _get_default_position() -> Vector2:
 
 func _on_panel_ready() -> void:
 	custom_minimum_size = STYLE.PANEL_MIN_SIZE
-	hide()
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 
 	_setup_styling()
 	_connect_signals()
 	_setup_scroll_handling()
+
+	_panel_ready = true
+
+	# Only hide if show wasn't already requested
+	if _pending_show:
+		show()
+		_pending_show = false
+	else:
+		hide()
 #endregion
 
 
@@ -202,7 +214,12 @@ func show_entity_info(entity: Node) -> void:
 	elif entity is Colony:
 		_setup_colony_view(entity)
 
-	show()
+	# Handle deferred initialization race condition
+	if _panel_ready:
+		show()
+	else:
+		_pending_show = true
+
 	queue_redraw()
 
 
@@ -323,8 +340,29 @@ func _sync_ant_visualization() -> void:
 		return
 	var ant: Ant = current_entity as Ant
 
-	nav_debug_check.button_pressed = ant.nav_agent.debug_enabled if ant.nav_agent else false
-	show_influence_vectors_check.button_pressed = ant.influence_manager.is_visualization_enabled() if ant.influence_manager else false
+	if ant.influence_manager:
+		show_influence_vectors_check.button_pressed = ant.influence_manager.is_visualization_enabled()
+
+	if ant.nav_agent:
+		nav_debug_check.button_pressed = ant.nav_agent.debug_enabled
+
+
+func _update_ant_info() -> void:
+	if not current_entity is Ant:
+		return
+	var ant: Ant = current_entity as Ant
+
+	if not is_instance_valid(ant):
+		return
+
+	_update_status_bars()
+	_update_movement_influences_section()
+	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
+
+	# Update legend periodically
+	if Engine.get_physics_frames() % 20 == 0:
+		if ant.influence_manager and ant.influence_manager.active_profile:
+			_update_legend(ant.influence_manager.active_profile.influences)
 #endregion
 
 
@@ -335,78 +373,78 @@ func _setup_colony_view(colony: Colony) -> void:
 
 	title_label.text = "Colony: %s" % colony.name
 
-	# Hide ant-specific options
+	# Show colony-specific visualization options
 	show_influence_vectors_check.visible = false
 	highlight_check.visible = true
 	highlight_check.text = "Highlight Ants"
 
+	_sync_colony_visualization(colony)
 	_populate_profile_options()
-	_sync_colony_values(colony)
 	_populate_colony_ant_profiles_list()
+	_update_colony_settings(colony)
+	_update_colony_info()
+
+
+func _sync_colony_visualization(colony: Colony) -> void:
+	show_heatmap_check.button_pressed = colony.heatmap_enabled
+	nav_debug_check.button_pressed = colony.nav_debug_enabled
+	highlight_check.button_pressed = colony.highlight_ants_enabled
 
 
 func _populate_profile_options() -> void:
 	profile_option.clear()
 	_profile_map.clear()
 
-	var dir: DirAccess = DirAccess.open("res://resources/profiles/ant")
-	if not dir:
-		return
+	var profiles: Array[AntProfile] = _get_available_ant_profiles()
+	for i: int in range(profiles.size()):
+		var profile: AntProfile = profiles[i]
+		profile_option.add_item(profile.name, i)
+		_profile_map[i] = profile
 
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	var idx: int = 0
-	while file_name != "":
-		if file_name.ends_with(".tres"):
-			var profile: AntProfile = load("res://resources/profiles/ant/" + file_name) as AntProfile
-			if profile:
-				profile_option.add_item(profile.name, idx)
-				_profile_map[idx] = profile
-				idx += 1
-		file_name = dir.get_next()
+	if not profiles.is_empty():
+		profile_option.select(0)
 
 
-func _sync_colony_values(colony: Colony) -> void:
-	if not colony.profile:
-		return
+func _get_available_ant_profiles() -> Array[AntProfile]:
+	var profiles: Array[AntProfile] = [] as Array[AntProfile]
 
-	radius_spin.value = colony.radius
-	max_ants_spin.value = colony.profile.max_ants
-	spawn_rate_spin.value = colony.profile.spawn_rate
-	dirt_color_picker.color = colony.profile.dirt_color
+	if current_entity is Colony:
+		var colony: Colony = current_entity as Colony
+		if colony.profile and not colony.profile.ant_profiles.is_empty():
+			profiles.append_array(colony.profile.ant_profiles)
 
-	show_heatmap_check.button_pressed = colony.heatmap_enabled
-	nav_debug_check.button_pressed = colony.nav_debug_enabled
-	highlight_check.button_pressed = colony.highlight_ants_enabled
+	if profiles.is_empty():
+		var default_profile: AntProfile = AntProfile.create_basic_worker()
+		profiles.append(default_profile)
+
+	return profiles
 
 
 func _populate_colony_ant_profiles_list() -> void:
 	colony_ant_profiles_list.clear()
 
+	if not current_entity is Colony:
+		return
 	var colony: Colony = current_entity as Colony
-	if not colony or not colony.profile:
+
+	if not colony.profile:
 		return
 
-	for ant_profile: AntProfile in colony.profile.ant_profiles:
-		var count: int = colony.profile.initial_ants.get(ant_profile.resource_path, 0)
-		colony_ant_profiles_list.add_item("%s (initial: %d)" % [ant_profile.name, count])
-#endregion
+	for profile: AntProfile in colony.profile.ant_profiles:
+		var initial_count: int = colony.profile.initial_ants.get(profile, 0)
+		colony_ant_profiles_list.add_item("%s (initial: %d)" % [profile.name, initial_count])
+
+	edit_colony_ant_profile_button.disabled = colony_ant_profiles_list.item_count == 0
 
 
-#region Update Methods
-func _update_ant_info() -> void:
-	if not current_entity is Ant:
-		return
-	var ant: Ant = current_entity as Ant
-
-	if not is_instance_valid(ant):
-		_on_close_pressed()
+func _update_colony_settings(colony: Colony) -> void:
+	if not colony.profile:
 		return
 
-	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
-	_update_status_bars()
-	_update_movement_influences_section()
-	_update_legend()
+	radius_spin.value = colony.profile.radius
+	max_ants_spin.value = colony.profile.max_ants
+	spawn_rate_spin.value = colony.profile.spawn_rate
+	dirt_color_picker.color = colony.profile.dirt_color
 
 
 func _update_colony_info() -> void:
@@ -415,76 +453,68 @@ func _update_colony_info() -> void:
 	var colony: Colony = current_entity as Colony
 
 	if not is_instance_valid(colony):
-		_on_close_pressed()
 		return
 
-	ant_count_label.text = "Ants: %d / %d" % [colony.ants.size(), colony.profile.max_ants if colony.profile else 0]
+	ant_count_label.text = "Ants: %d" % colony.ants.size()
 	food_collected_label.text = "Food: %.1f units" % (colony.foods.mass if colony.foods else 0.0)
 	radius_label.text = "Radius: %.1f" % colony.radius
 #endregion
 
 
 #region Legend Management
-func _update_legend() -> void:
-	if not current_entity is Ant:
-		return
-	var ant: Ant = current_entity as Ant
+func _update_legend(influences: Array) -> void:
+	_clear_legend()
 
-	if not ant.influence_manager or not ant.influence_manager.active_profile:
-		_clear_legend()
-		return
+	for influence: Influence in influences:
+		var influence_type: String = _get_influence_type_name(influence)
+		if influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
+			continue
 
-	# Only update periodically
-	if Engine.get_physics_frames() % 20 != 0:
-		return
+		# Check if influence is valid for this entity
+		if not influence.is_valid(current_entity):
+			continue
 
-	_build_legend(ant.influence_manager.active_profile.influences)
+		var direction: Vector2 = EvaluationSystem.get_value(influence, current_entity)
+		var weight: float = direction.length()
+		if weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+
+		var color: Color = _get_influence_color(influence_type)
+		_add_legend_entry(influence_type, weight, color)
+
+
+func _get_influence_type_name(influence: Influence) -> String:
+	## Extract type name from influence name (e.g., "food_influence" -> "food")
+	return influence.name.to_snake_case().trim_suffix("_influence")
 
 
 func _clear_legend() -> void:
 	for child: Node in influences_legend.get_children():
 		child.queue_free()
-	_influence_colors.clear()
 
 
-func _build_legend(influences: Array) -> void:
-	_clear_legend()
+func _add_legend_entry(type_name: String, weight: float, color: Color) -> void:
+	var entry: HBoxContainer = HBoxContainer.new()
 
-	var ant: Ant = current_entity as Ant
-	if not ant or not is_instance_valid(ant):
-		return
+	var color_rect: ColorRect = ColorRect.new()
+	color_rect.custom_minimum_size = Vector2(16, 16)
+	color_rect.color = color
+	entry.add_child(color_rect)
 
-	for influence: Variant in influences:
-		if not influence is Influence:
-			continue
-		var inf: Influence = influence as Influence
+	var label: Label = Label.new()
+	label.text = " %s: %.2f" % [type_name.capitalize(), weight]
+	entry.add_child(label)
 
-		if inf.influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
-			continue
-
-		if not inf.is_valid(ant):
-			continue
-
-		var color: Color = _get_influence_color(inf.name)
-		var row: HBoxContainer = HBoxContainer.new()
-
-		var color_rect: ColorRect = ColorRect.new()
-		color_rect.custom_minimum_size = Vector2(16, 16)
-		color_rect.color = color
-		row.add_child(color_rect)
-
-		var label: Label = Label.new()
-		label.text = " %s" % inf.name
-		row.add_child(label)
-
-		influences_legend.add_child(row)
+	influences_legend.add_child(entry)
 
 
-func _get_influence_color(influence_name: String) -> Color:
-	if not _influence_colors.has(influence_name):
-		var hue: float = hash(influence_name) % 360 / 360.0
-		_influence_colors[influence_name] = Color.from_hsv(hue, 0.7, 0.9)
-	return _influence_colors[influence_name]
+func _get_influence_color(type_name: String) -> Color:
+	if not _influence_colors.has(type_name):
+		# Generate consistent color based on type name hash
+		var hash_value: int = type_name.hash()
+		var hue: float = fmod(float(hash_value), 360.0) / 360.0
+		_influence_colors[type_name] = Color.from_hsv(hue, 0.7, 0.9)
+	return _influence_colors[type_name]
 #endregion
 
 
@@ -494,13 +524,8 @@ func _on_edit_ant_profile_pressed() -> void:
 		return
 	var ant: Ant = current_entity as Ant
 
-	if not ant.profile:
-		return
-
-	var editor: AntProfileEditorPopup = AntProfileEditorPopup.new()
-	add_child(editor)
-	editor.edit_profile(ant.profile)
-	await editor.closed
+	if ant.profile:
+		_open_ant_profile_editor(ant.profile)
 
 
 func _on_view_influence_profile_pressed() -> void:
@@ -508,12 +533,9 @@ func _on_view_influence_profile_pressed() -> void:
 		return
 	var ant: Ant = current_entity as Ant
 
-	if not ant.influence_manager or not ant.influence_manager.active_profile:
-		return
-
-	var popup: InfluenceProfileViewPopup = InfluenceProfileViewPopup.new()
-	add_child(popup)
-	popup.show_profile(ant.influence_manager.active_profile)
+	if ant.influence_manager and ant.influence_manager.active_profile:
+		print("Active Influence Profile: %s" % ant.influence_manager.active_profile.name)
+		# TODO: Open influence profile viewer
 #endregion
 
 
@@ -524,13 +546,14 @@ func _on_spawn_pressed() -> void:
 	var colony: Colony = current_entity as Colony
 
 	var count: int = int(spawn_count_spin.value)
-	var selected_idx: int = profile_option.selected
-	var profile: AntProfile = _profile_map.get(selected_idx) as AntProfile
+	var profile_idx: int = profile_option.get_selected_id()
 
-	spawn_requested.emit(colony, count, profile)
+	if _profile_map.has(profile_idx):
+		spawn_requested.emit(colony, count, _profile_map[profile_idx])
 
 
 func _on_profile_selected(_index: int) -> void:
+	# Profile selection changed
 	pass
 
 
@@ -538,13 +561,17 @@ func _on_radius_changed(value: float) -> void:
 	if not current_entity is Colony:
 		return
 	var colony: Colony = current_entity as Colony
-	colony.radius = value
+
+	if colony.profile:
+		colony.profile.radius = value
+		colony.radius = value
 
 
 func _on_max_ants_changed(value: float) -> void:
 	if not current_entity is Colony:
 		return
 	var colony: Colony = current_entity as Colony
+
 	if colony.profile:
 		colony.profile.max_ants = int(value)
 
@@ -553,6 +580,7 @@ func _on_spawn_rate_changed(value: float) -> void:
 	if not current_entity is Colony:
 		return
 	var colony: Colony = current_entity as Colony
+
 	if colony.profile:
 		colony.profile.spawn_rate = value
 
@@ -561,6 +589,7 @@ func _on_dirt_color_changed(color: Color) -> void:
 	if not current_entity is Colony:
 		return
 	var colony: Colony = current_entity as Colony
+
 	if colony.profile:
 		colony.profile.dirt_color = color
 		colony.queue_redraw()
@@ -570,15 +599,14 @@ func _on_darker_dirt_changed(color: Color) -> void:
 	if not current_entity is Colony:
 		return
 	var colony: Colony = current_entity as Colony
+
 	if colony.profile:
 		colony.profile.darker_dirt_color = color
 		colony.queue_redraw()
-#endregion
 
 
-#region Signal Handlers - Colony Ant Profiles
-func _on_colony_ant_profile_selected(index: int) -> void:
-	edit_colony_ant_profile_button.disabled = index < 0
+func _on_colony_ant_profile_selected(_index: int) -> void:
+	edit_colony_ant_profile_button.disabled = false
 
 
 func _on_edit_colony_ant_profile_pressed() -> void:

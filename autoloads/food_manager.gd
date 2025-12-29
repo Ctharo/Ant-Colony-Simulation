@@ -34,17 +34,17 @@ func set_food_container(container: Node2D) -> void:
 func get_food_container() -> Node2D:
 	if is_instance_valid(_food_container):
 		return _food_container
-	
+
 	var sandbox := get_tree().get_first_node_in_group("sandbox")
 	if sandbox and sandbox.has_node("FoodContainer"):
 		_food_container = sandbox.get_node("FoodContainer")
 		return _food_container
-	
+
 	var root := get_tree().current_scene
 	if root and root.has_node("FoodContainer"):
 		_food_container = root.get_node("FoodContainer")
 		return _food_container
-	
+
 	logger.warn("No FoodContainer found in scene tree")
 	return null
 #endregion
@@ -54,23 +54,23 @@ func get_food_container() -> Node2D:
 func spawn_food_cluster(center: Vector2, count: int, spread: float = CLUSTER_SPREAD) -> Array[Food]:
 	var foods: Array[Food] = []
 	var container := get_food_container()
-	
+
 	if not container:
 		logger.error("Cannot spawn food cluster - no container available")
 		return foods
-	
+
 	for i in range(count):
 		var food := _create_food()
 		if not food:
 			continue
-		
+
 		var offset := _get_cluster_offset(spread)
 		food.global_position = center + offset
-		
+
 		container.add_child(food)
 		foods.append(food)
 		food_spawned.emit(food)
-	
+
 	logger.debug("Spawned food cluster of %d at %s" % [foods.size(), center])
 	return foods
 
@@ -79,21 +79,21 @@ func spawn_food_cluster(center: Vector2, count: int, spread: float = CLUSTER_SPR
 func spawn_foods_at(positions: Array[Vector2]) -> Array[Food]:
 	var foods: Array[Food] = []
 	var container := get_food_container()
-	
+
 	if not container:
 		logger.error("Cannot spawn foods - no container available")
 		return foods
-	
+
 	for pos in positions:
 		var food := _create_food()
 		if not food:
 			continue
-		
+
 		food.global_position = pos
 		container.add_child(food)
 		foods.append(food)
 		food_spawned.emit(food)
-	
+
 	return foods
 
 
@@ -101,7 +101,7 @@ func spawn_foods_at(positions: Array[Vector2]) -> Array[Food]:
 func spawn_foods(num: int) -> Array[Food]:
 	var foods: Array[Food] = []
 	var container := get_food_container()
-	
+
 	for i in range(num):
 		var food := _create_food()
 		if food:
@@ -109,7 +109,7 @@ func spawn_foods(num: int) -> Array[Food]:
 				container.add_child(food)
 			foods.append(food)
 			food_spawned.emit(food)
-	
+
 	return foods
 
 
@@ -127,7 +127,7 @@ func _create_food() -> Food:
 	if not food:
 		logger.error("Failed to instantiate food scene")
 		return null
-	
+
 	food.add_to_group("food")
 	return food
 
@@ -144,7 +144,7 @@ func _get_cluster_offset(spread: float) -> Vector2:
 func remove_food(food: Food) -> void:
 	if not is_instance_valid(food):
 		return
-	
+
 	food_removed.emit(food)
 	food.queue_free()
 
@@ -177,11 +177,11 @@ func get_available() -> Foods:
 func get_in_range(position: Vector2, range_distance: float, available_only: bool = false) -> Foods:
 	var foods := Foods.new([] as Array[Food])
 	var source := get_available() if available_only else get_all()
-	
+
 	for food in source.elements:
 		if food.global_position.distance_to(position) <= range_distance:
 			foods.append(food)
-	
+
 	return foods
 
 
@@ -189,14 +189,14 @@ func get_in_range(position: Vector2, range_distance: float, available_only: bool
 func get_nearest(position: Vector2, range_distance: float, available_only: bool = false) -> Food:
 	var nearest: Food = null
 	var nearest_distance := INF
-	
+
 	var source := get_available() if available_only else get_all()
-	
+
 	for food in source.elements:
 		var distance: float = food.global_position.distance_to(position)
 		if distance <= range_distance and distance < nearest_distance:
 			nearest = food
 			nearest_distance = distance
-	
+
 	return nearest
 #endregion

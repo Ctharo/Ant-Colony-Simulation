@@ -32,6 +32,10 @@ var heatmap: HeatmapManager
 
 ## Current colony being displayed
 var current_colony: Colony
+## Tracks if show was requested before panel was ready
+var _pending_show: bool = false
+## Tracks if panel initialization is complete
+var _panel_ready: bool = false
 
 
 #region DraggablePanel Overrides
@@ -55,13 +59,21 @@ func _get_default_position() -> Vector2:
 
 func _on_panel_ready() -> void:
 	custom_minimum_size = STYLE.PANEL_MIN_SIZE
-	hide()
 	heatmap = get_tree().get_first_node_in_group("heatmap")
 	
 	close_button.pressed.connect(_on_close_pressed)
 	show_heatmap_check.toggled.connect(_on_show_heatmap_toggled)
 	nav_debug_check.toggled.connect(_on_nav_debug_toggled)
 	highlight_ants_check.toggled.connect(_on_highlight_ants_toggled)
+	
+	_panel_ready = true
+	
+	# Only hide if show wasn't already requested
+	if _pending_show:
+		show()
+		_pending_show = false
+	else:
+		hide()
 #endregion
 
 
@@ -83,7 +95,14 @@ func show_colony_info(colony: Colony) -> void:
 	nav_debug_check.button_pressed = colony.nav_debug_enabled
 
 	update_colony_info()
-	show()
+	
+	# Handle deferred initialization race condition
+	if _panel_ready:
+		show()
+	else:
+		_pending_show = true
+
+	# Queue redraw for selection circle
 	queue_redraw()
 
 
@@ -91,9 +110,12 @@ func update_colony_info() -> void:
 	if not current_colony or not is_visible():
 		return
 
+	if not is_instance_valid(current_colony):
+		return
+
 	ant_count_label.text = "Ants: %d" % current_colony.ants.size()
-	food_collected_label.text = "Food Collected: %s units" % (current_colony.foods.mass if current_colony.foods else 0.0)
-	radius_label.text = "Colony Radius: %.1f" % current_colony.radius
+	food_collected_label.text = "Food: %.1f units" % (current_colony.foods.mass if current_colony.foods else 0.0)
+	radius_label.text = "Radius: %.1f" % current_colony.radius
 
 
 func _on_highlight_ants_toggled(enabled: bool) -> void:
@@ -105,6 +127,7 @@ func _on_highlight_ants_toggled(enabled: bool) -> void:
 func _on_nav_debug_toggled(enabled: bool) -> void:
 	if current_colony:
 		current_colony.nav_debug_enabled = enabled
+		# Toggle nav debug for all existing ants
 		for ant: Ant in current_colony.ants:
 			if ant.nav_agent:
 				ant.nav_agent.debug_enabled = enabled

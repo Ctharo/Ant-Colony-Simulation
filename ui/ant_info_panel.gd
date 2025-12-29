@@ -29,6 +29,10 @@ const STYLE: Dictionary = {
 var _influence_colors: Dictionary = {}
 var heatmap: HeatmapManager
 var current_ant: Ant
+## Tracks if show was requested before panel was ready
+var _pending_show: bool = false
+## Tracks if panel initialization is complete
+var _panel_ready: bool = false
 #endregion
 
 #region UI Components
@@ -86,14 +90,22 @@ func _get_default_position() -> Vector2:
 
 func _on_panel_ready() -> void:
 	custom_minimum_size = STYLE.PANEL_MIN_SIZE
-	hide()
 	setup_styling()
 	clear_legend()
-	
+
 	heatmap = get_tree().get_first_node_in_group("heatmap")
-	
+
 	_connect_signals()
 	_setup_scroll_handling()
+
+	_panel_ready = true
+
+	# Only hide if show wasn't already requested
+	if _pending_show:
+		show()
+		_pending_show = false
+	else:
+		hide()
 #endregion
 
 
@@ -120,9 +132,9 @@ func _connect_signals() -> void:
 func _process(_delta: float) -> void:
 	if not is_visible() or not is_instance_valid(current_ant):
 		return
-	
+
 	update_ant_info()
-	
+
 	# Update legend every 20 physics frames
 	if Engine.get_physics_frames() % 20 == 0:
 		if current_ant.influence_manager and current_ant.influence_manager.active_profile:
@@ -151,7 +163,6 @@ func show_ant_info(ant: Ant) -> void:
 	if not ant:
 		return
 	current_ant = ant
-	show()
 
 	# Update basic info
 	title_label.text = "Ant #%d" % ant.id
@@ -163,6 +174,12 @@ func show_ant_info(ant: Ant) -> void:
 	# Update food info
 	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
 
+	# Handle deferred initialization race condition
+	if _panel_ready:
+		show()
+	else:
+		_pending_show = true
+
 	# Queue redraw for selection circle
 	queue_redraw()
 
@@ -170,13 +187,13 @@ func show_ant_info(ant: Ant) -> void:
 func update_ant_info() -> void:
 	if not current_ant or not is_instance_valid(current_ant):
 		return
-	
+
 	# Update status bars
 	update_status_bars()
-	
+
 	# Update food info
 	food_label.text = "Carrying Food: %s" % ("Yes" if current_ant.is_carrying_food else "No")
-	
+
 	# Update profile section
 	_update_profile_section()
 
@@ -184,22 +201,47 @@ func update_ant_info() -> void:
 func update_status_bars() -> void:
 	if not current_ant:
 		return
-	
+
 	health_bar.max_value = current_ant.health_max
 	health_bar.value = current_ant.health_level
 	health_value_label.text = "%d/%d" % [int(current_ant.health_level), int(current_ant.health_max)]
-	
+
 	energy_bar.max_value = current_ant.energy_max
 	energy_bar.value = current_ant.energy_level
 	energy_value_label.text = "%d/%d" % [int(current_ant.energy_level), int(current_ant.energy_max)]
+
+	_update_bar_colors()
+
+
+func _update_bar_colors() -> void:
+	if not current_ant:
+		return
+
+	var health_pct: float = current_ant.health_level / current_ant.health_max
+	var energy_pct: float = current_ant.energy_level / current_ant.energy_max
+
+	var health_color: Color = STYLE.HEALTH_COLOR
+	if health_pct < 0.25:
+		health_color = STYLE.LOW_COLOR
+	elif health_pct < 0.5:
+		health_color = STYLE.MED_COLOR
+
+	var energy_color: Color = STYLE.ENERGY_COLOR
+	if energy_pct < 0.25:
+		energy_color = STYLE.LOW_COLOR
+	elif energy_pct < 0.5:
+		energy_color = STYLE.MED_COLOR
+
+	health_bar.add_theme_stylebox_override("fill", create_stylebox(health_color))
+	energy_bar.add_theme_stylebox_override("fill", create_stylebox(energy_color))
 
 
 func _update_profile_section() -> void:
 	if not current_ant:
 		return
-	
+
 	profile_name_label.text = "Profile: %s" % (current_ant.profile.name if current_ant.profile else "None")
-	
+
 	if current_ant.influence_manager and current_ant.influence_manager.active_profile:
 		active_profile_label.text = "Active: %s" % current_ant.influence_manager.active_profile.name
 	else:
@@ -214,102 +256,84 @@ func clear_legend() -> void:
 
 func update_legend(influences: Array) -> void:
 	clear_legend()
-	
+
 	if not current_ant or not is_instance_valid(current_ant):
 		return
 
 	# Calculate total magnitude for normalization
 	var total_magnitude: float = 0.0
-	var influence_data: Array = [] as Array
+	var influence_data: Array[Dictionary] = [] as Array[Dictionary]
 
 	# First pass: collect data and calculate total magnitude
-	for influence: Variant in influences:
-		if not influence is Influence:
-			continue
-		var inf: Influence = influence as Influence
-		
-		if _should_ignore_influence(inf):
-			continue
-		
-		if not inf.is_valid(current_ant):
+	for influence: Influence in influences:
+		if _should_ignore_influence(influence):
 			continue
 
-		var result: Vector2 = EvaluationSystem.evaluate_vector(inf, current_ant, current_ant.colony)
-		var magnitude: float = result.length()
-		
-		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+		var weight: float = influence.get_current_weight()
+		if weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
 			continue
-		
+
+		total_magnitude += weight
 		influence_data.append({
-			"name": inf.name,
-			"magnitude": magnitude,
-			"color": _get_influence_color(inf.name)
+			"name": influence.type,
+			"weight": weight
 		})
-		total_magnitude += magnitude
-
-	# Sort by magnitude (highest first)
-	influence_data.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: 
-		return a["magnitude"] > b["magnitude"]
-	)
 
 	# Second pass: create legend entries
 	for data: Dictionary in influence_data:
-		var normalized_weight: float = data["magnitude"] / total_magnitude if total_magnitude > 0 else 0.0
-		_add_legend_entry(data["name"], data["color"], normalized_weight)
+		var normalized_weight: float = data.weight / total_magnitude if total_magnitude > 0 else 0.0
+		_add_legend_entry(data.name, normalized_weight)
 
 
-func _get_influence_color(influence_name: String) -> Color:
-	if not _influence_colors.has(influence_name):
-		var hue: float = hash(influence_name) % 360 / 360.0
-		_influence_colors[influence_name] = Color.from_hsv(hue, 0.7, 0.9)
-	return _influence_colors[influence_name]
-
-
-func _add_legend_entry(p_name: String, p_color: Color, normalized_weight: float) -> void:
+func _add_legend_entry(type_name: String, normalized_weight: float) -> void:
 	var entry: HBoxContainer = HBoxContainer.new()
-	entry.add_theme_constant_override("separation", 3)
-	
+
+	# Color indicator
+	var color: Color = _get_influence_color(type_name)
 	var color_rect: ColorRect = ColorRect.new()
-	color_rect.custom_minimum_size = Vector2(12, 12)
-	color_rect.color = p_color
+	color_rect.custom_minimum_size = Vector2(16, 16)
+	color_rect.color = color
 	entry.add_child(color_rect)
-	
-	if p_color == STYLE.INFLUENCE_SETTINGS.OVERALL_COLOR:
-		var color_spacer: Control = Control.new()
-		color_spacer.custom_minimum_size = Vector2(17, 0)
-		entry.add_child(color_spacer)
-	
+
+	# Spacer
 	var spacer: Control = Control.new()
-	spacer.custom_minimum_size = Vector2(5, 0)
+	spacer.custom_minimum_size = Vector2(8, 0)
 	entry.add_child(spacer)
-	
+
+	# Name label
 	var name_label: Label = Label.new()
-	name_label.text = p_name.trim_suffix("_influence").capitalize()
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.text = type_name.capitalize()
 	entry.add_child(name_label)
-	
+
+	# Weight label
 	var weight_label: Label = Label.new()
 	weight_label.custom_minimum_size.x = 70
 	weight_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weight_label.text = "%.1f%%" % (normalized_weight * 100)
-	
-	var weight_spacer: Control = Control.new()
-	weight_spacer.custom_minimum_size = Vector2(10, 0)
-	entry.add_child(weight_spacer)
-	
 	entry.add_child(weight_label)
+
 	influences_legend.add_child(entry)
 
 
+func _get_influence_color(type_name: String) -> Color:
+	if not _influence_colors.has(type_name):
+		# Generate consistent color based on type name hash
+		var hash_value: int = type_name.hash()
+		var hue: float = fmod(float(hash_value), 360.0) / 360.0
+		_influence_colors[type_name] = Color.from_hsv(hue, 0.7, 0.9)
+	return _influence_colors[type_name]
+
+
 func _should_ignore_influence(influence: Influence) -> bool:
-	var influence_type: String = influence.name.to_snake_case().trim_suffix("_influence")
-	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
+	return influence.type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
 
 
 #region Signal Handlers - Profile
 func _on_edit_profile_pressed() -> void:
 	if not current_ant or not current_ant.profile:
 		return
-	
+
 	var editor: AntProfileEditorPopup = AntProfileEditorPopup.new()
 	add_child(editor)
 	editor.edit_profile(current_ant.profile)
@@ -320,11 +344,11 @@ func _on_edit_profile_pressed() -> void:
 func _on_view_influence_profile_pressed() -> void:
 	if not current_ant or not current_ant.influence_manager:
 		return
-	
+
 	var active: InfluenceProfile = current_ant.influence_manager.active_profile
 	if not active:
 		return
-	
+
 	var popup: InfluenceProfileViewPopup = InfluenceProfileViewPopup.new()
 	add_child(popup)
 	popup.show_profile(active)
