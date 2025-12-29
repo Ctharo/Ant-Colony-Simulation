@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://c5finp56u4fg0"]
+[gd_scene format=3 uid="uid://c5finp56u4fg0"]
 
 [ext_resource type="Script" uid="uid://cmcprfq7niaro" path="res://entities/colony/colony.gd" id="1_colony"]
 [ext_resource type="Texture2D" uid="uid://bgnwao1ilj3pd" path="res://assets/anthill.svg" id="2_frwxs"]
@@ -6,24 +6,24 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_u8v2p"]
 radius = 60.0
 
-[node name="Colony" type="Node2D"]
+[node name="Colony" type="Node2D" unique_id=244451749]
 script = ExtResource("1_colony")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=741789570]
 position = Vector2(0, -12)
 scale = Vector2(1.10574, 1.26676)
 texture = ExtResource("2_frwxs")
 
-[node name="CollisionArea" type="Area2D" parent="."]
+[node name="CollisionArea" type="Area2D" parent="." unique_id=41755265]
 collision_layer = 4
 collision_mask = 10
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionArea" unique_id=1409245629]
 shape = SubResource("CircleShape2D_u8v2p")
 
-[node name="Markers" type="Node2D" parent="."]
+[node name="Markers" type="Node2D" parent="." unique_id=1187066022]
 
-[node name="SpawnPoint" type="Marker2D" parent="Markers"]
+[node name="SpawnPoint" type="Marker2D" parent="Markers" unique_id=36433206]
 
 [connection signal="body_entered" from="CollisionArea" to="." method="_on_collision_area_body_entered"]
 [connection signal="body_exited" from="CollisionArea" to="." method="_on_collision_area_body_exited"]

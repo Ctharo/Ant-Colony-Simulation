@@ -13,7 +13,7 @@ var mass :
 	get:
 		return float(count)
 
-func _init(initial_foods: Array[Food] = []) -> void:
+func _init(initial_foods: Array[Food] = [] as Array[Food]) -> void:
 	super._init()
 	for food in initial_foods:
 		append(food)
@@ -27,7 +27,7 @@ func add_food(food: Food) -> void:
 func remove_food() -> Food:
 	if count == 0:
 		return null
-		
+
 	var food = elements.pop_back()
 	foods_changed.emit()
 	return food

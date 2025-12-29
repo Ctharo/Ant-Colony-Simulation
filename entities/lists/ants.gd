@@ -1,7 +1,7 @@
 class_name Ants
 extends Iterator
 
-func _init(initial_ants: Array[Ant] = []):
+func _init(initial_ants: Array[Ant] = [] as Array[Ant]):
 	super._init()
 	for ant in initial_ants:
 		self.append(ant)
