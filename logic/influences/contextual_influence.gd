@@ -19,16 +19,16 @@ func get_value(entity: Node) -> Vector2:
 	# Check negation condition first
 	if is_instance_valid(negation_condition) and negation_condition.get_value(entity):
 		return Vector2.ZERO
-	
+
 	# Get base influence value
 	var value = super.get_value(entity)
-	
+
 	# Apply strength modification if condition is met
 	if is_instance_valid(strength_condition) and strength_condition.get_value(entity):
 		value *= strength_factor
-	
+
 	# Apply direction modification if condition is met
 	if is_instance_valid(direction_condition) and direction_condition.get_value(entity):
 		value = value.rotated(direction_angle)
-	
+
 	return value
