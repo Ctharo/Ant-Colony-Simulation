@@ -7,7 +7,6 @@ var settings_manager: SettingsManager = SettingsManager
 #region Node References
 var camera: CameraController
 var active_context_menu: BaseContextMenu
-var active_ant_info: AntInfoPanel
 var entity_info_panel: EntityInfoPanel
 var hovered_entity_label: Label
 
@@ -38,7 +37,7 @@ func _ready() -> void:
 	camera = get_node("../../Camera2D")
 	sandbox = get_node("../..")
 	DEFAULT_FOOD_SPAWN_NUM = settings_manager.get_setting("food_spawn_count", 50)
-	
+
 	if is_instance_valid(overlay):
 		overlay.visible = true
 
@@ -52,7 +51,7 @@ func _update_hovered_entity_label() -> void:
 	if is_instance_valid(hovered_entity_label):
 		hovered_entity_label.queue_free()
 		hovered_entity_label = null
-	
+
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		hovered_entity_label = Label.new()
 		hovered_entity_label.name = "hovered_entity"
@@ -65,7 +64,7 @@ func _update_hovered_entity_label() -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if initializing:
 		return
-	
+
 	if event is InputEventMouseButton and event.pressed:
 		var screen_pos: Vector2 = event.position
 		match event.button_index:
@@ -80,17 +79,16 @@ func _on_gui_input(event: InputEvent) -> void:
 #region Click Handling
 func handle_left_click(_screen_pos: Vector2) -> void:
 	clear_active_menu()
-	
+
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		show_info_panel(camera.hovered_entity)
 	else:
 		deselect_all()
-		close_ant_info()
 
 
 func handle_right_click(screen_pos: Vector2) -> void:
 	clear_active_menu()
-	
+
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		if camera.hovered_entity is Ant:
 			show_ant_context_menu(camera.hovered_entity, screen_pos)
@@ -106,7 +104,7 @@ func show_colony_context_menu(colony: Colony, screen_pos: Vector2) -> void:
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	
+
 	active_context_menu.add_button("Spawn Ants",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
@@ -119,7 +117,7 @@ func show_colony_context_menu(colony: Colony, screen_pos: Vector2) -> void:
 	active_context_menu.add_button("Destroy",
 		preload("res://ui/styles/destroy_normal.tres"),
 		preload("res://ui/styles/destroy_hover.tres"))
-	
+
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_colony_menu_button_pressed(index, colony))
 	active_context_menu.show_at(screen_pos, colony.radius)
@@ -128,7 +126,7 @@ func show_colony_context_menu(colony: Colony, screen_pos: Vector2) -> void:
 func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 	if not is_instance_valid(colony):
 		return
-	
+
 	match index:
 		0: # Spawn Ants
 			var profile := settings_manager.get_colony_profile()
@@ -145,7 +143,7 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 			colony.heatmap_enabled = !colony.heatmap_enabled
 		3: # Destroy
 			colony_manager.remove_colony(colony)
-	
+
 	clear_active_menu()
 
 
@@ -154,14 +152,14 @@ func show_empty_context_menu(screen_pos: Vector2) -> void:
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	
+
 	active_context_menu.add_button("Spawn Colony",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
 	active_context_menu.add_button("Spawn Food",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
-	
+
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_empty_menu_button_pressed(index, screen_pos))
 	active_context_menu.show_at(screen_pos)
@@ -173,7 +171,7 @@ func _on_empty_menu_button_pressed(index: int, screen_pos: Vector2) -> void:
 			_on_spawn_colony_requested(screen_pos)
 		1: # Spawn Food
 			_on_spawn_food_requested(screen_pos)
-	
+
 	clear_active_menu()
 
 
@@ -182,7 +180,7 @@ func show_ant_context_menu(ant: Ant, screen_pos: Vector2) -> void:
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
-	
+
 	active_context_menu.add_button("Info",
 		preload("res://ui/styles/info_normal.tres"),
 		preload("res://ui/styles/info_hover.tres"))
@@ -192,7 +190,7 @@ func show_ant_context_menu(ant: Ant, screen_pos: Vector2) -> void:
 	active_context_menu.add_button("Kill",
 		preload("res://ui/styles/destroy_normal.tres"),
 		preload("res://ui/styles/destroy_hover.tres"))
-	
+
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
 	active_context_menu.show_at(screen_pos)
@@ -201,7 +199,7 @@ func show_ant_context_menu(ant: Ant, screen_pos: Vector2) -> void:
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 	if not is_instance_valid(ant):
 		return
-	
+
 	match index:
 		0: # Info
 			show_info_panel(ant)
@@ -209,7 +207,7 @@ func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 			camera.track_entity(ant)
 		2: # Kill
 			ant_manager.remove_ant(ant)
-	
+
 	clear_active_menu()
 
 
@@ -223,7 +221,7 @@ func clear_active_menu() -> void:
 func show_info_panel(entity: Node) -> void:
 	if not entity:
 		return
-	
+
 	if is_instance_valid(entity_info_panel):
 		if entity is Ant and entity_info_panel.get_current_ant() == entity:
 			entity_info_panel.queue_free()
@@ -233,16 +231,16 @@ func show_info_panel(entity: Node) -> void:
 			entity_info_panel.queue_free()
 			entity_info_panel = null
 			return
-		
+
 		entity_info_panel.queue_free()
 		entity_info_panel = null
-	
+
 	entity_info_panel = preload("res://ui/entity_info_panel.tscn").instantiate()
 	info_panels_container.add_child(entity_info_panel)
-	
+
 	if entity is Colony:
 		entity_info_panel.highlight_ants.connect(_on_colony_highlight_ants_requested)
-	
+
 	entity_info_panel.closed.connect(_on_entity_info_panel_closed)
 	entity_info_panel.show_entity_info(entity)
 
@@ -259,12 +257,6 @@ func close_info_panel(entity: Node) -> void:
 		elif entity is Ant and entity_info_panel.get_current_ant() == entity:
 			entity_info_panel.queue_free()
 			entity_info_panel = null
-
-
-func close_ant_info() -> void:
-	if is_instance_valid(active_ant_info):
-		active_ant_info.queue_free()
-		active_ant_info = null
 
 
 func deselect_all() -> void:
