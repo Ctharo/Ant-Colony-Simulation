@@ -15,6 +15,7 @@ name = "food"
 decay_rate = 0.25
 generating_rate = 20.0
 heat_radius = 4
+diffusion_rate = 1.0
 start_color = Color(0.0196078, 0.0156863, 1, 0.101961)
 end_color = Color(3.56168e-06, 0, 0.852083, 0.2)
 condition = SubResource("Resource_e0ucx")

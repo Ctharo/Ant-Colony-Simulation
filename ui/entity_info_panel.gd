@@ -123,7 +123,7 @@ func _on_panel_ready() -> void:
 
 	_panel_ready = true
 
-	# Only hide if show wasn't already requested
+	## Only hide if show wasn't already requested
 	if _pending_show:
 		show()
 		_pending_show = false
@@ -148,11 +148,11 @@ func _on_scroll_gui_input(event: InputEvent) -> void:
 func _connect_signals() -> void:
 	close_button.pressed.connect(_on_close_pressed)
 
-	# Ant signals
+	## Ant signals
 	edit_ant_profile_button.pressed.connect(_on_edit_ant_profile_pressed)
 	view_influence_profile_button.pressed.connect(_on_view_influence_profile_pressed)
 
-	# Colony signals
+	## Colony signals
 	spawn_button.pressed.connect(_on_spawn_pressed)
 	profile_option.item_selected.connect(_on_profile_selected)
 	radius_spin.value_changed.connect(_on_radius_changed)
@@ -163,7 +163,7 @@ func _connect_signals() -> void:
 	colony_ant_profiles_list.item_selected.connect(_on_colony_ant_profile_selected)
 	edit_colony_ant_profile_button.pressed.connect(_on_edit_colony_ant_profile_pressed)
 
-	# Visualization signals
+	## Visualization signals
 	show_heatmap_check.toggled.connect(_on_show_heatmap_toggled)
 	nav_debug_check.toggled.connect(_on_nav_debug_toggled)
 	highlight_check.toggled.connect(_on_highlight_toggled)
@@ -214,7 +214,7 @@ func show_entity_info(entity: Node) -> void:
 	elif entity is Colony:
 		_setup_colony_view(entity)
 
-	# Handle deferred initialization race condition
+	## Handle deferred initialization race condition
 	if _panel_ready:
 		show()
 	else:
@@ -241,22 +241,24 @@ func _setup_ant_view(ant: Ant) -> void:
 	ant_section.visible = true
 	colony_section.visible = false
 
+	## Set title and basic info - THIS WAS MISSING ROLE_LABEL
 	title_label.text = "Ant #%d" % ant.id
+	role_label.text = "Role: %s" % ant.role
 	colony_label.text = "Colony: %s" % (str(ant.colony.name) if ant.colony else "None")
+	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
 
-	# Show ant-specific visualization options
+	## Show ant-specific visualization options
 	show_influence_vectors_check.visible = true
 	highlight_check.visible = false
 	highlight_check.text = "Show Nav Path"
 
+	## Update all sections
 	_update_ant_profile_section()
 	_update_movement_influences_section()
 	_update_status_bars()
 	_sync_ant_visualization()
 
-	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
-
-	# Automatically enable influence arrows when viewing ant info
+	## Automatically enable influence arrows when viewing ant info
 	_enable_influence_visualization(ant)
 
 
@@ -355,11 +357,14 @@ func _update_ant_info() -> void:
 	if not is_instance_valid(ant):
 		return
 
-	_update_status_bars()
-	_update_movement_influences_section()
+	## Update dynamic labels
+	role_label.text = "Role: %s" % ant.role
 	food_label.text = "Carrying Food: %s" % ("Yes" if ant.is_carrying_food else "No")
 
-	# Update legend periodically
+	_update_status_bars()
+	_update_movement_influences_section()
+
+	## Update legend periodically
 	if Engine.get_physics_frames() % 20 == 0:
 		if ant.influence_manager and ant.influence_manager.active_profile:
 			_update_legend(ant.influence_manager.active_profile.influences)
@@ -373,7 +378,7 @@ func _setup_colony_view(colony: Colony) -> void:
 
 	title_label.text = "Colony: %s" % colony.name
 
-	# Show colony-specific visualization options
+	## Show colony-specific visualization options
 	show_influence_vectors_check.visible = false
 	highlight_check.visible = true
 	highlight_check.text = "Highlight Ants"
@@ -413,10 +418,6 @@ func _get_available_ant_profiles() -> Array[AntProfile]:
 		if colony.profile and not colony.profile.ant_profiles.is_empty():
 			profiles.append_array(colony.profile.ant_profiles)
 
-	if profiles.is_empty():
-		var default_profile: AntProfile = AntProfile.create_basic_worker()
-		profiles.append(default_profile)
-
 	return profiles
 
 
@@ -425,26 +426,22 @@ func _populate_colony_ant_profiles_list() -> void:
 
 	if not current_entity is Colony:
 		return
-	var colony: Colony = current_entity as Colony
 
+	var colony: Colony = current_entity as Colony
 	if not colony.profile:
 		return
 
 	for profile: AntProfile in colony.profile.ant_profiles:
-		var initial_count: int = colony.profile.initial_ants.get(profile, 0)
-		colony_ant_profiles_list.add_item("%s (initial: %d)" % [profile.name, initial_count])
+		var item_text: String = "%s" % profile.name
+		colony_ant_profiles_list.add_item(item_text)
 
-	edit_colony_ant_profile_button.disabled = colony_ant_profiles_list.item_count == 0
+	edit_colony_ant_profile_button.disabled = true
 
 
 func _update_colony_settings(colony: Colony) -> void:
-	if not colony.profile:
-		return
-
-	radius_spin.value = colony.profile.radius
-	max_ants_spin.value = colony.profile.max_ants
-	spawn_rate_spin.value = colony.profile.spawn_rate
-	dirt_color_picker.color = colony.profile.dirt_color
+	radius_spin.value = colony.radius
+	max_ants_spin.value = colony.profile.max_ants if colony.profile else 100
+	dirt_color_picker.color = colony.dirt_color
 
 
 func _update_colony_info() -> void:
@@ -456,65 +453,8 @@ func _update_colony_info() -> void:
 		return
 
 	ant_count_label.text = "Ants: %d" % colony.ants.size()
-	food_collected_label.text = "Food: %.1f units" % (colony.foods.mass if colony.foods else 0.0)
+	food_collected_label.text = "Food: %s" % (str(colony.foods.mass) if colony.foods else "0")
 	radius_label.text = "Radius: %.1f" % colony.radius
-#endregion
-
-
-#region Legend Management
-func _update_legend(influences: Array) -> void:
-	_clear_legend()
-
-	for influence: Influence in influences:
-		var influence_type: String = _get_influence_type_name(influence)
-		if influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
-			continue
-
-		# Check if influence is valid for this entity
-		if not influence.is_valid(current_entity):
-			continue
-
-		var direction: Vector2 = EvaluationSystem.get_value(influence, current_entity)
-		var weight: float = direction.length()
-		if weight < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
-			continue
-
-		var color: Color = _get_influence_color(influence_type)
-		_add_legend_entry(influence_type, weight, color)
-
-
-func _get_influence_type_name(influence: Influence) -> String:
-	## Extract type name from influence name (e.g., "food_influence" -> "food")
-	return influence.name.to_snake_case().trim_suffix("_influence")
-
-
-func _clear_legend() -> void:
-	for child: Node in influences_legend.get_children():
-		child.queue_free()
-
-
-func _add_legend_entry(type_name: String, weight: float, color: Color) -> void:
-	var entry: HBoxContainer = HBoxContainer.new()
-
-	var color_rect: ColorRect = ColorRect.new()
-	color_rect.custom_minimum_size = Vector2(16, 16)
-	color_rect.color = color
-	entry.add_child(color_rect)
-
-	var label: Label = Label.new()
-	label.text = " %s: %.2f" % [type_name.capitalize(), weight]
-	entry.add_child(label)
-
-	influences_legend.add_child(entry)
-
-
-func _get_influence_color(type_name: String) -> Color:
-	if not _influence_colors.has(type_name):
-		# Generate consistent color based on type name hash
-		var hash_value: int = type_name.hash()
-		var hue: float = fmod(float(hash_value), 360.0) / 360.0
-		_influence_colors[type_name] = Color.from_hsv(hue, 0.7, 0.9)
-	return _influence_colors[type_name]
 #endregion
 
 
@@ -524,8 +464,14 @@ func _on_edit_ant_profile_pressed() -> void:
 		return
 	var ant: Ant = current_entity as Ant
 
-	if ant.profile:
-		_open_ant_profile_editor(ant.profile)
+	if not ant.profile:
+		return
+
+	var editor: AntProfileEditorPopup = AntProfileEditorPopup.new()
+	add_child(editor)
+	editor.edit_profile(ant.profile)
+	await editor.closed
+	_update_ant_profile_section()
 
 
 func _on_view_influence_profile_pressed() -> void:
@@ -533,9 +479,8 @@ func _on_view_influence_profile_pressed() -> void:
 		return
 	var ant: Ant = current_entity as Ant
 
-	if ant.influence_manager and ant.influence_manager.active_profile:
-		print("Active Influence Profile: %s" % ant.influence_manager.active_profile.name)
-		# TODO: Open influence profile viewer
+	print("Influence profile not yet implemented")
+	#TODO
 #endregion
 
 
@@ -546,62 +491,50 @@ func _on_spawn_pressed() -> void:
 	var colony: Colony = current_entity as Colony
 
 	var count: int = int(spawn_count_spin.value)
-	var profile_idx: int = profile_option.get_selected_id()
+	var selected_idx: int = profile_option.selected
+	var profile: AntProfile = _profile_map.get(selected_idx)
 
-	if _profile_map.has(profile_idx):
-		spawn_requested.emit(colony, count, _profile_map[profile_idx])
+	if profile:
+		spawn_requested.emit(colony, count, profile)
+		for i: int in range(count):
+			colony.spawn_ant(profile)
 
 
 func _on_profile_selected(_index: int) -> void:
-	# Profile selection changed
 	pass
 
 
 func _on_radius_changed(value: float) -> void:
-	if not current_entity is Colony:
-		return
-	var colony: Colony = current_entity as Colony
-
-	if colony.profile:
-		colony.profile.radius = value
+	if current_entity is Colony:
+		var colony: Colony = current_entity as Colony
 		colony.radius = value
+		colony.queue_redraw()
 
 
 func _on_max_ants_changed(value: float) -> void:
-	if not current_entity is Colony:
-		return
-	var colony: Colony = current_entity as Colony
-
-	if colony.profile:
-		colony.profile.max_ants = int(value)
+	if current_entity is Colony:
+		var colony: Colony = current_entity as Colony
+		if colony.profile:
+			colony.profile.max_ants = int(value)
 
 
 func _on_spawn_rate_changed(value: float) -> void:
-	if not current_entity is Colony:
-		return
-	var colony: Colony = current_entity as Colony
-
-	if colony.profile:
-		colony.profile.spawn_rate = value
+	if current_entity is Colony:
+		var colony: Colony = current_entity as Colony
+		colony.spawn_rate = value
 
 
 func _on_dirt_color_changed(color: Color) -> void:
-	if not current_entity is Colony:
-		return
-	var colony: Colony = current_entity as Colony
-
-	if colony.profile:
-		colony.profile.dirt_color = color
+	if current_entity is Colony:
+		var colony: Colony = current_entity as Colony
+		colony.dirt_color = color
 		colony.queue_redraw()
 
 
 func _on_darker_dirt_changed(color: Color) -> void:
-	if not current_entity is Colony:
-		return
-	var colony: Colony = current_entity as Colony
-
-	if colony.profile:
-		colony.profile.darker_dirt_color = color
+	if current_entity is Colony:
+		var colony: Colony = current_entity as Colony
+		colony.darker_dirt_color = color
 		colony.queue_redraw()
 
 
@@ -678,6 +611,81 @@ func _on_close_pressed() -> void:
 	_disable_influence_visualization()
 	closed.emit()
 	queue_free()
+#endregion
+
+
+#region Legend Management
+func _clear_legend() -> void:
+	for child: Node in influences_legend.get_children():
+		child.queue_free()
+	_influence_colors.clear()
+
+
+func _update_legend(influences: Array) -> void:
+	_clear_legend()
+
+	if not current_entity is Ant:
+		return
+	var ant: Ant = current_entity as Ant
+
+	if not is_instance_valid(ant):
+		return
+
+	## Calculate total magnitude for normalization
+	var total_magnitude: float = 0.0
+	var influence_data: Array[Dictionary] = [] as Array[Dictionary]
+
+	## First pass: collect data and calculate total magnitude
+	for influence: Influence in influences:
+		if _should_ignore_influence(influence):
+			continue
+
+		## Check if influence is valid for this ant
+		if not influence.is_valid(ant):
+			continue
+
+		## Get vector and weight
+		var vector: Vector2 = EvaluationSystem.get_value(influence, ant)
+		var magnitude: float = vector.length()
+
+		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
+			continue
+
+		total_magnitude += magnitude
+		influence_data.append({
+			"name": influence.name,
+			"magnitude": magnitude,
+			"color": influence.color
+		})
+
+	## Second pass: create legend entries
+	for data: Dictionary in influence_data:
+		var entry: HBoxContainer = HBoxContainer.new()
+
+		## Color indicator
+		var color_rect: ColorRect = ColorRect.new()
+		color_rect.custom_minimum_size = Vector2(16, 16)
+		color_rect.color = data.color
+		entry.add_child(color_rect)
+
+		## Name and percentage
+		var percentage: float = (data.magnitude / total_magnitude * 100.0) if total_magnitude > 0 else 0.0
+		var label: Label = Label.new()
+		label.text = " %s: %.1f%%" % [data.name, percentage]
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		entry.add_child(label)
+
+		influences_legend.add_child(entry)
+
+		## Store color for this influence
+		_influence_colors[data.name] = data.color
+
+
+func _should_ignore_influence(influence: Influence) -> bool:
+	for ignore_type: String in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES:
+		if influence.name.to_lower().contains(ignore_type):
+			return true
+	return false
 #endregion
 
 

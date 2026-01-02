@@ -12,8 +12,12 @@ extends Resource
 ## Rate at which pheromone is generated
 @export var generating_rate: float
 
-## Radius of effect for the pheromone
+## Maximum radius of effect for the pheromone (cells from center)
 @export var heat_radius: int = 1
+
+## How quickly pheromone spreads outward (0.0 to 1.0)
+## Higher values = faster spreading, lower = more concentrated trails
+@export_range(0.0, 1.0, 0.05) var diffusion_rate: float = 0.15
 
 ## Starting color for the pheromone visualization
 @export var start_color: Color = Color.WHITE
@@ -25,18 +29,25 @@ extends Resource
 @export var condition: Logic
 #endregion
 
-func check_and_emit(ant: Ant, delta: float):
+
+## Check condition and emit pheromone if appropriate
+func check_and_emit(ant: Ant, delta: float) -> void:
 	if _should_emit(ant):
 		_update_heat(ant, delta)
 
-func _update_heat(ant: Ant, delta: float):
+
+## Update heat in the heatmap
+func _update_heat(ant: Ant, delta: float) -> void:
 	HeatmapManager.update_entity_heat(ant, delta, name)
 
+
+## Check if pheromone should be emitted
 func _should_emit(ant: Ant) -> bool:
 	if not condition:
 		return true
 	return _evaluate_condition(ant)
 
 
-func _evaluate_condition(ant: Ant):
+## Evaluate the condition logic
+func _evaluate_condition(ant: Ant) -> bool:
 	return EvaluationSystem.get_value(condition, ant)
