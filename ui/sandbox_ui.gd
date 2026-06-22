@@ -100,10 +100,7 @@ func handle_right_click(screen_pos: Vector2) -> void:
 
 #region Context Menu Management
 func show_colony_context_menu(colony: Colony, screen_pos: Vector2) -> void:
-	clear_active_menu()
-	active_context_menu = BaseContextMenu.new()
-	active_context_menu.setup(camera)
-	add_child(active_context_menu)
+	_create_context_window()
 
 	active_context_menu.add_button("Spawn Ants",
 		preload("res://ui/styles/spawn_normal.tres"),
@@ -146,13 +143,16 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 
 	clear_active_menu()
 
-
-func show_empty_context_menu(screen_pos: Vector2) -> void:
+## Clears, initializes, and sets [member active_context_menu]
+func _create_context_window() -> void:
 	clear_active_menu()
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
 
+func show_empty_context_menu(screen_pos: Vector2) -> void:
+	_create_context_window()
+	
 	active_context_menu.add_button("Spawn Colony",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
@@ -176,10 +176,7 @@ func _on_empty_menu_button_pressed(index: int, screen_pos: Vector2) -> void:
 
 
 func show_ant_context_menu(ant: Ant, screen_pos: Vector2) -> void:
-	clear_active_menu()
-	active_context_menu = BaseContextMenu.new()
-	active_context_menu.setup(camera)
-	add_child(active_context_menu)
+	_create_context_window()
 
 	active_context_menu.add_button("Info",
 		preload("res://ui/styles/info_normal.tres"),
