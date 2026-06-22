@@ -1,7 +1,7 @@
 class_name SandboxUI
 extends Control
 ## UI controller for the sandbox simulation view
-
+#TODO Fix/understand position
 var settings_manager: SettingsManager = SettingsManager
 
 #region Node References
