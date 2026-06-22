@@ -1,5 +1,5 @@
 extends Node
-## FoodManager - Manages food spawning, tracking, and lifecycle
+##Manages food spawning, tracking, and lifecycle
 
 signal food_spawned(food: Food)
 signal food_removed(food: Food)

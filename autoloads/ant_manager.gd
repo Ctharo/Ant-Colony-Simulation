@@ -1,5 +1,6 @@
-# AntManager.gd
 extends Node
+##Manages ant spawning, tracking, and lifecycle
+
 
 #region Signals
 signal ant_spawned(ant: Ant, colony: Colony)

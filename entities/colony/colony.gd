@@ -106,7 +106,6 @@ func _spawn_initial_ants() -> void:
 
 		if is_instance_valid(ant_profile) and count > 0:
 			var spawned = spawn_ants(count, ant_profile)
-			logger.debug("Spawned %d %s ants" % [spawned.size(), ant_profile.name])
 #endregion
 
 func _physics_process(delta: float) -> void:
@@ -127,7 +126,7 @@ func spawn_ant(ant_profile: AntProfile) -> Ant:
 		logger.error("Invalid ant profile provided")
 		return null
 
-	var _ants = AntManager.spawn_ants(self, 1, ant_profile)
+	var _ants = spawn_ants(1, ant_profile)
 	if _ants.size() > 0:
 		_last_spawn_ticks = Time.get_ticks_msec()
 	return _ants[0] if _ants.size() > 0 else null

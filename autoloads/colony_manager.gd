@@ -1,5 +1,5 @@
 extends Node
-## ColonyManager - Manages colony spawning, tracking, and lifecycle
+##Manages colony spawning, tracking, and lifecycle
 
 signal colony_spawned(colony: Colony)
 signal colony_removed(colony: Colony)

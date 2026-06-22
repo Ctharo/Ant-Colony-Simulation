@@ -1,7 +1,6 @@
 class_name BaseContextMenu
 extends Control
 
-
 signal button_pressed(index: int)
 ## Radius of the circular menu layout
 @export var radius = 70.0

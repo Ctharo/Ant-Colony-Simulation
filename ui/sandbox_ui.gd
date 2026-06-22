@@ -17,6 +17,7 @@ var hovered_entity_label: Label
 #region Managers
 var colony_manager = ColonyManager
 var ant_manager = AntManager
+var food_manager = FoodManager
 var sandbox: Node2D
 #endregion
 
@@ -66,42 +67,44 @@ func _on_gui_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton and event.pressed:
-		var screen_pos: Vector2 = event.position
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
-				handle_left_click(screen_pos)
+				handle_left_click()
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
-				handle_right_click(screen_pos)
+				handle_right_click()
 				get_viewport().set_input_as_handled()
 #endregion
 
 #region Click Handling
-func handle_left_click(_screen_pos: Vector2) -> void:
+func handle_left_click() -> void:
 	clear_active_menu()
-
+	
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		show_info_panel(camera.hovered_entity)
-	else:
-		deselect_all()
 
 
-func handle_right_click(screen_pos: Vector2) -> void:
+
+func handle_right_click() -> void:
 	clear_active_menu()
-
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
-		if camera.hovered_entity is Ant:
-			show_ant_context_menu(camera.hovered_entity, screen_pos)
-		elif camera.hovered_entity is Colony:
-			show_colony_context_menu(camera.hovered_entity, screen_pos)
+		show_context_menu()
 	else:
-		show_empty_context_menu(screen_pos)
+		show_empty_context_menu()
 #endregion
 
 #region Context Menu Management
-func show_colony_context_menu(colony: Colony, screen_pos: Vector2) -> void:
-	_create_context_window()
+func show_context_menu() -> void:
+		_create_context_window()
+		if camera.hovered_entity is Ant:
+			_show_ant_context_menu()
+		elif camera.hovered_entity is Colony:
+			_show_colony_context_menu()
 
+func _show_colony_context_menu() -> void:
+	
+	var colony: Colony = camera.hovered_entity
+		
 	active_context_menu.add_button("Spawn Ants",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
@@ -117,7 +120,7 @@ func show_colony_context_menu(colony: Colony, screen_pos: Vector2) -> void:
 
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_colony_menu_button_pressed(index, colony))
-	active_context_menu.show_at(screen_pos, colony.radius)
+	active_context_menu.show_at(DisplayServer.mouse_get_position(), colony.radius)
 
 
 func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
@@ -126,14 +129,7 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 
 	match index:
 		0: # Spawn Ants
-			var profile := settings_manager.get_colony_profile()
-			var spawn_count := 5
-			if profile and not profile.initial_ants.is_empty():
-				spawn_count = profile.initial_ants.values()[0]
-			var ants := colony.spawn_ants(spawn_count)
-			for ant in ants:
-				if not ant.is_inside_tree():
-					sandbox.ant_container.add_child(ant)
+			_spawn_ants_at(colony)
 		1: # Info
 			show_info_panel(colony)
 		2: # Heatmap
@@ -143,6 +139,17 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 
 	clear_active_menu()
 
+#TODO: Should we change it so that it will check if mouse in radius of colony and assign ants to that else the ants are rogue?
+func _spawn_ants_at(colony: Colony) -> void:
+	var profile := settings_manager.get_colony_profile()
+	var spawn_count := 5 #TODO: Should use default value unless assigned somehow
+	if profile and not profile.initial_ants.is_empty():
+		spawn_count = profile.initial_ants.values()[0]
+	var ants := colony.spawn_ants(spawn_count)
+	for ant in ants:
+		if not ant.is_inside_tree():
+			sandbox.ant_container.add_child(ant)
+
 ## Clears, initializes, and sets [member active_context_menu]
 func _create_context_window() -> void:
 	clear_active_menu()
@@ -150,7 +157,7 @@ func _create_context_window() -> void:
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
 
-func show_empty_context_menu(screen_pos: Vector2) -> void:
+func show_empty_context_menu() -> void:
 	_create_context_window()
 	
 	active_context_menu.add_button("Spawn Colony",
@@ -161,22 +168,24 @@ func show_empty_context_menu(screen_pos: Vector2) -> void:
 		preload("res://ui/styles/spawn_hover.tres"))
 
 	active_context_menu.button_pressed.connect(
-		func(index: int): _on_empty_menu_button_pressed(index, screen_pos))
-	active_context_menu.show_at(screen_pos)
+		func(index: int): _on_empty_menu_button_pressed(index, DisplayServer.mouse_get_position()))
+	active_context_menu.show_at(DisplayServer.mouse_get_position())
 
 
 func _on_empty_menu_button_pressed(index: int, screen_pos: Vector2) -> void:
+	var world_pos := camera.screen_to_world(screen_pos)
 	match index:
 		0: # Spawn Colony
-			_on_spawn_colony_requested(screen_pos)
+			_on_spawn_colony_requested(world_pos)
 		1: # Spawn Food
-			_on_spawn_food_requested(screen_pos)
+			_on_spawn_food_requested(world_pos)
 
 	clear_active_menu()
 
 
-func show_ant_context_menu(ant: Ant, screen_pos: Vector2) -> void:
-	_create_context_window()
+func _show_ant_context_menu() -> void:
+	
+	var ant: Ant = camera.hovered_entity
 
 	active_context_menu.add_button("Info",
 		preload("res://ui/styles/info_normal.tres"),
@@ -190,7 +199,7 @@ func show_ant_context_menu(ant: Ant, screen_pos: Vector2) -> void:
 
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
-	active_context_menu.show_at(screen_pos)
+	active_context_menu.show_at(DisplayServer.mouse_get_position())
 
 
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
@@ -219,18 +228,7 @@ func show_info_panel(entity: Node) -> void:
 	if not entity:
 		return
 
-	if is_instance_valid(entity_info_panel):
-		if entity is Ant and entity_info_panel.get_current_ant() == entity:
-			entity_info_panel.queue_free()
-			entity_info_panel = null
-			return
-		if entity is Colony and entity_info_panel.get_current_colony() == entity:
-			entity_info_panel.queue_free()
-			entity_info_panel = null
-			return
-
-		entity_info_panel.queue_free()
-		entity_info_panel = null
+	close_info_panel()
 
 	entity_info_panel = preload("res://ui/entity_info_panel.tscn").instantiate()
 	info_panels_container.add_child(entity_info_panel)
@@ -238,54 +236,41 @@ func show_info_panel(entity: Node) -> void:
 	if entity is Colony:
 		entity_info_panel.highlight_ants.connect(_on_colony_highlight_ants_requested)
 
-	entity_info_panel.closed.connect(_on_entity_info_panel_closed)
 	entity_info_panel.show_entity_info(entity)
 
-
-func _on_entity_info_panel_closed() -> void:
+func close_info_panel() -> void:
+	if is_instance_valid(entity_info_panel):
+		entity_info_panel.queue_free()
 	entity_info_panel = null
 
 
-func close_info_panel(entity: Node) -> void:
-	if is_instance_valid(entity_info_panel):
-		if entity is Colony and entity_info_panel.get_current_colony() == entity:
-			entity_info_panel.queue_free()
-			entity_info_panel = null
-		elif entity is Ant and entity_info_panel.get_current_ant() == entity:
-			entity_info_panel.queue_free()
-			entity_info_panel = null
-
-
 func deselect_all() -> void:
-	if is_instance_valid(entity_info_panel):
-		entity_info_panel.queue_free()
-		entity_info_panel = null
+	close_info_panel()
 #endregion
 
 #region Colony Handlers
-func _on_spawn_colony_requested(screen_pos: Vector2) -> void:
-	var world_pos := camera.screen_to_world(screen_pos)
-	var colony := colony_manager.spawn_colony_at(world_pos)
+func _on_spawn_colony_requested(pos: Vector2) -> void:
+	_spawn_colony_at(pos)
+
+func _spawn_colony_at(pos: Vector2) -> void:
+	var colony: Colony = colony_manager.spawn_colony_at(pos)
 	if colony:
-		print("Spawned colony at: ", world_pos)
+		print("Spawned colony at: ", colony.global_position)
 	else:
 		push_warning("Failed to spawn colony")
-
 
 func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
 	if not is_instance_valid(colony):
 		return
 	colony.highlight_ants_enabled = enabled
+	
+	
 #endregion
 
 #region Food Handlers
-func _on_spawn_food_requested(screen_pos: Vector2) -> void:
-	var world_pos := camera.screen_to_world(screen_pos)
-	_spawn_food_at(world_pos, DEFAULT_FOOD_SPAWN_NUM)
+func _on_spawn_food_requested(pos: Vector2) -> void:
+	_spawn_food_at(pos)
 
-
-func _spawn_food_at(world_pos: Vector2, count: int) -> void:
-	var food_manager := get_tree().get_first_node_in_group("food_manager")
-	if food_manager and food_manager.has_method("spawn_food_cluster"):
-		food_manager.spawn_food_cluster(world_pos, count)
+func _spawn_food_at(pos: Vector2, count: int = DEFAULT_FOOD_SPAWN_NUM) -> void:
+	food_manager.spawn_food_cluster(pos, count)
 #endregion
