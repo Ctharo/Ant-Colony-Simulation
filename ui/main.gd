@@ -9,7 +9,6 @@ var logger: iLogger
 func _init() -> void:
 	logger = iLogger.new("main", DebugLogger.Category.PROGRAM)
 
-
 func _ready():
 	create_ui()
 	animate_ui_elements()
