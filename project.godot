@@ -33,6 +33,7 @@ HeatmapManager="*res://autoloads/heatmap_manager.gd"
 
 window/size/viewport_width=1700
 window/size/viewport_height=900
+window/hdr/request_hdr_output=true
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
