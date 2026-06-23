@@ -89,7 +89,7 @@ func spawn_colonies(count: int = 1, profile: ColonyProfile = null) -> Colonies:
 		count = MAX_COLONIES - colonies.size()
 
 	for i in range(count):
-		var colony := spawn_colony(profile)
+		var colony := _spawn_colony(profile)
 		if colony:
 			new_colonies.append(colony)
 
@@ -97,7 +97,7 @@ func spawn_colonies(count: int = 1, profile: ColonyProfile = null) -> Colonies:
 
 
 ## Spawn a single colony with the specified profile
-func spawn_colony(profile: ColonyProfile = null) -> Colony:
+func _spawn_colony(profile: ColonyProfile = null) -> Colony:
 	if colonies.size() >= MAX_COLONIES:
 		logger.warn("Cannot spawn colony - maximum of %d reached" % MAX_COLONIES)
 		return null
@@ -135,9 +135,12 @@ func spawn_colony(profile: ColonyProfile = null) -> Colony:
 
 ## Spawn colony at a specific world position
 func spawn_colony_at(world_position: Vector2, profile: ColonyProfile = null) -> Colony:
-	var colony := spawn_colony(profile)
+	var colony := _spawn_colony(profile)
 	if colony:
 		colony.global_position = world_position
+		print("Spawned colony at: ", colony.global_position)
+	else:
+		push_warning("Failed to spawn colony")
 	return colony
 
 

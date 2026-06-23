@@ -204,22 +204,11 @@ func screen_to_world(screen_position: Vector2) -> Vector2:
 	var scaled_pos := relative_pos / zoom
 	return position + scaled_pos
 
-
-## Alias for screen_to_world for backwards compatibility
-func ui_to_global(screen_position: Vector2) -> Vector2:
-	return screen_to_world(screen_position)
-
-
 ## Converts world coordinates to screen position
 func world_to_screen(world_position: Vector2) -> Vector2:
 	if not is_instance_valid(self):
 		return Vector2.ZERO
 	return get_global_transform_with_canvas() * to_local(world_position)
-
-
-## Alias for world_to_screen for backwards compatibility
-func global_to_ui(world_position: Vector2) -> Vector2:
-	return world_to_screen(world_position)
 
 
 ## Get mouse position in world coordinates

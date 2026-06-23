@@ -74,53 +74,6 @@ func spawn_food_cluster(center: Vector2, count: int, spread: float = CLUSTER_SPR
 	logger.debug("Spawned food cluster of %d at %s" % [foods.size(), center])
 	return foods
 
-
-## Spawns food at specific positions
-func spawn_foods_at(positions: Array[Vector2]) -> Array[Food]:
-	var foods: Array[Food] = []
-	var container := get_food_container()
-
-	if not container:
-		logger.error("Cannot spawn foods - no container available")
-		return foods
-
-	for pos in positions:
-		var food := _create_food()
-		if not food:
-			continue
-
-		food.global_position = pos
-		container.add_child(food)
-		foods.append(food)
-		food_spawned.emit(food)
-
-	return foods
-
-
-## Spawns multiple food items (legacy method - adds to container)
-func spawn_foods(num: int) -> Array[Food]:
-	var foods: Array[Food] = []
-	var container := get_food_container()
-
-	for i in range(num):
-		var food := _create_food()
-		if food:
-			if container:
-				container.add_child(food)
-			foods.append(food)
-			food_spawned.emit(food)
-
-	return foods
-
-
-## Spawns a single food item (legacy method - does NOT add to tree for backwards compatibility)
-func spawn_food() -> Food:
-	var food := _create_food()
-	if food:
-		food_spawned.emit(food)
-	return food
-
-
 ## Creates a food instance without adding to scene tree
 func _create_food() -> Food:
 	var food: Food = preload("res://entities/food/food.tscn").instantiate() as Food
