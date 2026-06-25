@@ -45,8 +45,8 @@ var initializing: bool = true:
 
 #region Lifecycle
 func _ready() -> void:
-	camera = get_node("../Camera2D")
-	sandbox = get_node("../")
+	camera = get_node("../../Camera2D")
+	sandbox = get_node("../..")
 	DEFAULT_FOOD_SPAWN_NUM = settings_manager.get_setting("food_spawn_count", 50)
 
 	if is_instance_valid(overlay):
