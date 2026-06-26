@@ -42,7 +42,6 @@ var initializing: bool = true:
 			overlay.queue_free()
 			overlay = null
 
-var menu_location: Vector2
 #endregion
 
 #region Lifecycle
@@ -182,15 +181,14 @@ func show_empty_context_menu() -> void:
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_empty_menu_button_pressed(index, pos))
 	active_context_menu.show_at(pos)
-	menu_location = pos
-
 
 func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
+	var global_pos = screen_to_world(pos)
 	match index:
 		0: # Spawn Colony
-			_on_spawn_colony_requested(pos)
+			_on_spawn_colony_requested(global_pos)
 		1: # Spawn Food
-			_on_spawn_food_requested(pos)
+			_on_spawn_food_requested(global_pos)
 
 	clear_active_menu()
 
@@ -213,7 +211,7 @@ func _show_ant_context_menu() -> void:
 
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
-	active_context_menu.show_at(get_global_mouse_position())
+	active_context_menu.show_at(world_to_screen(ant.global_position))
 
 
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
@@ -283,4 +281,16 @@ func _on_spawn_food_requested(pos: Vector2) -> void:
 
 func _spawn_food_at(pos: Vector2, count: int = DEFAULT_FOOD_SPAWN_NUM) -> void:
 	food_manager.spawn_food_cluster(pos, count)
+#endregion
+
+#region Coordinate Conversion
+
+func world_to_screen(world_pos: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform() * world_pos
+
+func screen_to_world(screen_pos: Vector2) -> Vector2:
+	var vp = get_viewport()
+	return (vp.get_screen_transform() * vp.get_canvas_transform()).affine_inverse() \
+		* screen_pos
+
 #endregion

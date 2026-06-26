@@ -51,10 +51,6 @@ func _process(_delta: float) -> void:
 	if not camera:
 		return
 
-	# Update position based on tracked object if it exists and is valid
-	if _tracked_object and is_instance_valid(_tracked_object) and _tracked_object.has_method("get_global_position"):
-		_screen_position = camera.global_to_ui(_tracked_object.global_position)
-
 	position = screen_position
 	queue_redraw()
 
