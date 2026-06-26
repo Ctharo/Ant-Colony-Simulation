@@ -123,10 +123,10 @@ func _on_panel_ready() -> void:
 
 	_panel_ready = true
 
-	## Only hide if show wasn't already requested
-	if _pending_show:
-		show()
+	if _pending_show and current_entity:
+		_run_entity_setup(current_entity)  # ← now @onready refs are valid
 		_pending_show = false
+		show()
 	else:
 		hide()
 #endregion
@@ -193,10 +193,10 @@ func _process(_delta: float) -> void:
 	if not is_visible() or not is_instance_valid(current_entity):
 		return
 
-	if current_entity is Ant:
-		_update_ant_info()
-	elif current_entity is Colony:
-		_update_colony_info()
+	#if current_entity is Ant:
+		#_update_ant_info()
+	#elif current_entity is Colony:
+		#_update_colony_info()
 
 	queue_redraw()
 #endregion
@@ -208,20 +208,21 @@ func show_entity_info(entity: Node) -> void:
 		return
 
 	current_entity = entity
+	
+	if not _panel_ready:
+		_pending_show = true
+		return  # Setup will run once _on_panel_ready fires
+		
+	_run_entity_setup(entity)
+	show()
+	queue_redraw()
 
+
+func _run_entity_setup(entity: Node) -> void:
 	if entity is Ant:
 		_setup_ant_view(entity)
 	elif entity is Colony:
 		_setup_colony_view(entity)
-
-	## Handle deferred initialization race condition
-	if _panel_ready:
-		show()
-	else:
-		_pending_show = true
-
-	queue_redraw()
-
 
 func get_current_ant() -> Ant:
 	if current_entity is Ant:
@@ -477,7 +478,7 @@ func _on_edit_ant_profile_pressed() -> void:
 func _on_view_influence_profile_pressed() -> void:
 	if not current_entity is Ant:
 		return
-	var ant: Ant = current_entity as Ant
+	#var ant: Ant = current_entity as Ant
 
 	print("Influence profile not yet implemented")
 	#TODO

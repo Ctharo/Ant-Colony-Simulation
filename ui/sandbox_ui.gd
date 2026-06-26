@@ -81,10 +81,10 @@ func _on_gui_input(event: InputEvent) -> void:
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
 				handle_left_click()
-				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
 				handle_right_click()
-				get_viewport().set_input_as_handled()
+				
+		get_viewport().set_input_as_handled()
 #endregion
 
 #region Click Handling
@@ -240,10 +240,7 @@ func show_info_panel(entity: Node) -> void:
 	if not entity:
 		return
 
-	close_info_panel()
-
-	entity_info_panel = preload("res://ui/entity_info_panel.tscn").instantiate()
-	info_panels_container.add_child(entity_info_panel)
+	entity_info_panel = create_info_panel()
 
 	if entity is Colony:
 		entity_info_panel.highlight_ants.connect(_on_colony_highlight_ants_requested)
@@ -254,6 +251,12 @@ func close_info_panel() -> void:
 	if is_instance_valid(entity_info_panel):
 		entity_info_panel.queue_free()
 	entity_info_panel = null
+
+func create_info_panel() -> EntityInfoPanel:
+	close_info_panel()
+	entity_info_panel = preload("res://ui/entity_info_panel.tscn").instantiate()
+	info_panels_container.add_child(entity_info_panel)
+	return entity_info_panel
 
 func deselect_all() -> void:
 	close_info_panel()

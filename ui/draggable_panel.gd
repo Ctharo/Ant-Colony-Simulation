@@ -90,12 +90,10 @@ func _ready() -> void:
 
 
 func _deferred_init() -> void:
-	## Deferred initialization to ensure size is correct
 	_expanded_size = size
+	_on_panel_ready()  # subclass @onready refs are assigned, _content_container is now valid
 	_load_panel_state()
-	_on_panel_ready()
 	_initialized = true
-
 
 func _setup_dragging() -> void:
 	if not draggable:

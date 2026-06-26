@@ -1,42 +1,38 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cn8llt8qeu25n"]
 
 [ext_resource type="Script" uid="uid://bxdydpv01tj8h" path="res://ui/entity_info_panel.gd" id="1_panel"]
 
-[node name="EntityInfoPanel" type="PanelContainer"]
+[node name="EntityInfoPanel" type="PanelContainer" unique_id=1876956196]
 custom_minimum_size = Vector2(340, 400)
 size_flags_horizontal = 3
 mouse_filter = 1
 script = ExtResource("1_panel")
 panel_id = "entity_info"
-draggable = true
-collapsible = true
-save_position = true
-save_expanded_state = true
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=608148559]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="MainVBox" type="VBoxContainer" parent="MarginContainer"]
+[node name="MainVBox" type="VBoxContainer" parent="MarginContainer" unique_id=1042059282]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/MainVBox"]
+[node name="HeaderContainer" type="HBoxContainer" parent="MarginContainer/MainVBox" unique_id=1481746134]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_default_cursor_shape = 9
 
-[node name="CollapseButton" type="Button" parent="MarginContainer/MainVBox/HeaderContainer"]
+[node name="CollapseButton" type="Button" parent="MarginContainer/MainVBox/HeaderContainer" unique_id=540143978]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 tooltip_text = "Collapse/Expand Panel"
 text = "▼"
 
-[node name="TitleLabel" type="Label" parent="MarginContainer/MainVBox/HeaderContainer"]
+[node name="TitleLabel" type="Label" parent="MarginContainer/MainVBox/HeaderContainer" unique_id=1952614193]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -44,220 +40,218 @@ theme_override_font_sizes/font_size = 16
 text = "Entity Info"
 vertical_alignment = 1
 
-[node name="CloseButton" type="Button" parent="MarginContainer/MainVBox/HeaderContainer"]
+[node name="CloseButton" type="Button" parent="MarginContainer/MainVBox/HeaderContainer" unique_id=357472649]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
 tooltip_text = "Close Panel"
 text = "×"
 
-[node name="ContentContainer" type="VBoxContainer" parent="MarginContainer/MainVBox"]
+[node name="ContentContainer" type="VBoxContainer" parent="MarginContainer/MainVBox" unique_id=1200851168]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ContentContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ContentContainer" unique_id=1010732144]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 1
 horizontal_scroll_mode = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer" unique_id=731350564]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer"]
+[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer" unique_id=407452778]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="AntSection" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer"]
+[node name="AntSection" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer" unique_id=1346665895]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="RoleLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="RoleLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1557497730]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Role: Worker"
 
-[node name="ColonyLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="ColonyLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=2102980162]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Colony: Colony-1"
 
-[node name="StatusSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="StatusSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1799557362]
 layout_mode = 2
 
-[node name="StatusLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="StatusLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1708683778]
 layout_mode = 2
 text = "Status"
 horizontal_alignment = 1
 
-[node name="HealthContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="HealthContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=80110941]
 layout_mode = 2
 
-[node name="HealthLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer"]
+[node name="HealthLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer" unique_id=2003044670]
 layout_mode = 2
 text = "Health:"
 
-[node name="HealthBar" type="ProgressBar" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer"]
+[node name="HealthBar" type="ProgressBar" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer" unique_id=1726466659]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 show_percentage = false
 
-[node name="HealthValueLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer"]
+[node name="HealthValueLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/HealthContainer" unique_id=1320095605]
 unique_name_in_owner = true
 layout_mode = 2
 text = "100/100"
 
-[node name="EnergyContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="EnergyContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=17187016]
 layout_mode = 2
 
-[node name="EnergyLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer"]
+[node name="EnergyLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer" unique_id=96317372]
 layout_mode = 2
 text = "Energy:"
 
-[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer"]
+[node name="EnergyBar" type="ProgressBar" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer" unique_id=1300549949]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 show_percentage = false
 
-[node name="EnergyValueLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer"]
+[node name="EnergyValueLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection/EnergyContainer" unique_id=796488063]
 unique_name_in_owner = true
 layout_mode = 2
 text = "100/100"
 
-[node name="FoodLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="FoodLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1715669311]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Carrying Food: No"
 
-[node name="ProfileSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="ProfileSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=22305238]
 layout_mode = 2
 
-[node name="ProfileSectionLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="ProfileSectionLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1106079893]
 layout_mode = 2
 text = "Ant Profile"
 horizontal_alignment = 1
 
-[node name="AntProfileNameLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="AntProfileNameLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=705136381]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Profile: Worker"
 
-[node name="EditAntProfileButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="EditAntProfileButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1790082367]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Edit Ant Profile"
 
-[node name="InfluenceSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="InfluenceSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=334320640]
 layout_mode = 2
 
-[node name="MovementSectionLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="MovementSectionLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=2120842688]
 layout_mode = 2
 text = "Movement Influences"
 horizontal_alignment = 1
 
-[node name="ActiveProfileLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="ActiveProfileLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=2133268651]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Active: Look For Food"
 
-[node name="ViewInfluenceProfileButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="ViewInfluenceProfileButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=677074886]
 unique_name_in_owner = true
 layout_mode = 2
 text = "View Influence Profile"
 
-[node name="LegendSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="LegendSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=1126988825]
 layout_mode = 2
 
-[node name="LegendLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="LegendLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=19203905]
 layout_mode = 2
 text = "Influence Legend"
 horizontal_alignment = 1
 
-[node name="InfluencesLegend" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection"]
+[node name="InfluencesLegend" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/AntSection" unique_id=843892631]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="ColonySection" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer"]
+[node name="ColonySection" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer" unique_id=1773233239]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="InfoContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=575360932]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="AntCountLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/InfoContainer"]
+[node name="AntCountLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/InfoContainer" unique_id=991107299]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Ants: 0 / 25"
 
-[node name="FoodCollectedLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/InfoContainer"]
+[node name="FoodCollectedLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/InfoContainer" unique_id=325192149]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Food Collected: 0.0 units"
 
-[node name="RadiusLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/InfoContainer"]
+[node name="RadiusLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/InfoContainer" unique_id=541275913]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Radius: 50.0"
 
-[node name="SpawnSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="SpawnSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=425811889]
 layout_mode = 2
 
-[node name="SpawnLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="SpawnLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=739413096]
 layout_mode = 2
 text = "Spawn Ants"
 horizontal_alignment = 1
 
-[node name="SpawnContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="SpawnContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=278031774]
 layout_mode = 2
 
-[node name="SpawnCountSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnContainer"]
+[node name="SpawnCountSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnContainer" unique_id=2080240684]
 unique_name_in_owner = true
 layout_mode = 2
 min_value = 1.0
 max_value = 50.0
 value = 5.0
 
-[node name="ProfileOption" type="OptionButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnContainer"]
+[node name="ProfileOption" type="OptionButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnContainer" unique_id=900568822]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SpawnButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnContainer"]
+[node name="SpawnButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnContainer" unique_id=1648911999]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Spawn"
 
-[node name="SettingsSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="SettingsSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=863180479]
 layout_mode = 2
 
-[node name="SettingsLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="SettingsLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1197580673]
 layout_mode = 2
 text = "Colony Settings"
 horizontal_alignment = 1
 
-[node name="RadiusContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="RadiusContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=2123563975]
 layout_mode = 2
 
-[node name="RadiusSettingLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/RadiusContainer"]
+[node name="RadiusSettingLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/RadiusContainer" unique_id=541671749]
 layout_mode = 2
 text = "Radius:"
 
-[node name="RadiusSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/RadiusContainer"]
+[node name="RadiusSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/RadiusContainer" unique_id=1413530190]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -265,14 +259,14 @@ min_value = 20.0
 max_value = 200.0
 value = 50.0
 
-[node name="MaxAntsContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="MaxAntsContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=782207751]
 layout_mode = 2
 
-[node name="MaxAntsLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/MaxAntsContainer"]
+[node name="MaxAntsLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/MaxAntsContainer" unique_id=1893380904]
 layout_mode = 2
 text = "Max Ants:"
 
-[node name="MaxAntsSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/MaxAntsContainer"]
+[node name="MaxAntsSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/MaxAntsContainer" unique_id=1471280616]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -280,14 +274,14 @@ min_value = 1.0
 max_value = 200.0
 value = 25.0
 
-[node name="SpawnRateContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="SpawnRateContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1210142825]
 layout_mode = 2
 
-[node name="SpawnRateLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnRateContainer"]
+[node name="SpawnRateLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnRateContainer" unique_id=1307420769]
 layout_mode = 2
 text = "Spawn Rate:"
 
-[node name="SpawnRateSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnRateContainer"]
+[node name="SpawnRateSpin" type="SpinBox" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/SpawnRateContainer" unique_id=81627461]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -297,90 +291,90 @@ step = 0.5
 value = 5.0
 suffix = "s"
 
-[node name="ColorsSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="ColorsSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=434351328]
 layout_mode = 2
 
-[node name="ColorsLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="ColorsLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1597817203]
 layout_mode = 2
 text = "Colony Colors"
 horizontal_alignment = 1
 
-[node name="DirtColorContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="DirtColorContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1919780174]
 layout_mode = 2
 
-[node name="DirtColorLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DirtColorContainer"]
+[node name="DirtColorLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DirtColorContainer" unique_id=561415664]
 layout_mode = 2
 text = "Dirt Color:"
 
-[node name="DirtColorPicker" type="ColorPickerButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DirtColorContainer"]
+[node name="DirtColorPicker" type="ColorPickerButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DirtColorContainer" unique_id=979111443]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0.4, 0.2, 0.05, 1)
 
-[node name="DarkerDirtContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="DarkerDirtContainer" type="HBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1429319173]
 layout_mode = 2
 
-[node name="DarkerDirtLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DarkerDirtContainer"]
+[node name="DarkerDirtLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DarkerDirtContainer" unique_id=773578616]
 layout_mode = 2
 text = "Darker Dirt:"
 
-[node name="DarkerDirtColorPicker" type="ColorPickerButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DarkerDirtContainer"]
+[node name="DarkerDirtColorPicker" type="ColorPickerButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection/DarkerDirtContainer" unique_id=1120846340]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0.3, 0.15, 0.03, 1)
 
-[node name="AntProfilesSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="AntProfilesSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=618715142]
 layout_mode = 2
 
-[node name="AntProfilesSectionLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="AntProfilesSectionLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=362224744]
 layout_mode = 2
 text = "Ant Profiles"
 horizontal_alignment = 1
 
-[node name="ColonyAntProfilesList" type="ItemList" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="ColonyAntProfilesList" type="ItemList" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1517408400]
 unique_name_in_owner = true
-layout_mode = 2
 custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
 auto_height = true
 item_count = 1
 item_0/text = "Worker (initial: 10)"
 
-[node name="EditColonyAntProfileButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection"]
+[node name="EditColonyAntProfileButton" type="Button" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/ColonySection" unique_id=1161110512]
 unique_name_in_owner = true
 layout_mode = 2
 disabled = true
 text = "Edit Selected Profile"
 
-[node name="VisualizationSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer"]
+[node name="VisualizationSeparator" type="HSeparator" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer" unique_id=1176519751]
 layout_mode = 2
 
-[node name="VisualizationLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer"]
+[node name="VisualizationLabel" type="Label" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer" unique_id=2135331798]
 layout_mode = 2
 text = "Visualization"
 horizontal_alignment = 1
 
-[node name="VisualizationContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer"]
+[node name="VisualizationContainer" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer" unique_id=54185589]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
+[node name="ShowHeatmapCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer" unique_id=1052622219]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Show Heatmap"
 
-[node name="NavDebugCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
+[node name="NavDebugCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer" unique_id=1267695981]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Nav Debug"
 
-[node name="HighlightCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
+[node name="HighlightCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer" unique_id=353685705]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Highlight Ants"
 
-[node name="ShowInfluenceVectorsCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer"]
+[node name="ShowInfluenceVectorsCheck" type="CheckButton" parent="MarginContainer/MainVBox/ContentContainer/ScrollContainer/VBoxContainer/VisualizationContainer" unique_id=1946233386]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Show Influence Vectors"
