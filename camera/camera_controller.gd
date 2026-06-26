@@ -132,13 +132,10 @@ func _handle_zoom(zoom_factor: float, mouse_position: Vector2) -> void:
 	if not is_instance_valid(self):
 		return
 	
-	var new_zoom := Vector2.ONE * clampf(zoom.x + zoom_factor, MIN_ZOOM, MAX_ZOOM)
-	var old_zoom := zoom
-	
+	var new_zoom := Vector2.ONE * clampf(zoom.x + zoom_factor, MIN_ZOOM, MAX_ZOOM)	
 	zoom = new_zoom
 	
-	var mouse_world_pos := screen_to_world(mouse_position)
-	position += (mouse_world_pos - position) * (1 - new_zoom.x / old_zoom.x)
+	position = mouse_position
 #endregion
 
 #region Entity Tracking
@@ -204,16 +201,6 @@ func screen_to_world(screen_position: Vector2) -> Vector2:
 	var scaled_pos := relative_pos / zoom
 	return position + scaled_pos
 
-## Converts world coordinates to screen position
-func world_to_screen(world_position: Vector2) -> Vector2:
-	if not is_instance_valid(self):
-		return Vector2.ZERO
-	return get_global_transform_with_canvas() * to_local(world_position)
-
-
-## Get mouse position in world coordinates
-func get_mouse_world_position() -> Vector2:
-	return screen_to_world(get_viewport().get_mouse_position())
 #endregion
 
 #region Drawing

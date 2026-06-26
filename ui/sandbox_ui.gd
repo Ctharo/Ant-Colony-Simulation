@@ -1,7 +1,7 @@
 class_name SandboxUI
 extends Control
-## UI controller for the sandbox simulation view
-#TODO Fix/understand position
+##UI controller for the sandbox simulation view
+
 #region Getters
 
 var hovered_entity:
@@ -41,6 +41,8 @@ var initializing: bool = true:
 		if not initializing and is_instance_valid(overlay):
 			overlay.queue_free()
 			overlay = null
+
+var menu_location: Vector2
 #endregion
 
 #region Lifecycle
@@ -90,8 +92,6 @@ func _on_gui_input(event: InputEvent) -> void:
 func handle_left_click() -> void:
 	clear_active_menu()
 	select_hovered_entity()
-
-
 
 func handle_right_click() -> void:
 	clear_active_menu()
@@ -182,6 +182,7 @@ func show_empty_context_menu() -> void:
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_empty_menu_button_pressed(index, pos))
 	active_context_menu.show_at(pos)
+	menu_location = pos
 
 
 func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
