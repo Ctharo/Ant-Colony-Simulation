@@ -2,7 +2,7 @@
 class_name Ant
 extends CharacterBody2D
 
-## TODO: Functional programming
+## TODO: Mb we can separate concerns? ie physics, decision-making, actions
 
 #region Signals
 signal spawned
@@ -35,7 +35,9 @@ var role: String
 var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
-var is_carrying_food: bool
+#TODO Is it better to have this as a getter to see if _carried_food 
+#instead of being set in the setter of _carried_food?
+var is_carrying_food: bool 
 var _carried_food: Food :
 	set(value):
 		_carried_food = value
@@ -65,6 +67,7 @@ var action_map: Dictionary[Action, Callable] = {
 }
 #endregion
 
+##When set will call [method NavigationAgent2D.set_target_position]
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position
@@ -129,11 +132,9 @@ func _ready() -> void:
 	elif profile:
 		_apply_profile_internal(profile)
 
-	# Register to heatmap
-	HeatmapManager.register_entity(self)
-	for pheromone in pheromones:
-		HeatmapManager.create_heatmap_type(pheromone)
-
+	register_to_heatmap()
+	
+	#FIXME What is this for??
 	# Ensure food is positioned correctly with respect to ant reach and carry position
 	var food: Food = load("res://entities/food/food.tscn").instantiate()
 	$ReachArea/CollisionShape2D.shape.radius = mouth_marker.position.x - food.get_size()
@@ -141,6 +142,12 @@ func _ready() -> void:
 
 	# Emit ready signal
 	spawned.emit()
+
+## Registers self to [class HeatmapManager]
+func register_to_heatmap() -> void:
+	HeatmapManager.register_entity(self)
+	for pheromone in pheromones:
+		HeatmapManager.create_heatmap_type(pheromone)
 
 ## Initialize with profile - handles both before and after _ready
 func init_profile(p_profile: AntProfile) -> void:
@@ -164,16 +171,13 @@ func _apply_profile_internal(p_profile: AntProfile) -> void:
 
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
-	# Don't process movement if is_dead
+
 	if is_dead:
 		return
 
 	_process_carrying()
 
-	# Energy consumption
-	if energy_level > 0 and not is_colony_in_range():
-		var energy_cost = calculate_energy_cost(delta)
-		energy_level -= energy_cost
+	_consume_energy_process(delta)
 
 	if doing_task:
 		return
@@ -197,6 +201,11 @@ func _physics_process(delta: float) -> void:
 		# Basic movement processing if we're moving
 		_process_movement(delta)
 
+func _consume_energy_process(delta: float) -> void:
+	if energy_level > 0 and not is_colony_in_range():
+		var energy_cost = calculate_energy_cost(delta)
+		energy_level -= energy_cost
+		
 ## Moves the ant to the specified position
 func move_to(target_pos: Vector2) -> bool:
 	movement_target = target_pos
@@ -248,11 +257,9 @@ func _process_movement(delta: float) -> void:
 	var move_direction = (next_pos - current_pos).normalized()
 	var target_velocity = move_direction * movement_rate
 
-	if nav_agent.avoidance_enabled:
-		nav_agent.set_velocity(target_velocity)
-	else:
-		target_velocity = velocity.lerp(target_velocity, 0.15)
-		_on_navigation_agent_2d_velocity_computed(target_velocity)
+
+	target_velocity = velocity.lerp(target_velocity, 0.15)
+	_on_navigation_agent_2d_velocity_computed(target_velocity)
 
 ## Pheromone handles checking condition and emitting if necessary
 func _process_pheromones(delta: float):

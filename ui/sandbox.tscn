@@ -9,6 +9,7 @@ script = ExtResource("1_dcr83")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1920290866]
 unique_name_in_owner = true
+layer = 0
 
 [node name="UI" type="Control" parent="CanvasLayer" unique_id=1184203888]
 unique_name_in_owner = true
@@ -88,6 +89,7 @@ script = ExtResource("2_wv2im")
 [node name="FoodContainer" type="Node2D" parent="." unique_id=1208062144]
 
 [node name="AntContainer" type="Node2D" parent="." unique_id=426668147]
+z_index = 1
 
 [connection signal="gui_input" from="CanvasLayer/UI" to="CanvasLayer/UI" method="_on_gui_input"]
 [connection signal="pressed" from="CanvasLayer/UI/ControlPanel/HBoxContainer/BackButton" to="." method="_on_back_button_pressed"]
