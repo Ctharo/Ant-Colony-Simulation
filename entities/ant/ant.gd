@@ -35,16 +35,9 @@ var role: String
 var profile: AntProfile
 ## The colony this ant belongs to
 var colony: Colony : set = set_colony
-#TODO Is it better to have this as a getter to see if _carried_food 
-#instead of being set in the setter of _carried_food?
-var is_carrying_food: bool 
-var _carried_food: Food :
-	set(value):
-		_carried_food = value
-		if _carried_food:
-			is_carrying_food = true
-		else:
-			is_carrying_food = false
+
+var _carried_food: Food 
+var is_carrying_food: bool = is_instance_valid(_carried_food)
 
 #region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
@@ -67,12 +60,14 @@ var action_map: Dictionary[Action, Callable] = {
 }
 #endregion
 
-##When set will call [method NavigationAgent2D.set_target_position]
+## When set will call [method NavigationAgent2D.set_target_position]
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position
 	set(value):
 		nav_agent.set_target_position(value)
+		logger.trace("Target position set to %s" % value)
+		
 
 ## Task update timer
 var task_update_timer: float = 0.0
@@ -119,7 +114,7 @@ var doing_task: bool = false
 var _profile_pending: AntProfile = null  # Store profile for deferred init
 
 func _init() -> void:
-	logger = iLogger.new("ant", DebugLogger.Category.ENTITY)
+	logger = iLogger.new("ant_%s" % id, DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
 	# Initialize influence manager
@@ -183,7 +178,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Attempt actions based on immediate conditions
-	if get_foods_in_reach() and not is_carrying_food:
+	if get_food_in_reach() and not is_carrying_food:
 		harvest_food()
 		return
 
@@ -270,7 +265,8 @@ func calculate_energy_cost(delta: float) -> float:
 	var movement_cost = energy_drain * velocity.length()
 	return movement_cost * delta
 
-#region Navigation Agent Callbacks
+#region Navigation
+
 func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 	velocity = safe_velocity
 	if safe_velocity.length() > 0.0:
@@ -287,11 +283,18 @@ func _on_navigation_agent_2d_path_changed() -> void:
 	if nav_agent.debug_enabled:
 		show_nav_path(true)
 	# Path changed, continue movement
+
+func is_navigation_finished() -> bool:
+	return nav_agent.is_navigation_finished()
+
+func show_nav_path(enabled: bool) -> void:
+	nav_agent.debug_enabled = enabled
+	
 #endregion
 
 func harvest_food():
 	doing_task = true
-	var foods_in_reach = get_foods_in_reach()
+	var foods_in_reach = get_food_in_reach()
 	if foods_in_reach.is_empty():
 		doing_task = false
 		return
@@ -327,8 +330,8 @@ func _on_died() -> void:
 	died.emit(self)
 
 
-func is_navigation_finished() -> bool:
-	return nav_agent.is_navigation_finished()
+
+
 
 func should_rest() -> bool:
 	return health_level < 0.9 * health_max or energy_level < 0.9 * energy_max
@@ -344,57 +347,48 @@ func _get_random_position() -> Vector2:
 	var x := randf_range(0, viewport_rect.size.x)
 	var y := randf_range(0, viewport_rect.size.y)
 	return Vector2(x, y)
+	
+	
 
+#region Get methods
+
+func _get_in_reach(predicate: Callable) -> Array:
+	return reach_area.get_overlapping_bodies().filter(predicate)
+
+func _get_in_view(predicate: Callable) -> Array:
+	return sight_area.get_overlapping_bodies().filter(predicate)
+	
 func get_food_in_view() -> Array:
-	var fiv: Array = []
-	for food in sight_area.get_overlapping_bodies():
-		if food is Food and food != null and food.is_available:
-			fiv.append(food)
-	return fiv
+	return _get_in_view(func(n): return n is Food and n.is_available) 
 
-func get_foods_in_reach() -> Array:
-	var foods: Array = []
-	for body in reach_area.get_overlapping_bodies():
-		if body is Food and body.is_available:
-			foods.append(body)
-	return foods
+func get_food_in_reach() -> Array:
+	return _get_in_reach(func(n): return n is Food and n.is_available) 
+
+func get_ants_in_view() -> Array:
+	return _get_in_view(func(n): return n is Ant and n != null) 
+
+func get_colonies_in_view() -> Array:
+	return _get_in_view(func(n): return n is Colony) 
+
+func get_colonies_in_reach() -> Array:
+	return _get_in_reach(func(n): return n is Colony) 
+
+#endregion
 
 func is_colony_in_range() -> bool:
 	if not colony:
 		return false
 	return global_position.distance_to(colony.global_position) < colony.radius
 
-func show_nav_path(enabled: bool) -> void:
-	nav_agent.debug_enabled = enabled
-
-func get_ants_in_view() -> Array:
-	var ants_arr: Array = []
-	for ant in sight_area.get_overlapping_bodies():
-		if ant is Ant and ant != null:
-			ants_arr.append(ant)
-	return ants_arr
-
-func get_colonies_in_view() -> Array:
-	var colonies: Array = []
-	for p_colony in sight_area.get_overlapping_bodies():
-		if p_colony is Colony:
-			colonies.append(p_colony)
-	return colonies
-
-func get_colonies_in_reach() -> Array:
-	var colonies: Array = []
-	for p_colony in reach_area.get_overlapping_bodies():
-		if p_colony is Colony:
-			colonies.append(p_colony)
-	return colonies
-
-func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
-	return ants_arr.filter(func(ant): return friendly == (ant.colony == colony))
-
 func is_colony_in_sight() -> bool:
 	var a = colony.global_position.distance_to(global_position) - colony.radius
 	var b = %SightArea.get_child(0).shape.radius
-	return a <= b
+	return a < b
+
+
+
+func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
+	return ants_arr.filter(func(ant): return friendly == (ant.colony == colony))
 
 func get_nearest_item(list: Array) -> Variant:
 	# Filter out nulls and find nearest item by distance
