@@ -60,7 +60,7 @@ var action_map: Dictionary[Action, Callable] = {
 }
 #endregion
 
-## When set will call [method NavigationAgent2D.set_target_position]
+## Setting will call [method NavigationAgent2D.set_target_position]
 var target_position: Vector2 :
 	get:
 		return nav_agent.target_position
@@ -69,7 +69,6 @@ var target_position: Vector2 :
 		logger.trace("Target position set to %s" % value)
 		
 
-## Task update timer
 var task_update_timer: float = 0.0
 var logger: iLogger
 #endregion
@@ -85,16 +84,17 @@ var vision_range: float = 100.0 :
 var movement_rate: float = 25.0
 var resting_rate: float = 20.0
 
-const ENERGY_DRAIN_FACTOR = 0.000015 # 0.000015 for reference, drains pretty slow
+const ENERGY_MAX: float = 100
+const ENERGY_DRAIN_FACTOR: float = 0.000015 ## 0.000015 for reference, drains pretty slow
 var energy_drain: float :
 	get:
 		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food else 0) + 1) * pow(movement_rate, 1.2)
 
-var energy_max: float = 100
-var energy_level: float = energy_max :
+
+var energy_level: float = ENERGY_MAX :
 	set(value):
 		var first: int = int(energy_level)
-		energy_level = min(maxf(value, 0.0), energy_max)
+		energy_level = min(maxf(value, 0.0), ENERGY_MAX)
 		if first != int(energy_level):
 			energy_changed.emit()
 		if energy_level == 0.0:
@@ -334,13 +334,13 @@ func _on_died() -> void:
 
 
 func should_rest() -> bool:
-	return health_level < 0.9 * health_max or energy_level < 0.9 * energy_max
+	return health_level < 0.9 * health_max or energy_level < 0.9 * ENERGY_MAX
 
 func suicide():
 	self._on_died()
 
 func is_fully_rested() -> bool:
-	return health_level == health_max and energy_level == energy_max
+	return health_level == health_max and energy_level == ENERGY_MAX
 
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
