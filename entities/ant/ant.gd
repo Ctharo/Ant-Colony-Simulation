@@ -101,10 +101,10 @@ var energy_level: float = ENERGY_MAX :
 			suicide()
 
 var carry_max: int = 1
-var health_max: float = 100
-var health_level: float = health_max :
+const HEALTH_MAX: float = 100
+var health_level: float = HEALTH_MAX :
 	set(value):
-		health_level = min(maxf(value, 0.0), health_max)
+		health_level = min(maxf(value, 0.0), HEALTH_MAX)
 		if health_level == 0.0:
 			suicide()
 
@@ -334,13 +334,13 @@ func _on_died() -> void:
 
 
 func should_rest() -> bool:
-	return health_level < 0.9 * health_max or energy_level < 0.9 * ENERGY_MAX
+	return health_level < 0.9 * HEALTH_MAX or energy_level < 0.9 * ENERGY_MAX
 
 func suicide():
 	self._on_died()
 
 func is_fully_rested() -> bool:
-	return health_level == health_max and energy_level == ENERGY_MAX
+	return health_level == HEALTH_MAX and energy_level == ENERGY_MAX
 
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
