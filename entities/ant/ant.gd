@@ -100,7 +100,7 @@ var energy_level: float = ENERGY_MAX :
 		if energy_level == 0.0:
 			suicide()
 
-var carry_max: int = 1
+const CARRY_MAX: int = 1
 const HEALTH_MAX: float = 100
 var health_level: float = HEALTH_MAX :
 	set(value):
@@ -309,7 +309,6 @@ func harvest_food():
 	var food = foods_in_reach[0]
 	if is_instance_valid(food) and food.is_available:
 		food.set_state(Food.State.CARRIED)
-		await get_tree().create_timer(1).timeout
 		food.global_position = mouth_marker.global_position
 		_carried_food = food
 		doing_task = false
@@ -378,14 +377,15 @@ func get_colonies_in_reach() -> Array:
 func is_colony_in_range() -> bool:
 	if not colony:
 		return false
-	return global_position.distance_to(colony.global_position) < colony.radius
+	return _distance_to_colony() < colony.radius
 
 func is_colony_in_sight() -> bool:
-	var a = colony.global_position.distance_to(global_position) - colony.radius
+	var a = _distance_to_colony() - colony.radius
 	var b = %SightArea.get_child(0).shape.radius
 	return a < b
 
-
+func _distance_to_colony() -> float:
+	return colony.global_position.distance_to(global_position)
 
 func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
 	return ants_arr.filter(func(ant): return friendly == (ant.colony == colony))
