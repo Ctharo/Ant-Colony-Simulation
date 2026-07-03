@@ -27,12 +27,14 @@ var camera: CameraController
 ## Screen position of the menu
 @onready var screen_position: Vector2:
 	get: return _screen_position
-## World position of the menu
-@onready var world_position: Vector2:
-	get: return camera.ui_to_global(_screen_position)
+
+var world_position: Vector2:
+	get: return _world_position
+var _world_position: Vector2  # world-space anchor for circle/leader line
 #endregion
 
 #region Private Variables
+var _indicator: SelectionIndicator
 var _screen_position: Vector2
 var _selection_radius := 12.0
 var _menu_buttons: Array[Button] = []
@@ -50,8 +52,11 @@ func setup(p_camera: Camera2D) -> void:
 func _process(_delta: float) -> void:
 	if not camera:
 		return
-
-	position = screen_position
+ 
+	if _tracked_object is Node2D and is_instance_valid(_tracked_object):
+		_world_position = _tracked_object.global_position
+ 
+	position = _screen_position
 	queue_redraw()
 
 ## Sets an object to track for menu positioning
@@ -71,23 +76,17 @@ func add_button(text: String, style_normal: StyleBox, style_hover: StyleBox) -> 
 func show_at(pos: Vector2, circle_radius: float = 12.0) -> void:
 	_screen_position = pos
 	_selection_radius = circle_radius
+ 
+	if _tracked_object is Node2D and is_instance_valid(_tracked_object):
+		_world_position = _tracked_object.global_position
+	else:
+		_world_position = _screen_to_world(pos)
+ 
 	position = pos
 	show()
 	_animate_open()
-
-func _draw() -> void:
-	if _selection_radius > 0 and camera:
-		var scaled_radius = _selection_radius * camera.zoom.x
-		draw_arc(
-			Vector2.ZERO,
-			scaled_radius,
-			0,
-			TAU,
-			32,
-			SELECTION_STYLE.CIRCLE_COLOR,
-			SELECTION_STYLE.CIRCLE_WIDTH * camera.zoom.x
-		)
-
+	_spawn_indicator()
+	
 ## Creates a button with label within a container
 func _create_button(text: String, style_normal: StyleBox,
 		style_hover: StyleBox) -> Button:
@@ -187,3 +186,86 @@ func _animate_close() -> void:
 	tween.tween_property(self, "scale", Vector2.ZERO, ANIMATION_DURATION/2)
 	
 	tween.tween_callback(queue_free).set_delay(ANIMATION_DURATION/2)
+	
+
+func _spawn_indicator() -> void:
+	if is_instance_valid(_indicator):
+		return
+ 
+	_indicator = SelectionIndicator.new()
+	_indicator.menu = self
+ 
+	# Parent it into the world canvas (NOT the UI CanvasLayer).
+	var world_root: Node = get_tree().get_first_node_in_group("sandbox")
+	if not world_root and camera:
+		world_root = camera.get_parent()
+	if world_root:
+		world_root.add_child(_indicator)
+	else:
+		_indicator = null  # no world to draw in; degrade gracefully
+ 
+ 
+func _exit_tree() -> void:
+	if is_instance_valid(_indicator):
+		_indicator.queue_free()
+			
+func _world_to_screen(world_pos: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform() * world_pos
+func _screen_to_world(screen_pos: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform().affine_inverse() * screen_pos
+	
+class SelectionIndicator:
+	extends Node2D
+ 
+	var menu: BaseContextMenu
+ 
+	func _ready() -> void:
+		top_level = true   # immune to whatever it gets parented under
+		z_index = 10       # draw above entities
+ 
+	func _process(_delta: float) -> void:
+		# Self-destruct if the menu is gone (covers every close path)
+		if not is_instance_valid(menu):
+			queue_free()
+			return
+		global_position = menu.world_position
+		queue_redraw()
+ 
+	func _draw() -> void:
+		if not is_instance_valid(menu) or not is_instance_valid(menu.camera):
+			return
+ 
+		var zoom: float = menu.camera.zoom.x
+		var sel_r: float = menu._selection_radius
+		var color: Color = BaseContextMenu.SELECTION_STYLE.CIRCLE_COLOR
+		var width: float = BaseContextMenu.SELECTION_STYLE.CIRCLE_WIDTH
+ 
+		# Selection circle: drawn at origin in WORLD units. No
+		# conversion, no zoom math — the camera scales it naturally.
+		# Line width divided by zoom keeps constant screen thickness.
+		if sel_r > 0.0:
+			draw_arc(Vector2.ZERO, sel_r, 0, TAU, 32, color, width / zoom)
+ 
+		# Leader line to the menu. Both positions are taken via
+		# get_global_transform_with_canvas(), which includes each
+		# node's own CanvasLayer transform — so the world-canvas
+		# indicator and the UI-layer menu meet in the same viewport
+		# space no matter how the layers are configured.
+		var xform: Transform2D = get_global_transform_with_canvas()
+		var inv: Transform2D = xform.affine_inverse()
+ 
+		var anchor_screen: Vector2 = xform.origin
+		var menu_screen: Vector2 = menu.get_global_transform_with_canvas().origin
+ 
+		var d: float = menu_screen.distance_to(anchor_screen)
+		var sel_r_screen: float = sel_r * zoom
+		if d <= menu.radius + sel_r_screen + 4.0:
+			return  # anchor still inside the button ring; no line
+ 
+		var dir: Vector2 = (anchor_screen - menu_screen) / d
+		var start_local: Vector2 = inv * (menu_screen + dir * menu.radius)
+		var end_local: Vector2 = inv * (anchor_screen - dir * sel_r_screen)
+ 
+		draw_dashed_line(start_local, end_local, color, width / zoom, 6.0 / zoom)
+ 
+ 

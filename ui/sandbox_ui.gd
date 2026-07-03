@@ -132,7 +132,11 @@ func _show_colony_context_menu() -> void:
 
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_colony_menu_button_pressed(index, colony))
-	active_context_menu.show_at(get_global_mouse_position(), colony.radius)
+	active_context_menu.track_object(colony)
+	active_context_menu.show_at(
+		world_to_screen(colony.global_position),
+		colony.radius
+	)
 
 
 func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
@@ -211,8 +215,8 @@ func _show_ant_context_menu() -> void:
 
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
+	active_context_menu.track_object(ant)
 	active_context_menu.show_at(world_to_screen(ant.global_position))
-
 
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 	if not is_instance_valid(ant):
