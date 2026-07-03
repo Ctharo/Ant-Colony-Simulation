@@ -12,6 +12,8 @@ const EDGE_PAN_SPEED := 300.0
 const EDGE_PAN_MARGIN := 20.0
 const SMOOTHING_FACTOR := 0.85
 const HOVER_DISTANCE_BASE := 10.0
+const ZOOM_STEP := 1.1              # multiplicative per wheel notch
+const FAST_PAN_MULTIPLIER := 3.0    # shift + direction
 #endregion
 
 #region State Variables
@@ -40,7 +42,6 @@ func _process(delta: float) -> void:
 	
 	_update_hovered_entity()
 	_handle_keyboard_input(delta)
-	_handle_edge_panning(delta)
 	_update_tracked_entity()
 	_apply_momentum()
 
@@ -65,44 +66,43 @@ func _input(event: InputEvent) -> void:
 
 #region Input Handling
 func _handle_keyboard_input(delta: float) -> void:
+	var focus: Control = get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:
+		return
+ 
 	var input_dir := Vector2.ZERO
 	input_dir.x = Input.get_axis("ui_left", "ui_right")
 	input_dir.y = Input.get_axis("ui_up", "ui_down")
-	
-	if input_dir != Vector2.ZERO:
-		stop_tracking()
-		position += input_dir.normalized() * KEYBOARD_PAN_SPEED * delta
-
-
-func _handle_edge_panning(delta: float) -> void:
-	if not edge_panning_enabled or is_panning:
+ 
+	if Input.is_physical_key_pressed(KEY_A):
+		input_dir.x -= 1.0
+	if Input.is_physical_key_pressed(KEY_D):
+		input_dir.x += 1.0
+	if Input.is_physical_key_pressed(KEY_W):
+		input_dir.y -= 1.0
+	if Input.is_physical_key_pressed(KEY_S):
+		input_dir.y += 1.0
+ 
+	if input_dir == Vector2.ZERO:
 		return
-	
-	var viewport_size := get_viewport_rect().size
-	var mouse_pos := get_viewport().get_mouse_position()
-	var pan_direction := Vector2.ZERO
-	
-	if mouse_pos.x < EDGE_PAN_MARGIN:
-		pan_direction.x = -1.0
-	elif mouse_pos.x > viewport_size.x - EDGE_PAN_MARGIN:
-		pan_direction.x = 1.0
-	
-	if mouse_pos.y < EDGE_PAN_MARGIN:
-		pan_direction.y = -1.0
-	elif mouse_pos.y > viewport_size.y - EDGE_PAN_MARGIN:
-		pan_direction.y = 1.0
-	
-	if pan_direction != Vector2.ZERO:
-		stop_tracking()
-		position += pan_direction.normalized() * EDGE_PAN_SPEED * delta / zoom.x
-
+ 
+	stop_tracking()
+ 
+	var speed := KEYBOARD_PAN_SPEED
+	if Input.is_key_pressed(KEY_SHIFT):
+		speed *= FAST_PAN_MULTIPLIER
+ 
+	# Divide by zoom so on-screen pan speed feels the same at
+	# every zoom level (matches what edge panning already does).
+	position += input_dir.normalized() * speed * delta / zoom.x
+	target_position = position
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	match event.button_index:
 		MOUSE_BUTTON_WHEEL_UP:
-			_handle_zoom(ZOOM_SPEED, event.position)
+			_handle_zoom(ZOOM_STEP)
 		MOUSE_BUTTON_WHEEL_DOWN:
-			_handle_zoom(-ZOOM_SPEED, event.position)
+			_handle_zoom(1.0 / ZOOM_STEP)
 		MOUSE_BUTTON_MIDDLE:
 			stop_tracking()
 			_handle_pan_start(event)
@@ -127,15 +127,20 @@ func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
 	position -= current_velocity
 	last_mouse_position = event.position
 
-
-func _handle_zoom(zoom_factor: float, mouse_position: Vector2) -> void:
-	if not is_instance_valid(self):
+func _handle_zoom(factor: float) -> void:
+	var new_zoom: float = clampf(zoom.x * factor, MIN_ZOOM, MAX_ZOOM)
+	if is_equal_approx(new_zoom, zoom.x):
 		return
-	
-	var new_zoom := Vector2.ONE * clampf(zoom.x + zoom_factor, MIN_ZOOM, MAX_ZOOM)	
-	zoom = new_zoom
-	
-	position = mouse_position
+ 
+	var mouse_world_before: Vector2 = get_global_mouse_position()
+	zoom = Vector2.ONE * new_zoom
+ 
+	if is_instance_valid(tracked_entity):
+		return  # stay centered on the tracked entity
+ 
+	var mouse_world_after: Vector2 = get_global_mouse_position()
+	position += mouse_world_before - mouse_world_after
+	target_position = position
 #endregion
 
 #region Entity Tracking

@@ -62,6 +62,14 @@ var _last_diffusion_time: int = 0
 var _pending_diffusion: Dictionary = {}  ## Dictionary[String, Array[DiffusionUpdate]]
 #endregion
 
+func _init() -> void:
+	logger = iLogger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
+	update_lock = Mutex.new()
+	top_level = true
+	z_index = -5   # above terrain (-10), below entities (0)
+	_last_decay_time = Time.get_ticks_msec()
+	_last_diffusion_time = Time.get_ticks_msec()
+
 #region Pure Functions - Cell Operations
 static func create_cell_data() -> Dictionary:
 	return CellData.duplicate(true)
@@ -259,13 +267,6 @@ static func get_cell_color(t: float, config: Pheromone) -> Color:
 #endregion
 
 #region Instance Management
-func _init() -> void:
-	logger = iLogger.new("heatmap_manager", DebugLogger.Category.MOVEMENT)
-	update_lock = Mutex.new()
-	top_level = true
-	_last_decay_time = Time.get_ticks_msec()
-	_last_diffusion_time = Time.get_ticks_msec()
-
 func _ready() -> void:
 	_start_update_thread()
 

@@ -65,14 +65,13 @@ func initialize() -> bool:
 	sandbox_ui.initializing = false
 	return result
 
-
 func generate_map(size: Vector2) -> bool:
 	map_generator = MapGenerator.new()
 	map_generator.name = "MapGenerator"
+	map_generator.z_index = -10  # terrain renders beneath entities
 	add_child(map_generator)
 	await map_generator.generate_navigation(size)
 	return true
-
 
 func setup_heatmap() -> bool:
 	heatmap_manager = HeatmapManager

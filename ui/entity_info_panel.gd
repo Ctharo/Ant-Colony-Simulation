@@ -139,10 +139,28 @@ func _setup_scroll_handling() -> void:
 
 
 func _on_scroll_gui_input(event: InputEvent) -> void:
-	## Stop scroll events from propagating to camera
-	if event is InputEventMouseButton:
-		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-			accept_event()
+	if not (event is InputEventMouseButton):
+		return
+	if event.button_index not in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		return
+ 
+	var v_bar: VScrollBar = scroll_container.get_v_scroll_bar()
+ 
+	# Nothing to scroll — swallow the wheel so the camera doesn't zoom
+	if not v_bar.visible:
+		accept_event()
+		return
+ 
+	var at_top: bool = v_bar.value <= v_bar.min_value
+	var at_bottom: bool = v_bar.value >= v_bar.max_value - v_bar.page
+ 
+	if (event.button_index == MOUSE_BUTTON_WHEEL_UP and at_top) \
+			or (event.button_index == MOUSE_BUTTON_WHEEL_DOWN and at_bottom):
+		# Container can't scroll further in this direction; eat the
+		# event before it leaks through to camera zoom.
+		accept_event()
+	# Otherwise: do nothing. The ScrollContainer's own handling runs
+	# next, scrolls, and accepts the event itself.
 
 
 func _connect_signals() -> void:
@@ -273,9 +291,9 @@ func _enable_influence_visualization(ant: Ant) -> void:
 
 func _disable_influence_visualization() -> void:
 	## Disable influence visualization if we enabled it
-	if _influence_vis_enabled_by_panel and current_entity is Ant:
+	if _influence_vis_enabled_by_panel and is_instance_valid(current_entity) and current_entity is Ant:
 		var ant: Ant = current_entity as Ant
-		if is_instance_valid(ant) and ant.influence_manager:
+		if ant.influence_manager:
 			ant.influence_manager.set_visualization_enabled(false)
 		_influence_vis_enabled_by_panel = false
 
