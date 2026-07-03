@@ -70,19 +70,8 @@ func _handle_keyboard_input(delta: float) -> void:
 	if focus is LineEdit or focus is TextEdit:
 		return
  
-	var input_dir := Vector2.ZERO
-	input_dir.x = Input.get_axis("ui_left", "ui_right")
-	input_dir.y = Input.get_axis("ui_up", "ui_down")
- 
-	if Input.is_physical_key_pressed(KEY_A):
-		input_dir.x -= 1.0
-	if Input.is_physical_key_pressed(KEY_D):
-		input_dir.x += 1.0
-	if Input.is_physical_key_pressed(KEY_W):
-		input_dir.y -= 1.0
-	if Input.is_physical_key_pressed(KEY_S):
-		input_dir.y += 1.0
- 
+	var input_dir = Input.get_vector("camera_left", "camera_right", "camera_up", "camera_down")
+
 	if input_dir == Vector2.ZERO:
 		return
  
