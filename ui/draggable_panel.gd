@@ -231,27 +231,27 @@ func collapse() -> void:
 	collapsed.emit()
 	_save_panel_state()
 
-
 func expand() -> void:
 	if not collapsible or _is_expanded:
 		return
-	
+ 
 	_is_expanded = true
-	
+ 
 	if _content_container:
 		_content_container.modulate.a = 0.0
 		_content_container.show()
-		
+ 
+		var target_y: float = maxf(_expanded_size.y, DEFAULT_MIN_SIZE.y)
+ 
 		var tween: Tween = create_tween()
 		tween.set_ease(Tween.EASE_OUT)
 		tween.set_trans(Tween.TRANS_CUBIC)
-		tween.tween_property(self, "custom_minimum_size:y", _expanded_size.y, COLLAPSE_ANIMATION_DURATION)
+		tween.tween_property(self, "custom_minimum_size:y", target_y, COLLAPSE_ANIMATION_DURATION)
 		tween.tween_property(_content_container, "modulate:a", 1.0, COLLAPSE_ANIMATION_DURATION)
-	
+ 
 	_update_collapse_button_text()
 	expanded.emit()
 	_save_panel_state()
-
 
 func _update_collapse_button_text() -> void:
 	if _collapse_button:

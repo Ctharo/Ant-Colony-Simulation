@@ -193,10 +193,10 @@ func _process(_delta: float) -> void:
 	if not is_visible() or not is_instance_valid(current_entity):
 		return
 
-	#if current_entity is Ant:
-		#_update_ant_info()
-	#elif current_entity is Colony:
-		#_update_colony_info()
+	if current_entity is Ant:
+		_update_ant_info()
+	elif current_entity is Colony:
+		_update_colony_info()
 
 	queue_redraw()
 #endregion
@@ -302,38 +302,37 @@ func _update_status_bars() -> void:
 	if not current_entity is Ant:
 		return
 	var ant: Ant = current_entity as Ant
-
-	health_bar.max_value = ant.health_max
+ 
+	health_bar.max_value = Ant.HEALTH_MAX
 	health_bar.value = ant.health_level
-	health_value_label.text = "%d/%d" % [int(ant.health_level), int(ant.health_max)]
-
-	energy_bar.max_value = ant.energy_max
+	health_value_label.text = "%d/%d" % [int(ant.health_level), int(Ant.HEALTH_MAX)]
+ 
+	energy_bar.max_value = Ant.ENERGY_MAX
 	energy_bar.value = ant.energy_level
-	energy_value_label.text = "%d/%d" % [int(ant.energy_level), int(ant.energy_max)]
-
+	energy_value_label.text = "%d/%d" % [int(ant.energy_level), int(Ant.ENERGY_MAX)]
+ 
 	_update_bar_colors()
-
 
 func _update_bar_colors() -> void:
 	if not current_entity is Ant:
 		return
 	var ant: Ant = current_entity as Ant
-
-	var health_pct: float = ant.health_level / ant.health_max
-	var energy_pct: float = ant.energy_level / ant.energy_max
-
+ 
+	var health_pct: float = ant.health_level / Ant.HEALTH_MAX
+	var energy_pct: float = ant.energy_level / Ant.ENERGY_MAX
+ 
 	var health_color: Color = STYLE.HEALTH_COLOR
 	if health_pct < 0.25:
 		health_color = STYLE.LOW_COLOR
 	elif health_pct < 0.5:
 		health_color = STYLE.MED_COLOR
-
+ 
 	var energy_color: Color = STYLE.ENERGY_COLOR
 	if energy_pct < 0.25:
 		energy_color = STYLE.LOW_COLOR
 	elif energy_pct < 0.5:
 		energy_color = STYLE.MED_COLOR
-
+ 
 	health_bar.add_theme_stylebox_override("fill", _create_stylebox(health_color))
 	energy_bar.add_theme_stylebox_override("fill", _create_stylebox(energy_color))
 

@@ -29,7 +29,10 @@ const DEFAULT_CONFIG_ROOT = "res://config/"
 
 #region Member Variables
 ## The unique identifier for this ant
-var id: int
+var id: int :
+	set(value):
+		id = value
+		logger = iLogger.new("ant_%d" % id, DebugLogger.Category.ENTITY)
 ## The role of this ant in the colony
 var role: String
 var profile: AntProfile
@@ -37,7 +40,8 @@ var profile: AntProfile
 var colony: Colony : set = set_colony
 
 var _carried_food: Food 
-var is_carrying_food: bool = is_instance_valid(_carried_food)
+var is_carrying_food: bool :
+	get: return is_instance_valid(_carried_food)
 
 #region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
@@ -117,7 +121,11 @@ func _init() -> void:
 	logger = iLogger.new("ant_%s" % id, DebugLogger.Category.ENTITY)
 
 func _ready() -> void:
-	# Initialize influence manager
+	var sight_shape: CollisionShape2D = $SightArea/CollisionShape2D
+	sight_shape.shape = sight_shape.shape.duplicate()
+	var reach_shape: CollisionShape2D = $ReachArea/CollisionShape2D
+	reach_shape.shape = reach_shape.shape.duplicate()	
+		# Initialize influence manager
 	influence_manager.initialize(self)
 
 	# Apply pending profile if set before ready
@@ -214,13 +222,6 @@ func stop_movement() -> void:
 	velocity = Vector2.ZERO
 	movement_completed.emit(false)
 
-func rest_until_full() -> void:
-	doing_task = true
-	while not is_fully_rested():
-		await get_tree().create_timer(0.5).timeout
-		_process_resting(0.5)
-	doing_task = false
-
 func _process_carrying() -> void:
 	if is_instance_valid(_carried_food):
 		_carried_food.global_position = mouth_marker.global_position
@@ -233,8 +234,22 @@ func _process_resting(delta: float) -> void:
 func store_food() -> void:
 	doing_task = true
 	await get_tree().create_timer(1.0).timeout
-	colony.store_food(_carried_food)
+	if is_dead or not is_inside_tree():
+		doing_task = false
+		return
+	if is_instance_valid(colony) and is_instance_valid(_carried_food):
+		colony.store_food(_carried_food)
 	_carried_food = null
+	doing_task = false
+ 
+func rest_until_full() -> void:
+	doing_task = true
+	while not is_fully_rested():
+		await get_tree().create_timer(0.5).timeout
+		if is_dead or not is_inside_tree():
+			doing_task = false
+			return
+		_process_resting(0.5)
 	doing_task = false
 
 func _process_movement(delta: float) -> void:
@@ -254,7 +269,10 @@ func _process_movement(delta: float) -> void:
 
 
 	target_velocity = velocity.lerp(target_velocity, 0.15)
-	_on_navigation_agent_2d_velocity_computed(target_velocity)
+	if nav_agent.avoidance_enabled:
+		nav_agent.velocity = target_velocity  # agent emits velocity_computed
+	else:
+		_on_navigation_agent_2d_velocity_computed(target_velocity)
 
 ## Pheromone handles checking condition and emitting if necessary
 func _process_pheromones(delta: float):
@@ -326,11 +344,8 @@ func _on_died() -> void:
 	if is_carrying_food:
 		_carried_food.set_state(Food.State.AVAILABLE)
 	is_dead = true
+	doing_task = false
 	died.emit(self)
-
-
-
-
 
 func should_rest() -> bool:
 	return health_level < 0.9 * HEALTH_MAX or energy_level < 0.9 * ENERGY_MAX
