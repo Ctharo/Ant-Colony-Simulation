@@ -89,11 +89,11 @@ func _on_gui_input(event: InputEvent) -> void:
 
 #region Click Handling
 func handle_left_click() -> void:
-	clear_active_menu()
+	clear_active_menus()
 	select_hovered_entity()
 
 func handle_right_click() -> void:
-	clear_active_menu()
+	clear_active_menus()
 	if is_instance_valid(camera) and is_instance_valid(camera.hovered_entity):
 		show_context_menu()
 	else:
@@ -153,7 +153,7 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 		3: # Destroy
 			colony_manager.remove_colony(colony)
 
-	clear_active_menu()
+	clear_active_menus()
 
 #TODO: Should we change it so that it will check if mouse in radius of colony and assign ants to that else the ants are rogue?
 func _spawn_ants_at_colony(colony: Colony) -> void:
@@ -166,7 +166,7 @@ func _spawn_ants_at_colony(colony: Colony) -> void:
 
 ## Clears, initializes, and sets [member active_context_menu]
 func _create_context_window() -> void:
-	clear_active_menu()
+	clear_active_menus()
 	active_context_menu = BaseContextMenu.new()
 	active_context_menu.setup(camera)
 	add_child(active_context_menu)
@@ -194,7 +194,7 @@ func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
 		1: # Spawn Food
 			_on_spawn_food_requested(global_pos)
 
-	clear_active_menu()
+	clear_active_menus()
 
 
 func _show_ant_context_menu() -> void:
@@ -230,13 +230,17 @@ func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 		2: # Kill
 			ant_manager.remove_ant(ant)
 
-	clear_active_menu()
+	clear_active_menus()
+
+func clear_active_menus() -> void:
+	close_context_menu()
+	close_info_panel()
 
 
-func clear_active_menu() -> void:
+func close_context_menu() -> void:
 	if is_instance_valid(active_context_menu):
 		active_context_menu.queue_free()
-		active_context_menu = null
+
 #endregion
 
 #region Info Panel Management
