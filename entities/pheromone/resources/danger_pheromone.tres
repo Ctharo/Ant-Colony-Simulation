@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Pheromone" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_logic"]
+[ext_resource type="Script" path="res://entities/pheromone/pheromone.gd" id="2_pher"]
+
+[sub_resource type="Resource" id="cond_danger_emit"]
+script = ExtResource("1_logic")
+name = "danger pheromone condition"
+expression_string = "enemy_count_in_view > 0"
+type = 1
+
+[resource]
+script = ExtResource("2_pher")
+name = "danger"
+decay_rate = 0.15
+generating_rate = 15.0
+heat_radius = 3
+diffusion_rate = 1.0
+start_color = Color(1, 0.15, 0.05, 0.12)
+end_color = Color(0.6, 0, 0, 0.28)
+condition = SubResource("cond_danger_emit")
