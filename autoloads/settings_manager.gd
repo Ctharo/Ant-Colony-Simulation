@@ -25,6 +25,14 @@ const DEFAULT_SETTINGS := {
 	# Simulation Settings
 	"colony_profile_path": DEFAULT_COLONY_PROFILE_PATH,
 	"food_spawn_count": 500,
+	"ant_spawn_count": 5,
+	"sim_speed_index": 0,
+	"sim_speed_1": 1.0,
+	"sim_speed_2": 5.0,
+	"sim_speed_3": 10.0,
+	"debug_show_heatmap": false,
+	"debug_show_status_bars": false,
+	"debug_show_influence_arrows": false,
 	"map_size_x": 6800,
 	"map_size_y": 3600,
 	"obstacle_density": 0.00001,
@@ -71,6 +79,10 @@ const SETTING_CONSTRAINTS := {
 	"max_ants": {"min": 1, "max": 200, "step": 1},
 	"spawn_rate": {"min": 1.0, "max": 60.0, "step": 0.5},
 	"colony_radius": {"min": 20.0, "max": 200.0, "step": 5.0},
+	"ant_spawn_count": {"min": 1, "max": 100, "step": 1},
+	"sim_speed_1": {"min": 0.1, "max": 50.0, "step": 0.1},
+	"sim_speed_2": {"min": 0.1, "max": 50.0, "step": 0.1},
+	"sim_speed_3": {"min": 0.1, "max": 50.0, "step": 0.1},
 }
 
 ## Logger instance for debugging

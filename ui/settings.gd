@@ -16,7 +16,6 @@ var settings_manager: SettingsManager
 @onready var master_volume: HSlider = %HSlider
 
 ## Simulation settings references
-@onready var food_spawn_count: SpinBox = %FoodSpawnCount/SpinBox
 @onready var map_size_x: SpinBox = %MapSize/XSpinBox
 @onready var map_size_y: SpinBox = %MapSize/YSpinBox
 @onready var obstacle_density: SpinBox = %ObstacleDensity/SpinBox
@@ -24,11 +23,14 @@ var settings_manager: SettingsManager
 @onready var obstacle_size_max: SpinBox = %ObstacleSize/MaxSpinBox
 @onready var terrain_seed: SpinBox = %TerrainSeed/SpinBox
 
+
 ## Debug settings references
 @onready var log_level_option: OptionButton = %LogLevelOption
 @onready var show_context_check: CheckBox = %ShowContextCheck
 @onready var category_grid: GridContainer = %CategoryGrid
 
+
+var speed_spins: Array[SpinBox] = []
 
 func _init() -> void:
 	logger = iLogger.new("settings", DebugLogger.Category.UI)
@@ -59,7 +61,27 @@ func _setup_ui_structure() -> void:
 	_setup_difficulty_options()
 	_setup_log_level_options()
 	_setup_category_checkboxes()
+	_setup_speed_rows()
 
+## Build the three simulation-speed rows in the Simulation section
+func _setup_speed_rows() -> void:
+	var sim_vbox: Node = terrain_seed.get_parent().get_parent()
+	for i in range(3):
+		var setting := "sim_speed_%d" % (i + 1)
+		var row := HBoxContainer.new()
+		var label := Label.new()
+		label.text = "Sim Speed %d" % (i + 1)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var spin := SpinBox.new()
+		spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		spin.size_flags_stretch_ratio = 0.08
+		row.add_child(spin)
+		sim_vbox.add_child(row)
+		speed_spins.append(spin)
+		_apply_spinbox_constraints(spin, setting)
+		spin.value = settings_manager.get_setting(setting)
+		spin.value_changed.connect(_on_setting_changed.bind(setting))
 
 ## Setup difficulty dropdown options
 func _setup_difficulty_options() -> void:
@@ -94,7 +116,6 @@ func _setup_category_checkboxes() -> void:
 
 ## Apply constraints from SettingsManager to all spinboxes/sliders
 func _apply_constraints() -> void:
-	_apply_spinbox_constraints(food_spawn_count, "food_spawn_count")
 	_apply_spinbox_constraints(map_size_x, "map_size_x")
 	_apply_spinbox_constraints(map_size_y, "map_size_y")
 	_apply_spinbox_constraints(obstacle_density, "obstacle_density")
@@ -144,7 +165,6 @@ func _load_game_values() -> void:
 
 ## Load simulation-related settings
 func _load_simulation_values() -> void:
-	food_spawn_count.value = settings_manager.get_setting("food_spawn_count")
 	map_size_x.value = settings_manager.get_setting("map_size_x")
 	map_size_y.value = settings_manager.get_setting("map_size_y")
 	obstacle_density.value = settings_manager.get_setting("obstacle_density")
@@ -185,7 +205,6 @@ func _connect_signals() -> void:
 	master_volume.value_changed.connect(_on_master_volume_changed)
 	
 	# Simulation settings
-	food_spawn_count.value_changed.connect(_on_setting_changed.bind("food_spawn_count"))
 	map_size_x.value_changed.connect(_on_map_size_changed)
 	map_size_y.value_changed.connect(_on_map_size_changed)
 	obstacle_density.value_changed.connect(_on_setting_changed.bind("obstacle_density"))

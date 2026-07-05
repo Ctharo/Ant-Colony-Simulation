@@ -18,6 +18,7 @@ var camera: CameraController
 var active_context_menu: BaseContextMenu
 var entity_info_panel: EntityInfoPanel
 var hovered_entity_label: Label
+var debug_menu: DebugMenu
 
 @onready var overlay: ColorRect = %InitializingRect
 @onready var info_panels_container := %InfoPanelsContainer
@@ -33,7 +34,6 @@ var sandbox: Node2D
 
 #region State
 var highlight_ants: bool = false
-var DEFAULT_FOOD_SPAWN_NUM: int = 50
 
 var initializing: bool = true:
 	set(value):
@@ -48,16 +48,27 @@ var initializing: bool = true:
 func _ready() -> void:
 	camera = get_node("../../Camera2D")
 	sandbox = get_node("../..")
-	DEFAULT_FOOD_SPAWN_NUM = settings_manager.get_setting("food_spawn_count", 50)
 
 	if is_instance_valid(overlay):
 		overlay.visible = true
+		
+	_setup_debug_menu()
+
 
 
 func _process(_delta: float) -> void:
 	queue_redraw()
 	_update_hovered_entity_label()
 
+func _setup_debug_menu() -> void:
+	debug_menu = DebugMenu.new()
+	debug_menu.setup(sandbox)
+	get_node("ControlPanel/HBoxContainer").add_child(debug_menu)
+
+	# UI and camera must keep processing while get_tree().paused is true,
+	# otherwise the Resume button and panning freeze along with the sim.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	camera.process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _update_hovered_entity_label() -> void:
 	if is_instance_valid(hovered_entity_label):
@@ -155,12 +166,8 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 
 	clear_active_menus()
 
-#TODO: Should we change it so that it will check if mouse in radius of colony and assign ants to that else the ants are rogue?
 func _spawn_ants_at_colony(colony: Colony) -> void:
-	var profile := settings_manager.get_colony_profile()
-	var spawn_count := 5 #TODO: Should use default value unless assigned somehow
-	if profile and not profile.initial_ants.is_empty():
-		spawn_count = profile.initial_ants.values()[0]
+	var spawn_count: int = int(settings_manager.get_setting("ant_spawn_count", 5))
 	colony.spawn_ants(spawn_count)
 
 
@@ -290,7 +297,9 @@ func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
 func _on_spawn_food_requested(pos: Vector2) -> void:
 	_spawn_food_at(pos)
 
-func _spawn_food_at(pos: Vector2, count: int = DEFAULT_FOOD_SPAWN_NUM) -> void:
+func _spawn_food_at(pos: Vector2, count: int = -1) -> void:
+	if count <= 0:
+		count = int(settings_manager.get_setting("food_spawn_count", 50))
 	food_manager.spawn_food_cluster(pos, count)
 #endregion
 

@@ -1,21 +1,26 @@
 class_name DraggablePanel
 extends PanelContainer
-## Base class for draggable, expandable panels with persistent positioning.
-## Extend this class and override panel_id to get automatic save/load of position and expanded state.
+## Base class for draggable, resizable, expandable panels with persistent state.
+## Extend this class and override panel_id to get automatic save/load of
+## position, size, and expanded state.
 
 #region Signals
 signal drag_started
 signal drag_ended
+signal resize_started
+signal resize_ended
 signal collapsed
 signal expanded
 #endregion
 
 #region Constants
 const DRAG_HANDLE_HEIGHT: int = 30
+const RESIZE_HANDLE_SIZE: int = 18
 const EDGE_PADDING: int = 10
 const COLLAPSE_ANIMATION_DURATION: float = 0.15
 const DEFAULT_MIN_SIZE: Vector2 = Vector2(200, 100)
 const COLLAPSED_HEIGHT: int = 40
+const GRIP_COLOR: Color = Color(1, 1, 1, 0.35)
 #endregion
 
 #region Export Variables
@@ -23,10 +28,14 @@ const COLLAPSED_HEIGHT: int = 40
 @export var panel_id: String = ""
 ## Whether this panel can be dragged
 @export var draggable: bool = true
+## Whether this panel can be resized from the bottom-right corner
+@export var resizable: bool = true
 ## Whether this panel can be collapsed
 @export var collapsible: bool = true
 ## Whether to save position between sessions
 @export var save_position: bool = true
+## Whether to save size between sessions
+@export var save_size: bool = true
 ## Whether to save expanded state between sessions
 @export var save_expanded_state: bool = true
 #endregion
@@ -34,6 +43,12 @@ const COLLAPSED_HEIGHT: int = 40
 #region Member Variables
 var _is_dragging: bool = false
 var _drag_offset: Vector2 = Vector2.ZERO
+var _is_resizing: bool = false
+var _resize_start_mouse: Vector2 = Vector2.ZERO
+var _resize_start_size: Vector2 = Vector2.ZERO
+## Minimum size the panel can be resized down to (captured after subclass init)
+var _base_min_size: Vector2 = DEFAULT_MIN_SIZE
+var _cursor_overridden: bool = false
 var _is_expanded: bool = true
 var _expanded_size: Vector2 = Vector2.ZERO
 var _content_container: Control
@@ -92,6 +107,14 @@ func _ready() -> void:
 func _deferred_init() -> void:
 	_expanded_size = size
 	_on_panel_ready()  # subclass @onready refs are assigned, _content_container is now valid
+	
+	# Capture the subclass minimum (e.g. STYLE.PANEL_MIN_SIZE set in
+	# _on_panel_ready) as the floor for resizing.
+	_base_min_size = Vector2(
+		maxf(custom_minimum_size.x, DEFAULT_MIN_SIZE.x),
+		maxf(custom_minimum_size.y, DEFAULT_MIN_SIZE.y)
+	)
+	
 	_load_panel_state()
 	_initialized = true
 
@@ -148,17 +171,37 @@ func _handle_drag_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	## Handle drag even when mouse leaves the panel
-	if _is_dragging:
-		if event is InputEventMouseMotion:
-			var mouse_motion: InputEventMouseMotion = event as InputEventMouseMotion
-			_update_drag(mouse_motion.global_position)
-			get_viewport().set_input_as_handled()
-		elif event is InputEventMouseButton:
-			var mouse_button: InputEventMouseButton = event as InputEventMouseButton
-			if mouse_button.button_index == MOUSE_BUTTON_LEFT and not mouse_button.pressed:
+	## Resize handling lives here in _input (which runs before GUI input)
+	## because the grip corner is covered by child controls (ScrollContainer,
+	## etc.) that would otherwise swallow the click before it reached
+	## _gui_input on the panel.
+	if event is InputEventMouseButton:
+		var mouse_button: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
+			if mouse_button.pressed and _can_start_resize(mouse_button.global_position):
+				_start_resize(mouse_button.global_position)
+				get_viewport().set_input_as_handled()
+				return
+			if not mouse_button.pressed and _is_resizing:
+				_end_resize()
+				get_viewport().set_input_as_handled()
+				return
+			if not mouse_button.pressed and _is_dragging:
 				_end_drag()
 				get_viewport().set_input_as_handled()
+				return
+	elif event is InputEventMouseMotion:
+		var mouse_motion: InputEventMouseMotion = event as InputEventMouseMotion
+		if _is_resizing:
+			_update_resize(mouse_motion.global_position)
+			get_viewport().set_input_as_handled()
+			return
+		if _is_dragging:
+			## Handle drag even when mouse leaves the panel
+			_update_drag(mouse_motion.global_position)
+			get_viewport().set_input_as_handled()
+			return
+		_update_resize_cursor(mouse_motion.global_position)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -204,6 +247,90 @@ func _clamp_to_viewport(pos: Vector2) -> Vector2:
 #endregion
 
 
+#region Resize Operations
+func _resize_handle_rect() -> Rect2:
+	var rect: Rect2 = get_global_rect()
+	return Rect2(
+		rect.position + rect.size - Vector2.ONE * RESIZE_HANDLE_SIZE,
+		Vector2.ONE * RESIZE_HANDLE_SIZE
+	)
+
+
+func _can_start_resize(global_mouse_pos: Vector2) -> bool:
+	return resizable \
+		and _is_expanded \
+		and not _is_dragging \
+		and not _is_resizing \
+		and is_visible_in_tree() \
+		and _resize_handle_rect().has_point(global_mouse_pos)
+
+
+func _start_resize(global_mouse_pos: Vector2) -> void:
+	_is_resizing = true
+	_resize_start_mouse = global_mouse_pos
+	_resize_start_size = size
+	resize_started.emit()
+
+
+func _update_resize(global_mouse_pos: Vector2) -> void:
+	if not _is_resizing:
+		return
+	
+	var new_size: Vector2 = _resize_start_size + (global_mouse_pos - _resize_start_mouse)
+	var viewport_size: Vector2 = get_viewport_rect().size
+	
+	new_size.x = clampf(new_size.x, _base_min_size.x, viewport_size.x - global_position.x - EDGE_PADDING)
+	new_size.y = clampf(new_size.y, _base_min_size.y, viewport_size.y - global_position.y - EDGE_PADDING)
+	
+	## PanelContainer shrinks to its content minimum, so drive both the
+	## minimum and the actual size to make the resize stick.
+	custom_minimum_size = new_size
+	size = new_size
+	_expanded_size = new_size
+	queue_redraw()
+
+
+func _end_resize() -> void:
+	if not _is_resizing:
+		return
+	
+	_is_resizing = false
+	resize_ended.emit()
+	_save_panel_state()
+
+
+func _update_resize_cursor(global_mouse_pos: Vector2) -> void:
+	var over_handle: bool = resizable and _is_expanded and is_visible_in_tree() \
+		and _resize_handle_rect().has_point(global_mouse_pos)
+	
+	if over_handle and not _cursor_overridden:
+		Input.set_default_cursor_shape(Input.CURSOR_FDIAGSIZE)
+		_cursor_overridden = true
+	elif not over_handle and _cursor_overridden:
+		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+		_cursor_overridden = false
+
+
+func _draw() -> void:
+	_draw_resize_grip()
+
+
+## Subclasses that override _draw() should call this to keep the grip visible
+func _draw_resize_grip() -> void:
+	if not resizable or not _is_expanded:
+		return
+	
+	var corner: Vector2 = size
+	for i in range(3):
+		var offset: float = 5.0 + i * 4.0
+		draw_line(
+			corner - Vector2(offset, 3.0),
+			corner - Vector2(3.0, offset),
+			GRIP_COLOR, 1.5
+		)
+#endregion
+
+
 #region Collapse Operations
 func _toggle_collapsed() -> void:
 	if _is_expanded:
@@ -229,6 +356,7 @@ func collapse() -> void:
 	
 	_update_collapse_button_text()
 	collapsed.emit()
+	queue_redraw()
 	_save_panel_state()
 
 func expand() -> void:
@@ -251,6 +379,7 @@ func expand() -> void:
  
 	_update_collapse_button_text()
 	expanded.emit()
+	queue_redraw()
 	_save_panel_state()
 
 func _update_collapse_button_text() -> void:
@@ -284,6 +413,10 @@ func _save_panel_state() -> void:
 		state["position_x"] = global_position.x
 		state["position_y"] = global_position.y
 	
+	if save_size:
+		state["size_x"] = _expanded_size.x
+		state["size_y"] = _expanded_size.y
+	
 	if save_expanded_state:
 		state["expanded"] = _is_expanded
 	
@@ -304,6 +437,16 @@ func _load_panel_state() -> void:
 		return
 	
 	var state_dict: Dictionary = state as Dictionary
+	
+	## Restore size FIRST — position clamping below depends on the panel's
+	## actual size to keep it fully on screen.
+	if save_size and state_dict.has("size_x") and state_dict.has("size_y"):
+		var saved_size: Vector2 = Vector2(state_dict["size_x"], state_dict["size_y"])
+		saved_size.x = maxf(saved_size.x, _base_min_size.x)
+		saved_size.y = maxf(saved_size.y, _base_min_size.y)
+		custom_minimum_size = saved_size
+		size = saved_size
+		_expanded_size = saved_size
 	
 	if save_position and state_dict.has("position_x") and state_dict.has("position_y"):
 		var saved_pos: Vector2 = Vector2(state_dict["position_x"], state_dict["position_y"])
@@ -346,4 +489,9 @@ func set_panel_position(pos: Vector2) -> void:
 ## Get whether the panel is currently being dragged
 func is_dragging() -> bool:
 	return _is_dragging
+
+
+## Get whether the panel is currently being resized
+func is_resizing() -> bool:
+	return _is_resizing
 #endregion
