@@ -1,9 +1,11 @@
 [gd_resource type="Resource" script_class="Logic" format=3 uid="uid://besq4feim3iyn"]
 
 [ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_gyt8x"]
+[ext_resource type="Resource" uid="uid://dorntljrvg8e6" path="res://resources/expressions/conditions/is_carrying_food.tres" id="2_hwjc0"]
 
 [resource]
 script = ExtResource("1_gyt8x")
-name = "energy drain"
-expression_string = "energy_drain"
+name = "energy_drain"
+expression_string = "ENERGY_DRAIN_FACTOR + float(is_carrying_food) * 0.01"
+nested_expressions = Array[ExtResource("1_gyt8x")]([ExtResource("2_hwjc0")])
 metadata/_custom_type_script = "uid://c4blfafbl73rr"

@@ -26,7 +26,7 @@ class ExpressionState:
 	var compiled_expression: String
 	var logic: Logic  # Store reference to the Logic object
 	var is_parsed: bool = false
-	var entity_context: Node  # Store reference to the entity context
+	var entity_context  # Store reference to the entity context
 
 	func _init(p_logic: Logic, p_entity: Node) -> void:
 		expression = Expression.new()

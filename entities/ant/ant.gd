@@ -113,11 +113,7 @@ var movement_rate: float = 25.0
 var resting_rate: float = 20.0
 
 const ENERGY_MAX: float = 100
-const ENERGY_DRAIN_FACTOR: float = 0.000015 ## 0.000015 for reference, drains pretty slow
-var energy_drain: float :
-	get:
-		return ENERGY_DRAIN_FACTOR * ((50 if is_carrying_food else 0) + 1) * pow(movement_rate, 1.2)
-
+const ENERGY_DRAIN_FACTOR: float = 0.015 
 
 var energy_level: float = ENERGY_MAX :
 	set(value):
@@ -302,8 +298,9 @@ func _process_pheromones(delta: float):
 		pheromone.check_and_emit(self, delta)
 
 func calculate_energy_cost(delta: float) -> float:
-	var movement_cost = energy_drain * velocity.length()
+	var movement_cost = (ENERGY_DRAIN_FACTOR + float(is_carrying_food) * 0.01) * velocity.length()
 	return movement_cost * delta
+
 
 #region Navigation
 

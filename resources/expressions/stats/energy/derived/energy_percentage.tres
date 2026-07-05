@@ -6,4 +6,3 @@
 script = ExtResource("1_xyb56")
 name = "energy percentage"
 expression_string = "energy_level / ENERGY_MAX * 100"
-type = 2
