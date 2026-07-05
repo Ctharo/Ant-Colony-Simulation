@@ -24,6 +24,17 @@ const USER_ROOTS: Dictionary = {
 	KIND_PROFILE: "user://behavior/profiles",
 }
 
+const _EXPRESSION_BUILTINS: PackedStringArray = [
+	"true", "false", "null", "PI", "TAU", "INF", "NAN",
+	"and", "or", "not", "in",
+	"abs", "min", "max", "clamp", "clampf", "clampi", "pow", "sqrt",
+	"floor", "ceil", "round", "sign", "fmod", "lerp", "inverse_lerp",
+	"float", "int", "str", "bool",
+	"sin", "cos", "tan", "atan2", "deg_to_rad", "rad_to_deg",
+	"randf", "randi", "randf_range", "randi_range",
+	"Vector2", "Vector2i", "Color",
+]
+
 class Entry:
 	var resource: Resource
 	var path: String
@@ -63,6 +74,37 @@ func rescan() -> void:
 	for kind: String in _catalog:
 		library_changed.emit(kind)
 
+
+## Lints every Logic expression: flags identifiers that are neither nested
+## bindings, AntSenses vocabulary, nor Expression built-ins. Run once from
+## the debug menu (or a breakpoint) after any vocabulary change.
+func audit_expressions() -> void:
+	var known := {}
+	for entry: Dictionary in AntSenses.get_vocabulary():
+		known[entry.name] = true
+	for builtin in _EXPRESSION_BUILTINS:
+		known[builtin] = true
+
+	var ident_regex := RegEx.create_from_string("(?<![.\\w])[A-Za-z_][A-Za-z0-9_]*")
+	var string_regex := RegEx.create_from_string("\"[^\"]*\"")
+	var issues := 0
+
+	for entry: Entry in get_entries(KIND_LOGIC):
+		var logic: Logic = entry.resource
+		var bound := {}
+		for nested: Logic in logic.nested_expressions:
+			bound[nested.id] = true
+
+		var stripped := string_regex.sub(logic.expression_string, "", true)
+		for m: RegExMatch in ident_regex.search_all(stripped):
+			var ident := m.get_string()
+			if not known.has(ident) and not bound.has(ident):
+				logger.warn("audit: '%s' (%s) uses unknown identifier '%s'" % [
+					logic.name, entry.path, ident
+				])
+				issues += 1
+
+	logger.info("Expression audit complete: %d issue(s)" % issues)
 
 func _scan_dir(dir_path: String, writable: bool) -> void:
 	var dir := DirAccess.open(dir_path)

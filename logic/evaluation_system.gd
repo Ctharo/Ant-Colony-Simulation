@@ -32,7 +32,8 @@ class ExpressionState:
 		expression = Expression.new()
 		compiled_expression = p_logic.expression_string
 		logic = p_logic
-		entity_context = p_entity
+		entity_context = p_entity.get_expression_context() \
+			if p_entity.has_method("get_expression_context") else p_entity
 
 	func parse(variables: PackedStringArray) -> Error:
 		if is_parsed:

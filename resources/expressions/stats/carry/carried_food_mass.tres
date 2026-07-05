@@ -5,6 +5,5 @@
 [resource]
 script = ExtResource("1_cxgbl")
 name = "carried_food_mass"
-expression_string = "1.0 if is_carrying_food else 0.0"
+expression_string = "1.0 * float(is_carrying_food)"
 description = "Mass of carried foods"
-type = 2

@@ -27,7 +27,8 @@ var _validation_label: Label
 var _desc_edit: LineEdit
 var _nested_list: ItemList
 var _nested_picker: OptionButton
-
+var _vocab_list: ItemList
+var _test_result_label: Label
 
 func _init() -> void:
 	title = "Expression Editor"
@@ -90,6 +91,26 @@ func _build_ui(writable: bool, path: String) -> void:
 	_validation_label = Label.new()
 	_validation_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_validation_label)
+
+	var vocab_label := Label.new()
+	vocab_label.text = "Available identifiers (double-click to insert):"
+	vbox.add_child(vocab_label)
+
+	_vocab_list = ItemList.new()
+	_vocab_list.custom_minimum_size = Vector2(0, 90)
+	_vocab_list.item_activated.connect(_on_vocab_activated)
+	vbox.add_child(_vocab_list)
+	_populate_vocabulary()
+
+	# --- Test row (before the Save/Cancel button_row) ---
+	var test_row := HBoxContainer.new()
+	test_row.add_theme_constant_override("separation", 6)
+	test_row.add_child(_action_button("Test on live ant", _on_test_pressed))
+	_test_result_label = Label.new()
+	_test_result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_test_result_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	test_row.add_child(_test_result_label)
+	vbox.add_child(test_row)
 
 	_desc_edit = LineEdit.new()
 	_desc_edit.text = editing.description
@@ -199,6 +220,48 @@ func _on_remove_nested() -> void:
 	_validate()
 #endregion
 
+func _populate_vocabulary() -> void:
+	_vocab_list.clear()
+	# Nested expression bindings first — they're what this expression composes
+	for nested in _nested:
+		var idx := _vocab_list.add_item("%s  [nested]" % nested.id)
+		_vocab_list.set_item_metadata(idx, nested.id)
+		_vocab_list.set_item_tooltip(idx, nested.description)
+	for entry: Dictionary in AntSenses.get_vocabulary():
+		var display: String = entry.get("signature", entry.name)
+		var idx := _vocab_list.add_item("%s  [%s]" % [display, entry.kind])
+		_vocab_list.set_item_metadata(idx, entry.name + ("()" if entry.kind == "method" else ""))
+
+
+func _on_vocab_activated(index: int) -> void:
+	_expr_edit.insert_text_at_caret(_vocab_list.get_item_metadata(index))
+	_expr_edit.grab_focus()
+	_validate()
+
+
+func _on_test_pressed() -> void:
+	if not _validate():
+		return
+	var ants: Array[Ant] = AntManager.get_all()
+	if ants.is_empty():
+		_test_result_label.text = "No live ants to test against."
+		return
+
+	# Throwaway Logic with a unique id so it can't collide with or pollute
+	# the cache of any real expression.
+	var probe := Logic.new()
+	probe.name = "editor probe"
+	probe.id = "__editor_probe_%d" % Time.get_ticks_usec()
+	probe.expression_string = _expr_edit.text
+	probe.nested_expressions.assign(_nested)
+
+	var ant: Ant = ants[0]
+	var result: Variant = EvaluationSystem.get_value(probe, ant)
+	EvaluationSystem.invalidate_expression(probe.id)
+
+	_test_result_label.text = "Ant #%d → %s  (%s)" % [
+		ant.id, str(result), type_string(typeof(result))
+	]
 
 func _validate() -> bool:
 	var ids := PackedStringArray()

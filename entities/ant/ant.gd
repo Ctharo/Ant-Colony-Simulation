@@ -72,6 +72,7 @@ var behavior_manager: BehaviorManager
 @onready var sight_area: Area2D = %SightArea
 @onready var reach_area: Area2D = %ReachArea
 @onready var mouth_marker: Marker2D = %MouthMarker
+var _senses: AntSenses
 #endregion
 
 #region Actions
@@ -388,7 +389,11 @@ func is_fully_rested() -> bool:
 	
 
 #region Get methods
-
+## Expressions evaluate against this facade instead of the ant itself.
+func get_expression_context() -> Object:
+	if not _senses:
+		_senses = AntSenses.new(self)
+	return _senses
 func _get_in_reach(predicate: Callable) -> Array:
 	return reach_area.get_overlapping_bodies().filter(predicate)
 
