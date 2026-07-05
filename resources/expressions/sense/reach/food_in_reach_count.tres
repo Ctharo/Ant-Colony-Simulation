@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_logic"]
+
+[resource]
+script = ExtResource("1_logic")
+name = "food in reach count"
+expression_string = "get_food_in_reach().size()"
+nested_expressions = Array[ExtResource("1_logic")]([])
+description = "Number of available food items within reach"
+type = 2

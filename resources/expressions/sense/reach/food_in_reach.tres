@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Logic" format=3 uid="uid://bhuxa53a3phdd"]
+
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_myu8s"]
+
+[resource]
+script = ExtResource("1_myu8s")
+name = "foods in reach"
+expression_string = "get_food_in_reach()"
+type = 6

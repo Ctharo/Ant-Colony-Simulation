@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AntRule" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://logic/behavior/ant_rule.gd" id="1_rule"]
+[ext_resource type="Resource" path="res://resources/expressions/conditions/can_harvest.tres" id="2_cond"]
+[ext_resource type="Resource" path="res://resources/behavior/actions/action_harvest.tres" id="3_act"]
+
+[resource]
+script = ExtResource("1_rule")
+name = "harvest rule"
+condition = ExtResource("2_cond")
+action = ExtResource("3_act")
+priority = 30
+enabled = true
+description = "Grab food when it is in reach and mandibles are free"

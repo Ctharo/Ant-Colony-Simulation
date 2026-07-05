@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="AntAction" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://logic/behavior/ant_action.gd" id="1_action"]
+
+[resource]
+script = ExtResource("1_action")
+name = "store food"
+method = "store_food"
+params = []
+description = "Deposit carried food at the colony (takes 1s)"

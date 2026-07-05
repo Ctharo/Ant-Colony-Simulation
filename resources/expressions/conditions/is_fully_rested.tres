@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1_logic")
-name = "is carrying food"
-expression_string = "is_carrying_food"
+name = "is fully rested"
+expression_string = "health_level == HEALTH_MAX and energy_level == ENERGY_MAX"
 nested_expressions = Array[ExtResource("1_logic")]([])
-description = "Whether the ant is currently carrying food"
+description = "Health and energy both at max"
 type = 1

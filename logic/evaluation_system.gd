@@ -8,7 +8,7 @@ extends Node
 ## Structure: { entity_id: { expression_id: ExpressionState } }
 var _entity_states: Dictionary = {}
 var _evaluation_cache: Dictionary = {}
-const CACHE_TTL = 0.5
+const CACHE_TTL_MS = 16.0 ## 16.0 for single-frame caching
 
 ## Logger instance
 var logger: iLogger
@@ -184,7 +184,7 @@ func _calculate(expression_id: String, entity: Node) -> Variant:
 	# Check cache
 	if _evaluation_cache.has(cache_key):
 		var cache_entry = _evaluation_cache[cache_key]
-		if Time.get_ticks_msec() - cache_entry.timestamp < CACHE_TTL:
+		if Time.get_ticks_msec() - cache_entry.timestamp < CACHE_TTL_MS:
 			return cache_entry.value
 
 	var start_time := 0.0

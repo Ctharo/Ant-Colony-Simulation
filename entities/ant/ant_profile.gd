@@ -14,6 +14,10 @@ var id: String
 @export var vision_range: float = 100.0
 @export var size: float
 
+## Behavior rules evaluated each tick, highest priority first.
+## Leave empty to use Ant.DEFAULT_BEHAVIOR_RULES.
+@export var behavior_rules: Array[AntRule] = []
+
 ## Create a basic worker ant profile
 static func create_basic_worker() -> AntProfile:
 	var profile = AntProfile.new()

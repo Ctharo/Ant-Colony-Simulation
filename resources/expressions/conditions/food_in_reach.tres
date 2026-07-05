@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3 uid="uid://cuguxwn32dx48"]
+[gd_resource type="Resource" script_class="Logic" format=3 uid="uid://cuguxwn32dx48"]
 
-[ext_resource type="Script" path="res://logic/logic.gd" id="1_y0i2v"]
-[ext_resource type="Resource" uid="uid://bhuxa53a3phdd" path="res://resources/expressions/sense/reach/foods_in_reach.tres" id="2_cmy5x"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_y0i2v"]
+[ext_resource type="Resource" uid="uid://bhuxa53a3phdd" path="res://resources/expressions/sense/reach/food_in_reach.tres" id="2_cmy5x"]
+
 
 [resource]
 script = ExtResource("1_y0i2v")

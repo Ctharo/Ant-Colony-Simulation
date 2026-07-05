@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Logic" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://logic/logic.gd" id="1_logic"]
+[ext_resource type="Resource" path="res://resources/expressions/conditions/should_rest.tres" id="2_rest"]
+
+[resource]
+script = ExtResource("1_logic")
+name = "should rest at colony"
+expression_string = "is_colony_in_range() and should_rest"
+nested_expressions = Array[ExtResource("1_logic")]([ExtResource("2_rest")])
+description = "Inside colony radius and health/energy below rest threshold"
+type = 1

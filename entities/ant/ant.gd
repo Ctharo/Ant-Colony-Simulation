@@ -2,7 +2,6 @@
 class_name Ant
 extends CharacterBody2D
 
-## TODO: Mb we can separate concerns? ie physics, decision-making, actions
 
 #region Signals
 signal spawned
@@ -25,6 +24,29 @@ var movement_target: Vector2
 
 #region Constants
 const DEFAULT_CONFIG_ROOT = "res://config/"
+
+## Methods that AntAction resources are allowed to invoke. Anything not in
+## this list is rejected by BehaviorManager — the safety boundary that makes
+## runtime/UI-authored behavior safe.
+const ACTION_API: Array[String] = [
+	"harvest_food",
+	"store_food",
+	"rest_until_full",
+	"move_to",
+	"stop_movement",
+]
+
+## Fallback rules preserving pre-refactor behavior for profiles that don't
+## define their own behavior_rules.
+const DEFAULT_BEHAVIOR_RULES: Array[String] = [
+	"res://resources/behavior/rules/rule_harvest.tres",
+	"res://resources/behavior/rules/rule_store.tres",
+	"res://resources/behavior/rules/rule_rest.tres",
+]
+
+const _SHOULD_REST: Logic = preload("res://resources/expressions/conditions/should_rest.tres")
+const _IS_FULLY_RESTED: Logic = preload("res://resources/expressions/conditions/is_fully_rested.tres")
+
 #endregion
 
 #region Member Variables
@@ -45,6 +67,7 @@ var is_carrying_food: bool :
 
 #region Components
 @onready var influence_manager: InfluenceManager = $InfluenceManager
+var behavior_manager: BehaviorManager
 @onready var nav_agent: NavigationAgent2D = %NavigationAgent2D
 @onready var sight_area: Area2D = %SightArea
 @onready var reach_area: Area2D = %ReachArea
@@ -135,6 +158,12 @@ func _ready() -> void:
 	elif profile:
 		_apply_profile_internal(profile)
 
+	behavior_manager = BehaviorManager.new()
+	add_child(behavior_manager)
+	behavior_manager.initialize(self)
+	for path in DEFAULT_BEHAVIOR_RULES:
+		behavior_manager.add_rule(load(path))
+
 	register_to_heatmap()
 	
 	#FIXME What is this for??
@@ -172,6 +201,11 @@ func _apply_profile_internal(p_profile: AntProfile) -> void:
 	for influence: InfluenceProfile in p_profile.movement_influences:
 		influence_manager.add_profile(influence)
 
+	# Profile-defined rules replace the defaults; empty means keep defaults
+	if behavior_manager and not p_profile.behavior_rules.is_empty():
+		behavior_manager.clear_rules()
+		behavior_manager.add_rules(p_profile.behavior_rules)
+
 func _physics_process(delta: float) -> void:
 	task_update_timer += delta
 
@@ -179,31 +213,18 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_process_carrying()
-
 	_consume_energy_process(delta)
 
 	if doing_task:
 		return
 
-	# Attempt actions based on immediate conditions
-	if get_food_in_reach() and not is_carrying_food:
-		harvest_food()
+	# Data-driven behavior: first matching rule (by priority) acts this tick
+	if behavior_manager and behavior_manager.process_rules():
 		return
 
-	# If we're at colony with food, store it
-	if is_colony_in_range() and is_carrying_food:
-		store_food()
-		return
-
-	# Rest at colony if needed
-	if is_colony_in_range() and should_rest():
-		rest_until_full()
-		return
-
-	if not doing_task:
-		# Basic movement processing if we're moving
-		_process_movement(delta)
-
+	# Default fall-through: influence-driven movement
+	_process_movement(delta)
+	
 func _consume_energy_process(delta: float) -> void:
 	if energy_level > 0 and not is_colony_in_range():
 		var energy_cost = calculate_energy_cost(delta)
@@ -347,20 +368,22 @@ func _on_died() -> void:
 	doing_task = false
 	died.emit(self)
 
-func should_rest() -> bool:
-	return health_level < 0.9 * HEALTH_MAX or energy_level < 0.9 * ENERGY_MAX
-
 func suicide():
 	self._on_died()
-
-func is_fully_rested() -> bool:
-	return health_level == HEALTH_MAX and energy_level == ENERGY_MAX
 
 func _get_random_position() -> Vector2:
 	var viewport_rect := get_viewport_rect()
 	var x := randf_range(0, viewport_rect.size.x)
 	var y := randf_range(0, viewport_rect.size.y)
 	return Vector2(x, y)
+
+
+
+func should_rest() -> bool:
+	return _SHOULD_REST.get_value(self)
+
+func is_fully_rested() -> bool:
+	return _IS_FULLY_RESTED.get_value(self)
 	
 	
 
