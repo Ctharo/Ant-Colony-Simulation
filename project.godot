@@ -28,6 +28,7 @@ ColonyManager="*res://autoloads/colony_manager.gd"
 SettingsManager="*res://autoloads/settings_manager.gd"
 EvaluationSystem="*res://logic/evaluation_system.gd"
 HeatmapManager="*res://autoloads/heatmap_manager.gd"
+ResourceLibrary="*uid://cwj4rikdf5yan"
 
 [display]
 

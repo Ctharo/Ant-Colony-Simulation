@@ -15,6 +15,11 @@ signal rules_changed
 ## The ant this manager acts on
 var entity: Ant
 
+## Per-ant rule overrides. Keys are AntRule, value true = locally disabled.
+## Never mutates the shared resource — profile-level enabled stays authoritative
+## for all ants; this only subtracts for this specific ant.
+var _local_disabled: Dictionary = {}
+
 ## Active rules, kept sorted by descending priority
 var rules: Array[AntRule] = []
 
@@ -58,10 +63,34 @@ func clear_rules() -> void:
 	rules.clear()
 	rules_changed.emit()
 
+## Public re-sort hook for runtime rule editing
+func resort() -> void:
+	_sort_rules()
+
 func _sort_rules() -> void:
 	rules.sort_custom(func(a: AntRule, b: AntRule) -> bool:
 		return a.priority > b.priority
 	)
+	
+func set_rule_enabled_local(rule: AntRule, enabled: bool) -> void:
+	if enabled:
+		_local_disabled.erase(rule)
+	else:
+		_local_disabled[rule] = true
+
+
+func is_rule_enabled_local(rule: AntRule) -> bool:
+	return not _local_disabled.get(rule, false)
+	
+## Replaces the full rule set (used when a profile's rules are edited live).
+## Local overrides for rules that survive the swap are preserved.
+func set_rules(p_rules: Array[AntRule]) -> void:
+	rules.clear()
+	add_rules(p_rules)
+	# Drop overrides for rules no longer present
+	for rule: AntRule in _local_disabled.keys():
+		if rule not in rules:
+			_local_disabled.erase(rule)
 #endregion
 
 #region Evaluation
@@ -73,7 +102,7 @@ func process_rules() -> bool:
 		return false
 
 	for rule: AntRule in rules:
-		if not rule.enabled or not rule.action:
+		if not rule.enabled or _local_disabled.get(rule, false) or not rule.action:
 			continue
 
 		if rule.condition:

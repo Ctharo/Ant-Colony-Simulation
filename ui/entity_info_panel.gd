@@ -51,6 +51,9 @@ var _panel_ready: bool = false
 
 #region UI Components - Info Section (shared)
 @onready var info_container: VBoxContainer = %InfoContainer
+var _rules_container: VBoxContainer
+var _last_fired_label: Label
+var _rule_checks: Dictionary = {}  # AntRule -> CheckBox
 #endregion
 
 #region UI Components - Ant Section
@@ -254,7 +257,57 @@ func get_current_colony() -> Colony:
 	return null
 #endregion
 
+#region Behavior Rules Section
+func _build_behavior_rules_section() -> void:
+	_rules_container = VBoxContainer.new()
+	_rules_container.add_theme_constant_override("separation", 4)
+	ant_section.add_child(_rules_container)
 
+
+func _refresh_behavior_rules() -> void:
+	for child in _rules_container.get_children():
+		child.queue_free()
+	_rule_checks.clear()
+
+	var ant := get_current_ant()
+	if not ant or not ant.behavior_manager:
+		return
+
+	var header := Label.new()
+	header.text = "Behavior Rules"
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rules_container.add_child(header)
+
+	for rule: AntRule in ant.behavior_manager.rules:
+		var check := CheckBox.new()
+		check.text = "[%d] %s" % [rule.priority, rule.name]
+		check.tooltip_text = rule.description
+		# Reflect both layers: shared resource state AND this ant's override
+		check.button_pressed = rule.enabled and ant.behavior_manager.is_rule_enabled_local(rule)
+		check.disabled = not rule.enabled  # profile-disabled: can't re-enable per-ant
+		check.toggled.connect(func(pressed: bool) -> void:
+			if is_instance_valid(ant) and ant.behavior_manager:
+				ant.behavior_manager.set_rule_enabled_local(rule, pressed)
+		)
+		_rules_container.add_child(check)
+		_rule_checks[rule] = check
+
+	_last_fired_label = Label.new()
+	_last_fired_label.text = "Last fired: —"
+	_last_fired_label.add_theme_font_size_override("font_size", 11)
+	_last_fired_label.modulate = Color(1, 1, 1, 0.6)
+	_rules_container.add_child(_last_fired_label)
+
+	if not ant.behavior_manager.rule_fired.is_connected(_on_rule_fired):
+		ant.behavior_manager.rule_fired.connect(_on_rule_fired)
+	if not ant.behavior_manager.rules_changed.is_connected(_refresh_behavior_rules):
+		ant.behavior_manager.rules_changed.connect(_refresh_behavior_rules)
+
+
+func _on_rule_fired(rule: AntRule) -> void:
+	if is_instance_valid(_last_fired_label):
+		_last_fired_label.text = "Last fired: %s" % rule.name
+#endregion
 #region Ant View Setup
 func _setup_ant_view(ant: Ant) -> void:
 	ant_section.visible = true

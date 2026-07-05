@@ -118,6 +118,25 @@ func register_expression(expression: Logic, entity: Node) -> void:
 		expression.id,
 		entity.name
 	])
+	
+## Drops parsed state and cached values for an expression across all entities.
+## Next get_value() lazily re-registers and re-parses. Used by runtime editors.
+func invalidate_expression(expression_id: String) -> void:
+	if expression_id.is_empty():
+		return
+	for entity_id in _entity_states:
+		_entity_states[entity_id].erase(expression_id)
+
+	var stale: Array = []
+	for key in _evaluation_cache:
+		if key.begins_with(expression_id + "_"):
+			stale.append(key)
+	for key in stale:
+		_evaluation_cache.erase(key)
+
+	var idx := DebugLogger.parsed_expression_strings.find(expression_id)
+	if idx >= 0:
+		DebugLogger.parsed_expression_strings.remove_at(idx)
 #endregion
 
 #region Expression Evaluation

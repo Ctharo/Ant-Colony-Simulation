@@ -10,6 +10,7 @@ const WINDOW_SIZE = Vector2i(450, 600)
 #region Member Variables
 var editing_profile: AntProfile
 var _influence_profiles: Array[InfluenceProfile] = [] as Array[InfluenceProfile]
+var _rules: Array[AntRule] = []
 #endregion
 
 
@@ -50,6 +51,11 @@ func _build_ui() -> void:
 	_add_separator(vbox)
 	_add_movement_influences_section(vbox)
 	_add_separator(vbox)
+	_add_movement_influences_section(vbox)
+	_add_separator(vbox)
+	_add_behavior_rules_section(vbox)   # NEW
+	_add_separator(vbox)
+	_add_pheromones_section(vbox)
 	_add_pheromones_section(vbox)
 	_add_separator(vbox)
 	_add_buttons(vbox)
@@ -176,6 +182,224 @@ func _add_movement_influences_section(parent: Control) -> void:
 	view_btn.pressed.connect(_on_view_influence_pressed)
 	buttons_row.add_child(view_btn)
 
+#region Behavior Rules Section
+func _add_behavior_rules_section(parent: Control) -> void:
+	_add_section_label(parent, "Behavior Rules")
+
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 5)
+	parent.add_child(container)
+
+	var hint = Label.new()
+	hint.name = "RulesHint"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 11)
+	hint.modulate = Color(1, 1, 1, 0.6)
+	container.add_child(hint)
+
+	var list = ItemList.new()
+	list.name = "RulesList"
+	list.custom_minimum_size = Vector2(0, 100)
+	list.select_mode = ItemList.SELECT_SINGLE
+	list.item_selected.connect(_on_rule_selected)
+	list.item_activated.connect(func(_i: int) -> void: _on_edit_rule_pressed())
+	container.add_child(list)
+
+	var buttons_row = HBoxContainer.new()
+	buttons_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons_row.add_theme_constant_override("separation", 10)
+	container.add_child(buttons_row)
+
+	var add_btn = Button.new()
+	add_btn.text = "Add"
+	add_btn.pressed.connect(_on_add_rule_pressed)
+	buttons_row.add_child(add_btn)
+
+	var new_btn = Button.new()
+	new_btn.text = "New"
+	new_btn.pressed.connect(_on_new_rule_pressed)
+	buttons_row.add_child(new_btn)
+
+	var edit_btn = Button.new()
+	edit_btn.name = "EditRuleBtn"
+	edit_btn.text = "Edit"
+	edit_btn.disabled = true
+	edit_btn.pressed.connect(_on_edit_rule_pressed)
+	buttons_row.add_child(edit_btn)
+
+	var remove_btn = Button.new()
+	remove_btn.name = "RemoveRuleBtn"
+	remove_btn.text = "Remove"
+	remove_btn.disabled = true
+	remove_btn.pressed.connect(_on_remove_rule_pressed)
+	buttons_row.add_child(remove_btn)
+
+
+func _on_rule_selected(_index: int) -> void:
+	var has_selection := not (_find_node("RulesList") as ItemList).get_selected_items().is_empty()
+	(_find_node("EditRuleBtn") as Button).disabled = not has_selection
+	(_find_node("RemoveRuleBtn") as Button).disabled = not has_selection
+
+
+func _refresh_rules_list() -> void:
+	var list = _find_node("RulesList") as ItemList
+	var hint = _find_node("RulesHint") as Label
+	if not list:
+		return
+
+	list.clear()
+	# Display in evaluation order
+	var sorted := _rules.duplicate()
+	sorted.sort_custom(func(a: AntRule, b: AntRule) -> bool: return a.priority > b.priority)
+	for rule: AntRule in sorted:
+		var idx := list.add_item("[%d]  %s%s" % [
+			rule.priority, rule.name, "" if rule.enabled else "  (disabled)"
+		])
+		list.set_item_metadata(idx, rule)
+		list.set_item_tooltip(idx, rule.description)
+
+	if hint:
+		hint.text = "Empty list = built-in defaults (harvest / store / rest)." \
+			if _rules.is_empty() else \
+			"Evaluated top-down each tick; first passing rule acts."
+
+
+func _on_add_rule_pressed() -> void:
+	var picker := _RulePicker.new()
+	add_child(picker)
+	var rule: AntRule = await picker.rule_selected
+	if rule and rule not in _rules:
+		_rules.append(rule)
+		_commit_rules()
+
+
+func _on_new_rule_pressed() -> void:
+	var popup := RuleEditorPopup.new()
+	add_child(popup)
+	popup.saved.connect(func(rule: AntRule) -> void:
+		if rule not in _rules:
+			_rules.append(rule)
+		_commit_rules()
+	)
+	popup.open_for(AntRule.new(), "", true)
+
+
+func _on_edit_rule_pressed() -> void:
+	var list = _find_node("RulesList") as ItemList
+	var sel := list.get_selected_items()
+	if sel.is_empty():
+		return
+	var rule: AntRule = list.get_item_metadata(sel[0])
+	var entry := _library_entry_for(rule)
+
+	var popup := RuleEditorPopup.new()
+	add_child(popup)
+	popup.saved.connect(func(saved_rule: AntRule) -> void:
+		# Editing a built-in forks it: swap the profile's reference to the fork
+		var idx := _rules.find(rule)
+		if idx >= 0 and saved_rule != rule:
+			_rules[idx] = saved_rule
+		_commit_rules()
+	)
+	if entry:
+		popup.open_for(entry.resource, entry.path, entry.writable)
+	else:
+		# Rule not in library (e.g. embedded in the .tres) — edit in place, writable
+		popup.open_for(rule, "", true)
+
+
+func _on_remove_rule_pressed() -> void:
+	var list = _find_node("RulesList") as ItemList
+	var sel := list.get_selected_items()
+	if sel.is_empty():
+		return
+	_rules.erase(list.get_item_metadata(sel[0]) as AntRule)
+	_commit_rules()
+
+
+func _library_entry_for(rule: AntRule) -> ResourceLibrary.Entry:
+	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_RULE):
+		if entry.resource == rule:
+			return entry
+	return null
+
+
+## Writes rules back to the profile, persists it, and pushes the new rule set
+## onto every live ant running this profile.
+func _commit_rules() -> void:
+	if not editing_profile:
+		return
+	editing_profile.behavior_rules.assign(_rules)
+	_refresh_rules_list()
+	_save_profile()
+	_apply_rules_to_live_ants()
+
+
+func _apply_rules_to_live_ants() -> void:
+	var effective: Array[AntRule] = []
+	if _rules.is_empty():
+		for path in Ant.DEFAULT_BEHAVIOR_RULES:
+			effective.append(load(path))
+	else:
+		effective.assign(_rules)
+
+	for ant: Ant in AntManager.get_all():
+		if ant.profile == editing_profile and ant.behavior_manager:
+			ant.behavior_manager.set_rules(effective)
+
+
+func _save_profile() -> void:
+	var prev := editing_profile.resource_path
+	ResourceLibrary.save_resource(editing_profile, ResourceLibrary.KIND_PROFILE,
+		prev if prev.begins_with("user://") else "")
+#endregion
+
+## Minimal awaitable rule picker (mirrors AntProfileSelector's contract)
+class _RulePicker:
+	extends Window
+	signal rule_selected(rule: AntRule)
+
+	var _list: ItemList
+
+	func _init() -> void:
+		title = "Add Rule"
+		size = Vector2i(320, 400)
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		close_requested.connect(func() -> void:
+			rule_selected.emit(null)
+			queue_free()
+		)
+
+	func _ready() -> void:
+		var margin := MarginContainer.new()
+		margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+		for side in ["left", "right", "top", "bottom"]:
+			margin.add_theme_constant_override("margin_%s" % side, 10)
+		add_child(margin)
+
+		var vbox := VBoxContainer.new()
+		vbox.add_theme_constant_override("separation", 8)
+		margin.add_child(vbox)
+
+		_list = ItemList.new()
+		_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_list.item_activated.connect(func(_i: int) -> void: _confirm())
+		vbox.add_child(_list)
+
+		for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_RULE):
+			var idx := _list.add_item(entry.display_name())
+			_list.set_item_metadata(idx, entry.resource)
+
+		var btn := Button.new()
+		btn.text = "Add Selected"
+		btn.pressed.connect(_confirm)
+		vbox.add_child(btn)
+		popup_centered()
+
+	func _confirm() -> void:
+		var sel := _list.get_selected_items()
+		rule_selected.emit(_list.get_item_metadata(sel[0]) if not sel.is_empty() else null)
+		queue_free()
 
 func _on_influence_selected(_index: int) -> void:
 	var view_btn = _find_node("ViewInfluenceBtn") as Button
