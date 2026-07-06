@@ -22,6 +22,7 @@ var _status_overlay: StatusBarsOverlay
 var _paused: bool = false
 
 var _library_panel: BehaviorLibraryPanel
+var _designer_panel: BehaviorDesignerPanel
 var _food_spin: SpinBox
 var _ant_spin: SpinBox
 var _speed_button: Button
@@ -106,7 +107,12 @@ func _build_ui() -> void:
 	behavior_btn.tooltip_text = "Open the behavior resource library"
 	behavior_btn.pressed.connect(_on_behavior_pressed)
 	add_child(behavior_btn)
-
+	
+	var designer_btn := Button.new()
+	designer_btn.text = "Designer"
+	designer_btn.tooltip_text = "Visual behavior designer: expression trees, live values, re-eval policies"
+	designer_btn.pressed.connect(_on_designer_pressed)
+	add_child(designer_btn)
 
 func _add_spin_row(label_text: String, setting_name: String) -> SpinBox:
 	var label := Label.new()
@@ -252,6 +258,14 @@ func _on_behavior_pressed() -> void:
 	_library_panel = BehaviorLibraryPanel.new()
 	get_tree().root.add_child(_library_panel)
 	_library_panel.popup_centered()
+
+func _on_designer_pressed() -> void:
+	if is_instance_valid(_designer_panel):
+		_designer_panel.grab_focus()
+		return
+	_designer_panel = BehaviorDesignerPanel.new()
+	get_tree().root.add_child(_designer_panel)
+	_designer_panel.popup_centered()
 
 func _apply_all_visualizations() -> void:
 	_apply_heatmap(bool(settings_manager.get_setting("debug_show_heatmap")))

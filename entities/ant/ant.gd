@@ -535,8 +535,4 @@ func die() -> void:
 	doing_task = false
 	died.emit(self)
 
-
-## Deprecated: use die(). Kept for any external callers.
-func suicide() -> void:
-	die()
 #endregion
