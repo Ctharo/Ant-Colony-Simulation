@@ -456,9 +456,9 @@ func _add_buttons(parent: Control) -> void:
 #region Public Methods
 func edit_profile(profile: AntProfile) -> void:
 	editing_profile = profile
-	title = "Edit Ant Profile: %s" % profile.name
+	set_window_title("Edit Ant Profile: %s" % profile.name)
 	_populate_fields()
-	popup_centered()
+	present()
 
 
 func _populate_fields() -> void:
@@ -518,13 +518,8 @@ func _find_node(node_name: String) -> Node:
 
 #region Signal Handlers
 func _on_done_pressed() -> void:
-	closed.emit(editing_profile)
-	queue_free()
+	_request_close()
 
-
-func _on_close_requested() -> void:
-	closed.emit(editing_profile)
-	queue_free()
 #endregion
 
 ## Edits apply to the live resource immediately; persist them on close

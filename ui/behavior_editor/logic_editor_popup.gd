@@ -33,7 +33,7 @@ var _test_result_label: Label
 
 func _init() -> void:
 	setup_window("expression_editor", "Expression Editor",
-		Vector2i(460, 620), Vector2i(400, 500))
+		Vector2i(500, 800), Vector2i(460, 700))
 	
 
 
@@ -139,9 +139,21 @@ func _build_ui(writable: bool, path: String) -> void:
 	button_row.add_child(_action_button("Cancel", queue_free))
 	vbox.add_child(button_row)
 
+	# Force re-parse on live ants (id may have changed on rename)
+	EvaluationSystem.invalidate_expression(_previous_id)
+	EvaluationSystem.invalidate_expression(editing.id)
+
+	_name_edit.tooltip_text = "Unique name; the id is derived from it"
+	_type_select.tooltip_text = "Variant type this expression must return"
+	_expr_edit.tooltip_text = "Godot Expression syntax; nested expression ids are usable as variables"
+	_desc_edit.tooltip_text = "Shown in library lists and pickers"
+	_nested_list.tooltip_text = "Sub-expressions available as variables inside this one"
+	_nested_picker.tooltip_text = "Pick an expression to nest"
+
+	watch([_name_edit, _type_select, _expr_edit, _desc_edit])
+	
 	_refresh_nested()
 	_validate()
-
 
 func _labeled_row(text: String, control: Control) -> HBoxContainer:
 	var row := HBoxContainer.new()
@@ -300,21 +312,10 @@ func _on_save() -> void:
 
 	if ResourceLibrary.save_resource(editing, ResourceLibrary.KIND_LOGIC, _previous_path) != OK:
 		_validation_label.text = "Save failed — see log."
+		toast_error("Save failed — see log.")
 		return
 
-	# Force re-parse on live ants (id may have changed on rename)
-	EvaluationSystem.invalidate_expression(_previous_id)
-	EvaluationSystem.invalidate_expression(editing.id)
 
-	_name_edit.tooltip_text = "Unique name; the id is derived from it"
-	_type_select.tooltip_text = "Variant type this expression must return"
-	_expr_edit.tooltip_text = "Godot Expression syntax; nested expression ids are usable as variables"
-	_desc_edit.tooltip_text = "Shown in library lists and pickers"
-	_nested_list.tooltip_text = "Sub-expressions available as variables inside this one"
-	_nested_picker.tooltip_text = "Pick an expression to nest"
-
-	watch([_name_edit, _type_select, _expr_edit, _desc_edit])
-	
 	saved.emit(editing)
 	clear_dirty()
 	Toast.success(get_parent(), "Saved expression '%s'" % editing.name)

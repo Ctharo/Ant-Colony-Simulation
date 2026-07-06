@@ -124,6 +124,9 @@ func _build_ui() -> void:
 	root.add_child(right)
 	right.add_child(_build_editor())
 
+	watch([_name_edit, _role_select, _move_spin, _vision_spin, _size_spin,
+		_health_spin, _damage_spin, _cooldown_spin, _combatant_check,
+		_spawn_select])
 
 func _build_left_pane() -> Control:
 	var vbox := VBoxContainer.new()
@@ -428,9 +431,7 @@ func _load_form_from(p: AntProfile) -> void:
 	_set_status("", false)
 	_save_btn.disabled = false
 	
-	watch([_name_edit, _role_select, _move_spin, _vision_spin, _size_spin,
-		_health_spin, _damage_spin, _cooldown_spin, _combatant_check,
-		_spawn_select])
+	clear_dirty()
 
 func _apply_form_to(p: AntProfile) -> void:
 	p.name = _name_edit.text.strip_edges()           # setter re-derives id
