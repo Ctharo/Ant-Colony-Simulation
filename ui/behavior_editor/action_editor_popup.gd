@@ -18,11 +18,8 @@ var _status: Label
 
 
 func _init() -> void:
-	title = "Action Editor"
-	size = Vector2i(440, 520)
-	min_size = Vector2i(380, 420)
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	close_requested.connect(queue_free)
+	setup_window("action_editor", "Action Editor",
+		Vector2i(440, 520), Vector2i(380, 420))
 
 
 func open_for(res: Resource, path: String, writable: bool) -> void:
@@ -98,6 +95,14 @@ func _build_ui(is_builtin: bool) -> void:
 	button_row.add_child(_btn("Cancel", queue_free))
 	vbox.add_child(button_row)
 
+	_name_edit.tooltip_text = "Unique name; the id is derived from it"
+	_method_select.tooltip_text = "Whitelisted Ant method this action invokes (Ant.ACTION_API)"
+	_desc_edit.tooltip_text = "Shown in library lists and rule editors"
+	_param_list.tooltip_text = "Logic expressions passed as arguments, in order"
+	_param_picker.tooltip_text = "Pick an expression to append as a parameter"
+
+	watch([_name_edit, _method_select, _desc_edit])
+
 	_refresh_params()
 
 
@@ -136,6 +141,7 @@ func _on_add_param() -> void:
 	if idx < 0:
 		return
 	_params.append(_param_picker.get_item_metadata(idx))
+	mark_dirty()
 	_refresh_params()
 
 
@@ -144,6 +150,7 @@ func _on_remove_param() -> void:
 	if sel.is_empty():
 		return
 	_params.remove_at(sel[0])
+	mark_dirty()
 	_refresh_params()
 
 
@@ -180,6 +187,13 @@ func _on_save() -> void:
 
 	if ResourceLibrary.save_resource(editing, ResourceLibrary.KIND_ACTION, _previous_path) != OK:
 		_status.text = "Save failed — see log."
+		toast_error("Save failed — see log.")
 		return
 	saved.emit(editing)
-	queue_free()
+	clear_dirty()
+	Toast.success(get_parent(), "Saved action '%s'" % editing.name)
+	_request_close()
+
+func _confirm_shortcut() -> bool:
+	_on_save()
+	return true

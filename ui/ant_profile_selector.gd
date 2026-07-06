@@ -1,5 +1,5 @@
 class_name AntProfileSelector
-extends Window
+extends ManagedWindow
 
 signal profile_selected(profile: AntProfile)
 
@@ -10,19 +10,23 @@ signal profile_selected(profile: AntProfile)
 @onready var search_edit: LineEdit = %SearchEdit
 #endregion
 
+var _emitted := false
+
 var profiles: Array[AntProfile] = []
 var filtered_profiles: Array[AntProfile] = []
+
+func _init() -> void:
+	setup_window("ant_profile_selector", "Select Ant Profile",
+		Vector2i(360, 460), Vector2i(300, 360), true)
 
 func _ready() -> void:
 	select_button.pressed.connect(_on_select_pressed)
 	cancel_button.pressed.connect(_on_cancel_pressed)
 	profile_list.item_activated.connect(_on_item_activated)
 	search_edit.text_changed.connect(_on_search_changed)
-	close_requested.connect(_on_cancel_pressed)
 	
-	title = "Select Ant Profile"
 	_load_profiles()
-	popup_centered()
+	present()
 
 func _load_profiles() -> void:
 	profiles.clear()
@@ -59,11 +63,11 @@ func _filter_profiles(search_text: String) -> void:
 			profile_list.add_item(profile.name)
 
 func _on_select_pressed() -> void:
+	
 	var selected = profile_list.get_selected_items()
 	if selected.size() > 0:
 		var profile = filtered_profiles[selected[0]]
-		profile_selected.emit(profile)
-		queue_free()
+		_emit_and_close(profile)
 
 func _on_cancel_pressed() -> void:
 	profile_selected.emit(null)
@@ -71,8 +75,18 @@ func _on_cancel_pressed() -> void:
 
 func _on_item_activated(index: int) -> void:
 	if index >= 0 and index < filtered_profiles.size():
-		profile_selected.emit(filtered_profiles[index])
-		queue_free()
+		_emit_and_close(filtered_profiles[index])
 
 func _on_search_changed(new_text: String) -> void:
 	_filter_profiles(new_text)
+
+func _emit_and_close(profile: AntProfile) -> void:
+	_emitted = true
+	profile_selected.emit(profile)
+	_close_now()
+
+func _close_now() -> void:
+	if not _emitted:
+		_emitted = true
+		profile_selected.emit(null)
+	super()

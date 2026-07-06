@@ -1,5 +1,5 @@
 class_name AntDesignerPanel
-extends Window
+extends ManagedWindow
 ## Designs ant *types/roles*: an AntProfile bundles a name (role), combat and
 ## movement stats, the pheromones it emits, the steering profiles it uses, and
 ## the behavior rules it runs. Profiles are persisted through ResourceLibrary
@@ -60,12 +60,9 @@ var _influence_pool: Array[Dictionary] = []
 
 
 func _init() -> void:
-	title = "Ant Designer"
-	size = Vector2i(720, 640)
-	min_size = Vector2i(560, 480)
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	setup_window("ant_designer", "Ant Designer",
+		Vector2i(720, 640), Vector2i(560, 480))
 	logger = iLogger.new("ant_designer", DebugLogger.Category.UI)
-	close_requested.connect(queue_free)
 
 
 func _ready() -> void:
@@ -229,6 +226,22 @@ func _build_editor() -> Control:
 	_save_btn = _mk_button("Save role", _on_save)
 	_save_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	vbox.add_child(_save_btn)
+	
+	_name_edit.tooltip_text = "Role name; the profile id is derived from it"
+	_role_select.tooltip_text = "Broad archetype — affects defaults, not behavior; rules do that"
+	_move_spin.tooltip_text = "Movement speed (px/s)"
+	_vision_spin.tooltip_text = "Sight radius for food, enemies, and pheromones (px)"
+	_size_spin.tooltip_text = "Visual + collision scale multiplier"
+	_health_spin.tooltip_text = "Maximum health"
+	_combatant_check.tooltip_text = "Combatants engage enemies; non-combatants only flee"
+	_damage_spin.tooltip_text = "Damage per attack"
+	_cooldown_spin.tooltip_text = "Seconds between attacks"
+	_spawn_select.tooltip_text = "Logic condition the colony checks to spawn this role"
+	_new_btn.tooltip_text = "Start a blank role"
+	_dup_btn.tooltip_text = "Copy the current role as a new editable one"
+	_del_btn.tooltip_text = "Delete the selected role (built-ins can't be deleted)"
+	_save_btn.tooltip_text = "Save to user:// and push to live ants (Ctrl+S)"
+	
 	return vbox
 #endregion
 
@@ -363,18 +376,25 @@ func _on_duplicate() -> void:
 
 func _on_delete() -> void:
 	var sel := _profile_list.get_selected_items()
+	
 	if sel.is_empty():
 		return
+		
 	var entry: ResourceLibrary.Entry = _profile_list.get_item_metadata(sel[0])
+	
 	if not entry or not entry.writable:
 		_set_status("Built-in roles can't be deleted (duplicate to make an editable copy).", true)
 		return
 	_confirm.dialog_text = "Delete role '%s'?\nLive ants keep their in-memory copy until removed." % entry.resource.name
+	
 	for conn in _confirm.confirmed.get_connections():
 		_confirm.confirmed.disconnect(conn.callable)
+	
 	_confirm.confirmed.connect(func() -> void:
+		var deleted_name: String = entry.resource.name
 		ResourceLibrary.delete_resource(entry)
 		_new_profile()
+		toast_info("Deleted role '%s'" % deleted_name)
 	)
 	_confirm.popup_centered()
 #endregion
@@ -407,7 +427,10 @@ func _load_form_from(p: AntProfile) -> void:
 	_select_spawn(p.spawn_condition)
 	_set_status("", false)
 	_save_btn.disabled = false
-
+	
+	watch([_name_edit, _role_select, _move_spin, _vision_spin, _size_spin,
+		_health_spin, _damage_spin, _cooldown_spin, _combatant_check,
+		_spawn_select])
 
 func _apply_form_to(p: AntProfile) -> void:
 	p.name = _name_edit.text.strip_edges()           # setter re-derives id
@@ -464,6 +487,10 @@ func _on_save() -> void:
 
 	_apply_to_live_ants(_editing)
 	_set_status("Saved role '%s'. New ants of this role use it immediately." % _editing.name, false)
+	
+	clear_dirty()
+	toast_success("Saved role '%s'" % _editing.name)
+	
 	# Re-select the freshly saved entry so further edits target it.
 	_editing_path = _editing.resource_path
 	_editing_writable = true
@@ -541,3 +568,7 @@ func _set_status(text: String, is_error: bool) -> void:
 	_status.add_theme_color_override("font_color",
 		Color.INDIAN_RED if is_error else Color.SEA_GREEN)
 #endregion
+
+func _confirm_shortcut() -> bool:
+	_on_save()
+	return true

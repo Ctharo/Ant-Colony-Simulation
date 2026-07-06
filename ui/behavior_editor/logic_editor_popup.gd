@@ -30,11 +30,10 @@ var _nested_picker: OptionButton
 var _vocab_list: ItemList
 var _test_result_label: Label
 
-var _dirty: bool = false
 
 func _init() -> void:
 	setup_window("expression_editor", "Expression Editor",
-	Vector2i(460, 620), Vector2i(400, 500))
+		Vector2i(460, 620), Vector2i(400, 500))
 	
 
 
@@ -208,7 +207,7 @@ func _on_add_nested() -> void:
 		_nested.append(logic)
 		_refresh_nested()
 		_validate()
-
+	
 
 func _on_remove_nested() -> void:
 	var sel := _nested_list.get_selected_items()
@@ -307,8 +306,16 @@ func _on_save() -> void:
 	EvaluationSystem.invalidate_expression(_previous_id)
 	EvaluationSystem.invalidate_expression(editing.id)
 
-	saved.emit(editing)
-	queue_free()
+	_name_edit.tooltip_text = "Unique name; the id is derived from it"
+	_type_select.tooltip_text = "Variant type this expression must return"
+	_expr_edit.tooltip_text = "Godot Expression syntax; nested expression ids are usable as variables"
+	_desc_edit.tooltip_text = "Shown in library lists and pickers"
+	_nested_list.tooltip_text = "Sub-expressions available as variables inside this one"
+	_nested_picker.tooltip_text = "Pick an expression to nest"
+
+	watch([_name_edit, _type_select, _expr_edit, _desc_edit])
 	
-func _has_unsaved_changes() -> bool:
-	return _dirty
+	saved.emit(editing)
+	clear_dirty()
+	Toast.success(get_parent(), "Saved expression '%s'" % editing.name)
+	_request_close()

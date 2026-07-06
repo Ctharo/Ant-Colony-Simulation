@@ -511,6 +511,7 @@ func _on_apply() -> void:
 		previous_path if previous_path.begins_with("user://") else "")
 	if err != OK:
 		_status.text = "Save failed — see log."
+		toast_error("Save failed — see log.")
 		return
 
 	# Drop parsed states, cached values, and stale trigger wiring so the new
@@ -522,6 +523,7 @@ func _on_apply() -> void:
 		_update_mode_cell(item, logic)
 
 	_status.text = "Saved."
+	toast_success("Policy saved")
 	if was_builtin:
 		_status.text += " Forked built-in to user:// — live ants use it now, but built-in parents on disk still reference the res:// original after restart. Fork the parent too to make this permanent."
 
@@ -532,4 +534,5 @@ func _on_invalidate() -> void:
 		return
 	EvaluationSystem.invalidate_expression(logic.id)
 	_status.text = "Cache cleared for '%s' on all ants — next use recomputes." % logic.id
+	toast_info("Cache cleared for '%s'" % logic.id)
 #endregion

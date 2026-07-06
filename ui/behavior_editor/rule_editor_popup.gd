@@ -17,11 +17,8 @@ var _status: Label
 
 
 func _init() -> void:
-	title = "Rule Editor"
-	size = Vector2i(420, 380)
-	min_size = Vector2i(380, 340)
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	close_requested.connect(queue_free)
+	setup_window("rule_editor", "Rule Editor", 
+		Vector2i(420, 380), Vector2i(380, 340))
 
 
 func open_for(res: Resource, path: String, writable: bool) -> void:
@@ -101,6 +98,16 @@ func _build_ui(is_builtin: bool) -> void:
 	cancel_btn.pressed.connect(queue_free)
 	button_row.add_child(cancel_btn)
 	vbox.add_child(button_row)
+	
+	_name_edit.tooltip_text = "Unique name; the id is derived from it"
+	_condition_select.tooltip_text = "Logic expression gating this rule; (none) means it always fires"
+	_action_select.tooltip_text = "Action executed when the condition passes"
+	_priority_spin.tooltip_text = "Higher priority rules are evaluated first; first passing rule acts"
+	_enabled_check.tooltip_text = "Disabled rules stay in the profile but are skipped at runtime"
+	_desc_edit.tooltip_text = "Shown in library lists and profile editors"
+
+	watch([_name_edit, _condition_select, _action_select,
+		_priority_spin, _enabled_check, _desc_edit])
 
 
 func _labeled_row(text: String, control: Control) -> HBoxContainer:
@@ -135,6 +142,7 @@ func _on_save() -> void:
 
 	if ResourceLibrary.save_resource(editing, ResourceLibrary.KIND_RULE, _previous_path) != OK:
 		_status.text = "Save failed — see log."
+		toast_error("Save failed — see log.")
 		return
 
 	# Priority may have changed: re-sort live behavior managers
@@ -143,4 +151,6 @@ func _on_save() -> void:
 			ant.behavior_manager.resort()
 
 	saved.emit(editing)
-	queue_free()
+	clear_dirty()
+	Toast.success(get_parent(), "Saved rule '%s'" % editing.name)
+	_request_close()

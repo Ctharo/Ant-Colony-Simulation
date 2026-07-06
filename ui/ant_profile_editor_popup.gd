@@ -15,10 +15,8 @@ var _rules: Array[AntRule] = []
 
 
 func _init() -> void:
-	title = "Edit Ant Profile"
-	size = WINDOW_SIZE
-	unresizable = false
-	close_requested.connect(_on_close_requested)
+	setup_window("ant_profile_editor", "Edit Ant Profile",
+		WINDOW_SIZE, Vector2i(380, 480))
 
 
 func _ready() -> void:
@@ -51,11 +49,8 @@ func _build_ui() -> void:
 	_add_separator(vbox)
 	_add_movement_influences_section(vbox)
 	_add_separator(vbox)
-	_add_movement_influences_section(vbox)
+	_add_behavior_rules_section(vbox)
 	_add_separator(vbox)
-	_add_behavior_rules_section(vbox)   # NEW
-	_add_separator(vbox)
-	_add_pheromones_section(vbox)
 	_add_pheromones_section(vbox)
 	_add_separator(vbox)
 	_add_buttons(vbox)
@@ -356,19 +351,18 @@ func _save_profile() -> void:
 
 ## Minimal awaitable rule picker (mirrors AntProfileSelector's contract)
 class _RulePicker:
-	extends Window
+	extends ManagedWindow
 	signal rule_selected(rule: AntRule)
 
 	var _list: ItemList
 
 	func _init() -> void:
-		title = "Add Rule"
-		size = Vector2i(320, 400)
-		process_mode = Node.PROCESS_MODE_ALWAYS
-		close_requested.connect(func() -> void:
-			rule_selected.emit(null)
-			queue_free()
-		)
+		setup_window("rule_picker", "Add Rule",
+			Vector2i(320, 400), Vector2i(280, 320), true)
+
+	func _close_now() -> void:
+		rule_selected.emit(null)
+		super()
 
 	func _ready() -> void:
 		var margin := MarginContainer.new()
@@ -394,7 +388,7 @@ class _RulePicker:
 		btn.text = "Add Selected"
 		btn.pressed.connect(_confirm)
 		vbox.add_child(btn)
-		popup_centered()
+		present()
 
 	func _confirm() -> void:
 		var sel := _list.get_selected_items()
@@ -532,3 +526,16 @@ func _on_close_requested() -> void:
 	closed.emit(editing_profile)
 	queue_free()
 #endregion
+
+## Edits apply to the live resource immediately; persist them on close
+## instead of offering to discard.
+func _has_unsaved_changes() -> bool:
+	return false  # never block closing — we save instead
+
+
+func _close_now() -> void:
+	if dirty:
+		_save_profile()
+		Toast.success(get_parent(), "Saved profile '%s'" % editing_profile.name)
+	closed.emit(editing_profile)
+	super()

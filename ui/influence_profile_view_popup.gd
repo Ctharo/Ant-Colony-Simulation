@@ -13,10 +13,8 @@ var viewing_profile: InfluenceProfile
 
 
 func _init() -> void:
-	title = "Influence Profile"
-	size = WINDOW_SIZE
-	unresizable = false
-	close_requested.connect(_on_close_requested)
+	setup_window("influence_profile_view", "Influence Profile",
+		WINDOW_SIZE, Vector2i(380, 380))
 
 
 func _ready() -> void:
@@ -212,9 +210,9 @@ func _add_buttons(parent: Control) -> void:
 #region Public Methods
 func show_profile(profile: InfluenceProfile) -> void:
 	viewing_profile = profile
-	title = "Influence Profile: %s" % profile.name
+	set_window_title("Influence Profile: %s" % profile.name)
 	_populate_fields()
-	popup_centered()
+	present()
 
 
 func _populate_fields() -> void:
@@ -270,11 +268,9 @@ func _find_node(node_name: String) -> Node:
 
 #region Signal Handlers
 func _on_close_button_pressed() -> void:
+	_request_close()
+	
+func _close_now() -> void:
 	closed.emit()
-	queue_free()
-
-
-func _on_close_requested() -> void:
-	closed.emit()
-	queue_free()
+	super()
 #endregion

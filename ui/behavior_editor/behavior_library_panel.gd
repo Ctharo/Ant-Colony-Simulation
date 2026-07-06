@@ -54,6 +54,11 @@ func _ready() -> void:
 	_del_btn = _make_button("Delete", _on_delete)
 	buttons.add_child(_del_btn)
 
+	_kind_select.tooltip_text = "Which resource kind to browse"
+	_edit_btn.tooltip_text = "Edit the selection (built-ins fork to user:// on save)"
+	_dup_btn.tooltip_text = "Copy the selection as a new editable resource"
+	_del_btn.tooltip_text = "Delete from user:// (built-ins can't be deleted)"
+
 	_confirm = ConfirmationDialog.new()
 	add_child(_confirm)
 
@@ -139,7 +144,11 @@ func _on_delete() -> void:
 	# Reconnect confirmed for this specific entry
 	for conn in _confirm.confirmed.get_connections():
 		_confirm.confirmed.disconnect(conn.callable)
-	_confirm.confirmed.connect(func() -> void: ResourceLibrary.delete_resource(entry))
+	_confirm.confirmed.connect(func() -> void:
+		var deleted_name: String = entry.resource.name
+		ResourceLibrary.delete_resource(entry)
+		toast_info("Deleted '%s'" % deleted_name)
+	)
 	_confirm.popup_centered()
 
 
