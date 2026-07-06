@@ -1,5 +1,5 @@
 class_name ActionEditorPopup
-extends Window
+extends ManagedWindow
 ## Runtime editor for AntAction resources. Method choices come straight from
 ## Ant.ACTION_API — the UI physically cannot author a non-whitelisted call.
 
@@ -30,7 +30,7 @@ func open_for(res: Resource, path: String, writable: bool) -> void:
 	editing = ResourceLibrary.duplicate_for_edit(res) if not path.is_empty() else res
 	_params.assign(editing.params)
 	_build_ui(not path.is_empty() and not writable)
-	popup_centered()
+	present()
 
 
 func _build_ui(is_builtin: bool) -> void:

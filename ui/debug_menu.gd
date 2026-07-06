@@ -80,8 +80,8 @@ func _build_ui() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	alignment = BoxContainer.ALIGNMENT_CENTER
 
-	_food_spin = _add_spin_row("Food:", "food_spawn_count")
-	_ant_spin = _add_spin_row("Ants:", "ant_spawn_count")
+	_food_spin = _add_spin_row("Food:", "food_spawn_count", "Food items spawned when the sandbox starts")	
+	_ant_spin = _add_spin_row("Ants:", "ant_spawn_count", "Ants spawned when the sandbox starts")
 
 	add_child(VSeparator.new())
 
@@ -114,14 +114,17 @@ func _build_ui() -> void:
 	designer_btn.pressed.connect(_on_designer_pressed)
 	add_child(designer_btn)
 
-func _add_spin_row(label_text: String, setting_name: String) -> SpinBox:
+func _add_spin_row(label_text: String, setting_name: String, tooltip: String = "") -> SpinBox:
 	var label := Label.new()
 	label.text = label_text
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	label.tooltip_text = tooltip
 	add_child(label)
 
 	var spin := SpinBox.new()
 	spin.custom_minimum_size = Vector2(90, 0)
 	var constraints: Dictionary = settings_manager.get_constraints(setting_name)
+	spin.tooltip_text = "%s\nRange: %s–%s" % [tooltip, constraints.get("min", 0), constraints.get("max", 100)]	
 	spin.min_value = constraints.get("min", 0)
 	spin.max_value = constraints.get("max", 100)
 	spin.step = constraints.get("step", 1)
@@ -257,7 +260,7 @@ func _on_behavior_pressed() -> void:
 		return
 	_library_panel = BehaviorLibraryPanel.new()
 	get_tree().root.add_child(_library_panel)
-	_library_panel.popup_centered()
+	_library_panel.present()
 
 func _on_designer_pressed() -> void:
 	if is_instance_valid(_designer_panel):
@@ -265,7 +268,7 @@ func _on_designer_pressed() -> void:
 		return
 	_designer_panel = BehaviorDesignerPanel.new()
 	get_tree().root.add_child(_designer_panel)
-	_designer_panel.popup_centered()
+	_designer_panel.present()
 
 func _apply_all_visualizations() -> void:
 	_apply_heatmap(bool(settings_manager.get_setting("debug_show_heatmap")))

@@ -1,5 +1,5 @@
 class_name ColonyProfileEditor
-extends Window
+extends ManagedWindow
 
 signal closed(result: Variant)
 
@@ -28,7 +28,7 @@ func edit_profile(profile: ColonyProfile) -> void:
 	editing_profile = profile
 	_load_profile_data()
 	title = "Edit Colony Profile"
-	popup_centered()
+	present()
 
 func create_new_profile() -> void:
 	editing_profile = ColonyProfile.new()

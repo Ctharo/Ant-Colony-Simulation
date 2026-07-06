@@ -1,5 +1,5 @@
 class_name RuleEditorPopup
-extends Window
+extends ManagedWindow
 ## Runtime editor for AntRule resources.
 
 signal saved(resource: AntRule)
@@ -28,7 +28,7 @@ func open_for(res: Resource, path: String, writable: bool) -> void:
 	_previous_path = path if writable else ""
 	editing = ResourceLibrary.duplicate_for_edit(res) if not path.is_empty() else res
 	_build_ui(not path.is_empty() and not writable)
-	popup_centered()
+	present()
 
 
 func _build_ui(is_builtin: bool) -> void:

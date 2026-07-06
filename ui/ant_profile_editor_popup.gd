@@ -1,5 +1,5 @@
 class_name AntProfileEditorPopup
-extends Window
+extends ManagedWindow
 
 signal closed(profile: AntProfile)
 

@@ -1,5 +1,5 @@
 class_name LogicEditorPopup
-extends Window
+extends ManagedWindow
 ## Runtime editor for Logic expression resources.
 
 signal saved(resource: Logic)
@@ -30,12 +30,12 @@ var _nested_picker: OptionButton
 var _vocab_list: ItemList
 var _test_result_label: Label
 
+var _dirty: bool = false
+
 func _init() -> void:
-	title = "Expression Editor"
-	size = Vector2i(460, 620)
-	min_size = Vector2i(400, 500)
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	close_requested.connect(queue_free)
+	setup_window("expression_editor", "Expression Editor",
+	Vector2i(460, 620), Vector2i(400, 500))
+	
 
 
 func open_for(res: Resource, path: String, writable: bool) -> void:
@@ -46,8 +46,7 @@ func open_for(res: Resource, path: String, writable: bool) -> void:
 	_previous_id = editing.id
 	_nested.assign(editing.nested_expressions)
 	_build_ui(writable, path)
-	popup_centered()
-
+	present()
 
 func _build_ui(writable: bool, path: String) -> void:
 	var margin := MarginContainer.new()
@@ -310,3 +309,6 @@ func _on_save() -> void:
 
 	saved.emit(editing)
 	queue_free()
+	
+func _has_unsaved_changes() -> bool:
+	return _dirty

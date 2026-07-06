@@ -1,5 +1,5 @@
 class_name BehaviorDesignerPanel
-extends Window
+extends ManagedWindow
 ## Visual behavior designer: renders rules and their nested Logic expression
 ## trees, shows live values and evaluation costs against a probe ant, and
 ## edits each expression's re-evaluation policy (frame cache, always, timer,
@@ -87,12 +87,9 @@ var _refresh_timer: Timer
 
 
 func _init() -> void:
-	title = "Behavior Designer"
-	size = Vector2i(920, 640)
-	min_size = Vector2i(720, 480)
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	setup_window("behavior_designer", "Behavior Designer",
+		Vector2i(920, 640), Vector2i(720, 480))
 	logger = iLogger.new("behavior_designer", DebugLogger.Category.UI)
-	close_requested.connect(queue_free)
 
 
 func _ready() -> void:

@@ -1,5 +1,5 @@
 class_name InfluenceProfileViewPopup
-extends Window
+extends ManagedWindow
 
 signal closed()
 

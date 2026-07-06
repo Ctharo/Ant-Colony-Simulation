@@ -1,5 +1,5 @@
 class_name BehaviorLibraryPanel
-extends Window
+extends ManagedWindow
 ## Browser for Logic / AntAction / AntRule resources: create, edit,
 ## duplicate, delete. Editing a built-in forks it to user://.
 
@@ -15,11 +15,8 @@ const KIND_LABELS: Array[String] = ["Expressions", "Actions", "Rules"]
 
 
 func _init() -> void:
-	title = "Behavior Library"
-	size = Vector2i(420, 520)
-	min_size = Vector2i(340, 380)
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	close_requested.connect(queue_free)
+	setup_window("behavior_library", "Behavior Library", 
+	Vector2i(420, 520), Vector2i(340, 380))
 
 
 func _ready() -> void:
