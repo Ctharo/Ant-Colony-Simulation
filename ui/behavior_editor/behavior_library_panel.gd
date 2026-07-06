@@ -114,12 +114,12 @@ func _on_edit() -> void:
 	var entry := _selected_entry()
 	if not entry:
 		return
-	var popup: Window
+	var p_popup: Window
 	match _current_kind():
-		"logic": popup = LogicEditorPopup.new()
-		"action": popup = ActionEditorPopup.new()
-		"rule": popup = RuleEditorPopup.new()
-	_open_editor(popup, entry.resource, entry.path, entry.writable)
+		"logic": p_popup = LogicEditorPopup.new()
+		"action": p_popup = ActionEditorPopup.new()
+		"rule": p_popup = RuleEditorPopup.new()
+	_open_editor(p_popup, entry.resource, entry.path, entry.writable)
 
 
 func _on_duplicate() -> void:
@@ -128,12 +128,12 @@ func _on_duplicate() -> void:
 		return
 	var copy: Resource = ResourceLibrary.duplicate_for_edit(entry.resource)
 	copy.name = "%s copy" % copy.name
-	var popup: Window
+	var p_popup: Window
 	match _current_kind():
-		"logic": popup = LogicEditorPopup.new()
-		"action": popup = ActionEditorPopup.new()
-		"rule": popup = RuleEditorPopup.new()
-	_open_editor(popup, copy, "", true)
+		"logic": p_popup = LogicEditorPopup.new()
+		"action": p_popup = ActionEditorPopup.new()
+		"rule": p_popup = RuleEditorPopup.new()
+	_open_editor(p_popup, copy, "", true)
 
 
 func _on_delete() -> void:
@@ -152,6 +152,6 @@ func _on_delete() -> void:
 	_confirm.popup_centered()
 
 
-func _open_editor(popup: Window, res: Resource, path: String, writable: bool) -> void:
-	add_child(popup)
-	popup.open_for(res, path, writable)
+func _open_editor(p_popup: Window, res: Resource, path: String, writable: bool) -> void:
+	add_child(p_popup)
+	p_popup.open_for(res, path, writable)
