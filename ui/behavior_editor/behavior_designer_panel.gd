@@ -6,6 +6,11 @@ extends ManagedWindow
 ## event triggers, sticky). Policies persist through ResourceLibrary exactly
 ## like other behavior resources — editing a built-in forks it to user://.
 ##
+## This is the PRIMARY authoring window: the left pane offers full CRUD
+## (New / Edit / Duplicate / Delete), double-clicking a list entry opens the
+## matching editor popup, and double-clicking any expression row in the tree
+## opens the Logic editor for that expression directly.
+##
 ## Opened from the sandbox debug menu ("Designer"). Built entirely in code to
 ## match the project's runtime-UI convention (no separate .tscn).
 ##
@@ -67,6 +72,10 @@ var _probe_label: Label
 
 # Left pane
 var _item_list: ItemList
+var _edit_btn: Button
+var _dup_btn: Button
+var _del_btn: Button
+var _confirm: ConfirmationDialog
 
 # Right pane
 var _tree: Tree
@@ -109,11 +118,7 @@ func _ready() -> void:
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(split)
 
-	_item_list = ItemList.new()
-	_item_list.custom_minimum_size = Vector2(190, 0)
-	_item_list.item_selected.connect(func(_i: int) -> void: _rebuild_tree())
-	split.add_child(_item_list)
-
+	split.add_child(_build_left_pane())
 	split.add_child(_build_right_pane())
 
 	_totals_label = Label.new()
@@ -126,6 +131,9 @@ func _ready() -> void:
 	gating_hint.add_theme_font_size_override("font_size", 11)
 	gating_hint.modulate = Color(1, 1, 1, 0.6)
 	root.add_child(gating_hint)
+
+	_confirm = ConfirmationDialog.new()
+	add_child(_confirm)
 
 	_refresh_timer = Timer.new()
 	_refresh_timer.wait_time = REFRESH_INTERVAL
@@ -163,6 +171,48 @@ func _build_top_bar() -> HBoxContainer:
 	return top
 
 
+func _build_left_pane() -> VBoxContainer:
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 6)
+
+	_item_list = ItemList.new()
+	_item_list.custom_minimum_size = Vector2(190, 0)
+	_item_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_item_list.item_selected.connect(func(_i: int) -> void:
+		_rebuild_tree()
+		_update_crud_buttons()
+	)
+	_item_list.item_activated.connect(func(_i: int) -> void: _edit_selected_entry())
+	left.add_child(_item_list)
+
+	var crud := HBoxContainer.new()
+	crud.add_theme_constant_override("separation", 4)
+	left.add_child(crud)
+
+	crud.add_child(_small_btn("New", _on_new,
+		"Create a new resource of the selected kind"))
+	_edit_btn = _small_btn("Edit", _edit_selected_entry,
+		"Edit the selection (built-ins fork to user:// on save). Double-click also works.")
+	crud.add_child(_edit_btn)
+	_dup_btn = _small_btn("Dup", _on_duplicate,
+		"Copy the selection as a new editable resource")
+	crud.add_child(_dup_btn)
+	_del_btn = _small_btn("Del", _on_delete,
+		"Delete from user:// (built-ins can't be deleted)")
+	crud.add_child(_del_btn)
+
+	return left
+
+
+func _small_btn(text: String, handler: Callable, tooltip: String) -> Button:
+	var btn := Button.new()
+	btn.text = text
+	btn.tooltip_text = tooltip
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.pressed.connect(handler)
+	return btn
+
+
 func _build_right_pane() -> VBoxContainer:
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 8)
@@ -188,6 +238,7 @@ func _build_right_pane() -> VBoxContainer:
 	_tree.set_column_custom_minimum_width(Col.HITS, 96)
 	_tree.set_column_custom_minimum_width(Col.AVG, 72)
 	_tree.item_selected.connect(_on_tree_item_selected)
+	_tree.item_activated.connect(_on_tree_item_activated)
 	right.add_child(_tree)
 
 	right.add_child(_build_policy_editor())
@@ -322,7 +373,15 @@ func _refresh_list() -> void:
 
 	if _item_list.get_selected_items().is_empty() and _item_list.item_count > 0:
 		_item_list.select(0)
+	_update_crud_buttons()
 	_rebuild_tree()
+
+
+func _update_crud_buttons() -> void:
+	var entry := _selected_entry()
+	_edit_btn.disabled = entry == null
+	_dup_btn.disabled = entry == null
+	_del_btn.disabled = entry == null or not entry.writable
 
 
 func _rebuild_tree() -> void:
@@ -373,7 +432,9 @@ func _add_logic_item(parent: TreeItem, logic: Logic, seen: Dictionary, prefix: S
 	if expr.length() > 44:
 		expr = expr.substr(0, 41) + "..."
 	item.set_text(Col.NAME, "%s%s  —  %s" % [prefix, display, expr])
-	item.set_tooltip_text(Col.NAME, "%s\n\n%s" % [logic.expression_string, logic.description])
+	item.set_tooltip_text(Col.NAME, "%s\n\n%s\n\nDouble-click to open in the expression editor." % [
+		logic.expression_string, logic.description
+	])
 	item.set_metadata(Col.NAME, logic)
 	_update_mode_cell(item, logic)
 
@@ -393,6 +454,79 @@ func _update_mode_cell(item: TreeItem, logic: Logic) -> void:
 	item.set_text(Col.MODE, label)
 	item.set_custom_color(Col.MODE, MODE_COLORS.get(logic.eval_mode, Color.WHITE))
 	item.set_tooltip_text(Col.MODE, MODE_HINTS.get(logic.eval_mode, ""))
+#endregion
+
+
+#region CRUD (New / Edit / Duplicate / Delete)
+func _on_new() -> void:
+	match _current_kind():
+		ResourceLibrary.KIND_LOGIC:
+			_open_editor(LogicEditorPopup.new(), Logic.new(), "", true)
+		ResourceLibrary.KIND_RULE:
+			_open_editor(RuleEditorPopup.new(), AntRule.new(), "", true)
+
+
+## Double-click on the left list, or the Edit button: Rule entries open the
+## rule editor, Expression entries open the logic editor.
+func _edit_selected_entry() -> void:
+	var entry := _selected_entry()
+	if not entry:
+		return
+	if entry.resource is AntRule:
+		_open_editor(RuleEditorPopup.new(), entry.resource, entry.path, entry.writable)
+	elif entry.resource is Logic:
+		_open_editor(LogicEditorPopup.new(), entry.resource, entry.path, entry.writable)
+
+
+func _on_duplicate() -> void:
+	var entry := _selected_entry()
+	if not entry:
+		return
+	var copy: Resource = ResourceLibrary.duplicate_for_edit(entry.resource)
+	copy.name = "%s copy" % copy.name
+	if copy is AntRule:
+		_open_editor(RuleEditorPopup.new(), copy, "", true)
+	elif copy is Logic:
+		_open_editor(LogicEditorPopup.new(), copy, "", true)
+
+
+func _on_delete() -> void:
+	var entry := _selected_entry()
+	if not entry or not entry.writable:
+		return
+	_confirm.dialog_text = "Delete '%s'?\nAnts currently referencing it keep the in-memory copy until restart." % entry.resource.name
+	# Reconnect confirmed for this specific entry
+	for conn in _confirm.confirmed.get_connections():
+		_confirm.confirmed.disconnect(conn.callable)
+	_confirm.confirmed.connect(func() -> void:
+		var deleted_name: String = entry.resource.name
+		ResourceLibrary.delete_resource(entry)
+		toast_info("Deleted '%s'" % deleted_name)
+	)
+	_confirm.popup_centered()
+
+
+func _open_editor(popup: Window, res: Resource, path: String, writable: bool) -> void:
+	add_child(popup)
+	popup.open_for(res, path, writable)
+	# library_changed (already connected) refreshes the list on save; this
+	# restores the tree, whose selection is lost when the saved resource
+	# instance replaces the one being displayed.
+	if popup.has_signal("saved"):
+		popup.saved.connect(func(_r: Resource) -> void: _rebuild_tree())
+
+
+## Double-click on a tree row: open the Logic editor for that expression.
+## Nested built-ins embedded without their own file open with an empty path,
+## i.e. as "new" — saving writes a standalone user:// copy (the built-in
+## parent on disk still references the embedded original after restart; fork
+## the parent too to make it permanent).
+func _on_tree_item_activated() -> void:
+	var logic := _selected_logic()
+	if not logic:
+		return
+	var path := logic.resource_path
+	_open_editor(LogicEditorPopup.new(), logic, path, path.begins_with("user://"))
 #endregion
 
 

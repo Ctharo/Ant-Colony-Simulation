@@ -29,7 +29,7 @@ var _nested_list: ItemList
 var _nested_picker: OptionButton
 var _vocab_list: ItemList
 var _test_result_label: Label
-
+var _vocab_tree: Tree
 
 func _init() -> void:
 	setup_window("expression_editor", "Expression Editor",
@@ -91,13 +91,14 @@ func _build_ui(writable: bool, path: String) -> void:
 	vbox.add_child(_validation_label)
 
 	var vocab_label := Label.new()
-	vocab_label.text = "Available identifiers (double-click to insert):"
+	vocab_label.text = "Vocabulary (double-click to insert):"
 	vbox.add_child(vocab_label)
 
-	_vocab_list = ItemList.new()
-	_vocab_list.custom_minimum_size = Vector2(0, 90)
-	_vocab_list.item_activated.connect(_on_vocab_activated)
-	vbox.add_child(_vocab_list)
+	_vocab_tree = Tree.new()
+	_vocab_tree.hide_root = true
+	_vocab_tree.custom_minimum_size = Vector2(0, 130)
+	_vocab_tree.item_activated.connect(_on_vocab_activated)
+	vbox.add_child(_vocab_tree)
 	_populate_vocabulary()
 
 	# --- Test row (before the Save/Cancel button_row) ---
@@ -153,6 +154,68 @@ func _build_ui(writable: bool, path: String) -> void:
 	watch([_name_edit, _type_select, _expr_edit, _desc_edit])
 	
 	_refresh_nested()
+	_validate()
+
+func _populate_vocabulary() -> void:
+	_vocab_tree.clear()
+	var root := _vocab_tree.create_item()
+
+	# Bound nested expressions — the variables this expression composes.
+	if not _nested.is_empty():
+		var bound := _category_item(root, "This expression (nested)")
+		for nested in _nested:
+			var it := _vocab_tree.create_item(bound)
+			it.set_text(0, nested.id)
+			it.set_tooltip_text(0, nested.description)
+			it.set_metadata(0, { "insert": nested.id })
+
+	# Tier 0: atomic senses, grouped by AntSenses.VOCAB categories.
+	var groups := {}
+	for entry: Dictionary in AntSenses.get_vocabulary():
+		if not groups.has(entry.category):
+			groups[entry.category] = _category_item(root, entry.category)
+		var it := _vocab_tree.create_item(groups[entry.category])
+		it.set_text(0, "%s : %s" % [entry.signature, entry.returns])
+		it.set_tooltip_text(0, entry.doc)
+		it.set_metadata(0, { "insert": entry.name + ("()" if entry.kind == "method" else "") })
+
+	# Tier 1: library expressions. Inserting one also binds it as nested.
+	var derived := _category_item(root, "Derived (library expressions)")
+	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_LOGIC):
+		var logic: Logic = entry.resource
+		if logic == editing or logic.id == _previous_id or logic in _nested:
+			continue
+		if _creates_cycle(logic, editing):
+			continue
+		var it := _vocab_tree.create_item(derived)
+		it.set_text(0, "%s : %s" % [logic.id, type_string(logic.type)])
+		it.set_tooltip_text(0, "%s\n\nInserting binds it as a nested expression."
+			% (logic.description if not logic.description.is_empty() else logic.expression_string))
+		it.set_metadata(0, { "insert": logic.id, "bind": logic })
+
+
+func _category_item(root: TreeItem, label: String) -> TreeItem:
+	var it := _vocab_tree.create_item(root)
+	it.set_text(0, label)
+	it.set_selectable(0, false)
+	it.set_custom_color(0, Color(0.7, 0.8, 1.0))
+	return it
+
+func _on_vocab_activated() -> void:
+	var it := _vocab_tree.get_selected()
+	if not it:
+		return
+	var meta: Variant = it.get_metadata(0)
+	if not meta is Dictionary:
+		return
+	var bind: Logic = meta.get("bind")
+	if bind and bind not in _nested:
+		_nested.append(bind)
+		_refresh_nested()
+		_populate_vocabulary()  # moves it into the "nested" group
+		mark_dirty()
+	_expr_edit.insert_text_at_caret(meta.insert)
+	_expr_edit.grab_focus()
 	_validate()
 
 func _labeled_row(text: String, control: Control) -> HBoxContainer:
@@ -219,6 +282,7 @@ func _on_add_nested() -> void:
 		_nested.append(logic)
 		_refresh_nested()
 		_validate()
+	_populate_vocabulary()
 	
 
 func _on_remove_nested() -> void:
@@ -228,26 +292,8 @@ func _on_remove_nested() -> void:
 	_nested.remove_at(sel[0])
 	_refresh_nested()
 	_validate()
+	_populate_vocabulary()
 #endregion
-
-func _populate_vocabulary() -> void:
-	_vocab_list.clear()
-	# Nested expression bindings first — they're what this expression composes
-	for nested in _nested:
-		var idx := _vocab_list.add_item("%s  [nested]" % nested.id)
-		_vocab_list.set_item_metadata(idx, nested.id)
-		_vocab_list.set_item_tooltip(idx, nested.description)
-	for entry: Dictionary in AntSenses.get_vocabulary():
-		var display: String = entry.get("signature", entry.name)
-		var idx := _vocab_list.add_item("%s  [%s]" % [display, entry.kind])
-		_vocab_list.set_item_metadata(idx, entry.name + ("()" if entry.kind == "method" else ""))
-
-
-func _on_vocab_activated(index: int) -> void:
-	_expr_edit.insert_text_at_caret(_vocab_list.get_item_metadata(index))
-	_expr_edit.grab_focus()
-	_validate()
-
 
 func _on_test_pressed() -> void:
 	if not _validate():

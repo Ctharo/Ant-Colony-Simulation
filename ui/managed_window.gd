@@ -10,7 +10,7 @@ extends Window
 ##    and an automatic discard-confirmation on close while dirty
 ##  - watch(controls) wires change signals from form controls to mark_dirty()
 ##  - toast_success/error/info(text) for temporary status messages (Toast)
-##  - present() — restores last geometry, or centers on first open
+##  - present() — restores last geometry, or fits-and-centers on first open
 ##
 ## Usage in a subclass _init():
 ##   setup_window("behavior_library", "Behavior Library",
@@ -38,6 +38,7 @@ var dirty: bool = false:
 var _base_title: String = ""
 var _default_size: Vector2i = Vector2i(480, 400)
 var _geometry_restored: bool = false
+var _geometry_saved_on_close: bool = false
 var _close_confirm: ConfirmationDialog
 #endregion
 
@@ -62,13 +63,25 @@ func setup_window(id: String, p_title: String, p_size: Vector2i,
 	focus_entered.connect(move_to_foreground)
 
 
-## Show the window: restore saved geometry if we have it, else center.
+## Show the window: restore saved geometry if we have it (clamped so a rect
+## saved against a bigger viewport can't strand the window), else size to
+## the default — shrunk to fit the viewport — and center at that final size.
+##
+## Never rely on popup_centered() for this: it centers at the *requested*
+## size, so a window taller than the viewport gets clamped afterwards and
+## ends up pinned to an edge instead of centered.
 func present() -> void:
 	if _restore_geometry():
 		show()
+		_clamp_to_bounds()
 	else:
-		popup_centered(_default_size)
-	_clamp_to_bounds()
+		var bounds := _viewport_bounds()
+		size = Vector2i(
+			clampi(_default_size.x, min_size.x, bounds.x),
+			clampi(_default_size.y, min_size.y, bounds.y),
+		)
+		position = (bounds - size) / 2
+		show()
 	grab_focus()
 
 
@@ -157,12 +170,15 @@ func _show_close_confirm() -> void:
 
 func _close_now() -> void:
 	_save_geometry()
+	_geometry_saved_on_close = true
 	queue_free()
 
 
 func _exit_tree() -> void:
 	## Safety net for windows freed without close_requested (scene change).
-	_save_geometry()
+	## Skipped after a normal close, which already saved.
+	if not _geometry_saved_on_close:
+		_save_geometry()
 #endregion
 
 
@@ -193,7 +209,9 @@ func _geometry_key() -> String:
 
 
 func _save_geometry() -> void:
-	if window_id.is_empty() or not visible and not _geometry_restored:
+	## Skip windows that never made it on screen (no id, or created but
+	## never presented) so a broken open can't persist a garbage rect.
+	if window_id.is_empty() or (not visible and not _geometry_restored):
 		return
 	SettingsManager.set_setting(_geometry_key(), {
 		"x": position.x, "y": position.y,
@@ -213,16 +231,19 @@ func _restore_geometry() -> bool:
 	return true
 
 
-## Keeps the window fully inside the parent viewport (embedded windows) or
-## the screen (native). Prevents "my designer vanished off-screen".
-func _clamp_to_bounds() -> void:
-	var bounds: Vector2i
+## The area a window may occupy: the embedding viewport for embedded
+## windows, or the screen for native ones.
+func _viewport_bounds() -> Vector2i:
 	var parent := get_parent()
 	if parent and parent.get_viewport():
-		bounds = Vector2i(parent.get_viewport().get_visible_rect().size)
-	else:
-		bounds = DisplayServer.screen_get_size()
+		return Vector2i(parent.get_viewport().get_visible_rect().size)
+	return DisplayServer.screen_get_size()
 
+
+## Keeps the window fully inside the visible bounds. Prevents
+## "my designer vanished off-screen".
+func _clamp_to_bounds() -> void:
+	var bounds := _viewport_bounds()
 	size = Vector2i(mini(size.x, bounds.x), mini(size.y, bounds.y))
 	position = Vector2i(
 		clampi(position.x, 0, maxi(0, bounds.x - size.x)),
