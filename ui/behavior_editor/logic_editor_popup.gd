@@ -285,6 +285,12 @@ func _validate() -> bool:
 		_validation_label.add_theme_color_override("font_color", Color.INDIAN_RED)
 		return false
 
+	var boundary_errors := LogicValidator.validate(_expr_edit.text, _nested)
+	if not boundary_errors.is_empty():
+		_validation_label.text = "\n".join(boundary_errors)
+		_validation_label.modulate = Color(1.0, 0.55, 0.55)
+		return false
+
 	_validation_label.text = "Parses OK. Other identifiers resolve against the ant at runtime."
 	_validation_label.add_theme_color_override("font_color", Color.SEA_GREEN)
 	return true

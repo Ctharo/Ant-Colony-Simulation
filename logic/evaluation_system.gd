@@ -181,6 +181,12 @@ func get_value(expression: Logic, entity: Node) -> Variant:
 
 	# Lazy parsing if needed
 	if not state.is_parsed:
+		var errors := LogicValidator.validate_logic(expression)
+		if not errors.is_empty():
+			push_error("Logic '%s' rejected by validator: %s" % [expression.id, "; ".join(errors)])
+			# mark the state invalid so we don't re-validate every call,
+			# and return the safe default for the declared type
+			return false
 		_parse_expression(expression, entity)
 
 	# Calculate new value

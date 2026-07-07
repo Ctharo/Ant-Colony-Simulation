@@ -165,6 +165,12 @@ func has_id_conflict(kind: String, id: String, exclude: Resource) -> bool:
 ## Saves to user://. previous_path handles renames (stale file removal) and
 ## the fork case: a built-in edited in the UI lands here as a new user file.
 func save_resource(res: Resource, kind: String, previous_path: String = "") -> Error:
+	if kind == KIND_LOGIC:
+		var errors := LogicValidator.validate_logic(res)
+		if not errors.is_empty():
+			push_error("Refusing to save Logic '%s': %s" % [res.id, "; ".join(errors)])
+			return ERR_INVALID_DATA
+			
 	var dir: String = USER_ROOTS[kind]
 	DirAccess.make_dir_recursive_absolute(dir)
 
