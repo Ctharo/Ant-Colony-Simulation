@@ -269,14 +269,14 @@ func _on_add_rule_pressed() -> void:
 
 
 func _on_new_rule_pressed() -> void:
-	var popup := RuleEditorPopup.new()
-	add_child(popup)
-	popup.saved.connect(func(rule: AntRule) -> void:
+	var p_popup := RuleEditorPopup.new()
+	add_child(p_popup)
+	p_popup.saved.connect(func(rule: AntRule) -> void:
 		if rule not in _rules:
 			_rules.append(rule)
 		_commit_rules()
 	)
-	popup.open_for(AntRule.new(), "", true)
+	p_popup.open_for(AntRule.new(), "", true)
 
 
 func _on_edit_rule_pressed() -> void:
@@ -287,9 +287,9 @@ func _on_edit_rule_pressed() -> void:
 	var rule: AntRule = list.get_item_metadata(sel[0])
 	var entry := _library_entry_for(rule)
 
-	var popup := RuleEditorPopup.new()
-	add_child(popup)
-	popup.saved.connect(func(saved_rule: AntRule) -> void:
+	var p_popup := RuleEditorPopup.new()
+	add_child(p_popup)
+	p_popup.saved.connect(func(saved_rule: AntRule) -> void:
 		# Editing a built-in forks it: swap the profile's reference to the fork
 		var idx := _rules.find(rule)
 		if idx >= 0 and saved_rule != rule:
@@ -297,10 +297,10 @@ func _on_edit_rule_pressed() -> void:
 		_commit_rules()
 	)
 	if entry:
-		popup.open_for(entry.resource, entry.path, entry.writable)
+		p_popup.open_for(entry.resource, entry.path, entry.writable)
 	else:
 		# Rule not in library (e.g. embedded in the .tres) — edit in place, writable
-		popup.open_for(rule, "", true)
+		p_popup.open_for(rule, "", true)
 
 
 func _on_remove_rule_pressed() -> void:
@@ -417,9 +417,9 @@ func _on_view_influence_pressed() -> void:
 
 
 func _show_influence_profile_details(profile: InfluenceProfile) -> void:
-	var popup = InfluenceProfileViewPopup.new()
-	add_child(popup)
-	popup.show_profile(profile)
+	var p_popup = InfluenceProfileViewPopup.new()
+	add_child(p_popup)
+	p_popup.show_profile(profile)
 #endregion
 
 
