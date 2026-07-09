@@ -29,6 +29,18 @@ extends RefCounted
 ## sense is automatically legal everywhere the moment it gets a VOCAB entry.
 
 #region Whitelists
+## Word-form operators of the Expression language. The identifier regex in
+## _extract_identifiers() cannot distinguish these from names, so they must
+## be whitelisted or every expression using "a and b" is falsely rejected
+## (the symbol forms &&/||/! never hit the regex and were unaffected).
+##
+## Deliberately excludes "self": inside an Expression, self IS the base
+## instance (AntSenses), i.e. an object receiver — exactly what this
+## validator exists to deny.
+const KEYWORDS: Array[String] = [
+	"and", "or", "not", "in",
+]
+
 ## Pure Expression built-in functions. Deliberately excludes anything with
 ## side effects or object access (print, load, instance_from_id, ...).
 const BUILTIN_FUNCS: Array[String] = [
@@ -118,6 +130,8 @@ static func _build_allowed(nested: Array[Logic]) -> Dictionary:
 	if _static_allowed.is_empty():
 		for entry: Dictionary in AntSenses.get_vocabulary():
 			_static_allowed[entry.name] = true
+		for n in KEYWORDS:
+			_static_allowed[n] = true
 		for n in BUILTIN_FUNCS:
 			_static_allowed[n] = true
 		for n in VALUE_METHODS:

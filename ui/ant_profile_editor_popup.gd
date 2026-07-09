@@ -329,19 +329,19 @@ func _commit_rules() -> void:
 	_save_profile()
 	_apply_rules_to_live_ants()
 
-
 func _apply_rules_to_live_ants() -> void:
 	var effective: Array[AntRule] = []
 	if _rules.is_empty():
-		for path in Ant.DEFAULT_BEHAVIOR_RULES:
-			effective.append(load(path))
+		for rule_id: String in Ant.DEFAULT_RULE_IDS:
+			var rule: AntRule = ResourceLibrary.get_by_id(ResourceLibrary.KIND_RULE, rule_id)
+			if rule:
+				effective.append(rule)
 	else:
 		effective.assign(_rules)
 
 	for ant: Ant in AntManager.get_all():
 		if ant.profile == editing_profile and ant.behavior_manager:
 			ant.behavior_manager.set_rules(effective)
-
 
 func _save_profile() -> void:
 	var prev := editing_profile.resource_path

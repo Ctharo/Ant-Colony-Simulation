@@ -12,7 +12,7 @@ extends RefCounted
 ##   primitives belongs in a Logic resource (Tier 1, "derived").
 ##
 ##   Atomic:  colony_position, nearest_food_in_view_position, energy_level
-##   Derived: distance_to_colony, low_energy, food_is_near  →  .tres files
+##   Derived: distance_to_colony, low_energy, food_is_near  →  Logic resources
 ##
 ## SAFETY RULE:
 ##   Every public symbol returns a VALUE TYPE (bool/int/float/String/Vector2).
@@ -20,15 +20,21 @@ extends RefCounted
 ##   from an expression allow arbitrary chained method calls, which is the
 ##   residual risk this facade exists to close.
 ##
+## Spatial queries go through AntPerception (the ant's node-returning query
+## layer); this facade flattens their results to value types. Vitals and body
+## state read straight off the ant.
+##
 ## Every public symbol MUST have a VOCAB entry (category, doc, returns).
 ## get_vocabulary() joins reflection with VOCAB and warns loudly on drift,
 ## so the editor's picker can never silently fall out of sync.
 
 var _ant: Ant
+var _perception: AntPerception
 
 
 func _init(p_ant: Ant) -> void:
 	_ant = p_ant
+	_perception = p_ant.perception
 
 
 #region Vocabulary metadata (drives the expression editor's picker)
@@ -90,9 +96,10 @@ const VOCAB: Dictionary = {
 }
 
 ## Old node-returning API, kept callable so nothing hard-crashes during
-## migration, but hidden from the editor's vocabulary. Run
-## ResourceLibrary.audit_expressions() to list every .tres still using one,
-## rewrite those expressions, then delete this block and these methods.
+## migration, but hidden from the editor's vocabulary. The influence
+## expressions under res://resources/influences are the last known callers.
+## Run ResourceLibrary.audit_expressions() to list every resource still using
+## one, rewrite those expressions, then delete this block and these methods.
 const DEPRECATED: Array[String] = [
 	"get_food_in_view", "get_food_in_reach", "get_ants_in_view",
 	"get_colonies_in_view", "get_colonies_in_reach", "get_nearest_item",
@@ -149,62 +156,62 @@ var colony_radius: float:
 	get: return _ant.colony.radius if is_instance_valid(_ant.colony) else 0.0
 
 func is_colony_in_range() -> bool:
-	return _ant.is_colony_in_range()
+	return _perception.is_colony_in_range()
 
 func is_colony_in_sight() -> bool:
-	return _ant.is_colony_in_sight()
+	return _perception.is_colony_in_sight()
 #endregion
 
 
 #region Food senses
 var food_in_view_count: int:
-	get: return _ant.get_food_in_view().size()
+	get: return _perception.get_food_in_view().size()
 var food_in_reach_count: int:
-	get: return _ant.get_food_in_reach().size()
+	get: return _perception.get_food_in_reach().size()
 var nearest_food_in_view_position: Vector2:
-	get: return _nearest_position(_ant.get_food_in_view())
+	get: return _nearest_position(_perception.get_food_in_view())
 var nearest_food_in_reach_position: Vector2:
-	get: return _nearest_position(_ant.get_food_in_reach())
+	get: return _nearest_position(_perception.get_food_in_reach())
 #endregion
 
 
 #region Other ants
 var ants_in_view_count: int:
-	get: return _ant.get_ants_in_view().size()
+	get: return _perception.get_ants_in_view().size()
 var allies_in_view_count: int:
-	get: return _ant.filter_friendly_ants(_ant.get_ants_in_view(), true).size()
+	get: return _perception.filter_friendly_ants(_perception.get_ants_in_view(), true).size()
 var enemies_in_view_count: int:
-	get: return _ant.filter_friendly_ants(_ant.get_ants_in_view(), false).size()
+	get: return _perception.filter_friendly_ants(_perception.get_ants_in_view(), false).size()
 var nearest_enemy_position: Vector2:
-	get: return _nearest_position(_ant.filter_friendly_ants(_ant.get_ants_in_view(), false))
+	get: return _nearest_position(_perception.filter_friendly_ants(_perception.get_ants_in_view(), false))
 var nearest_ally_position: Vector2:
-	get: return _nearest_position(_ant.filter_friendly_ants(_ant.get_ants_in_view(), true))
+	get: return _nearest_position(_perception.filter_friendly_ants(_perception.get_ants_in_view(), true))
 #endregion
 
 
 #region Pheromones
 func pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
-	return _ant.get_pheromone_direction(pheromone_name, follow_concentration)
+	return _perception.get_pheromone_direction(pheromone_name, follow_concentration)
 
 func pheromone_concentration(pheromone_name: String) -> float:
-	return _ant.get_pheromone_concentration(pheromone_name)
+	return _perception.get_pheromone_concentration(pheromone_name)
 #endregion
 
 
 #region Deprecated node-returning API (excluded from vocabulary; delete after migration)
-func get_food_in_view() -> Array: return _ant.get_food_in_view()
-func get_food_in_reach() -> Array: return _ant.get_food_in_reach()
-func get_ants_in_view() -> Array: return _ant.get_ants_in_view()
-func get_colonies_in_view() -> Array: return _ant.get_colonies_in_view()
-func get_colonies_in_reach() -> Array: return _ant.get_colonies_in_reach()
-func get_nearest_item(list: Array) -> Variant: return _ant.get_nearest_item(list)
-func get_nearest_food_in_reach() -> Food: return _ant.get_nearest_food_in_reach()
+func get_food_in_view() -> Array: return _perception.get_food_in_view()
+func get_food_in_reach() -> Array: return _perception.get_food_in_reach()
+func get_ants_in_view() -> Array: return _perception.get_ants_in_view()
+func get_colonies_in_view() -> Array: return _perception.get_colonies_in_view()
+func get_colonies_in_reach() -> Array: return _perception.get_colonies_in_reach()
+func get_nearest_item(list: Array) -> Variant: return _perception.get_nearest_item(list)
+func get_nearest_food_in_reach() -> Food: return _perception.get_nearest_food_in_reach()
 func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
-	return _ant.filter_friendly_ants(ants_arr, friendly)
+	return _perception.filter_friendly_ants(ants_arr, friendly)
 func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
-	return _ant.get_pheromone_direction(pheromone_name, follow_concentration)
+	return _perception.get_pheromone_direction(pheromone_name, follow_concentration)
 func get_pheromone_concentration(pheromone_name: String) -> float:
-	return _ant.get_pheromone_concentration(pheromone_name)
+	return _perception.get_pheromone_concentration(pheromone_name)
 #endregion
 
 
@@ -213,7 +220,7 @@ func get_pheromone_concentration(pheromone_name: String) -> float:
 ## list is empty. INF makes distance comparisons fail naturally ("< 50" is
 ## false), so conditions degrade safely without a separate null check.
 func _nearest_position(items: Array) -> Vector2:
-	var nearest: Node2D = _ant.get_nearest_item(items)
+	var nearest: Node2D = _perception.get_nearest_item(items)
 	return nearest.global_position if is_instance_valid(nearest) else Vector2.INF
 #endregion
 

@@ -17,6 +17,20 @@ extends Window
 ##       Vector2i(420, 520), Vector2i(340, 380))
 ## Then show it with present() instead of popup_centered().
 ##
+## Geometry rules (learned the hard way):
+##  - Never rely on popup_centered(): it centers at the *requested* size, so
+##    a window taller than the viewport gets clamped afterwards and ends up
+##    pinned to an edge instead of centered.
+##  - Bounds come from the EMBEDDER, not the parent. A popup opened as a
+##    child of another Window would otherwise be measured against that
+##    window's rect and shrunk/pinned inside it.
+##  - Embedded windows draw their title bar ABOVE position.y, so the minimum
+##    legal y is the title bar height, not 0 — clamping to 0 shoves the bar
+##    off-screen and makes the window undraggable.
+##  - Size must respect the content's real minimum (get_contents_minimum_size),
+##    both on first open and when restoring a saved rect, or a rect persisted
+##    while the layout was smaller hides controls forever.
+##
 ## CRUD editors: call watch([...]) at the end of _build_ui(), clear_dirty()
 ## after a successful save (and after programmatically loading a form —
 ## SpinBox.value= and CheckBox.button_pressed= emit change signals), and
@@ -63,25 +77,35 @@ func setup_window(id: String, p_title: String, p_size: Vector2i,
 	focus_entered.connect(move_to_foreground)
 
 
-## Show the window: restore saved geometry if we have it (clamped so a rect
-## saved against a bigger viewport can't strand the window), else size to
-## the default — shrunk to fit the viewport — and center at that final size.
-##
-## Never rely on popup_centered() for this: it centers at the *requested*
-## size, so a window taller than the viewport gets clamped afterwards and
-## ends up pinned to an edge instead of centered.
+## Show the window at a sane size and position:
+##  - size is at least the content minimum, at most the usable viewport
+##  - a saved rect is restored, then corrected by the same limits
+##  - first open centers within the band below the title-bar margin
 func present() -> void:
-	if _restore_geometry():
-		show()
+	var restored := _restore_geometry()
+
+	var eff_min := _effective_min_size()
+	min_size = eff_min  # user resizing can't hide controls either
+
+	var bounds := _viewport_bounds()
+	var top := _decoration_top()
+	var usable_h := maxi(bounds.y - top, 1)
+
+	var desired: Vector2i = size if restored else _default_size
+	size = Vector2i(
+		mini(maxi(desired.x, eff_min.x), bounds.x),
+		mini(maxi(desired.y, eff_min.y), usable_h),
+	)
+
+	if restored:
 		_clamp_to_bounds()
 	else:
-		var bounds := _viewport_bounds()
-		size = Vector2i(
-			clampi(_default_size.x, min_size.x, bounds.x),
-			clampi(_default_size.y, min_size.y, bounds.y),
+		position = Vector2i(
+			maxi(0, (bounds.x - size.x) / 2),
+			top + maxi(0, (usable_h - size.y) / 2),
 		)
-		position = (bounds - size) / 2
-		show()
+
+	show()
 	grab_focus()
 
 
@@ -231,22 +255,41 @@ func _restore_geometry() -> bool:
 	return true
 
 
-## The area a window may occupy: the embedding viewport for embedded
-## windows, or the screen for native ones.
+## The layout's real minimum: the declared min_size or the content's
+## computed minimum, whichever is larger. Only meaningful after the UI has
+## been built — present() is always called after _build_ui()/_ready().
+func _effective_min_size() -> Vector2i:
+	var content := Vector2i(get_contents_minimum_size().ceil())
+	return Vector2i(maxi(min_size.x, content.x), maxi(min_size.y, content.y))
+
+
+## Height of the embedded title bar, drawn ABOVE position.y. The minimum
+## legal y — clamping to 0 hides the bar and makes the window undraggable.
+func _decoration_top() -> int:
+	var h := get_theme_constant("title_height")
+	return h if h > 0 else 32
+
+
+## The area a window may occupy. For embedded windows this is the EMBEDDING
+## viewport (the game window), regardless of what node the popup was
+## parented to — a popup opened as a child of another ManagedWindow must be
+## measured against the screen, not that window's rect. Native windows use
+## the physical screen.
 func _viewport_bounds() -> Vector2i:
-	var parent := get_parent()
-	if parent and parent.get_viewport():
-		return Vector2i(parent.get_viewport().get_visible_rect().size)
+	if is_embedded() and get_tree():
+		return Vector2i(get_tree().root.get_visible_rect().size)
 	return DisplayServer.screen_get_size()
 
 
-## Keeps the window fully inside the visible bounds. Prevents
-## "my designer vanished off-screen".
+## Keeps the window fully inside the visible bounds — including keeping the
+## title bar below the top edge. Prevents "my designer vanished off-screen"
+## and "I can't grab the title bar to move it".
 func _clamp_to_bounds() -> void:
 	var bounds := _viewport_bounds()
-	size = Vector2i(mini(size.x, bounds.x), mini(size.y, bounds.y))
+	var top := _decoration_top()
+	size = Vector2i(mini(size.x, bounds.x), mini(size.y, maxi(bounds.y - top, 1)))
 	position = Vector2i(
 		clampi(position.x, 0, maxi(0, bounds.x - size.x)),
-		clampi(position.y, 0, maxi(0, bounds.y - size.y)),
+		clampi(position.y, top, maxi(top, bounds.y - size.y)),
 	)
 #endregion

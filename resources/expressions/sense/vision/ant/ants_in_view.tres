@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="Logic" format=3 uid="uid://dprvbp8la7j0l"]
-
-[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_8iwap"]
-
-[resource]
-script = ExtResource("1_8iwap")
-name = "ants in view"
-expression_string = "get_ants_in_view()"
-type = 28

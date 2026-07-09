@@ -8,10 +8,18 @@ extends CharacterBody2D
 ## - [BehaviorManager] evaluates AntRule resources each physics tick; the
 ##   first matching rule invokes one of the whitelisted ACTION_API methods.
 ## - [InfluenceManager] provides the default movement when no rule fires.
-## - [AntSenses] is the read-only facade Logic expressions evaluate against
-##   (see get_expression_context()).
+## - [AntPerception] (own file) owns every spatial/sensor query — area
+##   overlaps, nearest-item searches, colony proximity, pheromone sampling.
+## - [AntSenses] is the read-only, value-type facade Logic expressions
+##   evaluate against (see get_expression_context()); it reads from
+##   AntPerception, never from this script's mutating surface.
 ## - [PheromoneMemory] (own file) accumulates heatmap samples for gradient
-##   following.
+##   following; owned by AntPerception.
+##
+## This script deliberately contains NO derived behavior logic: conditions
+## live in Logic resources under user://behavior, and the only hardcoded
+## checks left are engine glue (e.g. "is recovery complete" inside
+## rest_until_full — a physical fact, not an authored decision).
 
 #region Signals
 signal spawned
@@ -34,12 +42,14 @@ const ACTION_API: Array[String] = [
 	"stop_movement",
 ]
 
-## Fallback rules preserving pre-refactor behavior for profiles that don't
-## define their own behavior_rules.
-const DEFAULT_BEHAVIOR_RULES: Array[String] = [
-	"res://resources/behavior/rules/rule_harvest.tres",
-	"res://resources/behavior/rules/rule_store.tres",
-	"res://resources/behavior/rules/rule_rest.tres",
+## Fallback rules (by ResourceLibrary id) preserving default behavior for
+## profiles that don't define their own behavior_rules. These are seeded
+## into user://behavior by DefaultLibrarySeeder on first run; if the user
+## has deleted one, it is simply skipped.
+const DEFAULT_RULE_IDS: Array[String] = [
+	"harvest_rule",
+	"store_rule",
+	"rest_rule",
 ]
 
 const ENERGY_MAX: float = 100.0
@@ -51,9 +61,6 @@ const ENERGY_DRAIN_FACTOR: float = 0.015
 const CARRY_DRAIN_FACTOR: float = 0.01
 ## Smoothing factor for velocity interpolation each physics tick.
 const VELOCITY_LERP_WEIGHT: float = 0.15
-
-const _SHOULD_REST: Logic = preload("res://resources/expressions/conditions/should_rest.tres")
-const _IS_FULLY_RESTED: Logic = preload("res://resources/expressions/conditions/is_fully_rested.tres")
 #endregion
 
 
@@ -137,10 +144,11 @@ var _profile_pending: AntProfile = null
 @onready var reach_area: Area2D = %ReachArea
 @onready var mouth_marker: Marker2D = %MouthMarker
 var behavior_manager: BehaviorManager
+## All spatial/sensor queries (see AntPerception). Created in _init so it is
+## always valid; individual queries guard on tree membership themselves.
+var perception: AntPerception
 ## Lazily created read-only facade for Logic expressions.
 var _senses: AntSenses
-## Per-pheromone sample history used for gradient following.
-var pheromone_memories: Dictionary[String, PheromoneMemory] = {}
 #endregion
 
 
@@ -148,6 +156,7 @@ var pheromone_memories: Dictionary[String, PheromoneMemory] = {}
 func _init() -> void:
 	# Fallback logger; replaced with the id-tagged one once id is assigned.
 	logger = iLogger.new("ant_unassigned", DebugLogger.Category.ENTITY)
+	perception = AntPerception.new(self)
 
 
 func _ready() -> void:
@@ -202,8 +211,12 @@ func _setup_behavior_manager() -> void:
 	behavior_manager = BehaviorManager.new()
 	add_child(behavior_manager)
 	behavior_manager.initialize(self)
-	for path: String in DEFAULT_BEHAVIOR_RULES:
-		behavior_manager.add_rule(load(path))
+	for rule_id: String in DEFAULT_RULE_IDS:
+		var rule: AntRule = ResourceLibrary.get_by_id(ResourceLibrary.KIND_RULE, rule_id)
+		if rule:
+			behavior_manager.add_rule(rule)
+		else:
+			logger.warn("Default rule '%s' not found in library (deleted?)" % rule_id)
 
 
 ## Shrinks the reach radius so that food carried at the mouth marker still
@@ -248,7 +261,7 @@ func _apply_profile_internal(p_profile: AntProfile) -> void:
 func harvest_food() -> void:
 	doing_task = true
 
-	var food: Food = get_nearest_food_in_reach()
+	var food: Food = perception.get_nearest_food_in_reach()
 	if is_instance_valid(food) and food.is_available:
 		food.set_state(Food.State.CARRIED)
 		food.global_position = mouth_marker.global_position
@@ -281,12 +294,15 @@ func store_food() -> void:
 	doing_task = false
 
 
-## Rests in place, recovering health and energy until fully rested.
+## Rests in place, recovering health and energy until both are full.
+## The completion check is engine glue (a physical fact about recovery), not
+## authored behavior — the *decision to start* resting is what belongs in a
+## rule condition, and does.
 func rest_until_full() -> void:
 	doing_task = true
 	is_resting = true
 
-	while not is_fully_rested():
+	while energy_level < ENERGY_MAX or health_level < HEALTH_MAX:
 		await get_tree().create_timer(0.5).timeout
 		# Validity guard after await.
 		if is_dead or not is_inside_tree():
@@ -321,7 +337,7 @@ func _process_carrying() -> void:
 
 ## Drains energy from movement; resting inside the colony is free.
 func _consume_energy(delta: float) -> void:
-	if not is_colony_in_range():
+	if not perception.is_colony_in_range():
 		energy_level -= calculate_energy_cost(delta)
 
 
@@ -400,102 +416,12 @@ func show_nav_path(enabled: bool) -> void:
 #region Sensing
 ## Expressions evaluate against this facade instead of the ant itself, so
 ## UI-authored Logic can only reach read-only state (see AntSenses).
+## All node-returning spatial queries live on [member perception]; code that
+## needs Food/Ant/Colony nodes goes through it directly.
 func get_expression_context() -> Object:
 	if not _senses:
 		_senses = AntSenses.new(self)
 	return _senses
-
-
-func _get_in_reach(predicate: Callable) -> Array:
-	return reach_area.get_overlapping_bodies().filter(predicate)
-
-
-func _get_in_view(predicate: Callable) -> Array:
-	return sight_area.get_overlapping_bodies().filter(predicate)
-
-
-func get_food_in_view() -> Array:
-	return _get_in_view(func(n): return n is Food and n.is_available)
-
-
-func get_food_in_reach() -> Array:
-	return _get_in_reach(func(n): return n is Food and n.is_available)
-
-
-func get_ants_in_view() -> Array:
-	return _get_in_view(func(n): return n is Ant and n != null)
-
-
-func get_colonies_in_view() -> Array:
-	return _get_in_view(func(n): return n is Colony)
-
-
-func get_colonies_in_reach() -> Array:
-	return _get_in_reach(func(n): return n is Colony)
-
-
-## Nearest available food within reach, or null.
-func get_nearest_food_in_reach() -> Food:
-	return get_nearest_item(get_food_in_reach()) as Food
-
-
-## Nearest non-null item in `list` by distance to this ant, or null.
-func get_nearest_item(list: Array) -> Variant:
-	var nearest: Variant = null
-	var min_distance: float = INF
-	for item: Variant in list:
-		if item == null:
-			continue
-		var distance: float = global_position.distance_to(item.global_position)
-		if distance < min_distance:
-			min_distance = distance
-			nearest = item
-	return nearest
-
-
-func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
-	return ants_arr.filter(func(ant): return friendly == (ant.colony == colony))
-
-
-func is_colony_in_range() -> bool:
-	if not is_instance_valid(colony):
-		return false
-	return _distance_to_colony() < colony.radius
-
-
-func is_colony_in_sight() -> bool:
-	if not is_instance_valid(colony):
-		return false
-	var sight_shape: CollisionShape2D = sight_area.get_node("CollisionShape2D")
-	var gap_to_colony_edge: float = _distance_to_colony() - colony.radius
-	return gap_to_colony_edge < sight_shape.shape.radius
-
-
-func _distance_to_colony() -> float:
-	return colony.global_position.distance_to(global_position)
-#endregion
-
-
-#region Pheromone Sensing
-func get_pheromone_concentration(pheromone_name: String) -> float:
-	return HeatmapManager.get_heat_at_position(self, pheromone_name)
-
-
-## Samples heat at the current cell and accumulates a per-pheromone memory,
-## returning the gradient direction (toward higher concentration by default).
-func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
-	if not is_instance_valid(colony):
-		return Vector2.ZERO
-
-	if not pheromone_memories.has(pheromone_name):
-		pheromone_memories[pheromone_name] = PheromoneMemory.new()
-
-	var current_cell: Vector2i = HeatmapManager.world_to_cell(global_position)
-	var current_concentration: float = HeatmapManager.get_heat_at_position(self, pheromone_name)
-	pheromone_memories[pheromone_name].add_sample(current_cell, current_concentration)
-
-	var direction: Vector2 = pheromone_memories[pheromone_name].get_concentration_vector()
-	return direction if follow_concentration else -direction
 
 
 ## Registers self and pheromone heatmap types with [HeatmapManager].
@@ -503,16 +429,6 @@ func register_to_heatmap() -> void:
 	HeatmapManager.register_entity(self)
 	for pheromone: Pheromone in pheromones:
 		HeatmapManager.create_heatmap_type(pheromone)
-#endregion
-
-
-#region Rest Conditions
-func should_rest() -> bool:
-	return _SHOULD_REST.get_value(self)
-
-
-func is_fully_rested() -> bool:
-	return _IS_FULLY_RESTED.get_value(self)
 #endregion
 
 
@@ -534,5 +450,4 @@ func die() -> void:
 	is_dead = true
 	doing_task = false
 	died.emit(self)
-
 #endregion

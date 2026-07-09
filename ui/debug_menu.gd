@@ -21,7 +21,6 @@ var _sandbox: Node2D
 var _status_overlay: StatusBarsOverlay
 var _paused: bool = false
 
-var _library_panel: BehaviorLibraryPanel
 var _designer_panel: BehaviorDesignerPanel
 var _food_spin: SpinBox
 var _ant_spin: SpinBox
@@ -101,13 +100,7 @@ func _build_ui() -> void:
 	_heatmap_check = _add_check("Heatmap")
 	_bars_check = _add_check("Health/Energy")
 	_influence_check = _add_check("Influence Arrows")
-	
-	var behavior_btn := Button.new()
-	behavior_btn.text = "Behavior"
-	behavior_btn.tooltip_text = "Open the behavior resource library"
-	behavior_btn.pressed.connect(_on_behavior_pressed)
-	add_child(behavior_btn)
-	
+		
 	var designer_btn := Button.new()
 	designer_btn.text = "Designer"
 	designer_btn.tooltip_text = "Visual behavior designer: expression trees, live values, re-eval policies"
@@ -253,14 +246,6 @@ func _on_bars_toggled(enabled: bool) -> void:
 func _on_influence_toggled(enabled: bool) -> void:
 	settings_manager.set_setting("debug_show_influence_arrows", enabled)
 	_apply_influence(enabled)
-
-func _on_behavior_pressed() -> void:
-	if is_instance_valid(_library_panel):
-		_library_panel.grab_focus()
-		return
-	_library_panel = BehaviorLibraryPanel.new()
-	get_tree().root.add_child(_library_panel)
-	_library_panel.present()
 
 func _on_designer_pressed() -> void:
 	if is_instance_valid(_designer_panel):

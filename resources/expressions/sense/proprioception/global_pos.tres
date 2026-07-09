@@ -1,9 +1,0 @@
-[gd_resource type="Resource" script_class="Logic" format=3 uid="uid://dhu375ct2j8ru"]
-
-[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="1_c7ltp"]
-
-[resource]
-script = ExtResource("1_c7ltp")
-name = "global pos"
-expression_string = "global_position"
-type = 5
