@@ -3,19 +3,18 @@ extends ManagedWindow
 ## Designs ant *types/roles*: an AntProfile bundles a name (role), combat and
 ## movement stats, the pheromones it emits, the steering profiles it uses, and
 ## the behavior rules it runs. Profiles are persisted through ResourceLibrary
-## (KIND_PROFILE) exactly like the Behavior Library's other resources, so a
-## role authored here is immediately spawnable and forks built-ins to user://.
+## (KIND_PROFILE) exactly like the Behavior Library's other resources.
+##
+## Pheromones are now cataloged too (KIND_PHEROMONE) and come straight from
+## ResourceLibrary — the old directory-scanning discovery only remains for
+## InfluenceProfiles, which haven't been migrated off res:// yet.
 ##
 ## Opened from the sandbox debug menu ("Ant Roles"). Built entirely in code to
 ## match the project's runtime-UI convention (no separate .tscn).
 
-## Directories scanned for the pheromone / influence checklists. Pheromones and
-## InfluenceProfiles aren't in ResourceLibrary's catalog (it manages
-## Logic/Action/Rule/Profile), so the designer discovers them itself.
-const PHEROMONE_DIRS: Array[String] = [
-	"res://entities/pheromone/resources",
-	"user://behavior/pheromones",
-]
+## Directories scanned for the influence checklist. InfluenceProfiles aren't
+## in ResourceLibrary's catalog yet, so the designer discovers them itself.
+## (Pheromone discovery was removed when pheromones were cataloged.)
 const INFLUENCE_PROFILE_DIRS: Array[String] = [
 	"res://resources/influences/profiles",
 	"user://behavior/influence_profiles",
@@ -54,8 +53,7 @@ var _editing: AntProfile           # the live resource being edited
 var _editing_path: String = ""     # on-disk path (empty for brand-new)
 var _editing_writable: bool = true
 
-# Discovered option pools, kept as {resource, path} rows
-var _pheromone_pool: Array[Dictionary] = []
+# Discovered option pool for influences, kept as {resource, path} rows
 var _influence_pool: Array[Dictionary] = []
 
 
@@ -75,9 +73,8 @@ func _ready() -> void:
 	_new_profile()  # start on a blank role so the form is never empty
 
 
-#region Discovery
+#region Discovery (influences only — pheromones come from ResourceLibrary)
 func _discover_pools() -> void:
-	_pheromone_pool = _scan(PHEROMONE_DIRS, func(r): return r is Pheromone)
 	_influence_pool = _scan(INFLUENCE_PROFILE_DIRS, func(r): return r is InfluenceProfile)
 
 
@@ -128,6 +125,7 @@ func _build_ui() -> void:
 		_health_spin, _damage_spin, _cooldown_spin, _combatant_check,
 		_spawn_select])
 
+
 func _build_left_pane() -> Control:
 	var vbox := VBoxContainer.new()
 	vbox.custom_minimum_size = Vector2(200, 0)
@@ -160,91 +158,86 @@ func _build_editor() -> Control:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 8)
 
+	vbox.add_child(_section("Identity"))
 	_name_edit = LineEdit.new()
 	_name_edit.placeholder_text = "e.g. Soldier"
-	vbox.add_child(_row("Role name", _name_edit))
+	vbox.add_child(_row("Name:", _name_edit))
 
 	_role_select = OptionButton.new()
-	for rt: String in ROLE_TYPES:
-		_role_select.add_item(rt.capitalize())
-	vbox.add_child(_row("Role type", _role_select))
+	for role in ROLE_TYPES:
+		_role_select.add_item(role.capitalize())
+	vbox.add_child(_row("Role type:", _role_select))
 
 	vbox.add_child(_section("Stats"))
-	_move_spin = _mk_spin(1, 200, 1)
-	vbox.add_child(_row("Movement rate", _move_spin))
-	_vision_spin = _mk_spin(10, 600, 5)
-	vbox.add_child(_row("Vision range", _vision_spin))
-	_size_spin = _mk_spin(0.2, 5.0, 0.1)
-	vbox.add_child(_row("Size", _size_spin))
-	_health_spin = _mk_spin(1, 1000, 5)
-	vbox.add_child(_row("Max health", _health_spin))
+	_move_spin = _mk_spin(1.0, 200.0, 0.5)
+	vbox.add_child(_row("Movement rate:", _move_spin))
+	_vision_spin = _mk_spin(10.0, 500.0, 5.0)
+	vbox.add_child(_row("Vision range:", _vision_spin))
+	_size_spin = _mk_spin(0.25, 4.0, 0.05)
+	vbox.add_child(_row("Size:", _size_spin))
+	_health_spin = _mk_spin(1.0, 1000.0, 5.0)
+	vbox.add_child(_row("Max health:", _health_spin))
 
 	vbox.add_child(_section("Combat"))
 	_combatant_check = CheckBox.new()
-	_combatant_check.text = "Combatant (will attack enemy ants)"
+	_combatant_check.text = "Can attack"
 	vbox.add_child(_combatant_check)
-	_damage_spin = _mk_spin(0, 500, 1)
-	vbox.add_child(_row("Attack damage", _damage_spin))
-	_cooldown_spin = _mk_spin(0.05, 10.0, 0.05)
-	vbox.add_child(_row("Attack cooldown (s)", _cooldown_spin))
+	_damage_spin = _mk_spin(0.0, 200.0, 1.0)
+	vbox.add_child(_row("Attack damage:", _damage_spin))
+	_cooldown_spin = _mk_spin(0.1, 10.0, 0.1)
+	vbox.add_child(_row("Attack cooldown (s):", _cooldown_spin))
 
-	vbox.add_child(_section("Pheromones emitted"))
+	vbox.add_child(_section("Spawning"))
+	_spawn_select = OptionButton.new()
+	vbox.add_child(_row("Spawn condition:", _spawn_select))
+	_populate_spawn_options()
+
+	# Pheromones: checklist fed by the ResourceLibrary catalog, plus a button
+	# into the pheromone editor.
+	var pher_header := HBoxContainer.new()
+	pher_header.add_theme_constant_override("separation", 8)
+	var pher_label := _section("Pheromones")
+	pher_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pher_header.add_child(pher_label)
+	var manage_btn := _mk_button("Manage...", _on_manage_pheromones)
+	manage_btn.tooltip_text = "Create and edit pheromones in the Pheromone Library"
+	pher_header.add_child(manage_btn)
+	vbox.add_child(pher_header)
+
 	_pheromone_box = VBoxContainer.new()
-	for row: Dictionary in _pheromone_pool:
-		_pheromone_box.add_child(_pool_check(row))
 	vbox.add_child(_pheromone_box)
+	_populate_pheromone_checks()
 
-	vbox.add_child(_section("Movement / steering profiles"))
-	var hint := Label.new()
-	hint.text = "Checked profiles are tried top-to-bottom; the first whose enter-condition passes wins. Put combat profiles (e.g. mobilize) above foraging."
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 11)
-	hint.modulate = Color(1, 1, 1, 0.6)
-	vbox.add_child(hint)
+	vbox.add_child(_section("Movement influences"))
 	_influence_box = VBoxContainer.new()
-	for row: Dictionary in _influence_pool:
-		_influence_box.add_child(_pool_check(row))
 	vbox.add_child(_influence_box)
+	for row in _influence_pool:
+		_influence_box.add_child(_pool_check(row))
 
 	vbox.add_child(_section("Behavior rules"))
-	var rule_hint := Label.new()
-	rule_hint.text = "Leave all unchecked to use the default worker rules (harvest / store / rest)."
-	rule_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	rule_hint.add_theme_font_size_override("font_size", 11)
-	rule_hint.modulate = Color(1, 1, 1, 0.6)
-	vbox.add_child(rule_hint)
+	var rules_hint := Label.new()
+	rules_hint.text = "Leave all unchecked to use the default rule set."
+	rules_hint.add_theme_font_size_override("font_size", 11)
+	rules_hint.modulate = Color(1, 1, 1, 0.6)
+	vbox.add_child(rules_hint)
 	_rule_box = VBoxContainer.new()
 	vbox.add_child(_rule_box)
 	_populate_rule_checks()
 
-	vbox.add_child(_section("Spawn condition"))
-	_spawn_select = OptionButton.new()
-	vbox.add_child(_row("When to spawn", _spawn_select))
-	_populate_spawn_options()
+	vbox.add_child(HSeparator.new())
+
+	_save_btn = _mk_button("Save", _on_save)
+	vbox.add_child(_save_btn)
 
 	_status = Label.new()
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_status)
 
-	_save_btn = _mk_button("Save role", _on_save)
-	_save_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
-	vbox.add_child(_save_btn)
-	
-	_name_edit.tooltip_text = "Role name; the profile id is derived from it"
-	_role_select.tooltip_text = "Broad archetype — affects defaults, not behavior; rules do that"
-	_move_spin.tooltip_text = "Movement speed (px/s)"
-	_vision_spin.tooltip_text = "Sight radius for food, enemies, and pheromones (px)"
-	_size_spin.tooltip_text = "Visual + collision scale multiplier"
-	_health_spin.tooltip_text = "Maximum health"
-	_combatant_check.tooltip_text = "Combatants engage enemies; non-combatants only flee"
-	_damage_spin.tooltip_text = "Damage per attack"
-	_cooldown_spin.tooltip_text = "Seconds between attacks"
-	_spawn_select.tooltip_text = "Logic condition the colony checks to spawn this role"
 	_new_btn.tooltip_text = "Start a blank role"
 	_dup_btn.tooltip_text = "Copy the current role as a new editable one"
 	_del_btn.tooltip_text = "Delete the selected role (built-ins can't be deleted)"
 	_save_btn.tooltip_text = "Save to user:// and push to live ants (Ctrl+S)"
-	
+
 	return vbox
 #endregion
 
@@ -295,7 +288,19 @@ func _pool_check(row: Dictionary) -> CheckBox:
 #endregion
 
 
-#region Rules & spawn option pools
+#region Pheromone / rules / spawn option pools
+func _populate_pheromone_checks() -> void:
+	for child in _pheromone_box.get_children():
+		child.queue_free()
+	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_PHEROMONE):
+		var c := CheckBox.new()
+		c.text = entry.display_name()
+		c.tooltip_text = entry.path
+		c.set_meta("path", entry.path)
+		c.set_meta("resource", entry.resource)
+		_pheromone_box.add_child(c)
+
+
 func _populate_rule_checks() -> void:
 	for child in _rule_box.get_children():
 		child.queue_free()
@@ -315,6 +320,12 @@ func _populate_spawn_options() -> void:
 		var idx := _spawn_select.item_count
 		_spawn_select.add_item(entry.display_name())
 		_spawn_select.set_item_metadata(idx, entry.resource)
+
+
+func _on_manage_pheromones() -> void:
+	var panel := PheromoneLibraryPanel.new()
+	add_child(panel)
+	panel.present()
 #endregion
 
 
@@ -327,10 +338,23 @@ func _refresh_profile_list() -> void:
 		_profile_list.set_item_tooltip(idx, entry.path)
 
 
-func _on_library_changed(_kind: String) -> void:
-	_refresh_profile_list()
-	_populate_rule_checks()
-	_populate_spawn_options()
+func _on_library_changed(kind: String) -> void:
+	match kind:
+		ResourceLibrary.KIND_PROFILE:
+			_refresh_profile_list()
+		ResourceLibrary.KIND_RULE:
+			_populate_rule_checks()
+			if _editing:
+				_apply_rule_checks(_editing)
+		ResourceLibrary.KIND_LOGIC:
+			_populate_spawn_options()
+			if _editing:
+				_select_spawn(_editing.spawn_condition)
+		ResourceLibrary.KIND_PHEROMONE:
+			_populate_pheromone_checks()
+			if _editing:
+				# queue_free'd checkboxes are gone next frame; apply then.
+				_apply_pheromone_checks.call_deferred(_editing)
 
 
 func _on_profile_selected(index: int) -> void:
@@ -379,20 +403,20 @@ func _on_duplicate() -> void:
 
 func _on_delete() -> void:
 	var sel := _profile_list.get_selected_items()
-	
+
 	if sel.is_empty():
 		return
-		
+
 	var entry: ResourceLibrary.Entry = _profile_list.get_item_metadata(sel[0])
-	
+
 	if not entry or not entry.writable:
 		_set_status("Built-in roles can't be deleted (duplicate to make an editable copy).", true)
 		return
 	_confirm.dialog_text = "Delete role '%s'?\nLive ants keep their in-memory copy until removed." % entry.resource.name
-	
+
 	for conn in _confirm.confirmed.get_connections():
 		_confirm.confirmed.disconnect(conn.callable)
-	
+
 	_confirm.confirmed.connect(func() -> void:
 		var deleted_name: String = entry.resource.name
 		ResourceLibrary.delete_resource(entry)
@@ -415,23 +439,16 @@ func _load_form_from(p: AntProfile) -> void:
 	_damage_spin.value = p.attack_damage
 	_cooldown_spin.value = p.attack_cooldown if p.attack_cooldown > 0.0 else 0.8
 
-	_check_pool(_pheromone_box, _paths_of(p.pheromones))
+	_apply_pheromone_checks(p)
 	_check_pool(_influence_box, _paths_of(p.movement_influences))
-
-	var rule_ids := {}
-	for r: AntRule in p.behavior_rules:
-		if r:
-			rule_ids[r.id] = true
-	for c in _rule_box.get_children():
-		if c is CheckBox:
-			var res: AntRule = c.get_meta("resource")
-			c.button_pressed = res and rule_ids.has(res.id)
+	_apply_rule_checks(p)
 
 	_select_spawn(p.spawn_condition)
 	_set_status("", false)
 	_save_btn.disabled = false
-	
+
 	clear_dirty()
+
 
 func _apply_form_to(p: AntProfile) -> void:
 	p.name = _name_edit.text.strip_edges()           # setter re-derives id
@@ -480,7 +497,6 @@ func _on_save() -> void:
 		_set_status("Another role already uses the id '%s' — pick a different name." % _editing.id, true)
 		return
 
-	# Editing a built-in forks to user://; save_resource handles that.
 	var prev := _editing_path if _editing_path.begins_with("user://") else ""
 	if ResourceLibrary.save_resource(_editing, ResourceLibrary.KIND_PROFILE, prev) != OK:
 		_set_status("Save failed — see log.", true)
@@ -488,10 +504,10 @@ func _on_save() -> void:
 
 	_apply_to_live_ants(_editing)
 	_set_status("Saved role '%s'. New ants of this role use it immediately." % _editing.name, false)
-	
+
 	clear_dirty()
 	toast_success("Saved role '%s'" % _editing.name)
-	
+
 	# Re-select the freshly saved entry so further edits target it.
 	_editing_path = _editing.resource_path
 	_editing_writable = true
@@ -502,8 +518,10 @@ func _on_save() -> void:
 func _apply_to_live_ants(p: AntProfile) -> void:
 	var effective_rules: Array[AntRule] = []
 	if p.behavior_rules.is_empty():
-		for path in Ant.DEFAULT_BEHAVIOR_RULES:
-			effective_rules.append(load(path))
+		for rule_id in Ant.DEFAULT_RULE_IDS:
+			var rule: AntRule = ResourceLibrary.get_by_id(ResourceLibrary.KIND_RULE, rule_id)
+			if rule:
+				effective_rules.append(rule)
 	else:
 		effective_rules.assign(p.behavior_rules)
 
@@ -533,6 +551,35 @@ func _paths_of(resources: Array) -> Dictionary:
 		if r and not r.resource_path.is_empty():
 			out[r.resource_path] = true
 	return out
+
+
+## Pheromone checkboxes match by path OR by name. The name fallback keeps
+## profiles authored before the pheromone migration (still holding res://
+## references) from silently losing their pheromones: the equivalent
+## cataloged pheromone shows checked, and the next Save upgrades the
+## reference to the user:// copy.
+func _apply_pheromone_checks(p: AntProfile) -> void:
+	var wanted_paths := _paths_of(p.pheromones)
+	var wanted_names := {}
+	for ph: Pheromone in p.pheromones:
+		if ph:
+			wanted_names[ph.name] = true
+	for c in _pheromone_box.get_children():
+		if c is CheckBox:
+			var res: Pheromone = c.get_meta("resource")
+			c.button_pressed = wanted_paths.has(c.get_meta("path")) \
+				or (res and wanted_names.has(res.name))
+
+
+func _apply_rule_checks(p: AntProfile) -> void:
+	var rule_ids := {}
+	for r: AntRule in p.behavior_rules:
+		if r:
+			rule_ids[r.id] = true
+	for c in _rule_box.get_children():
+		if c is CheckBox:
+			var res: AntRule = c.get_meta("resource")
+			c.button_pressed = res and rule_ids.has(res.id)
 
 
 func _check_pool(box: VBoxContainer, wanted_paths: Dictionary) -> void:
@@ -569,6 +616,7 @@ func _set_status(text: String, is_error: bool) -> void:
 	_status.add_theme_color_override("font_color",
 		Color.INDIAN_RED if is_error else Color.SEA_GREEN)
 #endregion
+
 
 func _confirm_shortcut() -> bool:
 	_on_save()

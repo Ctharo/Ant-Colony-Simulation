@@ -1,10 +1,10 @@
 class_name DefaultLibrarySeeder
 extends RefCounted
 ## Generates the default behavior library (Logic conditions, AntActions,
-## AntRules, AntProfiles) in code and saves it into user://behavior/ on first
-## run. This replaces the built-in .tres files that used to ship under
-## res://resources, making every resource user-editable through the runtime
-## UI and freeing the project tree to be reorganized without breaking
+## AntRules, AntProfiles, Pheromones) in code and saves it into
+## user://behavior/ on first run. This replaces the built-in .tres files that
+## used to ship under res://, making every resource user-editable through the
+## runtime UI and freeing the project tree to be reorganized without breaking
 ## resource references.
 ##
 ## Seeding policy (all three matter):
@@ -23,7 +23,7 @@ extends RefCounted
 ## Called by ResourceLibrary._ready() before the first rescan(), so the
 ## catalog always includes freshly seeded defaults.
 
-const SEED_VERSION := 2
+const SEED_VERSION := 3
 
 const MANIFEST_PATH := "user://behavior/seed_manifest.cfg"
 
@@ -31,15 +31,12 @@ const LOGIC_DIR := "user://behavior/expressions"
 const ACTION_DIR := "user://behavior/actions"
 const RULE_DIR := "user://behavior/rules"
 const PROFILE_DIR := "user://behavior/profiles"
+const PHEROMONE_DIR := "user://behavior/pheromones"
 
-## Pheromones and influence profiles are NOT migrated yet — they still live
-## under res:// and have their own discovery dirs (see AntDesignerPanel).
-## The default worker references them only if they exist, so a reorganized
-## project degrades to a plain wanderer instead of failing to seed.
-const WORKER_PHEROMONE_PATHS: Array[String] = [
-	"res://entities/pheromone/resources/food_pheromone.tres",
-	"res://entities/pheromone/resources/home_pheromone.tres",
-]
+## Influence profiles are NOT migrated yet — they still live under res:// and
+## have their own discovery dirs (see AntDesignerPanel). The default worker
+## references them only if they exist, so a reorganized project degrades to a
+## plain wanderer instead of failing to seed.
 const WORKER_INFLUENCE_PATHS: Array[String] = [
 	"res://resources/influences/profiles/look_for_food.tres",
 	"res://resources/influences/profiles/go_home.tres",
@@ -48,7 +45,7 @@ const WORKER_INFLUENCE_PATHS: Array[String] = [
 
 ## Entry point. Idempotent; cheap when nothing needs seeding.
 static func seed() -> void:
-	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR]:
+	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR, PHEROMONE_DIR]:
 		DirAccess.make_dir_recursive_absolute(dir)
 
 	var manifest := ConfigFile.new()
@@ -78,6 +75,22 @@ static func seed() -> void:
 		"food_in_reach_count > 0 and not is_carrying_food",
 		"Food within reach and mandibles free", [])
 
+	# Pheromone emit conditions (cataloged Logic, so they pass through the
+	# editor/save/parse gates and can be reused by rules and influences).
+	_seed_logic(manifest, ctx, "carrying food",
+		"is_carrying_food",
+		"Ant is carrying food", [])
+
+	_seed_logic(manifest, ctx, "not carrying food",
+		"not is_carrying_food",
+		"Ant is not carrying food", [])
+
+	# NOTE: the old res:// danger pheromone used `enemy_count_in_view`, which
+	# is not in the AntSenses vocabulary — this is the corrected identifier.
+	_seed_logic(manifest, ctx, "enemies in view",
+		"enemies_in_view_count > 0",
+		"At least one foreign-colony ant is visible", [])
+
 	# ---- Actions (thin whitelisted verbs) --------------------------------
 	_seed_action(manifest, ctx, "harvest food", "harvest_food",
 		"Pick up the nearest available food within reach")
@@ -98,8 +111,27 @@ static func seed() -> void:
 	_seed_rule(manifest, ctx, "rest rule", "should_rest_at_colony", "rest_until_full", 10,
 		"Rest when at colony with health or energy below 90%")
 
+	# ---- Pheromones -------------------------------------------------------
+	_seed_pheromone(manifest, ctx, "food", 0.25, 20.0, 4, 1.0,
+		Color(0.0196078, 0.0156863, 1.0, 0.101961),
+		Color(0.0, 0.0, 0.852083, 0.2),
+		"carrying_food")
+
+	_seed_pheromone(manifest, ctx, "home", 0.02, 5.0, 2, 1.0,
+		Color(0.603612, 1.0, 0.573065, 0.0745098),
+		Color(0.0, 0.560784, 0.0, 0.258824),
+		"not_carrying_food")
+
+	_seed_pheromone(manifest, ctx, "danger", 0.15, 15.0, 3, 1.0,
+		Color(1.0, 0.15, 0.05, 0.12),
+		Color(0.6, 0.0, 0.0, 0.28),
+		"enemies_in_view")
+
 	# ---- Profiles ---------------------------------------------------------
 	_seed_worker_profile(manifest, ctx)
+
+	# ---- One-time migrations ----------------------------------------------
+	_migrate_profile_pheromone_refs(manifest, ctx)
 
 	manifest.set_value("meta", "version", SEED_VERSION)
 	manifest.save(MANIFEST_PATH)
@@ -190,10 +222,44 @@ static func _seed_rule(manifest: ConfigFile, ctx: Dictionary, p_name: String,
 	_save_and_record(manifest, ctx, "rule", id, path, rule)
 
 
+## Pheromone defaults. Emit conditions are cataloged Logic resources
+## (referenced, not embedded), so they were saved leaves-first above and the
+## .tres written here holds an ext_resource — never a forked subresource.
+## condition_id may be "" for an always-emitting pheromone.
+static func _seed_pheromone(manifest: ConfigFile, ctx: Dictionary,
+		p_name: String, decay: float, generating: float, radius: int,
+		diffusion: float, start_color: Color, end_color: Color,
+		condition_id: String) -> void:
+	var id := p_name.to_snake_case()
+	var path := PHEROMONE_DIR.path_join("%s.tres" % id)
+
+	if _adopt_existing(manifest, ctx, "pheromone", id, path):
+		return
+	if _was_deleted(manifest, "pheromone", id):
+		return
+
+	var condition: Logic = null
+	if not condition_id.is_empty():
+		condition = ctx.get("logic/%s" % condition_id)
+		if not condition:
+			push_warning("Seeder: skipping pheromone '%s' — emit condition '%s' unavailable (deleted by user?)" % [id, condition_id])
+			return
+
+	var pheromone := Pheromone.new()
+	pheromone.name = p_name
+	pheromone.decay_rate = decay
+	pheromone.generating_rate = generating
+	pheromone.heat_radius = radius
+	pheromone.diffusion_rate = diffusion
+	pheromone.start_color = start_color
+	pheromone.end_color = end_color
+	pheromone.condition = condition
+
+	_save_and_record(manifest, ctx, "pheromone", id, path, pheromone)
+
+
 ## Default "Worker" role so the profile catalog is never empty and colony
-## creation always has a spawnable ant type. Combat fields are assigned via
-## set() so this compiles against AntProfile with or without the combat
-## extension (set() on a missing property is a silent no-op).
+## creation always has a spawnable ant type.
 static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 	var id := "worker"
 	var path := PROFILE_DIR.path_join("%s.tres" % id)
@@ -205,14 +271,14 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 
 	var profile := AntProfile.new()
 	profile.name = "Worker"
+	profile.role_type = "worker"
 	profile.movement_rate = 25.0
 	profile.vision_range = 100.0
 	profile.size = 1.0
-	profile.set("role_type", "worker")
-	profile.set("max_health", 100.0)
-	profile.set("is_combatant", false)
-	profile.set("attack_damage", 0.0)
-	profile.set("attack_cooldown", 0.8)
+	profile.max_health = 100.0
+	profile.is_combatant = false
+	profile.attack_damage = 0.0
+	profile.attack_cooldown = 0.8
 
 	# No spawn_condition: identifiers like ant_count_by_role are not part of
 	# the AntSenses vocabulary, so such a condition would be rejected by the
@@ -222,10 +288,13 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 	# Empty rules = the ant falls back to Ant.DEFAULT_RULE_IDS.
 	profile.behavior_rules = []
 
+	# Pheromones now come from the seeded catalog (leaves-first: they were
+	# saved above, so these are ext_resource references).
 	var pheromones: Array[Pheromone] = []
-	for p_path: String in WORKER_PHEROMONE_PATHS:
-		if ResourceLoader.exists(p_path):
-			pheromones.append(load(p_path))
+	for pid: String in ["food", "home"]:
+		var ph: Pheromone = ctx.get("pheromone/%s" % pid)
+		if ph:
+			pheromones.append(ph)
 	profile.pheromones = pheromones
 
 	var influences: Array[InfluenceProfile] = []
@@ -235,6 +304,64 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 	profile.movement_influences = influences
 
 	_save_and_record(manifest, ctx, "profile", id, path, profile)
+#endregion
+
+
+#region One-time migrations
+## Existing installs seeded at v2 have profiles whose pheromones point at the
+## old res://entities/pheromone/resources .tres files. Swap those references
+## to the freshly seeded user:// pheromones (matched by name) so the res://
+## copies become deletable. Runs once; the manifest remembers.
+##
+## This is a pointer migration, not a content change — the user's profile
+## keeps every stat and rule exactly as authored. A res:// reference whose
+## name has no seeded counterpart (or whose counterpart the user deleted) is
+## left alone.
+static func _migrate_profile_pheromone_refs(manifest: ConfigFile, ctx: Dictionary) -> void:
+	if manifest.get_value("meta", "pheromones_migrated", false):
+		return
+
+	var by_name := {}
+	for key: String in ctx:
+		if key.begins_with("pheromone/"):
+			var ph: Pheromone = ctx[key]
+			by_name[ph.name] = ph
+
+	var dir := DirAccess.open(PROFILE_DIR)
+	if dir:
+		dir.list_dir_begin()
+		var fname := dir.get_next()
+		while fname != "":
+			if not dir.current_is_dir() and fname.get_extension() == "tres":
+				_migrate_one_profile(PROFILE_DIR.path_join(fname), by_name)
+			fname = dir.get_next()
+		dir.list_dir_end()
+
+	manifest.set_value("meta", "pheromones_migrated", true)
+
+
+static func _migrate_one_profile(path: String, by_name: Dictionary) -> void:
+	var profile: AntProfile = ResourceLoader.load(path) as AntProfile
+	if not profile:
+		return
+
+	var changed := false
+	var swapped: Array[Pheromone] = []
+	for ph: Pheromone in profile.pheromones:
+		if ph and ph.resource_path.begins_with("res://") and by_name.has(ph.name):
+			swapped.append(by_name[ph.name])
+			changed = true
+		else:
+			swapped.append(ph)
+
+	if changed:
+		profile.pheromones = swapped
+		var err := ResourceSaver.save(profile, path)
+		if err != OK:
+			push_error("Seeder: pheromone-ref migration failed for %s (%s)" % [
+				path, error_string(err)])
+		else:
+			print("Seeder: migrated pheromone references in %s" % path)
 #endregion
 
 
