@@ -111,10 +111,6 @@ func _spawn_colony(profile: ColonyProfile = null) -> Colony:
 	if not colony_profile:
 		colony_profile = SettingsManager.get_colony_profile()
 
-	if not colony_profile:
-		logger.warn("No colony profile available, using standard")
-		colony_profile = ColonyProfile.create_standard()
-
 	colony.init_colony_profile(colony_profile)
 
 	colonies.append(colony)
