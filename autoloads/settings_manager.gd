@@ -13,9 +13,6 @@ signal colony_profile_changed(profile: ColonyProfile)
 const EDITOR_SETTINGS_PATH: String = "res://.godot/editor_settings.json"
 const RUNTIME_SETTINGS_PATH: String = "user://settings.json"
 
-## Default colony profile path
-const DEFAULT_COLONY_PROFILE_PATH: String = "res://entities/colony/resources/standard_colony_profile.tres"
-
 ## Default values for all settings - SINGLE SOURCE OF TRUTH
 const DEFAULT_SETTINGS := {
 	# Game Settings
@@ -23,7 +20,11 @@ const DEFAULT_SETTINGS := {
 	"master_volume": 1.0,
 
 	# Simulation Settings
-	"colony_profile_path": DEFAULT_COLONY_PROFILE_PATH,
+	# Empty = resolve the colony profile from the ResourceLibrary catalog
+	# (id "standard_colony", falling back to the first cataloged colony).
+	# The old res:// standard_colony_profile.tres default is treated as
+	# legacy and redirected to the catalog too.
+	"colony_profile_path": "",
 	"food_spawn_count": 500,
 	"ant_spawn_count": 5,
 	"sim_speed_index": 0,
@@ -106,7 +107,9 @@ func _init() -> void:
 func _ready() -> void:
 	load_settings()
 	apply_debug_settings()
-	_try_load_colony_profile()
+	# SettingsManager readies BEFORE ResourceLibrary (autoload order), so
+	# catalog resolution must be deferred past the remaining _ready calls.
+	_resolve_colony_profile.call_deferred()
 	_is_initialized = true
 	settings_initialized.emit()
 
@@ -168,7 +171,7 @@ func _apply_setting_side_effects(setting_name: String, value: Variant) -> void:
 		"show_context":
 			DebugLogger.set_show_context(value)
 		"colony_profile_path":
-			_try_load_colony_profile()
+			_resolve_colony_profile()
 		_:
 			# Handle category settings (category_task, category_entity, etc.)
 			if setting_name.begins_with("category_"):
@@ -220,24 +223,62 @@ func get_obstacle_size_range() -> Vector2:
 
 #region Colony Profile Methods
 
-## Try to load the colony profile - gracefully handles missing files
-func _try_load_colony_profile() -> void:
+## Resolves the active colony profile, preferring the ResourceLibrary
+## catalog so every UI panel edits the SAME instance the sandbox spawns
+## from. Resolution order:
+##  1. A cataloged colony whose on-disk path matches colony_profile_path
+##  2. The cataloged default (id "standard_colony")
+##  3. The first cataloged colony
+##  4. Direct load of colony_profile_path (external/legacy file that exists)
+## A res:// path in the setting is treated as legacy and redirected to the
+## catalog (the old default pointed at a res:// .tres whose reference chain
+## has been migrated to user://).
+func _resolve_colony_profile() -> void:
 	var profile_path: String = get_setting("colony_profile_path")
 
-	if not ResourceLoader.exists(profile_path):
-		logger.debug("Colony profile not found at: %s (this is OK if not using profiles)" % profile_path)
+	var entries: Array = ResourceLibrary.get_entries(ResourceLibrary.KIND_COLONY)
+
+	if not profile_path.is_empty() and not profile_path.begins_with("res://"):
+		for entry in entries:
+			if entry.path == profile_path:
+				_set_colony_profile(entry.resource, entry.path)
+				return
+
+	var by_id: ColonyProfile = ResourceLibrary.get_by_id(
+		ResourceLibrary.KIND_COLONY, "standard_colony") as ColonyProfile
+	if by_id:
+		_set_colony_profile(by_id, by_id.resource_path)
 		return
 
-	_colony_profile = load(profile_path) as ColonyProfile
-	if _colony_profile:
-		logger.info("Loaded colony profile: %s" % _colony_profile.name)
-		colony_profile_changed.emit(_colony_profile)
-	else:
-		logger.warn("Failed to load colony profile from: %s" % profile_path)
+	if not entries.is_empty():
+		var entry = entries[0]
+		_set_colony_profile(entry.resource, entry.path)
+		return
+
+	if not profile_path.is_empty() and ResourceLoader.exists(profile_path):
+		var loaded := load(profile_path) as ColonyProfile
+		if loaded:
+			_set_colony_profile(loaded, profile_path)
+			return
+
+	logger.warn("No colony profile could be resolved (catalog empty and no valid path)")
 
 
-## Get the current colony profile
+func _set_colony_profile(profile: ColonyProfile, path: String) -> void:
+	_colony_profile = profile
+	# Record without recursing through set_setting side effects.
+	if _settings.get("colony_profile_path") != path:
+		_settings["colony_profile_path"] = path
+		save_settings()
+	logger.info("Colony profile resolved: %s (%s)" % [profile.name, path])
+	colony_profile_changed.emit(profile)
+
+
+## Get the current colony profile (lazy: resolves from the catalog if a
+## caller asks before the deferred startup resolution has run).
 func get_colony_profile() -> ColonyProfile:
+	if not _colony_profile:
+		_resolve_colony_profile()
 	return _colony_profile
 
 
@@ -264,32 +305,23 @@ func update_colony_initial_ants(profile_id: String, count: int) -> Result:
 	return save_colony_profile()
 
 
-## Save the current colony profile to its resource file
+## Save the current colony profile through ResourceLibrary (validation,
+## catalog refresh, rename handling — same pipeline as every other kind).
 func save_colony_profile() -> Result:
 	if not _colony_profile:
 		return Result.new(Result.ErrorType.INVALID_RESOURCE, "No colony profile to save")
 
-	var profile_path: String = get_setting("colony_profile_path")
+	var prev := _colony_profile.resource_path \
+		if _colony_profile.resource_path.begins_with("user://behavior/") else ""
+	var err := ResourceLibrary.save_resource(
+		_colony_profile, ResourceLibrary.KIND_COLONY, prev)
+	if err != OK:
+		logger.error("Failed to save colony profile: %s" % error_string(err))
+		return Result.new(Result.ErrorType.ACCESS_ERROR, "Failed to save: %s" % error_string(err))
 
-	# Only save to user:// paths or if in editor
-	if Engine.is_editor_hint() or profile_path.begins_with("user://"):
-		var error := ResourceSaver.save(_colony_profile, profile_path)
-		if error != OK:
-			logger.error("Failed to save colony profile: %s" % error)
-			return Result.new(Result.ErrorType.ACCESS_ERROR, "Failed to save: %s" % error)
-		logger.info("Saved colony profile to: %s" % profile_path)
-	else:
-		# At runtime, save to user directory instead
-		var user_path := "user://colony_profile.tres"
-		var error := ResourceSaver.save(_colony_profile, user_path)
-		if error != OK:
-			logger.error("Failed to save colony profile: %s" % error)
-			return Result.new(Result.ErrorType.ACCESS_ERROR, "Failed to save: %s" % error)
-
-		# Update setting to point to user path
-		set_setting("colony_profile_path", user_path)
-		logger.info("Saved colony profile to user directory: %s" % user_path)
-
+	if _settings.get("colony_profile_path") != _colony_profile.resource_path:
+		_settings["colony_profile_path"] = _colony_profile.resource_path
+		save_settings()
 	return Result.new()
 
 #endregion

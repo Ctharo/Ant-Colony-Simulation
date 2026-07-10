@@ -1,18 +1,22 @@
 extends Node
 ## Runtime catalog + persistence for behavior resources (Logic, AntAction,
-## AntRule, AntProfile, Pheromone, Influence, InfluenceProfile). Everything
-## lives under user://behavior/ and is fully editable: defaults are generated
-## in code by DefaultLibrarySeeder on first run (see that file for the
-## never-clobber / deletions-stick policy), so the project no longer ships
-## any built-in .tres under res://.
+## AntRule, AntProfile, Pheromone, Influence, InfluenceProfile,
+## ColonyProfile). Everything lives under user://behavior/ and is fully
+## editable: defaults are generated in code by DefaultLibrarySeeder on first
+## run (see that file for the never-clobber / deletions-stick policy), so
+## the project no longer ships any built-in .tres under res://.
 ##
 ## Consequences of the all-user model:
 ## - Every Entry is writable; the old fork-a-built-in-on-save path is gone.
 ## - Deleting a default is permanent (the seed manifest remembers it).
-## - res://entities/pheromone/resources and res://resources/influences are
-##   both deletable once you've launched with the v4 seeder (its migration
-##   passes swap profile references off res://). Remember ant.tscn still
-##   bakes res:// pheromones on the Ant node — clear that export too.
+## - After launching once on seeder v5, ALL of these res:// resource dirs
+##   are deletable (their references are migrated to user://):
+##     res://entities/pheromone/resources
+##     res://resources/influences
+##     res://entities/ant/resources        (basic_worker.tres)
+##     res://entities/colony/resources     (colony profile .tres)
+##   ant.tscn still bakes res:// pheromones on the Ant node — clear that
+##   export before deleting the pheromone dir.
 
 signal library_changed(kind: String)
 
@@ -23,6 +27,7 @@ const KIND_PROFILE := "profile"
 const KIND_PHEROMONE := "pheromone"
 const KIND_INFLUENCE := "influence"
 const KIND_INFLUENCE_PROFILE := "influence_profile"
+const KIND_COLONY := "colony"
 
 const USER_ROOTS: Dictionary = {
 	KIND_LOGIC: "user://behavior/expressions",
@@ -32,6 +37,7 @@ const USER_ROOTS: Dictionary = {
 	KIND_PHEROMONE: "user://behavior/pheromones",
 	KIND_INFLUENCE: "user://behavior/influences",
 	KIND_INFLUENCE_PROFILE: "user://behavior/influence_profiles",
+	KIND_COLONY: "user://behavior/colonies",
 }
 
 class Entry:
@@ -61,6 +67,7 @@ func _ready() -> void:
 	# (and everything that queries it during startup) sees them.
 	DefaultLibrarySeeder.seed()
 	rescan()
+
 
 func rescan() -> void:
 	_catalog = {}
@@ -104,9 +111,9 @@ func has_id_conflict(kind: String, id: String, exclude: Resource) -> bool:
 ##    LogicValidator directly (influences additionally must be Vector2-typed).
 ##  - Every kind is then walked for embedded/attached Logic (a Pheromone's
 ##    emit condition, an Influence's gate condition, an InfluenceProfile's
-##    enter/exit conditions and influence list) and each is validated too —
-##    a hand-edited .tres can't smuggle a non-whitelisted expression in
-##    through a parent resource.
+##    enter/exit conditions and influence list, an AntProfile's spawn
+##    condition) and each is validated too — a hand-edited .tres can't
+##    smuggle a non-whitelisted expression in through a parent resource.
 func save_resource(res: Resource, kind: String, previous_path: String = "") -> Error:
 	if kind == KIND_LOGIC or kind == KIND_INFLUENCE:
 		var errors := LogicValidator.validate_logic(res)
@@ -197,16 +204,22 @@ func _embedded_logic_errors(res: Resource, kind: String) -> PackedStringArray:
 				if gate:
 					for e: String in LogicValidator.validate_logic(gate):
 						errors.append("influence '%s' gate: %s" % [infl.name, e])
+		KIND_PROFILE:
+			var spawn: Logic = res.get("spawn_condition")
+			if spawn:
+				for e: String in LogicValidator.validate_logic(spawn):
+					errors.append("spawn condition: %s" % e)
 	return errors
 
 
 ## Lints every Logic expression against the SAME whitelist the validator
 ## enforces (LogicValidator.allowed_identifiers), so this audit can never
 ## drift from the real boundary again. Walks first-class Logic, pheromone
-## emit conditions, influences (and their gates), and influence-profile
-## enter/exit conditions — including ones embedded as subresources. Run from
-## the debug menu (or a breakpoint) after any vocabulary change, and before
-## deleting the deprecated node-returning methods from AntSenses.
+## emit conditions, influences (and their gates), influence-profile
+## enter/exit conditions, and ant-profile spawn conditions — including ones
+## embedded as subresources. Run from the debug menu (or a breakpoint) after
+## any vocabulary change, and before deleting the deprecated node-returning
+## methods from AntSenses.
 func audit_expressions() -> void:
 	var string_regex := RegEx.create_from_string("\"[^\"]*\"")
 	var ident_regex := RegEx.create_from_string("(?<![.\\w])[A-Za-z_][A-Za-z0-9_]*")
@@ -238,6 +251,11 @@ func audit_expressions() -> void:
 				issues += _audit_one(infl, entry.path, string_regex, ident_regex)
 			if infl is Influence and infl.condition:
 				issues += _audit_one(infl.condition, entry.path, string_regex, ident_regex)
+
+	for entry: Entry in get_entries(KIND_PROFILE):
+		var spawn: Logic = entry.resource.get("spawn_condition")
+		if spawn:
+			issues += _audit_one(spawn, entry.path, string_regex, ident_regex)
 
 	logger.info("Expression audit complete: %d issue(s)" % issues)
 
@@ -289,6 +307,8 @@ func _register_file(path: String) -> void:
 ## Classification by script type. Influence must be checked before Logic
 ## (it subclasses it).
 func _kind_of(res: Resource) -> String:
+	if res is ColonyProfile:
+		return KIND_COLONY
 	if res is AntProfile:
 		return KIND_PROFILE
 	if res is AntRule:

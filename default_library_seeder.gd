@@ -31,10 +31,19 @@ extends RefCounted
 ##   - go_home's null exit_conditions becomes a real exit ("not carrying
 ##     food"), which the sticky selection in InfluenceManager now honors.
 ##
+## v5 (colony migration) notes:
+##   - ColonyProfiles are cataloged (KIND_COLONY) and a "Standard Colony"
+##     default referencing the seeded worker replaces the res://
+##     standard_colony_profile.tres → basic_worker.tres chain that kept the
+##     legacy res:// resources load-bearing.
+##   - The legacy runtime save (user://colony_profile.tres) is imported, and
+##     res:// ant-profile references / initial_ants keys are renamed through
+##     LEGACY_PROFILE_ALIASES (basic_worker → worker).
+##
 ## Called by ResourceLibrary._ready() before the first rescan(), so the
 ## catalog always includes freshly seeded defaults.
 
-const SEED_VERSION := 4
+const SEED_VERSION := 5
 
 const MANIFEST_PATH := "user://behavior/seed_manifest.cfg"
 
@@ -45,12 +54,19 @@ const PROFILE_DIR := "user://behavior/profiles"
 const PHEROMONE_DIR := "user://behavior/pheromones"
 const INFLUENCE_DIR := "user://behavior/influences"
 const INFLUENCE_PROFILE_DIR := "user://behavior/influence_profiles"
+const COLONY_DIR := "user://behavior/colonies"
+
+## Legacy ant-profile ids renamed by the seeder migrations. Colony profiles
+## authored against the old res:// basic_worker map onto the seeded worker.
+const LEGACY_PROFILE_ALIASES: Dictionary = {
+	"basic_worker": "worker",
+}
 
 
 ## Entry point. Idempotent; cheap when nothing needs seeding.
 static func seed() -> void:
 	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR,
-			PHEROMONE_DIR, INFLUENCE_DIR, INFLUENCE_PROFILE_DIR]:
+			PHEROMONE_DIR, INFLUENCE_DIR, INFLUENCE_PROFILE_DIR, COLONY_DIR]:
 		DirAccess.make_dir_recursive_absolute(dir)
 
 	var manifest := ConfigFile.new()
@@ -201,9 +217,13 @@ static func seed() -> void:
 	# ---- Profiles ---------------------------------------------------------
 	_seed_worker_profile(manifest, ctx)
 
+	# ---- Colonies ---------------------------------------------------------
+	_seed_standard_colony(manifest, ctx)
+
 	# ---- One-time migrations ----------------------------------------------
 	_migrate_profile_pheromone_refs(manifest, ctx)
 	_migrate_profile_influence_refs(manifest, ctx)
+	_migrate_colony_profiles(manifest, ctx)
 
 	manifest.set_value("meta", "version", SEED_VERSION)
 	manifest.save(MANIFEST_PATH)
@@ -463,6 +483,37 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 #endregion
 
 
+## Default colony so colony creation never depends on a res:// .tres again
+## (the old SettingsManager default pointed at
+## res://entities/colony/resources/standard_colony_profile.tres, whose
+## basic_worker chain dragged in every legacy res:// resource).
+static func _seed_standard_colony(manifest: ConfigFile, ctx: Dictionary) -> void:
+	var id := "standard_colony"
+	var path := COLONY_DIR.path_join("%s.tres" % id)
+
+	if _adopt_existing(manifest, ctx, "colony", id, path):
+		return
+	if _was_deleted(manifest, "colony", id):
+		return
+
+	var worker: AntProfile = ctx.get("profile/worker")
+	if not worker:
+		push_warning("Seeder: skipping colony 'standard_colony' — worker profile unavailable (deleted by user?)")
+		return
+
+	var colony := ColonyProfile.new()
+	colony.name = "Standard Colony"
+	colony.radius = 60.0
+	colony.max_ants = 25
+	colony.spawn_rate = 10.0
+	colony.dirt_color = Color(0.545098, 0.270588, 0.0745098, 0.8)
+	colony.darker_dirt = Color(0.545098, 0.270588, 0.0745098, 0.9)
+	colony.ant_profiles = [worker] as Array[AntProfile]
+	colony.initial_ants = { "worker": 5 }
+
+	_save_and_record(manifest, ctx, "colony", id, path, colony)
+
+
 #region One-time migrations
 ## Existing installs have profiles whose pheromones point at the old
 ## res://entities/pheromone/resources .tres files. Swap those references to
@@ -526,6 +577,89 @@ static func _migrate_profile_influence_refs(manifest: ConfigFile, ctx: Dictionar
 	)
 
 	manifest.set_value("meta", "influences_migrated", true)
+
+
+## Rescues colony profiles from the res:// era. Runs once:
+##  1. Imports the legacy SettingsManager runtime save
+##     (user://colony_profile.tres) into the colony catalog dir. User data
+##     wins: if its id collides with a freshly seeded default, it overwrites.
+##  2. For every colony .tres in the catalog dir: res:// AntProfile
+##     references are swapped to cataloged profiles matched by id (with the
+##     LEGACY_PROFILE_ALIASES rename map, so basic_worker → worker), and
+##     initial_ants keys are renamed through the same aliases.
+static func _migrate_colony_profiles(manifest: ConfigFile, ctx: Dictionary) -> void:
+	if manifest.get_value("meta", "colonies_migrated", false):
+		return
+
+	# 1. Import the legacy runtime save, if any.
+	const LEGACY_PATH := "user://colony_profile.tres"
+	if FileAccess.file_exists(LEGACY_PATH):
+		var legacy: ColonyProfile = ResourceLoader.load(LEGACY_PATH) as ColonyProfile
+		if legacy:
+			var lid: String = legacy.id if not legacy.id.is_empty() else "imported_colony"
+			var dest := COLONY_DIR.path_join("%s.tres" % lid)
+			var err := ResourceSaver.save(legacy, dest)
+			if err == OK:
+				legacy.take_over_path(dest)
+				ctx["colony/%s" % lid] = legacy
+				manifest.set_value("colony", lid, SEED_VERSION)
+				print("Seeder: imported legacy colony profile -> %s" % dest)
+			else:
+				push_error("Seeder: failed to import legacy colony profile (%s)" % error_string(err))
+
+	# 2. Fix references in every cataloged colony profile.
+	var profiles_by_id := {}
+	for key: String in ctx:
+		if key.begins_with("profile/"):
+			profiles_by_id[key.trim_prefix("profile/")] = ctx[key]
+
+	var dir := DirAccess.open(COLONY_DIR)
+	if dir:
+		dir.list_dir_begin()
+		var fname := dir.get_next()
+		while fname != "":
+			if not dir.current_is_dir() and fname.get_extension() == "tres":
+				_migrate_one_colony(COLONY_DIR.path_join(fname), profiles_by_id)
+			fname = dir.get_next()
+		dir.list_dir_end()
+
+	manifest.set_value("meta", "colonies_migrated", true)
+
+
+static func _migrate_one_colony(path: String, profiles_by_id: Dictionary) -> void:
+	var colony: ColonyProfile = ResourceLoader.load(path) as ColonyProfile
+	if not colony:
+		return
+
+	var changed := false
+
+	# Swap res:// ant-profile references to cataloged ones (id + aliases).
+	var swapped: Array[AntProfile] = []
+	for ap: AntProfile in colony.ant_profiles:
+		if ap and ap.resource_path.begins_with("res://"):
+			var target_id: String = LEGACY_PROFILE_ALIASES.get(ap.id, ap.id)
+			if profiles_by_id.has(target_id):
+				swapped.append(profiles_by_id[target_id])
+				changed = true
+				continue
+		swapped.append(ap)
+
+	# Rename initial_ants keys through the same alias map.
+	var renamed := {}
+	for key: String in colony.initial_ants:
+		var new_key: String = LEGACY_PROFILE_ALIASES.get(key, key)
+		if new_key != key:
+			changed = true
+		renamed[new_key] = colony.initial_ants[key]
+
+	if changed:
+		colony.ant_profiles = swapped
+		colony.initial_ants = renamed
+		var err := ResourceSaver.save(colony, path)
+		if err != OK:
+			push_error("Seeder: colony migration failed for %s (%s)" % [path, error_string(err)])
+		else:
+			print("Seeder: migrated colony profile %s" % path)
 
 
 static func _for_each_profile(fn: Callable) -> void:

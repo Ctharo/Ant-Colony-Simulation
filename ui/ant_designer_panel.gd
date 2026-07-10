@@ -163,7 +163,16 @@ func _build_editor() -> Control:
 	vbox.add_child(_pheromone_box)
 	_populate_pheromone_checks()
 
-	vbox.add_child(_section("Movement influences"))
+	var infl_header := HBoxContainer.new()
+	infl_header.add_theme_constant_override("separation", 8)
+	var infl_label := _section("Movement influences")
+	infl_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	infl_header.add_child(infl_label)
+	var infl_manage_btn := _mk_button("Manage...", _on_manage_influences)
+	infl_manage_btn.tooltip_text = "Create and edit influences and steering profiles in the Influence Library"
+	infl_header.add_child(infl_manage_btn)
+	vbox.add_child(infl_header)
+
 	var infl_hint := Label.new()
 	infl_hint.text = "Steering states, checked in list order: first eligible profile drives the ant."
 	infl_hint.add_theme_font_size_override("font_size", 11)
@@ -284,6 +293,12 @@ func _populate_spawn_options() -> void:
 
 func _on_manage_pheromones() -> void:
 	var panel := PheromoneLibraryPanel.new()
+	add_child(panel)
+	panel.present()
+
+
+func _on_manage_influences() -> void:
+	var panel := InfluenceLibraryPanel.new()
 	add_child(panel)
 	panel.present()
 #endregion
