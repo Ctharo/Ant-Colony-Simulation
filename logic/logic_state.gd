@@ -41,3 +41,16 @@ func _init(p_logic: Logic, p_entity: Node):
 	or logic is ConditionLogic \
 	or logic is DecisionLogic:
 		expression = Expression.new()
+
+func cache(value: Variant):
+	if !has_value or cached_value != value:
+		version += 1
+
+	cached_value = value
+	has_value = true
+
+func dependency_changed(child: Logic, version: int) -> bool:
+	return dependency_versions.get(child.id, -1) != version
+
+func remember_dependency(child: Logic, child_version: int):
+	dependency_versions[child.id] = child_version
