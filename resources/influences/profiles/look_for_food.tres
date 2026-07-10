@@ -8,6 +8,7 @@
 [ext_resource type="Resource" uid="uid://ocrh0kgvf20j" path="res://resources/influences/forward_influence.tres" id="4_d4j81"]
 [ext_resource type="Resource" uid="uid://cw1owtck8lyu1" path="res://resources/influences/random_influence.tres" id="5_tqb37"]
 
+
 [resource]
 script = ExtResource("2_yrwn0")
 enter_conditions = Array[Object]([ExtResource("1_8spje")])

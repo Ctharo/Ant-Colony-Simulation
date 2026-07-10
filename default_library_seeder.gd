@@ -1,11 +1,11 @@
 class_name DefaultLibrarySeeder
 extends RefCounted
 ## Generates the default behavior library (Logic conditions, AntActions,
-## AntRules, AntProfiles, Pheromones) in code and saves it into
-## user://behavior/ on first run. This replaces the built-in .tres files that
-## used to ship under res://, making every resource user-editable through the
-## runtime UI and freeing the project tree to be reorganized without breaking
-## resource references.
+## AntRules, AntProfiles, Pheromones, Influences, InfluenceProfiles) in code
+## and saves it into user://behavior/ on first run. This replaces the
+## built-in .tres files that used to ship under res://, making every
+## resource user-editable through the runtime UI and freeing the project
+## tree to be reorganized without breaking resource references.
 ##
 ## Seeding policy (all three matter):
 ##   1. NEVER overwrite an existing user file — user edits are sacred.
@@ -20,10 +20,21 @@ extends RefCounted
 ## an ext_resource reference, silently forking the child. Every resource is
 ## therefore saved and take_over_path()'d before anything references it.
 ##
+## v4 (influence migration) notes — the seeded influences are REWRITES of
+## the old res://resources/influences .tres files:
+##   - get_pheromone_direction("x")  →  pheromone_direction("x")
+##     (the deprecated node-era call; last blocker for deleting
+##     AntSenses.DEPRECATED — run audit_expressions() after first launch)
+##   - go_home's "die" enter condition calling suicide() is dropped: a
+##     side-effecting action inside a condition is exactly what the
+##     validator exists to reject.
+##   - go_home's null exit_conditions becomes a real exit ("not carrying
+##     food"), which the sticky selection in InfluenceManager now honors.
+##
 ## Called by ResourceLibrary._ready() before the first rescan(), so the
 ## catalog always includes freshly seeded defaults.
 
-const SEED_VERSION := 3
+const SEED_VERSION := 4
 
 const MANIFEST_PATH := "user://behavior/seed_manifest.cfg"
 
@@ -32,20 +43,14 @@ const ACTION_DIR := "user://behavior/actions"
 const RULE_DIR := "user://behavior/rules"
 const PROFILE_DIR := "user://behavior/profiles"
 const PHEROMONE_DIR := "user://behavior/pheromones"
-
-## Influence profiles are NOT migrated yet — they still live under res:// and
-## have their own discovery dirs (see AntDesignerPanel). The default worker
-## references them only if they exist, so a reorganized project degrades to a
-## plain wanderer instead of failing to seed.
-const WORKER_INFLUENCE_PATHS: Array[String] = [
-	"res://resources/influences/profiles/look_for_food.tres",
-	"res://resources/influences/profiles/go_home.tres",
-]
+const INFLUENCE_DIR := "user://behavior/influences"
+const INFLUENCE_PROFILE_DIR := "user://behavior/influence_profiles"
 
 
 ## Entry point. Idempotent; cheap when nothing needs seeding.
 static func seed() -> void:
-	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR, PHEROMONE_DIR]:
+	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR,
+			PHEROMONE_DIR, INFLUENCE_DIR, INFLUENCE_PROFILE_DIR]:
 		DirAccess.make_dir_recursive_absolute(dir)
 
 	var manifest := ConfigFile.new()
@@ -91,6 +96,23 @@ static func seed() -> void:
 		"enemies_in_view_count > 0",
 		"At least one foreign-colony ant is visible", [])
 
+	# Influence gate conditions.
+	_seed_logic(manifest, ctx, "sees food",
+		"food_in_view_count > 0",
+		"At least one food item is visible", [])
+
+	_seed_logic(manifest, ctx, "senses food pheromone",
+		"pheromone_concentration(\"food\") > 0.0",
+		"Standing in a nonzero food-pheromone gradient", [])
+
+	_seed_logic(manifest, ctx, "senses home pheromone",
+		"pheromone_concentration(\"home\") > 0.0",
+		"Standing in a nonzero home-pheromone gradient", [])
+
+	_seed_logic(manifest, ctx, "colony in sight",
+		"has_colony and global_position.distance_to(colony_position) < vision_range",
+		"Own colony center is within vision range", [])
+
 	# ---- Actions (thin whitelisted verbs) --------------------------------
 	_seed_action(manifest, ctx, "harvest food", "harvest_food",
 		"Pick up the nearest available food within reach")
@@ -127,11 +149,61 @@ static func seed() -> void:
 		Color(0.6, 0.0, 0.0, 0.28),
 		"enemies_in_view")
 
+	# ---- Influences (steering vectors, all whitelisted vocabulary) --------
+	_seed_influence(manifest, ctx, "forward influence",
+		"Vector2(1, 0).rotated(global_rotation) * 1.5",
+		Color(0.745532, 0.0971564, 0.444001, 1.0), "",
+		"Keep moving the way the ant is facing")
+
+	_seed_influence(manifest, ctx, "random influence",
+		"Vector2(1, 0).rotated(global_rotation + randf_range(-PI, PI))",
+		Color(0.498039, 0.603922, 0.870588, 1.0), "",
+		"Wander jitter")
+
+	_seed_influence(manifest, ctx, "food influence",
+		"(nearest_food_in_view_position - global_position).normalized() * 2.0",
+		Color(0.9, 0.75, 0.1, 1.0), "sees_food",
+		"Steer toward the nearest visible food (gated on seeing any)")
+
+	_seed_influence(manifest, ctx, "food pheromone influence",
+		"pheromone_direction(\"food\").normalized() * 2.5",
+		Color(0.0, 0.0, 0.831373, 1.0), "senses_food_pheromone",
+		"Follow the food-pheromone gradient")
+
+	_seed_influence(manifest, ctx, "home pheromone influence",
+		"pheromone_direction(\"home\").normalized() * 2.5",
+		Color(0.0, 0.0, 1.0, 1.0), "senses_home_pheromone",
+		"Follow the home-pheromone gradient")
+
+	_seed_influence(manifest, ctx, "colony in sight influence",
+		"(colony_position - global_position).normalized() * 3.0",
+		Color(0.1, 0.8, 0.3, 1.0), "colony_in_sight",
+		"Steer straight to the colony once it is visible")
+
+	# ---- Influence profiles (steering states) ------------------------------
+	_seed_influence_profile(manifest, ctx, "wander",
+		[], [],
+		["forward_influence", "random_influence"],
+		)
+
+	_seed_influence_profile(manifest, ctx, "look for food",
+		["not_carrying_food"], ["carrying_food"],
+		["food_influence", "food_pheromone_influence",
+		 "forward_influence", "random_influence"],
+		)
+
+	_seed_influence_profile(manifest, ctx, "go home",
+		["carrying_food"], ["not_carrying_food"],
+		["colony_in_sight_influence", "home_pheromone_influence",
+		 "forward_influence", "random_influence"],
+		)
+
 	# ---- Profiles ---------------------------------------------------------
 	_seed_worker_profile(manifest, ctx)
 
 	# ---- One-time migrations ----------------------------------------------
 	_migrate_profile_pheromone_refs(manifest, ctx)
+	_migrate_profile_influence_refs(manifest, ctx)
 
 	manifest.set_value("meta", "version", SEED_VERSION)
 	manifest.save(MANIFEST_PATH)
@@ -223,9 +295,8 @@ static func _seed_rule(manifest: ConfigFile, ctx: Dictionary, p_name: String,
 
 
 ## Pheromone defaults. Emit conditions are cataloged Logic resources
-## (referenced, not embedded), so they were saved leaves-first above and the
-## .tres written here holds an ext_resource — never a forked subresource.
-## condition_id may be "" for an always-emitting pheromone.
+## (referenced, not embedded). condition_id may be "" for an
+## always-emitting pheromone.
 static func _seed_pheromone(manifest: ConfigFile, ctx: Dictionary,
 		p_name: String, decay: float, generating: float, radius: int,
 		diffusion: float, start_color: Color, end_color: Color,
@@ -258,6 +329,88 @@ static func _seed_pheromone(manifest: ConfigFile, ctx: Dictionary,
 	_save_and_record(manifest, ctx, "pheromone", id, path, pheromone)
 
 
+## Influence defaults. Gate conditions are cataloged Logic (condition_id may
+## be "" for an ungated influence). Validated like any Logic before save.
+static func _seed_influence(manifest: ConfigFile, ctx: Dictionary,
+		p_name: String, expression: String, color: Color,
+		condition_id: String, description: String) -> void:
+	var id := p_name.to_snake_case()
+	var path := INFLUENCE_DIR.path_join("%s.tres" % id)
+
+	if _adopt_existing(manifest, ctx, "influence", id, path):
+		return
+	if _was_deleted(manifest, "influence", id):
+		return
+
+	var condition: Logic = null
+	if not condition_id.is_empty():
+		condition = ctx.get("logic/%s" % condition_id)
+		if not condition:
+			push_warning("Seeder: skipping influence '%s' — gate condition '%s' unavailable (deleted by user?)" % [id, condition_id])
+			return
+
+	var influence := Influence.new()
+	influence.name = p_name
+	influence.expression_string = expression
+	influence.description = description
+	influence.color = color
+	influence.condition = condition
+	# _init already set type = TYPE_VECTOR2
+
+	var errors := LogicValidator.validate_logic(influence)
+	if not errors.is_empty():
+		push_error("Seeder: default influence '%s' failed validation: %s" % [id, "; ".join(errors)])
+		return
+
+	_save_and_record(manifest, ctx, "influence", id, path, influence)
+
+
+## Influence-profile defaults. Everything referenced must already be in ctx
+## (leaves-first). A missing dependency (user-deleted) skips the profile.
+static func _seed_influence_profile(manifest: ConfigFile, ctx: Dictionary,
+		p_name: String, enter_ids: Array, exit_ids: Array,
+		influence_ids: Array) -> void:
+	var id := p_name.to_snake_case()
+	var path := INFLUENCE_PROFILE_DIR.path_join("%s.tres" % id)
+
+	if _adopt_existing(manifest, ctx, "influence_profile", id, path):
+		return
+	if _was_deleted(manifest, "influence_profile", id):
+		return
+
+	var enter: Array[Logic] = []
+	for cid: String in enter_ids:
+		var c: Logic = ctx.get("logic/%s" % cid)
+		if not c:
+			push_warning("Seeder: skipping influence profile '%s' — enter condition '%s' unavailable" % [id, cid])
+			return
+		enter.append(c)
+
+	var exit: Array[Logic] = []
+	for cid: String in exit_ids:
+		var c: Logic = ctx.get("logic/%s" % cid)
+		if not c:
+			push_warning("Seeder: skipping influence profile '%s' — exit condition '%s' unavailable" % [id, cid])
+			return
+		exit.append(c)
+
+	var influences: Array[Logic] = []
+	for iid: String in influence_ids:
+		var infl: Influence = ctx.get("influence/%s" % iid)
+		if not infl:
+			push_warning("Seeder: skipping influence profile '%s' — influence '%s' unavailable" % [id, iid])
+			return
+		influences.append(infl)
+
+	var profile := InfluenceProfile.new()
+	profile.name = p_name
+	profile.enter_conditions = enter
+	profile.exit_conditions = exit
+	profile.influences = influences
+
+	_save_and_record(manifest, ctx, "influence_profile", id, path, profile)
+
+
 ## Default "Worker" role so the profile catalog is never empty and colony
 ## creation always has a spawnable ant type.
 static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
@@ -288,8 +441,8 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 	# Empty rules = the ant falls back to Ant.DEFAULT_RULE_IDS.
 	profile.behavior_rules = []
 
-	# Pheromones now come from the seeded catalog (leaves-first: they were
-	# saved above, so these are ext_resource references).
+	# All composition now comes from the seeded catalog (leaves-first: these
+	# were saved above, so the .tres holds ext_resource references).
 	var pheromones: Array[Pheromone] = []
 	for pid: String in ["food", "home"]:
 		var ph: Pheromone = ctx.get("pheromone/%s" % pid)
@@ -297,10 +450,13 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 			pheromones.append(ph)
 	profile.pheromones = pheromones
 
+	# Order matters: InfluenceManager picks the FIRST eligible profile, so
+	# the always-eligible wander fallback goes last.
 	var influences: Array[InfluenceProfile] = []
-	for i_path: String in WORKER_INFLUENCE_PATHS:
-		if ResourceLoader.exists(i_path):
-			influences.append(load(i_path))
+	for iid: String in ["look_for_food", "go_home", "wander"]:
+		var ip: InfluenceProfile = ctx.get("influence_profile/%s" % iid)
+		if ip:
+			influences.append(ip)
 	profile.movement_influences = influences
 
 	_save_and_record(manifest, ctx, "profile", id, path, profile)
@@ -308,15 +464,9 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 
 
 #region One-time migrations
-## Existing installs seeded at v2 have profiles whose pheromones point at the
-## old res://entities/pheromone/resources .tres files. Swap those references
-## to the freshly seeded user:// pheromones (matched by name) so the res://
-## copies become deletable. Runs once; the manifest remembers.
-##
-## This is a pointer migration, not a content change — the user's profile
-## keeps every stat and rule exactly as authored. A res:// reference whose
-## name has no seeded counterpart (or whose counterpart the user deleted) is
-## left alone.
+## Existing installs have profiles whose pheromones point at the old
+## res://entities/pheromone/resources .tres files. Swap those references to
+## the seeded user:// pheromones (matched by name). Runs once.
 static func _migrate_profile_pheromone_refs(manifest: ConfigFile, ctx: Dictionary) -> void:
 	if manifest.get_value("meta", "pheromones_migrated", false):
 		return
@@ -327,41 +477,80 @@ static func _migrate_profile_pheromone_refs(manifest: ConfigFile, ctx: Dictionar
 			var ph: Pheromone = ctx[key]
 			by_name[ph.name] = ph
 
-	var dir := DirAccess.open(PROFILE_DIR)
-	if dir:
-		dir.list_dir_begin()
-		var fname := dir.get_next()
-		while fname != "":
-			if not dir.current_is_dir() and fname.get_extension() == "tres":
-				_migrate_one_profile(PROFILE_DIR.path_join(fname), by_name)
-			fname = dir.get_next()
-		dir.list_dir_end()
+	_for_each_profile(func(profile: AntProfile, path: String) -> void:
+		var changed := false
+		var swapped: Array[Pheromone] = []
+		for ph: Pheromone in profile.pheromones:
+			if ph and ph.resource_path.begins_with("res://") and by_name.has(ph.name):
+				swapped.append(by_name[ph.name])
+				changed = true
+			else:
+				swapped.append(ph)
+		if changed:
+			profile.pheromones = swapped
+			_resave_profile(profile, path, "pheromone")
+	)
 
 	manifest.set_value("meta", "pheromones_migrated", true)
 
 
-static func _migrate_one_profile(path: String, by_name: Dictionary) -> void:
-	var profile: AntProfile = ResourceLoader.load(path) as AntProfile
-	if not profile:
+## Same pointer migration for movement_influences: res:// InfluenceProfile
+## references are swapped to the seeded user:// equivalents. Matching is by
+## name, falling back to the file's basename because some legacy files
+## (look_for_food.tres) never had their name property set.
+static func _migrate_profile_influence_refs(manifest: ConfigFile, ctx: Dictionary) -> void:
+	if manifest.get_value("meta", "influences_migrated", false):
 		return
 
-	var changed := false
-	var swapped: Array[Pheromone] = []
-	for ph: Pheromone in profile.pheromones:
-		if ph and ph.resource_path.begins_with("res://") and by_name.has(ph.name):
-			swapped.append(by_name[ph.name])
-			changed = true
-		else:
-			swapped.append(ph)
+	var by_id := {}
+	for key: String in ctx:
+		if key.begins_with("influence_profile/"):
+			var ip: InfluenceProfile = ctx[key]
+			by_id[ip.id] = ip
 
-	if changed:
-		profile.pheromones = swapped
-		var err := ResourceSaver.save(profile, path)
-		if err != OK:
-			push_error("Seeder: pheromone-ref migration failed for %s (%s)" % [
-				path, error_string(err)])
-		else:
-			print("Seeder: migrated pheromone references in %s" % path)
+	_for_each_profile(func(profile: AntProfile, path: String) -> void:
+		var changed := false
+		var swapped: Array[InfluenceProfile] = []
+		for ip: InfluenceProfile in profile.movement_influences:
+			if ip and ip.resource_path.begins_with("res://"):
+				var key: String = ip.name.to_snake_case() if not ip.name.is_empty() \
+					else ip.resource_path.get_file().get_basename().to_snake_case()
+				if by_id.has(key):
+					swapped.append(by_id[key])
+					changed = true
+					continue
+			swapped.append(ip)
+		if changed:
+			profile.movement_influences = swapped
+			_resave_profile(profile, path, "influence")
+	)
+
+	manifest.set_value("meta", "influences_migrated", true)
+
+
+static func _for_each_profile(fn: Callable) -> void:
+	var dir := DirAccess.open(PROFILE_DIR)
+	if not dir:
+		return
+	dir.list_dir_begin()
+	var fname := dir.get_next()
+	while fname != "":
+		if not dir.current_is_dir() and fname.get_extension() == "tres":
+			var path := PROFILE_DIR.path_join(fname)
+			var profile: AntProfile = ResourceLoader.load(path) as AntProfile
+			if profile:
+				fn.call(profile, path)
+		fname = dir.get_next()
+	dir.list_dir_end()
+
+
+static func _resave_profile(profile: AntProfile, path: String, what: String) -> void:
+	var err := ResourceSaver.save(profile, path)
+	if err != OK:
+		push_error("Seeder: %s-ref migration failed for %s (%s)" % [
+			what, path, error_string(err)])
+	else:
+		print("Seeder: migrated %s references in %s" % [what, path])
 #endregion
 
 

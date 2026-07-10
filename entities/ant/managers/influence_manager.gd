@@ -1,5 +1,20 @@
 class_name InfluenceManager
 extends Node2D
+## Drives the ant's default (non-rule) movement: selects the active
+## InfluenceProfile from its enter/exit conditions and steers along the sum
+## of that profile's influence vectors.
+##
+## Profile selection (every physics tick — cheap because every condition is
+## evaluated through EvaluationSystem, whose per-expression eval policies
+## (FRAME/TIMER/STICKY/...) control the real recompute cost; the old
+## profile_check_interval timer duplicated that and is gone):
+##  - A profile with exit_conditions is STICKY: once active it holds until
+##    any exit condition fires, then selection re-runs.
+##  - A profile without exit_conditions is not sticky and can be displaced
+##    any tick by an earlier-listed eligible profile — this is what lets an
+##    always-eligible fallback like "wander" yield to real states.
+##  - Eligible = any enter condition true, or no enter conditions at all.
+##    First eligible profile in list order wins; fallback is profiles[0].
 
 signal profile_changed
 signal influence_visibility_changed(enabled: bool)
@@ -43,10 +58,9 @@ var active_profile: InfluenceProfile:
 			active_profile = value
 			_on_active_profile_changed()
 
-## Available influence profiles
+## Available influence profiles, in priority order (first eligible wins)
 @export var profiles: Array[InfluenceProfile] = [] as Array[InfluenceProfile]
-@export var profile_check_interval: float = 1.0
-var _profile_check_timer: float = 0.0
+
 ## Logger instance for debugging
 var logger: iLogger
 #endregion
@@ -55,8 +69,6 @@ var logger: iLogger
 func _init() -> void:
 	name = "influence_manager"
 	logger = iLogger.new(name, DebugLogger.Category.INFLUENCE)
-	# Enable influence logging for debugging
-	DebugLogger.set_category_enabled(DebugLogger.Category.INFLUENCE, true)
 
 func _ready() -> void:
 	top_level = true
@@ -67,31 +79,9 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 func _physics_process(delta: float) -> void:
-	_profile_check_timer += delta
 	_target_recalc_timer += delta
-
-	if _profile_check_timer >= profile_check_interval:
-		logger.trace("Checking %d profiles for validity" % profiles.size())
-		var previous_profile = active_profile
-		var found_valid_profile = false
-
-		for profile: InfluenceProfile in profiles:
-			if is_profile_valid(profile):
-				if active_profile != profile:
-					logger.trace("Switching from '%s' to '%s'" % [
-						previous_profile.name if previous_profile else "none",
-						profile.name
-					])
-				active_profile = profile
-				found_valid_profile = true
-				break
-
-		# If no valid profile found, try to use default profile
-		if not found_valid_profile and profiles.size() > 0:
-			logger.trace("No valid profiles found, using first profile as fallback")
-			active_profile = profiles[0]
-
-		_profile_check_timer = 0.0
+	if entity:
+		_update_active_profile()
 
 ## Sets the entity reference
 func initialize(p_entity: Node) -> void:
@@ -100,27 +90,59 @@ func initialize(p_entity: Node) -> void:
 		return
 
 	entity = p_entity
+#endregion
 
+#region Profile Selection
+func _update_active_profile() -> void:
+	# Sticky hold: a profile that declares exit conditions keeps control
+	# until one of them fires.
+	if active_profile and not _exits_of(active_profile).is_empty():
+		if not _should_exit(active_profile):
+			return
+		logger.trace("Profile '%s' released by exit condition" % active_profile.name)
+
+	for profile: InfluenceProfile in profiles:
+		if is_profile_valid(profile):
+			if active_profile != profile:
+				logger.trace("Switching from '%s' to '%s'" % [
+					active_profile.name if active_profile else "none",
+					profile.name
+				])
+			active_profile = profile
+			return
+
+	# No eligible profile: fall back to the first one.
+	if profiles.size() > 0:
+		active_profile = profiles[0]
+
+
+## Eligible when any enter condition passes; no enter conditions = always.
+func is_profile_valid(profile: InfluenceProfile) -> bool:
+	if profile.enter_conditions.is_empty():
+		return true
+
+	for condition: Logic in profile.enter_conditions:
+		if condition and EvaluationSystem.get_value(condition, entity):
+			return true
+	return false
+
+
+## True when any exit condition of the profile fires.
+func _should_exit(profile: InfluenceProfile) -> bool:
+	for condition: Logic in _exits_of(profile):
+		if condition and EvaluationSystem.get_value(condition, entity):
+			return true
+	return false
+
+
+## Null-safe accessor: legacy .tres files (pre-migration go_home.tres) wrote
+## `exit_conditions = null` into a typed-array property.
+func _exits_of(profile: InfluenceProfile) -> Array:
+	var exits = profile.get("exit_conditions")
+	return exits if exits != null else []
 #endregion
 
 #region Profile Management
-func is_profile_valid(profile: InfluenceProfile) -> bool:
-	## Default is true
-	if profile.enter_conditions.is_empty():
-		logger.trace("Profile '%s' has no enter conditions, considering valid" % profile.name)
-		return true
-
-	## Otherwise check each condition and if any are true, then return true
-	for condition: Logic in profile.enter_conditions:
-		var result = condition.get_value(entity)
-		logger.trace("Profile '%s' condition '%s': %s" % [profile.name, condition.name, result])
-		if result:
-			logger.trace("Profile '%s' is valid" % profile.name)
-			return true
-
-	logger.trace("Profile '%s' is not valid" % profile.name)
-	return false
-
 ## Add resource InfluenceProfile to [member profiles]
 func add_profile(influence_profile: InfluenceProfile) -> void:
 	if not influence_profile:
@@ -131,7 +153,7 @@ func add_profile(influence_profile: InfluenceProfile) -> void:
 		profiles.append(influence_profile)
 
 		# If no active profile set, set first one as active
-		if active_profile==null:
+		if active_profile == null:
 			active_profile = influence_profile
 
 func remove_profile(influence_profile: InfluenceProfile) -> void:
@@ -253,9 +275,10 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 	return best_target
 
 func _calculate_direction(influences: Array[Logic]) -> Vector2:
-	# Filter valid influences
+	# Filter valid influences (gate conditions evaluated via EvaluationSystem
+	# inside Influence.is_valid)
 	var valid_influences = influences.filter(func(influence):
-		return influence.is_valid(entity)
+		return influence is Influence and influence.is_valid(entity)
 	)
 
 	logger.trace("Valid influences: %d/%d" % [valid_influences.size(), influences.size()])
@@ -290,7 +313,6 @@ func _calculate_direction(influences: Array[Logic]) -> Vector2:
 		return Vector2.ZERO
 
 	return resultant.normalized()
-
 #endregion
 
 #region Visualization
@@ -317,6 +339,9 @@ func draw_influences() -> void:
 	var influence_data = []
 
 	for influence in active_profile.influences:
+		if not influence is Influence:
+			continue
+
 		if should_ignore_influence(influence):
 			continue
 
@@ -324,6 +349,8 @@ func draw_influences() -> void:
 			continue
 
 		var direction = EvaluationSystem.get_value(influence, entity)
+		if not direction is Vector2:
+			continue
 		var magnitude = direction.length()
 
 		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
@@ -331,7 +358,6 @@ func draw_influences() -> void:
 
 		total_magnitude += magnitude
 
-		# Check for existing color in meta, create if not exists
 		var influence_color: Color = influence.color
 
 		influence_data.append({

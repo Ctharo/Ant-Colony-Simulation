@@ -1,19 +1,18 @@
 extends Node
 ## Runtime catalog + persistence for behavior resources (Logic, AntAction,
-## AntRule, AntProfile, Pheromone). Everything lives under user://behavior/
-## and is fully editable: defaults are generated in code by
-## DefaultLibrarySeeder on first run (see that file for the never-clobber /
-## deletions-stick policy), so the project no longer ships any built-in
-## .tres under res://.
+## AntRule, AntProfile, Pheromone, Influence, InfluenceProfile). Everything
+## lives under user://behavior/ and is fully editable: defaults are generated
+## in code by DefaultLibrarySeeder on first run (see that file for the
+## never-clobber / deletions-stick policy), so the project no longer ships
+## any built-in .tres under res://.
 ##
 ## Consequences of the all-user model:
 ## - Every Entry is writable; the old fork-a-built-in-on-save path is gone.
 ## - Deleting a default is permanent (the seed manifest remembers it).
-## - res://entities/pheromone/resources can be deleted once you've launched
-##   with the pheromone seeding in place (the seeder migrates profile
-##   references off res:// on first run). Influence profiles are NOT
-##   migrated yet — they still live under res:// and AntDesignerPanel
-##   discovers them itself.
+## - res://entities/pheromone/resources and res://resources/influences are
+##   both deletable once you've launched with the v4 seeder (its migration
+##   passes swap profile references off res://). Remember ant.tscn still
+##   bakes res:// pheromones on the Ant node — clear that export too.
 
 signal library_changed(kind: String)
 
@@ -22,6 +21,8 @@ const KIND_ACTION := "action"
 const KIND_RULE := "rule"
 const KIND_PROFILE := "profile"
 const KIND_PHEROMONE := "pheromone"
+const KIND_INFLUENCE := "influence"
+const KIND_INFLUENCE_PROFILE := "influence_profile"
 
 const USER_ROOTS: Dictionary = {
 	KIND_LOGIC: "user://behavior/expressions",
@@ -29,6 +30,8 @@ const USER_ROOTS: Dictionary = {
 	KIND_RULE: "user://behavior/rules",
 	KIND_PROFILE: "user://behavior/profiles",
 	KIND_PHEROMONE: "user://behavior/pheromones",
+	KIND_INFLUENCE: "user://behavior/influences",
+	KIND_INFLUENCE_PROFILE: "user://behavior/influence_profiles",
 }
 
 class Entry:
@@ -59,12 +62,10 @@ func _ready() -> void:
 	DefaultLibrarySeeder.seed()
 	rescan()
 
-
 func rescan() -> void:
-	_catalog = {
-		KIND_LOGIC: [], KIND_ACTION: [], KIND_RULE: [], KIND_PROFILE: [],
-		KIND_PHEROMONE: [],
-	}
+	_catalog = {}
+	for kind: String in USER_ROOTS:
+		_catalog[kind] = []
 	for kind: String in USER_ROOTS:
 		_scan_dir(USER_ROOTS[kind])
 	for kind: String in _catalog:
@@ -99,15 +100,18 @@ func has_id_conflict(kind: String, id: String, exclude: Resource) -> bool:
 ## Saves to user://. previous_path handles renames (stale file removal).
 ##
 ## Validation gates:
-##  - KIND_LOGIC resources go through LogicValidator directly.
-##  - Every other kind is walked for embedded Logic (e.g. a Pheromone's emit
-##    condition) and each is validated too — a hand-edited .tres can't smuggle
-##    a non-whitelisted expression in through a parent resource.
+##  - KIND_LOGIC and KIND_INFLUENCE resources ARE Logic and go through
+##    LogicValidator directly (influences additionally must be Vector2-typed).
+##  - Every kind is then walked for embedded/attached Logic (a Pheromone's
+##    emit condition, an Influence's gate condition, an InfluenceProfile's
+##    enter/exit conditions and influence list) and each is validated too —
+##    a hand-edited .tres can't smuggle a non-whitelisted expression in
+##    through a parent resource.
 func save_resource(res: Resource, kind: String, previous_path: String = "") -> Error:
-	if kind == KIND_LOGIC:
+	if kind == KIND_LOGIC or kind == KIND_INFLUENCE:
 		var errors := LogicValidator.validate_logic(res)
 		if not errors.is_empty():
-			push_error("Refusing to save Logic '%s': %s" % [res.id, "; ".join(errors)])
+			push_error("Refusing to save %s '%s': %s" % [kind, res.id, "; ".join(errors)])
 			return ERR_INVALID_DATA
 
 	var embedded := _embedded_logic_errors(res, kind)
@@ -155,9 +159,8 @@ func duplicate_for_edit(res: Resource) -> Resource:
 	return res.duplicate(false)
 
 
-## Logic resources embedded inside a non-Logic resource, validated with the
-## same whitelist as first-class Logic. Extend the match as new Logic-bearing
-## kinds are cataloged (influences and their profiles in the next migration).
+## Logic resources embedded inside (or attached to) a resource of the given
+## kind, validated with the same whitelist as first-class Logic.
 func _embedded_logic_errors(res: Resource, kind: String) -> PackedStringArray:
 	var errors := PackedStringArray()
 	match kind:
@@ -166,13 +169,42 @@ func _embedded_logic_errors(res: Resource, kind: String) -> PackedStringArray:
 			if cond:
 				for e: String in LogicValidator.validate_logic(cond):
 					errors.append("emit condition: %s" % e)
+		KIND_INFLUENCE:
+			if res.get("type") != TYPE_VECTOR2:
+				errors.append("an Influence must be Vector2-typed (it is a direction)")
+			var gate: Logic = res.get("condition")
+			if gate:
+				for e: String in LogicValidator.validate_logic(gate):
+					errors.append("gate condition: %s" % e)
+		KIND_INFLUENCE_PROFILE:
+			for cond: Logic in res.get("enter_conditions"):
+				if cond:
+					for e: String in LogicValidator.validate_logic(cond):
+						errors.append("enter condition '%s': %s" % [cond.name, e])
+			for cond: Logic in res.get("exit_conditions"):
+				if cond:
+					for e: String in LogicValidator.validate_logic(cond):
+						errors.append("exit condition '%s': %s" % [cond.name, e])
+			for infl in res.get("influences"):
+				if not infl:
+					continue
+				if not infl is Influence:
+					errors.append("'%s' is not an Influence" % str(infl.get("name")))
+					continue
+				for e: String in LogicValidator.validate_logic(infl):
+					errors.append("influence '%s': %s" % [infl.name, e])
+				var gate: Logic = infl.condition
+				if gate:
+					for e: String in LogicValidator.validate_logic(gate):
+						errors.append("influence '%s' gate: %s" % [infl.name, e])
 	return errors
 
 
 ## Lints every Logic expression against the SAME whitelist the validator
 ## enforces (LogicValidator.allowed_identifiers), so this audit can never
-## drift from the real boundary again. Also walks pheromone emit conditions,
-## which may be embedded subresources rather than cataloged Logic. Run from
+## drift from the real boundary again. Walks first-class Logic, pheromone
+## emit conditions, influences (and their gates), and influence-profile
+## enter/exit conditions — including ones embedded as subresources. Run from
 ## the debug menu (or a breakpoint) after any vocabulary change, and before
 ## deleting the deprecated node-returning methods from AntSenses.
 func audit_expressions() -> void:
@@ -187,6 +219,25 @@ func audit_expressions() -> void:
 		var cond: Logic = entry.resource.get("condition")
 		if cond:
 			issues += _audit_one(cond, entry.path, string_regex, ident_regex)
+
+	for entry: Entry in get_entries(KIND_INFLUENCE):
+		issues += _audit_one(entry.resource, entry.path, string_regex, ident_regex)
+		var gate: Logic = entry.resource.get("condition")
+		if gate:
+			issues += _audit_one(gate, entry.path, string_regex, ident_regex)
+
+	for entry: Entry in get_entries(KIND_INFLUENCE_PROFILE):
+		for cond: Logic in entry.resource.get("enter_conditions"):
+			if cond:
+				issues += _audit_one(cond, entry.path, string_regex, ident_regex)
+		for cond: Logic in entry.resource.get("exit_conditions"):
+			if cond:
+				issues += _audit_one(cond, entry.path, string_regex, ident_regex)
+		for infl in entry.resource.get("influences"):
+			if infl is Logic:
+				issues += _audit_one(infl, entry.path, string_regex, ident_regex)
+			if infl is Influence and infl.condition:
+				issues += _audit_one(infl.condition, entry.path, string_regex, ident_regex)
 
 	logger.info("Expression audit complete: %d issue(s)" % issues)
 
@@ -235,9 +286,8 @@ func _register_file(path: String) -> void:
 	_catalog[kind].append(Entry.new(res, path))
 
 
-## Classification by script type. Influence subclasses Logic but is managed
-## through InfluenceProfiles, so it's excluded from the generic logic list
-## (until the influence migration gives it its own kind).
+## Classification by script type. Influence must be checked before Logic
+## (it subclasses it).
 func _kind_of(res: Resource) -> String:
 	if res is AntProfile:
 		return KIND_PROFILE
@@ -247,8 +297,10 @@ func _kind_of(res: Resource) -> String:
 		return KIND_ACTION
 	if res is Pheromone:
 		return KIND_PHEROMONE
+	if res is InfluenceProfile:
+		return KIND_INFLUENCE_PROFILE
 	if res is Influence:
-		return ""
+		return KIND_INFLUENCE
 	if res is Logic:
 		return KIND_LOGIC
 	return ""

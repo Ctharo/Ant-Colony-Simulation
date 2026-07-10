@@ -5,20 +5,13 @@ extends ManagedWindow
 ## the behavior rules it runs. Profiles are persisted through ResourceLibrary
 ## (KIND_PROFILE) exactly like the Behavior Library's other resources.
 ##
-## Pheromones are now cataloged too (KIND_PHEROMONE) and come straight from
-## ResourceLibrary — the old directory-scanning discovery only remains for
-## InfluenceProfiles, which haven't been migrated off res:// yet.
+## Every checklist is now fed by the ResourceLibrary catalog — pheromones
+## (KIND_PHEROMONE) and influence profiles (KIND_INFLUENCE_PROFILE) included.
+## The old directory-scanning discovery is gone.
 ##
 ## Opened from the sandbox debug menu ("Ant Roles"). Built entirely in code to
 ## match the project's runtime-UI convention (no separate .tscn).
 
-## Directories scanned for the influence checklist. InfluenceProfiles aren't
-## in ResourceLibrary's catalog yet, so the designer discovers them itself.
-## (Pheromone discovery was removed when pheromones were cataloged.)
-const INFLUENCE_PROFILE_DIRS: Array[String] = [
-	"res://resources/influences/profiles",
-	"user://behavior/influence_profiles",
-]
 const ROLE_TYPES: Array[String] = ["worker", "soldier", "scout", "custom"]
 
 var logger: iLogger
@@ -53,9 +46,6 @@ var _editing: AntProfile           # the live resource being edited
 var _editing_path: String = ""     # on-disk path (empty for brand-new)
 var _editing_writable: bool = true
 
-# Discovered option pool for influences, kept as {resource, path} rows
-var _influence_pool: Array[Dictionary] = []
-
 
 func _init() -> void:
 	setup_window("ant_designer", "Ant Designer",
@@ -64,46 +54,12 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_discover_pools()
 	_build_ui()
 	_confirm = ConfirmationDialog.new()
 	add_child(_confirm)
 	ResourceLibrary.library_changed.connect(_on_library_changed)
 	_refresh_profile_list()
 	_new_profile()  # start on a blank role so the form is never empty
-
-
-#region Discovery (influences only — pheromones come from ResourceLibrary)
-func _discover_pools() -> void:
-	_influence_pool = _scan(INFLUENCE_PROFILE_DIRS, func(r): return r is InfluenceProfile)
-
-
-func _scan(dirs: Array[String], predicate: Callable) -> Array[Dictionary]:
-	var found: Array[Dictionary] = []
-	var seen := {}
-	for dir_path: String in dirs:
-		var dir := DirAccess.open(dir_path)
-		if not dir:
-			continue
-		dir.list_dir_begin()
-		var fname := dir.get_next()
-		while fname != "":
-			if not dir.current_is_dir() and fname.get_extension() == "tres":
-				var full := dir_path.path_join(fname)
-				var res := ResourceLoader.load(full)
-				if res and predicate.call(res) and not seen.has(full):
-					seen[full] = true
-					found.append({ "resource": res, "path": full })
-			fname = dir.get_next()
-		dir.list_dir_end()
-	found.sort_custom(func(a, b): return _label_of(a.resource).naturalnocasecmp_to(_label_of(b.resource)) < 0)
-	return found
-
-
-func _label_of(res: Resource) -> String:
-	var n: String = res.get("name") if res.get("name") else ""
-	return n if not n.is_empty() else res.resource_path.get_file()
-#endregion
 
 
 #region UI construction
@@ -192,8 +148,7 @@ func _build_editor() -> Control:
 	vbox.add_child(_row("Spawn condition:", _spawn_select))
 	_populate_spawn_options()
 
-	# Pheromones: checklist fed by the ResourceLibrary catalog, plus a button
-	# into the pheromone editor.
+	# Pheromones: checklist fed by the catalog, plus a button into the editor.
 	var pher_header := HBoxContainer.new()
 	pher_header.add_theme_constant_override("separation", 8)
 	var pher_label := _section("Pheromones")
@@ -209,10 +164,14 @@ func _build_editor() -> Control:
 	_populate_pheromone_checks()
 
 	vbox.add_child(_section("Movement influences"))
+	var infl_hint := Label.new()
+	infl_hint.text = "Steering states, checked in list order: first eligible profile drives the ant."
+	infl_hint.add_theme_font_size_override("font_size", 11)
+	infl_hint.modulate = Color(1, 1, 1, 0.6)
+	vbox.add_child(infl_hint)
 	_influence_box = VBoxContainer.new()
 	vbox.add_child(_influence_box)
-	for row in _influence_pool:
-		_influence_box.add_child(_pool_check(row))
+	_populate_influence_checks()
 
 	vbox.add_child(_section("Behavior rules"))
 	var rules_hint := Label.new()
@@ -277,39 +236,40 @@ func _section(text: String) -> Control:
 	l.add_theme_font_size_override("font_size", 15)
 	l.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
 	return l
-
-
-func _pool_check(row: Dictionary) -> CheckBox:
-	var c := CheckBox.new()
-	c.text = _label_of(row.resource)
-	c.set_meta("path", row.path)
-	c.set_meta("resource", row.resource)
-	return c
 #endregion
 
 
-#region Pheromone / rules / spawn option pools
+#region Catalog-fed option pools
 func _populate_pheromone_checks() -> void:
 	for child in _pheromone_box.get_children():
 		child.queue_free()
 	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_PHEROMONE):
-		var c := CheckBox.new()
-		c.text = entry.display_name()
-		c.tooltip_text = entry.path
-		c.set_meta("path", entry.path)
-		c.set_meta("resource", entry.resource)
-		_pheromone_box.add_child(c)
+		_pheromone_box.add_child(_entry_check(entry))
+
+
+func _populate_influence_checks() -> void:
+	for child in _influence_box.get_children():
+		child.queue_free()
+	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_INFLUENCE_PROFILE):
+		_influence_box.add_child(_entry_check(entry))
 
 
 func _populate_rule_checks() -> void:
 	for child in _rule_box.get_children():
 		child.queue_free()
 	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_RULE):
-		var c := CheckBox.new()
-		c.text = entry.display_name()
+		var c := _entry_check(entry)
 		c.tooltip_text = entry.resource.get("description") if entry.resource.get("description") else ""
-		c.set_meta("resource", entry.resource)
 		_rule_box.add_child(c)
+
+
+func _entry_check(entry: ResourceLibrary.Entry) -> CheckBox:
+	var c := CheckBox.new()
+	c.text = entry.display_name()
+	c.tooltip_text = entry.path
+	c.set_meta("path", entry.path)
+	c.set_meta("resource", entry.resource)
+	return c
 
 
 func _populate_spawn_options() -> void:
@@ -345,7 +305,7 @@ func _on_library_changed(kind: String) -> void:
 		ResourceLibrary.KIND_RULE:
 			_populate_rule_checks()
 			if _editing:
-				_apply_rule_checks(_editing)
+				_apply_rule_checks.call_deferred(_editing)
 		ResourceLibrary.KIND_LOGIC:
 			_populate_spawn_options()
 			if _editing:
@@ -355,6 +315,10 @@ func _on_library_changed(kind: String) -> void:
 			if _editing:
 				# queue_free'd checkboxes are gone next frame; apply then.
 				_apply_pheromone_checks.call_deferred(_editing)
+		ResourceLibrary.KIND_INFLUENCE_PROFILE:
+			_populate_influence_checks()
+			if _editing:
+				_apply_influence_checks.call_deferred(_editing)
 
 
 func _on_profile_selected(index: int) -> void:
@@ -440,7 +404,7 @@ func _load_form_from(p: AntProfile) -> void:
 	_cooldown_spin.value = p.attack_cooldown if p.attack_cooldown > 0.0 else 0.8
 
 	_apply_pheromone_checks(p)
-	_check_pool(_influence_box, _paths_of(p.movement_influences))
+	_apply_influence_checks(p)
 	_apply_rule_checks(p)
 
 	_select_spawn(p.spawn_condition)
@@ -545,30 +509,44 @@ func _apply_to_live_ants(p: AntProfile) -> void:
 
 
 #region Selection utilities
-func _paths_of(resources: Array) -> Dictionary:
-	var out := {}
-	for r in resources:
-		if r and not r.resource_path.is_empty():
-			out[r.resource_path] = true
-	return out
-
-
-## Pheromone checkboxes match by path OR by name. The name fallback keeps
-## profiles authored before the pheromone migration (still holding res://
-## references) from silently losing their pheromones: the equivalent
-## cataloged pheromone shows checked, and the next Save upgrades the
-## reference to the user:// copy.
+## Pheromone checkboxes match by path OR by name; influence-profile
+## checkboxes by path OR by id (name/basename derived). The fallbacks keep
+## profiles authored before the res://→user:// migrations from silently
+## losing their composition: the equivalent cataloged resource shows
+## checked, and the next Save upgrades the reference to the user:// copy.
 func _apply_pheromone_checks(p: AntProfile) -> void:
-	var wanted_paths := _paths_of(p.pheromones)
+	var wanted_paths := {}
 	var wanted_names := {}
 	for ph: Pheromone in p.pheromones:
-		if ph:
-			wanted_names[ph.name] = true
+		if not ph:
+			continue
+		if not ph.resource_path.is_empty():
+			wanted_paths[ph.resource_path] = true
+		wanted_names[ph.name] = true
 	for c in _pheromone_box.get_children():
 		if c is CheckBox:
 			var res: Pheromone = c.get_meta("resource")
 			c.button_pressed = wanted_paths.has(c.get_meta("path")) \
 				or (res and wanted_names.has(res.name))
+
+
+func _apply_influence_checks(p: AntProfile) -> void:
+	var wanted_paths := {}
+	var wanted_ids := {}
+	for ip: InfluenceProfile in p.movement_influences:
+		if not ip:
+			continue
+		if not ip.resource_path.is_empty():
+			wanted_paths[ip.resource_path] = true
+		var key: String = ip.name.to_snake_case() if not ip.name.is_empty() \
+			else ip.resource_path.get_file().get_basename().to_snake_case()
+		if not key.is_empty():
+			wanted_ids[key] = true
+	for c in _influence_box.get_children():
+		if c is CheckBox:
+			var res: InfluenceProfile = c.get_meta("resource")
+			c.button_pressed = wanted_paths.has(c.get_meta("path")) \
+				or (res and wanted_ids.has(res.id))
 
 
 func _apply_rule_checks(p: AntProfile) -> void:
@@ -580,12 +558,6 @@ func _apply_rule_checks(p: AntProfile) -> void:
 		if c is CheckBox:
 			var res: AntRule = c.get_meta("resource")
 			c.button_pressed = res and rule_ids.has(res.id)
-
-
-func _check_pool(box: VBoxContainer, wanted_paths: Dictionary) -> void:
-	for c in box.get_children():
-		if c is CheckBox:
-			c.button_pressed = wanted_paths.has(c.get_meta("path"))
 
 
 func _select_option_text(option: OptionButton, value: String) -> void:
