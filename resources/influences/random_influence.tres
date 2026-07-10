@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Influence" load_steps=3 format=3 uid="uid://cw1owtck8lyu1"]
+
+[ext_resource type="Script" uid="uid://bitxo46b4yoya" path="res://logic/influences/influence.gd" id="1_d8g8r"]
+[ext_resource type="Script" uid="uid://c4blfafbl73rr" path="res://logic/logic.gd" id="3_hqprq"]
+
+
+[resource]
+script = ExtResource("1_d8g8r")
+color = Color(0.498039, 0.603922, 0.870588, 1)
+name = "random influence"
+expression_string = "Vector2(1, 0).rotated(global_rotation + randf_range(-PI, PI))"
+nested_expressions = Array[ExtResource("3_hqprq")]([])
+description = ""
+type = 5
