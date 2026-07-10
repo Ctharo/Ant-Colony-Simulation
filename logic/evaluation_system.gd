@@ -43,6 +43,11 @@ class ExpressionState:
 	var is_parsed: bool = false
 	var entity_context  # Store reference to the entity context
 
+	var version: int = 0
+	var cached_value: Variant
+
+	var dependency_versions: Dictionary = {}
+	
 	func _init(p_logic: Logic, p_entity: Node) -> void:
 		expression = Expression.new()
 		compiled_expression = p_logic.expression_string
