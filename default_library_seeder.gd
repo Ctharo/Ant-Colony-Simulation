@@ -62,12 +62,46 @@ const LEGACY_PROFILE_ALIASES: Dictionary = {
 	"basic_worker": "worker",
 }
 
+static func clear_directory(path: String) -> Error:
+	var dir := DirAccess.open(path)
+	if dir == null:
+		return DirAccess.get_open_error()
+
+	dir.list_dir_begin()
+
+	while true:
+		var name := dir.get_next()
+		if name.is_empty():
+			break
+
+		if name == "." or name == "..":
+			continue
+
+		var full_path := path.path_join(name)
+
+		if dir.current_is_dir():
+			var err := clear_directory(full_path)
+			if err != OK:
+				return err
+
+			err = DirAccess.remove_absolute(full_path)
+			if err != OK:
+				return err
+		else:
+			var err := DirAccess.remove_absolute(full_path)
+			if err != OK:
+				return err
+
+	dir.list_dir_end()
+
+	return OK
 
 ## Entry point. Idempotent; cheap when nothing needs seeding.
 static func seed() -> void:
 	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR,
 			PHEROMONE_DIR, INFLUENCE_DIR, INFLUENCE_PROFILE_DIR, COLONY_DIR]:
 		DirAccess.make_dir_recursive_absolute(dir)
+		clear_directory(dir)
 
 	var manifest := ConfigFile.new()
 	manifest.load(MANIFEST_PATH)  # missing file is fine — starts empty
@@ -106,8 +140,6 @@ static func seed() -> void:
 		"not is_carrying_food",
 		"Ant is not carrying food", [])
 
-	# NOTE: the old res:// danger pheromone used `enemy_count_in_view`, which
-	# is not in the AntSenses vocabulary — this is the corrected identifier.
 	_seed_logic(manifest, ctx, "enemies in view",
 		"enemies_in_view_count > 0",
 		"At least one foreign-colony ant is visible", [])
@@ -220,10 +252,6 @@ static func seed() -> void:
 	# ---- Colonies ---------------------------------------------------------
 	_seed_standard_colony(manifest, ctx)
 
-	# ---- One-time migrations ----------------------------------------------
-	_migrate_profile_pheromone_refs(manifest, ctx)
-	_migrate_profile_influence_refs(manifest, ctx)
-	_migrate_colony_profiles(manifest, ctx)
 
 	manifest.set_value("meta", "version", SEED_VERSION)
 	manifest.save(MANIFEST_PATH)

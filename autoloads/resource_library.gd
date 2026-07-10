@@ -90,9 +90,13 @@ func get_entries(kind: String) -> Array:
 ## Resource with the given id, or null. This is the lookup that replaced
 ## hardcoded res:// paths (e.g. Ant.DEFAULT_RULE_IDS).
 func get_by_id(kind: String, id: String) -> Resource:
+	if get_entries(kind).is_empty():
+		push_error("Attempting to get resource but none are found")
+		assert(false, "Attempting to get resource but none are found")
 	for entry: Entry in get_entries(kind):
 		if entry.resource.get("id") == id:
 			return entry.resource
+	push_warning("get_by_id failed to return a resource")
 	return null
 
 

@@ -60,9 +60,6 @@ func _init() -> void:
 func _ready() -> void:
 	HeatmapManager.register_entity(self)
 
-	# If a profile was set before _ready, spawn initial ants now
-	if profile:
-		_spawn_initial_ants()
 
 func init_colony_profile(p_profile: ColonyProfile) -> void:
 	if not is_instance_valid(p_profile):
@@ -88,24 +85,7 @@ func init_colony_profile(p_profile: ColonyProfile) -> void:
 
 	logger.debug("Colony profile applied: %s" % profile.name)
 
-	# Spawn initial ants if we're already in the tree
-	if is_inside_tree():
-		_spawn_initial_ants()
 
-## Spawn initial ants based on profile configuration
-func _spawn_initial_ants() -> void:
-	if not is_instance_valid(profile) or profile.initial_ants.is_empty():
-		return
-
-	logger.debug("Spawning initial ants for colony %s" % name)
-
-	# Spawn initial ants according to profile
-	for profile_id in profile.initial_ants:
-		var count = profile.initial_ants[profile_id]
-		var ant_profile = profile.get_ant_profile_by_id(profile_id)
-
-		if is_instance_valid(ant_profile) and count > 0:
-			var spawned = spawn_ants(count, ant_profile)
 #endregion
 
 func _physics_process(delta: float) -> void:

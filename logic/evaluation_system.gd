@@ -5,7 +5,7 @@ extends Node
 @onready var _controller: EvaluationController
 
 ## Dictionary mapping entity instance IDs to their expression states
-## Structure: { entity_id: { expression_id: ExpressionState } }
+## Structure: { entity_id: { expression_id: LogicState } }
 var _entity_states: Dictionary = {}
 var _evaluation_cache: Dictionary = {}
 
@@ -35,65 +35,6 @@ var _perf_monitor_enabled := false
 var _slow_threshold_ms := 1.0
 #endregion
 
-#region Expression State
-class ExpressionState:
-	var expression: Expression
-	var compiled_expression: String
-	var logic: Logic  # Store reference to the Logic object
-	var is_parsed: bool = false
-	var entity_context  # Store reference to the entity context
-
-	var version: int = 0
-	var cached_value: Variant
-
-	var dependency_versions: Dictionary = {}
-	
-	func _init(p_logic: Logic, p_entity: Node) -> void:
-		expression = Expression.new()
-		compiled_expression = p_logic.expression_string
-		logic = p_logic
-		entity_context = p_entity.get_expression_context() \
-			if p_entity.has_method("get_expression_context") else p_entity
-
-	func parse(variables: PackedStringArray) -> Error:
-		if is_parsed:
-			return OK
-
-		# Check for unsafe access patterns
-		var unsafe_patterns := [
-			" _",  # Space followed by underscore
-			"._",  # Dot followed by underscore
-			"@",   # Direct property access
-			"$/",  # Node path traversal
-			"get_node",  # Node access
-			" load",      # Resource loading
-			" preload"    # Resource preloading
-		]
-
-		for pattern in unsafe_patterns:
-			if compiled_expression.contains(pattern):
-				push_error("Unsafe expression pattern detected: %s" % pattern)
-				return ERR_UNAUTHORIZED
-
-		# Validate variables don't contain unsafe patterns
-		for var_name in variables:
-			for pattern in unsafe_patterns:
-				if var_name.contains(pattern):
-					push_error("Unsafe variable name detected: %s" % var_name)
-					return ERR_UNAUTHORIZED
-
-		var error = expression.parse(compiled_expression, variables)
-		is_parsed = error == OK
-		return error
-
-	func execute(bindings: Array) -> Variant:
-		if not is_parsed:
-			return null
-		return expression.execute(bindings, entity_context)
-
-	func has_error() -> bool:
-		return expression.has_execute_failed()
-#endregion
 
 #region Initialization
 func _init() -> void:
@@ -108,14 +49,14 @@ func _get_entity_states(entity: Node) -> Dictionary:
 	return _entity_states[entity_id]
 
 ## Gets or creates an expression state for a specific entity
-func _get_or_create_state(expression: Logic, entity: Node) -> ExpressionState:
+func _get_or_create_state(expression: Logic, entity: Node) -> LogicState:
 	if expression.id.is_empty():
 		logger.error("Expression has empty ID: %s" % expression)
 		return null
 
 	var states := _get_entity_states(entity)
 	if not states.has(expression.id):
-		states[expression.id] = ExpressionState.new(expression, entity)
+		states[expression.id] = LogicState.new(expression, entity)
 
 	return states[expression.id]
 
@@ -179,7 +120,7 @@ func get_value(expression: Logic, entity: Node) -> Variant:
 		register_expression(expression, entity)
 
 	# Get expression state if available
-	var state: ExpressionState = states[expression.id]
+	var state: LogicState = states[expression.id]
 	if not state:
 		logger.error("Failed to get/create state for expression %s" % expression.id)
 		return null
@@ -232,7 +173,7 @@ func _parse_expression(expression: Logic, entity: Node) -> void:
 
 func _calculate(expression_id: String, entity: Node) -> Variant:
 	var states := _get_entity_states(entity)
-	var state: ExpressionState = states[expression_id]
+	var state: LogicState = states[expression_id]
 	if not state.is_parsed:
 		return null
 

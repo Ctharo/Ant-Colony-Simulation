@@ -558,6 +558,7 @@ func _on_view_influence_profile_pressed() -> void:
 #region Signal Handlers - Colony
 func _on_spawn_pressed() -> void:
 	if not current_entity is Colony:
+		push_warning("Ant spawn requested on missing Colony")
 		return
 	var colony: Colony = current_entity as Colony
 
@@ -566,9 +567,8 @@ func _on_spawn_pressed() -> void:
 	var profile: AntProfile = _profile_map.get(selected_idx)
 
 	if profile:
-		spawn_requested.emit(colony, count, profile)
-		for i: int in range(count):
-			colony.spawn_ant(profile)
+		spawn_requested.emit(colony, count, profile) # Why do we emit this?
+		colony.spawn_ants(count, profile)
 
 
 func _on_profile_selected(_index: int) -> void:

@@ -261,7 +261,7 @@ func _resolve_colony_profile() -> void:
 			_set_colony_profile(loaded, profile_path)
 			return
 
-	logger.warn("No colony profile could be resolved (catalog empty and no valid path)")
+	push_error("No colony profile could be resolved (catalog empty and no valid path)")
 
 
 func _set_colony_profile(profile: ColonyProfile, path: String) -> void:
