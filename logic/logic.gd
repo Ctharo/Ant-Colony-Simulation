@@ -54,3 +54,18 @@ signal action_triggered(value: Variant, expression_id: String)
 ## Get value with evaluation system
 func get_value(entity: Node) -> Variant:
 	return EvaluationSystem.get_value(self, entity)
+
+
+## Compute this logic's value against its per-entity state.
+##
+## Subclasses override this to define WHAT to compute; EvaluationSystem
+## decides WHEN (re-evaluation policies, dependency versions, caching).
+## `bindings` holds the already-resolved values of nested_expressions, in
+## order — the engine gathers them because it needs the children's versions
+## for dependency tracking anyway.
+##
+## The base implementation treats expression_string as a full compiled
+## expression, so plain Logic resources (every .tres authored before the
+## subclasses existed) keep working unchanged.
+func evaluate(state: LogicState, bindings: Array) -> Variant:
+	return state.execute(bindings)
