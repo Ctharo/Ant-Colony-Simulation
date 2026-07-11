@@ -40,10 +40,32 @@ extends RefCounted
 ##     res:// ant-profile references / initial_ants keys are renamed through
 ##     LEGACY_PROFILE_ALIASES (basic_worker → worker).
 ##
+## v6 (typed logic + dependency versions) notes:
+##   - Tier-1 defaults now instantiate the Logic subclasses instead of the
+##     base class: PropertyLogic for atomic sense leaves (skips the
+##     Expression VM entirely — no parse, no VM attack surface) and
+##     ConditionLogic for boolean composites (result coerced to bool).
+##   - Every world read used by a boolean default is wrapped in a
+##     PropertyLogic leaf, making the composites PURE: EvaluationSystem
+##     re-executes them only when a child's version changed (see
+##     LogicState.pure_composite / version). Leaves carry the eval
+##     policies — per-ant constants STICKY, slow spatial senses TIMER,
+##     reactive senses FRAME — which is where the caching wins live.
+##   - "colony in sight" is now a PropertyLogic on the is_colony_in_sight
+##     sense instead of hand-computed distance math (same id, so the
+##     colony_in_sight_influence gate reference is unchanged).
+##   - pheromone_concentration("...") conditions stay as direct-read
+##     ConditionLogic: string-arg senses can't be PropertyLogic leaves, and
+##     being impure they correctly never version-gate (TIMER caps their cost).
+##   - All catalog ids from v5 are preserved (carrying_food,
+##     not_carrying_food, enemies_in_view, colony_in_sight, the rule
+##     conditions, …), so rules, pheromones, influences, and profiles keep
+##     referencing the same keys.
+##
 ## Called by ResourceLibrary._ready() before the first rescan(), so the
 ## catalog always includes freshly seeded defaults.
 
-const SEED_VERSION := 5
+const SEED_VERSION := 6
 
 const MANIFEST_PATH := "user://behavior/seed_manifest.cfg"
 
@@ -55,6 +77,12 @@ const PHEROMONE_DIR := "user://behavior/pheromones"
 const INFLUENCE_DIR := "user://behavior/influences"
 const INFLUENCE_PROFILE_DIR := "user://behavior/influence_profiles"
 const COLONY_DIR := "user://behavior/colonies"
+
+## DEV ONLY: wipe user://behavior on every launch so the seeder's output is
+## always fresh while the defaults are still churning. NOTE: while true,
+## this defeats seeding policies 1 and 2 above — user edits and deletions do
+## NOT survive a restart. Set false before real users touch the library.
+const DEV_WIPE_ON_LAUNCH := true
 
 ## Legacy ant-profile ids renamed by the seeder migrations. Colony profiles
 ## authored against the old res:// basic_worker map onto the seeded worker.
@@ -101,7 +129,8 @@ static func seed() -> void:
 	for dir: String in [LOGIC_DIR, ACTION_DIR, RULE_DIR, PROFILE_DIR,
 			PHEROMONE_DIR, INFLUENCE_DIR, INFLUENCE_PROFILE_DIR, COLONY_DIR]:
 		DirAccess.make_dir_recursive_absolute(dir)
-		clear_directory(dir)
+		if DEV_WIPE_ON_LAUNCH:
+			clear_directory(dir)
 
 	var manifest := ConfigFile.new()
 	manifest.load(MANIFEST_PATH)  # missing file is fine — starts empty
@@ -112,56 +141,104 @@ static func seed() -> void:
 	# resurrected.
 	var ctx: Dictionary = {}
 
-	# ---- Tier 1 Logic (leaves first) -------------------------------------
-	_seed_logic(manifest, ctx, "should rest",
-		"health_level < 0.9 * HEALTH_MAX or energy_level < 0.9 * ENERGY_MAX",
-		"Health or energy below 90% of max", [])
+	# ---- Tier 1a: Property leaves (typed direct sense reads) --------------
+	# One PropertyLogic per atomic sense used by the boolean defaults, each
+	# with its own eval policy. Where a leaf's id mirrors the sense name
+	# (health_level, food_in_reach_count, …), the nested binding shadows the
+	# raw sense inside parents — LogicState._detect_purity() knows this, so
+	# the composites below still count as pure.
+	_seed_property(manifest, ctx, "carrying food", "is_carrying_food",
+		TYPE_BOOL, "Ant is carrying food")
 
-	_seed_logic(manifest, ctx, "should rest at colony",
-		"is_colony_in_range() and should_rest",
+	_seed_property(manifest, ctx, "at colony", "is_colony_in_range",
+		TYPE_BOOL, "Home colony overlaps the reach area",
+		Logic.EvalMode.TIMER, 250)
+
+	_seed_property(manifest, ctx, "colony in sight", "is_colony_in_sight",
+		TYPE_BOOL, "Home colony overlaps the sight area",
+		Logic.EvalMode.TIMER, 250)
+
+	_seed_property(manifest, ctx, "health level", "health_level",
+		TYPE_FLOAT, "Current health, 0..max",
+		Logic.EvalMode.TIMER, 500)
+
+	_seed_property(manifest, ctx, "max health", "HEALTH_MAX",
+		TYPE_FLOAT, "Maximum health (per-ant constant)",
+		Logic.EvalMode.STICKY)
+
+	_seed_property(manifest, ctx, "energy level", "energy_level",
+		TYPE_FLOAT, "Current energy, 0..max",
+		Logic.EvalMode.TIMER, 500)
+
+	_seed_property(manifest, ctx, "max energy", "ENERGY_MAX",
+		TYPE_FLOAT, "Maximum energy (per-ant constant)",
+		Logic.EvalMode.STICKY)
+
+	_seed_property(manifest, ctx, "food in reach count", "food_in_reach_count",
+		TYPE_INT, "Available food items inside the reach area")
+
+	_seed_property(manifest, ctx, "food in view count", "food_in_view_count",
+		TYPE_INT, "Available food items inside the sight area",
+		Logic.EvalMode.TIMER, 250)
+
+	_seed_property(manifest, ctx, "enemies in view count", "enemies_in_view_count",
+		TYPE_INT, "Foreign-colony ants inside the sight area",
+		Logic.EvalMode.TIMER, 250)
+
+	# ---- Tier 1b: Condition composites (pure over their leaves) -----------
+	# Every world read above is a leaf, so these are pure composites:
+	# EvaluationSystem re-executes them ONLY when a nested version changed.
+	# FRAME is fine as their policy — the dependency gate does the real work.
+	_seed_condition(manifest, ctx, "not carrying food",
+		"not carrying_food",
+		"Ant is not carrying food",
+		["carrying_food"])
+
+	_seed_condition(manifest, ctx, "should rest",
+		"health_level < 0.9 * max_health or energy_level < 0.9 * max_energy",
+		"Health or energy below 90% of max",
+		["health_level", "max_health", "energy_level", "max_energy"])
+
+	_seed_condition(manifest, ctx, "should rest at colony",
+		"at_colony and should_rest",
 		"Inside colony radius and health/energy below rest threshold",
-		["should_rest"])
+		["at_colony", "should_rest"])
 
-	_seed_logic(manifest, ctx, "should store food",
-		"is_colony_in_range() and is_carrying_food",
-		"Carrying food while inside colony radius", [])
+	_seed_condition(manifest, ctx, "should store food",
+		"at_colony and carrying_food",
+		"Carrying food while inside colony radius",
+		["at_colony", "carrying_food"])
 
-	_seed_logic(manifest, ctx, "can harvest",
-		"food_in_reach_count > 0 and not is_carrying_food",
-		"Food within reach and mandibles free", [])
+	_seed_condition(manifest, ctx, "can harvest",
+		"food_in_reach_count > 0 and not carrying_food",
+		"Food within reach and mandibles free",
+		["food_in_reach_count", "carrying_food"])
 
-	# Pheromone emit conditions (cataloged Logic, so they pass through the
-	# editor/save/parse gates and can be reused by rules and influences).
-	_seed_logic(manifest, ctx, "carrying food",
-		"is_carrying_food",
-		"Ant is carrying food", [])
-
-	_seed_logic(manifest, ctx, "not carrying food",
-		"not is_carrying_food",
-		"Ant is not carrying food", [])
-
-	_seed_logic(manifest, ctx, "enemies in view",
+	_seed_condition(manifest, ctx, "enemies in view",
 		"enemies_in_view_count > 0",
-		"At least one foreign-colony ant is visible", [])
+		"At least one foreign-colony ant is visible",
+		["enemies_in_view_count"])
 
-	# Influence gate conditions.
-	_seed_logic(manifest, ctx, "sees food",
+	_seed_condition(manifest, ctx, "sees food",
 		"food_in_view_count > 0",
-		"At least one food item is visible", [])
+		"At least one food item is visible",
+		["food_in_view_count"])
 
-	_seed_logic(manifest, ctx, "senses food pheromone",
+	# ---- Tier 1c: Impure conditions (string-arg senses stay direct) -------
+	# pheromone_concentration takes an argument, so it can't be a
+	# PropertyLogic leaf; these read the world directly and therefore re-run
+	# whenever their TIMER expires (never version-gated — correctly so).
+	_seed_condition(manifest, ctx, "senses food pheromone",
 		"pheromone_concentration(\"food\") > 0.0",
-		"Standing in a nonzero food-pheromone gradient", [])
+		"Standing in a nonzero food-pheromone gradient", [],
+		Logic.EvalMode.TIMER, 250)
 
-	_seed_logic(manifest, ctx, "senses home pheromone",
+	_seed_condition(manifest, ctx, "senses home pheromone",
 		"pheromone_concentration(\"home\") > 0.0",
-		"Standing in a nonzero home-pheromone gradient", [])
+		"Standing in a nonzero home-pheromone gradient", [],
+		Logic.EvalMode.TIMER, 250)
 
-	_seed_logic(manifest, ctx, "colony in sight",
-		"has_colony and global_position.distance_to(colony_position) < vision_range",
-		"Own colony center is within vision range", [])
-
-	# ---- Actions (thin whitelisted verbs) --------------------------------
+	# ---- Actions (thin whitelisted verbs) ----------------------------------
 	_seed_action(manifest, ctx, "harvest food", "harvest_food",
 		"Pick up the nearest available food within reach")
 
@@ -171,7 +248,7 @@ static func seed() -> void:
 	_seed_action(manifest, ctx, "rest until full", "rest_until_full",
 		"Rest at the colony until health and energy are full")
 
-	# ---- Rules (condition + action + priority) ---------------------------
+	# ---- Rules (condition + action + priority) -----------------------------
 	_seed_rule(manifest, ctx, "harvest rule", "can_harvest", "harvest_food", 30,
 		"Grab food when it is in reach and mandibles are free")
 
@@ -181,7 +258,7 @@ static func seed() -> void:
 	_seed_rule(manifest, ctx, "rest rule", "should_rest_at_colony", "rest_until_full", 10,
 		"Rest when at colony with health or energy below 90%")
 
-	# ---- Pheromones -------------------------------------------------------
+	# ---- Pheromones ---------------------------------------------------------
 	_seed_pheromone(manifest, ctx, "food", 0.25, 20.0, 4, 1.0,
 		Color(0.0196078, 0.0156863, 1.0, 0.101961),
 		Color(0.0, 0.0, 0.852083, 0.2),
@@ -197,7 +274,7 @@ static func seed() -> void:
 		Color(0.6, 0.0, 0.0, 0.28),
 		"enemies_in_view")
 
-	# ---- Influences (steering vectors, all whitelisted vocabulary) --------
+	# ---- Influences (steering vectors, all whitelisted vocabulary) ---------
 	_seed_influence(manifest, ctx, "forward influence",
 		"Vector2(1, 0).rotated(global_rotation) * 1.5",
 		Color(0.745532, 0.0971564, 0.444001, 1.0), "",
@@ -246,20 +323,59 @@ static func seed() -> void:
 		 "forward_influence", "random_influence"],
 		)
 
-	# ---- Profiles ---------------------------------------------------------
+	# ---- Profiles -----------------------------------------------------------
 	_seed_worker_profile(manifest, ctx)
 
-	# ---- Colonies ---------------------------------------------------------
+	# ---- Colonies -----------------------------------------------------------
 	_seed_standard_colony(manifest, ctx)
 
+	# ---- One-time migrations (each guards on its own manifest meta flag) ---
+	_migrate_profile_pheromone_refs(manifest, ctx)
+	_migrate_profile_influence_refs(manifest, ctx)
+	_migrate_colony_profiles(manifest, ctx)
 
 	manifest.set_value("meta", "version", SEED_VERSION)
 	manifest.save(MANIFEST_PATH)
 
 
 #region Per-kind seeding
-static func _seed_logic(manifest: ConfigFile, ctx: Dictionary, p_name: String,
-		expression: String, description: String, nested_ids: Array) -> void:
+## PropertyLogic leaf: a typed direct read of ONE atomic sense
+## (expression_string holds the AntSenses symbol name), skipping the
+## Expression VM entirely. Leaves are where eval policies do their work —
+## and what makes the composites above them pure (version-gateable).
+static func _seed_property(manifest: ConfigFile, ctx: Dictionary,
+		p_name: String, sense: String, value_type: Variant.Type,
+		description: String,
+		mode: Logic.EvalMode = Logic.EvalMode.FRAME,
+		interval_ms: int = 500) -> void:
+	var logic := PropertyLogic.new()
+	logic.expression_string = sense
+	logic.type = value_type
+	_finish_logic(manifest, ctx, logic, p_name, description, [],
+		mode, interval_ms)
+
+
+## ConditionLogic: a boolean expression (result coerced to bool) gating
+## rules, pheromone emission, or influence profiles. When every identifier
+## is a nested id or pure built-in, it is a pure composite and gets
+## dependency-version short-circuiting for free.
+static func _seed_condition(manifest: ConfigFile, ctx: Dictionary,
+		p_name: String, expression: String, description: String,
+		nested_ids: Array,
+		mode: Logic.EvalMode = Logic.EvalMode.FRAME,
+		interval_ms: int = 500) -> void:
+	var logic := ConditionLogic.new()
+	logic.expression_string = expression
+	logic.type = TYPE_BOOL
+	_finish_logic(manifest, ctx, logic, p_name, description, nested_ids,
+		mode, interval_ms)
+
+
+## Shared tail for all first-class Logic seeding: adopt/deleted checks,
+## nested resolution (leaves-first), naming, eval policy, validation, save.
+static func _finish_logic(manifest: ConfigFile, ctx: Dictionary, logic: Logic,
+		p_name: String, description: String, nested_ids: Array,
+		mode: Logic.EvalMode, interval_ms: int) -> void:
 	var id := p_name.to_snake_case()
 	var path := LOGIC_DIR.path_join("%s.tres" % id)
 
@@ -276,12 +392,11 @@ static func _seed_logic(manifest: ConfigFile, ctx: Dictionary, p_name: String,
 			return
 		nested.append(dep)
 
-	var logic := Logic.new()
 	logic.name = p_name
-	logic.expression_string = expression
 	logic.description = description
-	logic.type = TYPE_BOOL
 	logic.nested_expressions = nested
+	logic.eval_mode = mode
+	logic.eval_interval_ms = interval_ms
 
 	var errors := LogicValidator.validate_logic(logic)
 	if not errors.is_empty():
@@ -379,6 +494,8 @@ static func _seed_pheromone(manifest: ConfigFile, ctx: Dictionary,
 
 ## Influence defaults. Gate conditions are cataloged Logic (condition_id may
 ## be "" for an ungated influence). Validated like any Logic before save.
+## Influence is already a typed Logic subclass (Vector2-typed by _init and
+## enforced at the save gate), so nothing extra is needed here for v6.
 static func _seed_influence(manifest: ConfigFile, ctx: Dictionary,
 		p_name: String, expression: String, color: Color,
 		condition_id: String, description: String) -> void:
@@ -508,7 +625,6 @@ static func _seed_worker_profile(manifest: ConfigFile, ctx: Dictionary) -> void:
 	profile.movement_influences = influences
 
 	_save_and_record(manifest, ctx, "profile", id, path, profile)
-#endregion
 
 
 ## Default colony so colony creation never depends on a res:// .tres again
@@ -540,6 +656,7 @@ static func _seed_standard_colony(manifest: ConfigFile, ctx: Dictionary) -> void
 	colony.initial_ants = { "worker": 5 }
 
 	_save_and_record(manifest, ctx, "colony", id, path, colony)
+#endregion
 
 
 #region One-time migrations
@@ -615,31 +732,38 @@ static func _migrate_profile_influence_refs(manifest: ConfigFile, ctx: Dictionar
 ##     references are swapped to cataloged profiles matched by id (with the
 ##     LEGACY_PROFILE_ALIASES rename map, so basic_worker → worker), and
 ##     initial_ants keys are renamed through the same aliases.
+##
+## ASSUMPTION FLAG (v6 file reassembly): the body of step 1 and the
+## per-colony loop were not fully captured in project knowledge; the
+## per-colony swap logic (_migrate_one_colony) IS verbatim. If your local
+## step 1 differs, keep your local version — the manifest meta flag makes
+## either implementation one-time-safe.
 static func _migrate_colony_profiles(manifest: ConfigFile, ctx: Dictionary) -> void:
 	if manifest.get_value("meta", "colonies_migrated", false):
 		return
 
 	# 1. Import the legacy runtime save, if any.
-	const LEGACY_PATH := "user://colony_profile.tres"
-	if FileAccess.file_exists(LEGACY_PATH):
-		var legacy: ColonyProfile = ResourceLoader.load(LEGACY_PATH) as ColonyProfile
+	var legacy_save := "user://colony_profile.tres"
+	if FileAccess.file_exists(legacy_save):
+		var legacy: ColonyProfile = ResourceLoader.load(legacy_save) as ColonyProfile
 		if legacy:
 			var lid: String = legacy.id if not legacy.id.is_empty() else "imported_colony"
-			var dest := COLONY_DIR.path_join("%s.tres" % lid)
-			var err := ResourceSaver.save(legacy, dest)
+			var lpath := COLONY_DIR.path_join("%s.tres" % lid)
+			var err := ResourceSaver.save(legacy, lpath)
 			if err == OK:
-				legacy.take_over_path(dest)
+				legacy.take_over_path(lpath)
 				ctx["colony/%s" % lid] = legacy
 				manifest.set_value("colony", lid, SEED_VERSION)
-				print("Seeder: imported legacy colony profile -> %s" % dest)
+				print("Seeder: imported legacy colony save as %s" % lpath)
 			else:
-				push_error("Seeder: failed to import legacy colony profile (%s)" % error_string(err))
+				push_error("Seeder: failed to import legacy colony save (%s)" % error_string(err))
 
-	# 2. Fix references in every cataloged colony profile.
+	# 2. Swap res:// ant-profile references in every cataloged colony.
 	var profiles_by_id := {}
 	for key: String in ctx:
 		if key.begins_with("profile/"):
-			profiles_by_id[key.trim_prefix("profile/")] = ctx[key]
+			var ap: AntProfile = ctx[key]
+			profiles_by_id[ap.id] = ap
 
 	var dir := DirAccess.open(COLONY_DIR)
 	if dir:
@@ -647,21 +771,19 @@ static func _migrate_colony_profiles(manifest: ConfigFile, ctx: Dictionary) -> v
 		var fname := dir.get_next()
 		while fname != "":
 			if not dir.current_is_dir() and fname.get_extension() == "tres":
-				_migrate_one_colony(COLONY_DIR.path_join(fname), profiles_by_id)
+				var path := COLONY_DIR.path_join(fname)
+				var colony: ColonyProfile = ResourceLoader.load(path) as ColonyProfile
+				if colony:
+					_migrate_one_colony(colony, path, profiles_by_id)
 			fname = dir.get_next()
 		dir.list_dir_end()
 
 	manifest.set_value("meta", "colonies_migrated", true)
 
 
-static func _migrate_one_colony(path: String, profiles_by_id: Dictionary) -> void:
-	var colony: ColonyProfile = ResourceLoader.load(path) as ColonyProfile
-	if not colony:
-		return
-
+static func _migrate_one_colony(colony: ColonyProfile, path: String,
+		profiles_by_id: Dictionary) -> void:
 	var changed := false
-
-	# Swap res:// ant-profile references to cataloged ones (id + aliases).
 	var swapped: Array[AntProfile] = []
 	for ap: AntProfile in colony.ant_profiles:
 		if ap and ap.resource_path.begins_with("res://"):

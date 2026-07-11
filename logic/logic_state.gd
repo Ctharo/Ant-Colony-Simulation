@@ -43,7 +43,18 @@ var stale := false
 ## policies measure against this.
 var last_evaluation_time: int = 0
 
-## Incremented whenever this logic's VALUE actually changes.
+## Version of the cached VALUE. Reassigned (from the global serial below)
+## only when the value actually changes; parents compare the versions they
+## remembered in dependency_versions against their children's current
+## versions to decide whether a pure composite must re-execute.
+##
+## Why a GLOBAL serial instead of a per-state counter: states get dropped
+## and recreated by invalidate_expression() (library edits). A per-state
+## counter restarts at 0 → 1, which can collide with a version the OLD
+## state already reported to a parent — the parent would then serve a stale
+## cache across a real value change. Serials are never reused, so version
+## equality always means "same value as last remembered". 0 = never
+## computed (the serial starts handing out values at 1).
 var version: int = 0
 
 ## Child versions from the last successful evaluation.
@@ -66,9 +77,10 @@ var is_parsed := false
 ## returns the type default without re-validating on every call.
 var validation_failed := false
 
-## True when the compiled expression references ONLY nested ids and pure
-## deterministic built-ins — no atomic senses, no randomness. Only then do
-## unchanged dependency versions imply an unchanged result, so only then may
+## True when the compiled expression's inputs are ENTIRELY its children:
+## every identifier is a nested id or a pure deterministic built-in — no
+## direct atomic-sense reads, no randomness. Only then do unchanged
+## dependency versions imply an unchanged result, so only then may
 ## EvaluationSystem skip execute() on the dependency-version check.
 var pure_composite := false
 #endregion
@@ -90,6 +102,10 @@ const FRAME_TTL_MS := 16.0
 const _IMPURE_FUNCS: Array[String] = [
 	"randf", "randi", "randf_range", "randi_range",
 ]
+
+## Global monotonic version serial (see `version`). Shared by ALL states so
+## a version number can never be reused across state drop/recreate cycles.
+static var _version_serial: int = 0
 
 ## Atomic sense names, built once from AntSenses (single source of truth).
 static var _sense_names: Dictionary = {}
@@ -153,6 +169,15 @@ func parse(variables: PackedStringArray) -> Error:
 
 
 ## Determines pure_composite (see its doc). Runs once per parse.
+##
+## Nested ids are excluded from the sense-name scan: Expression.parse()
+## binds the nested ids as input variables at PARSE time, so an identifier
+## matching a nested id always resolves to the child's bound value — never
+## to a same-named atomic sense on the base instance. A PropertyLogic leaf
+## may therefore share its name with the sense it wraps (e.g. a leaf whose
+## id is "health_level" reading the health_level sense) without poisoning
+## its parents' purity. Without this exclusion, the natural leaf-naming
+## convention would silently disable version gating everywhere.
 func _detect_purity() -> void:
 	pure_composite = false
 	if logic.nested_expressions.is_empty():
@@ -167,10 +192,17 @@ func _detect_purity() -> void:
 		_ident_regex = RegEx.create_from_string("(?<![A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*")
 		_string_regex = RegEx.create_from_string("\"[^\"]*\"")
 
+	var nested_ids := {}
+	for n: Logic in logic.nested_expressions:
+		if n:
+			nested_ids[n.id] = true
+
 	# Strip string literals so pheromone names like "danger" aren't scanned.
 	var stripped := _string_regex.sub(compiled_expression, "", true)
 	for m: RegExMatch in _ident_regex.search_all(stripped):
 		var ident := m.get_string()
+		if nested_ids.has(ident):
+			continue  # bound child input — shadows any same-named sense
 		if _sense_names.has(ident) or ident in _IMPURE_FUNCS:
 			return
 	pure_composite = true
@@ -190,11 +222,13 @@ func has_error() -> bool:
 
 
 #region Value & versions
-## Stores a computed result, bumping version only if the VALUE changed —
-## parents recompute on version bumps, so spurious bumps waste work.
+## Stores a computed result, taking a fresh version serial only if the VALUE
+## changed — parents recompute on version changes, so spurious bumps waste
+## work, and a recompute that lands on the same value must not ripple.
 func cache(value: Variant) -> void:
 	if not has_value or cached_value != value:
-		version += 1
+		_version_serial += 1
+		version = _version_serial
 	cached_value = value
 	has_value = true
 	stale = false

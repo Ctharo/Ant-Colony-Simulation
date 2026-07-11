@@ -79,7 +79,7 @@ func _build_ui() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	alignment = BoxContainer.ALIGNMENT_CENTER
 
-	_food_spin = _add_spin_row("Food:", "food_spawn_count", "Food items spawned when the sandbox starts")	
+	_food_spin = _add_spin_row("Food:", "food_spawn_count", "Food items spawned when the sandbox starts")
 	_ant_spin = _add_spin_row("Ants:", "ant_spawn_count", "Ants spawned when the sandbox starts")
 
 	add_child(VSeparator.new())
@@ -100,7 +100,7 @@ func _build_ui() -> void:
 	_heatmap_check = _add_check("Heatmap")
 	_bars_check = _add_check("Health/Energy")
 	_influence_check = _add_check("Influence Arrows")
-		
+
 	var designer_btn := Button.new()
 	designer_btn.text = "Designer"
 	designer_btn.tooltip_text = "Visual behavior designer: expression trees, live values, re-eval policies"
@@ -117,7 +117,7 @@ func _add_spin_row(label_text: String, setting_name: String, tooltip: String = "
 	var spin := SpinBox.new()
 	spin.custom_minimum_size = Vector2(90, 0)
 	var constraints: Dictionary = settings_manager.get_constraints(setting_name)
-	spin.tooltip_text = "%s\nRange: %s–%s" % [tooltip, constraints.get("min", 0), constraints.get("max", 100)]	
+	spin.tooltip_text = "%s\nRange: %s–%s" % [tooltip, constraints.get("min", 0), constraints.get("max", 100)]
 	spin.min_value = constraints.get("min", 0)
 	spin.max_value = constraints.get("max", 100)
 	spin.step = constraints.get("step", 1)

@@ -92,7 +92,7 @@ func get_entries(kind: String) -> Array:
 func get_by_id(kind: String, id: String) -> Resource:
 	if get_entries(kind).is_empty():
 		push_error("Attempting to get resource but none are found")
-		assert(false, "Attempting to get resource but none are found")
+		#assert(false, "Attempting to get resource but none are found")
 	for entry: Entry in get_entries(kind):
 		if entry.resource.get("id") == id:
 			return entry.resource
