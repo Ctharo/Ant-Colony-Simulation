@@ -51,7 +51,7 @@ func _ready() -> void:
 
 	if is_instance_valid(overlay):
 		overlay.visible = true
-		
+
 	_setup_debug_menu()
 
 
@@ -94,7 +94,7 @@ func _on_gui_input(event: InputEvent) -> void:
 				handle_left_click()
 			MOUSE_BUTTON_RIGHT:
 				handle_right_click()
-				
+
 		get_viewport().set_input_as_handled()
 #endregion
 
@@ -109,11 +109,11 @@ func handle_right_click() -> void:
 		show_context_menu()
 	else:
 		show_empty_context_menu()
-		
+
 func select_hovered_entity() -> void:
 	if hovered_entity:
 		show_info_panel(hovered_entity)
-		
+
 #endregion
 
 #region Context Menu Management
@@ -125,9 +125,9 @@ func show_context_menu() -> void:
 			_show_colony_context_menu()
 
 func _show_colony_context_menu() -> void:
-	
+
 	var colony: Colony = camera.hovered_entity
-		
+
 	active_context_menu.add_button("Spawn Ants",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
@@ -154,6 +154,9 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 	if not is_instance_valid(colony):
 		return
 
+	clear_active_menus()
+
+
 	match index:
 		0: # Spawn Ants
 			_spawn_ants_at_colony(colony)
@@ -164,7 +167,6 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 		3: # Destroy
 			colony_manager.remove_colony(colony)
 
-	clear_active_menus()
 
 func _spawn_ants_at_colony(colony: Colony) -> void:
 	var spawn_count: int = int(settings_manager.get_setting("ant_spawn_count", 5))
@@ -180,7 +182,7 @@ func _create_context_window() -> void:
 
 func show_empty_context_menu() -> void:
 	_create_context_window()
-	
+
 	active_context_menu.add_button("Spawn Colony",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
@@ -205,7 +207,7 @@ func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
 
 
 func _show_ant_context_menu() -> void:
-	
+
 	var ant: Ant = hovered_entity
 	if not ant:
 		return
@@ -282,15 +284,17 @@ func _on_spawn_colony_requested(pos: Vector2) -> void:
 	_spawn_colony_at(pos)
 
 func _spawn_colony_at(pos: Vector2) -> void:
-	colony_manager.spawn_colony_at(pos)
+	var colony = colony_manager.spawn_colony_at(pos)
+	if not colony:
+		Toast.error(self, "Failed to spawn colony")
 
 
 func _on_colony_highlight_ants_requested(colony: Colony, enabled: bool) -> void:
 	if not is_instance_valid(colony):
 		return
 	colony.highlight_ants_enabled = enabled
-	
-	
+
+
 #endregion
 
 #region Food Handlers

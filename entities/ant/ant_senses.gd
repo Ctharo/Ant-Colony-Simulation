@@ -197,24 +197,6 @@ func pheromone_concentration(pheromone_name: String) -> float:
 	return _perception.get_pheromone_concentration(pheromone_name)
 #endregion
 
-
-#region Deprecated node-returning API (excluded from vocabulary; delete after migration)
-func get_food_in_view() -> Array: return _perception.get_food_in_view()
-func get_food_in_reach() -> Array: return _perception.get_food_in_reach()
-func get_ants_in_view() -> Array: return _perception.get_ants_in_view()
-func get_colonies_in_view() -> Array: return _perception.get_colonies_in_view()
-func get_colonies_in_reach() -> Array: return _perception.get_colonies_in_reach()
-func get_nearest_item(list: Array) -> Variant: return _perception.get_nearest_item(list)
-func get_nearest_food_in_reach() -> Food: return _perception.get_nearest_food_in_reach()
-func filter_friendly_ants(ants_arr: Array, friendly: bool = true) -> Array:
-	return _perception.filter_friendly_ants(ants_arr, friendly)
-func get_pheromone_direction(pheromone_name: String, follow_concentration: bool = true) -> Vector2:
-	return _perception.get_pheromone_direction(pheromone_name, follow_concentration)
-func get_pheromone_concentration(pheromone_name: String) -> float:
-	return _perception.get_pheromone_concentration(pheromone_name)
-#endregion
-
-
 #region Helpers
 ## Nearest item's position by distance to this ant, or Vector2.INF when the
 ## list is empty. INF makes distance comparisons fail naturally ("< 50" is

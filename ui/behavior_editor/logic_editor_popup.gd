@@ -34,7 +34,7 @@ var _vocab_tree: Tree
 func _init() -> void:
 	setup_window("expression_editor", "Expression Editor",
 		Vector2i(500, 800), Vector2i(460, 700))
-	
+
 
 
 func open_for(res: Resource, path: String, writable: bool) -> void:
@@ -152,7 +152,7 @@ func _build_ui(writable: bool, path: String) -> void:
 	_nested_picker.tooltip_text = "Pick an expression to nest"
 
 	watch([_name_edit, _type_select, _expr_edit, _desc_edit])
-	
+
 	_refresh_nested()
 	_validate()
 
@@ -283,7 +283,7 @@ func _on_add_nested() -> void:
 		_refresh_nested()
 		_validate()
 	_populate_vocabulary()
-	
+
 
 func _on_remove_nested() -> void:
 	var sel := _nested_list.get_selected_items()

@@ -109,8 +109,9 @@ func _spawn_colony(profile: ColonyProfile = null) -> Colony:
 
 	var colony_profile: ColonyProfile = profile
 	if not colony_profile:
-		push_warning("No colony profile found, attempting to retrieve default from settings")
-		colony_profile = SettingsManager.get_colony_profile()
+		logger.error("Cannot spawn colony — no colony profile could be resolved")
+		colony.queue_free()
+		return null
 
 	colony.init_colony_profile(colony_profile)
 
@@ -138,6 +139,7 @@ func spawn_colony_at(world_position: Vector2, profile: ColonyProfile = null) -> 
 		print("Spawned colony at: ", colony.global_position)
 	else:
 		push_warning("Failed to spawn colony")
+		return null
 	return colony
 
 

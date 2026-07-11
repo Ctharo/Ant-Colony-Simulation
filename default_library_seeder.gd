@@ -20,48 +20,6 @@ extends RefCounted
 ## an ext_resource reference, silently forking the child. Every resource is
 ## therefore saved and take_over_path()'d before anything references it.
 ##
-## v4 (influence migration) notes — the seeded influences are REWRITES of
-## the old res://resources/influences .tres files:
-##   - get_pheromone_direction("x")  →  pheromone_direction("x")
-##     (the deprecated node-era call; last blocker for deleting
-##     AntSenses.DEPRECATED — run audit_expressions() after first launch)
-##   - go_home's "die" enter condition calling suicide() is dropped: a
-##     side-effecting action inside a condition is exactly what the
-##     validator exists to reject.
-##   - go_home's null exit_conditions becomes a real exit ("not carrying
-##     food"), which the sticky selection in InfluenceManager now honors.
-##
-## v5 (colony migration) notes:
-##   - ColonyProfiles are cataloged (KIND_COLONY) and a "Standard Colony"
-##     default referencing the seeded worker replaces the res://
-##     standard_colony_profile.tres → basic_worker.tres chain that kept the
-##     legacy res:// resources load-bearing.
-##   - The legacy runtime save (user://colony_profile.tres) is imported, and
-##     res:// ant-profile references / initial_ants keys are renamed through
-##     LEGACY_PROFILE_ALIASES (basic_worker → worker).
-##
-## v6 (typed logic + dependency versions) notes:
-##   - Tier-1 defaults now instantiate the Logic subclasses instead of the
-##     base class: PropertyLogic for atomic sense leaves (skips the
-##     Expression VM entirely — no parse, no VM attack surface) and
-##     ConditionLogic for boolean composites (result coerced to bool).
-##   - Every world read used by a boolean default is wrapped in a
-##     PropertyLogic leaf, making the composites PURE: EvaluationSystem
-##     re-executes them only when a child's version changed (see
-##     LogicState.pure_composite / version). Leaves carry the eval
-##     policies — per-ant constants STICKY, slow spatial senses TIMER,
-##     reactive senses FRAME — which is where the caching wins live.
-##   - "colony in sight" is now a PropertyLogic on the is_colony_in_sight
-##     sense instead of hand-computed distance math (same id, so the
-##     colony_in_sight_influence gate reference is unchanged).
-##   - pheromone_concentration("...") conditions stay as direct-read
-##     ConditionLogic: string-arg senses can't be PropertyLogic leaves, and
-##     being impure they correctly never version-gate (TIMER caps their cost).
-##   - All catalog ids from v5 are preserved (carrying_food,
-##     not_carrying_food, enemies_in_view, colony_in_sight, the rule
-##     conditions, …), so rules, pheromones, influences, and profiles keep
-##     referencing the same keys.
-##
 ## Called by ResourceLibrary._ready() before the first rescan(), so the
 ## catalog always includes freshly seeded defaults.
 
@@ -131,6 +89,14 @@ static func seed() -> void:
 		DirAccess.make_dir_recursive_absolute(dir)
 		if DEV_WIPE_ON_LAUNCH:
 			clear_directory(dir)
+
+	if DEV_WIPE_ON_LAUNCH:
+		# A dev wipe must simulate a TRUE first run. The manifest lives at
+		# user://behavior/ root and survives the subdirectory wipe; if it is
+		# left in place, _was_deleted() reads every wiped file as a
+		# deliberate user deletion and silently skips ALL seeding — empty
+		# catalog, null colony profile at spawn. Manifest goes with the files.
+		DirAccess.remove_absolute(MANIFEST_PATH)
 
 	var manifest := ConfigFile.new()
 	manifest.load(MANIFEST_PATH)  # missing file is fine — starts empty
@@ -328,11 +294,6 @@ static func seed() -> void:
 
 	# ---- Colonies -----------------------------------------------------------
 	_seed_standard_colony(manifest, ctx)
-
-	# ---- One-time migrations (each guards on its own manifest meta flag) ---
-	_migrate_profile_pheromone_refs(manifest, ctx)
-	_migrate_profile_influence_refs(manifest, ctx)
-	_migrate_colony_profiles(manifest, ctx)
 
 	manifest.set_value("meta", "version", SEED_VERSION)
 	manifest.save(MANIFEST_PATH)
