@@ -76,7 +76,6 @@ func setup_window(id: String, p_title: String, p_size: Vector2i,
 	window_input.connect(_on_window_input)
 	focus_entered.connect(move_to_foreground)
 
-
 ## Show the window at a sane size and position:
 ##  - size is at least the content minimum, at most the usable viewport
 ##  - a saved rect is restored, then corrected by the same limits

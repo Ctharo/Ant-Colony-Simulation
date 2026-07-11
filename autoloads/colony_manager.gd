@@ -109,6 +109,8 @@ func _spawn_colony(profile: ColonyProfile = null) -> Colony:
 
 	var colony_profile: ColonyProfile = profile
 	if not colony_profile:
+		colony_profile = SettingsManager.get_colony_profile()
+	if not colony_profile:
 		logger.error("Cannot spawn colony — no colony profile could be resolved")
 		colony.queue_free()
 		return null

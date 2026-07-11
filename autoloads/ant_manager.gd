@@ -123,7 +123,6 @@ func remove_ant(ant: Ant) -> void:
 
 	# Cleanup systems
 	HeatmapManager.unregister_entity(ant)
-	EvaluationSystem.cleanup_entity(ant)
 
 	# Delete node
 	ant.queue_free()
