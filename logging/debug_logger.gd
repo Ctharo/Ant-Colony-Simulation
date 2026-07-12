@@ -1,5 +1,19 @@
 class_name DebugLogger
 extends RefCounted
+## Central logging funnel.
+##
+## Levels are gated PER CATEGORY: a message prints only if its level is at or
+## below min(global log_level, category_levels[category]). The global level is
+## a master cap; per-category levels tune verbosity independently.
+##
+## ERROR and WARN are exempt from ALL filtering. They always reach the editor's
+## Debugger -> Errors tab (via push_error / push_warning, with stack trace) AND
+## always print to Output, no matter which categories are muted. An error in a
+## muted category is still an error.
+##
+## Doctrine (see ERRORS.md): never call push_error/push_warning directly from
+## instanced code — go through an iLogger. Static / pre-logger contexts (e.g.
+## DefaultLibrarySeeder) use the static DebugLogger.error()/warn() funnels.
 
 ## Log levels for different types of messages
 enum LogLevel {
@@ -32,7 +46,8 @@ enum Category {
 
 #region Configuration
 
-## Current log level - default to TRACE, SettingsManager will set the actual value
+## Global level CAP - default to TRACE, SettingsManager will set the actual
+## value. Effective level for a message = min(log_level, category level).
 static var log_level := LogLevel.TRACE
 
 ## Show context in logs
@@ -54,18 +69,17 @@ class SourceFilter:
 ## Maps source identifiers to their filter configuration
 static var source_filters: Dictionary = {}
 
-## Enabled categories - initialized to allow PROGRAM logging before SettingsManager runs
-## SettingsManager.apply_debug_settings() will set the actual values on startup
-static var enabled_categories: Dictionary = _create_initial_categories()
+## Per-category log levels (Category -> LogLevel). NONE = muted.
+## Initialized so PROGRAM can log before SettingsManager applies real values.
+static var category_levels: Dictionary = _create_initial_category_levels()
 
-## Create initial category states - only PROGRAM enabled by default
-## This ensures we can log during startup before SettingsManager applies real settings
-static func _create_initial_categories() -> Dictionary:
-	var categories := {}
+## Create initial category levels - only PROGRAM open by default.
+## This ensures we can log during startup before SettingsManager runs.
+static func _create_initial_category_levels() -> Dictionary:
+	var levels := {}
 	for category in Category.keys():
-		# Only enable PROGRAM by default for startup logging
-		categories[Category[category]] = (category == "PROGRAM")
-	return categories
+		levels[Category[category]] = LogLevel.TRACE if category == "PROGRAM" else LogLevel.NONE
+	return levels
 
 #endregion
 
@@ -109,19 +123,25 @@ static func configure_source(source: String, enabled: bool = true, categories: A
 	source_filters[source] = SourceFilter.new(enabled, categories)
 
 
-## Enable or disable specific categories
-static func set_category_enabled(category: Category, enabled: bool = true, from: String = "") -> void:
-	var current_state: bool = enabled_categories.get(category, false)
-	if current_state != enabled:
-		enabled_categories[category] = enabled
-		# Only log the change if it's actually different
-		info(Category.PROGRAM, "%s logging category %s" % [
-			"Enabled" if enabled else "Disabled",
-			CATEGORY_NAMES[category]
+## Set the log level for a specific category
+static func set_category_level(category: Category, level: LogLevel, from: String = "") -> void:
+	var current: int = category_levels.get(category, LogLevel.NONE)
+	if current != level:
+		category_levels[category] = level
+		info(Category.PROGRAM, "Set category %s to level %s" % [
+			CATEGORY_NAMES[category],
+			LogLevel.keys()[level]
 		], {"from": from if from else "debug_logger"})
 
 
-## Set the global log level
+## Back-compat shim over set_category_level.
+## enabled -> TRACE (category fully open; the global cap decides what prints),
+## disabled -> NONE. This reproduces the old boolean semantics exactly.
+static func set_category_enabled(category: Category, enabled: bool = true, from: String = "") -> void:
+	set_category_level(category, LogLevel.TRACE if enabled else LogLevel.NONE, from)
+
+
+## Set the global log level cap
 static func set_log_level(level: LogLevel, from: String = "") -> void:
 	if DebugLogger.log_level != level:
 		info(Category.PROGRAM, "Set log level to %s" % LogLevel.keys()[level],
@@ -137,21 +157,33 @@ static func set_show_context(enabled: bool = true, from: String = "") -> void:
 	DebugLogger.show_context = enabled
 
 
-## Check if a category is enabled
+## Current configured level for a category (before applying the global cap)
+static func get_category_level(category: Category) -> LogLevel:
+	return category_levels.get(category, LogLevel.NONE) as LogLevel
+
+
+## The level that actually gates messages: min(global cap, category level)
+static func effective_level(category: Category) -> LogLevel:
+	return mini(log_level, category_levels.get(category, LogLevel.NONE)) as LogLevel
+
+
+## Check if a category is enabled at all (any level above NONE)
 static func is_category_enabled(category: Category) -> bool:
-	return enabled_categories.get(category, false)
+	return effective_level(category) > LogLevel.NONE
+
+
+## Check if a given level would print for a given category.
+## NOTE: pure filter check — ERROR/WARN bypass this in log() regardless.
+static func is_level_enabled(category: Category, level: LogLevel) -> bool:
+	return level <= effective_level(category)
 
 #endregion
 
 
 #region Logging Implementation
 
-## Determine if a message should be logged based on source and category
-static func should_log(source: String, category: Category) -> bool:
-	# First check if the category is enabled globally
-	if not enabled_categories.get(category, false):
-		return false
-
+## Source-filter check only (category levels are handled in log())
+static func _source_allows(source: String, category: Category) -> bool:
 	# If no source filter exists, allow logging
 	if not source_filters.has(source):
 		return true
@@ -169,18 +201,54 @@ static func should_log(source: String, category: Category) -> bool:
 	return true
 
 
+## Determine if a message should be logged. ERROR/WARN always pass.
+static func should_log(source: String, category: Category, level: LogLevel = LogLevel.INFO) -> bool:
+	if level == LogLevel.NONE:
+		return false
+	if level <= LogLevel.WARN:
+		return true
+	if level > effective_level(category):
+		return false
+	return _source_allows(source, category)
+
+
 ## Log a message with specified level and category
 static func log(level: LogLevel, category: Category, message: String, context: Dictionary = {}) -> void:
-	# Check log level first
-	if level > DebugLogger.log_level:
+	if level == LogLevel.NONE:
 		return
 
 	var source: String = context.get("from", "")
+	var always_surface := level <= LogLevel.WARN
 
-	# Check if this combination of source and category should be logged
-	if not should_log(source, category):
-		return
+	if not always_surface:
+		# Filters only apply to INFO/DEBUG/TRACE
+		if level > effective_level(category):
+			return
+		if not _source_allows(source, category):
+			return
 
+	if always_surface:
+		_push_native(level, category, source, message)
+
+	_print_formatted(level, category, source, message, context)
+
+
+## Mirror ERROR/WARN into the editor debugger (Errors tab, with stack trace)
+static func _push_native(level: LogLevel, category: Category, source: String, message: String) -> void:
+	var tagged := "[%s]%s %s" % [
+		CATEGORY_NAMES[category],
+		"[%s]" % source if source else "",
+		message
+	]
+	if level == LogLevel.ERROR:
+		push_error(tagged)
+	elif level == LogLevel.WARN:
+		push_warning(tagged)
+
+
+## Rich-text Output print (formatting unchanged from previous version)
+static func _print_formatted(level: LogLevel, category: Category, source: String,
+		message: String, context: Dictionary) -> void:
 	var timestamp: String = Time.get_datetime_string_from_system()
 	var level_name: String = LogLevel.keys()[level]
 	var category_name: String = CATEGORY_NAMES[category]
@@ -242,7 +310,7 @@ static func trace(category: Category, message: String, context: Dictionary = {})
 #endregion
 
 
-#region Level Check Methods
+#region Level Check Methods (global-cap only; prefer is_level_enabled)
 
 static func is_trace_enabled() -> bool:
 	return LogLevel.TRACE <= log_level

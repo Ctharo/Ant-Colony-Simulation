@@ -46,24 +46,28 @@ const DEFAULT_SETTINGS := {
 	"show_context": false,
 }
 
-## Category default states - defines which debug categories are on by default
-## This is the SINGLE SOURCE OF TRUTH for category defaults
+## Per-category log LEVELS - SINGLE SOURCE OF TRUTH for category defaults.
+## Values are DebugLogger.LogLevel; NONE mutes the category entirely. The
+## effective level for a message is min(global "log_level", category level),
+## so TRACE here means "fully open — let the global cap decide."
+## NOTE: ERROR and WARN always surface regardless of these values.
+## (Legacy bool values in saved settings files are migrated on load:
+## true -> TRACE, false -> NONE, which reproduces the old behavior exactly.)
 const DEFAULT_CATEGORY_STATES := {
-	"category_task": false,
-	"category_logic": true,
-	"category_movement": false,
-	"category_influence": false,
-	"category_action": false,
-	"category_behavior": false,
-	"category_condition": false,
-	"category_context": false,
-	"category_entity": true,
-	"category_property": false,
-	"category_transition": false,
-	"category_hierarchy": false,
-	"category_ui": false,
-	"category_program": true,  # Program category should generally be on
-	"category_data": false,
+	"category_task": DebugLogger.LogLevel.NONE,
+	"category_logic": DebugLogger.LogLevel.TRACE,
+	"category_movement": DebugLogger.LogLevel.NONE,
+	"category_influence": DebugLogger.LogLevel.NONE,
+	"category_behavior": DebugLogger.LogLevel.NONE,
+	"category_condition": DebugLogger.LogLevel.NONE,
+	"category_context": DebugLogger.LogLevel.NONE,
+	"category_entity": DebugLogger.LogLevel.TRACE,
+	"category_property": DebugLogger.LogLevel.NONE,
+	"category_transition": DebugLogger.LogLevel.NONE,
+	"category_hierarchy": DebugLogger.LogLevel.NONE,
+	"category_ui": DebugLogger.LogLevel.NONE,
+	"category_program": DebugLogger.LogLevel.TRACE,  # Program generally on
+	"category_data": DebugLogger.LogLevel.NONE,
 }
 
 ## UI constraints for settings - centralizes min/max/step for spinboxes
@@ -168,7 +172,7 @@ func set_setting(setting_name: String, value: Variant) -> void:
 func _apply_setting_side_effects(setting_name: String, value: Variant) -> void:
 	match setting_name:
 		"log_level":
-			DebugLogger.set_log_level(value)
+			DebugLogger.set_log_level(int(value) as DebugLogger.LogLevel)
 		"show_context":
 			DebugLogger.set_show_context(value)
 		"colony_profile_path":
@@ -178,14 +182,17 @@ func _apply_setting_side_effects(setting_name: String, value: Variant) -> void:
 			if setting_name.begins_with("category_"):
 				var category_name := setting_name.trim_prefix("category_").to_upper()
 				if DebugLogger.Category.has(category_name):
-					DebugLogger.set_category_enabled(
+					DebugLogger.set_category_level(
 						DebugLogger.Category[category_name],
-						value
+						_coerce_level(value)
 					)
 
 
 ## Apply default settings for any missing values
 func ensure_defaults() -> void:
+	# Migrate legacy bool category values (true/false) to LogLevel ints
+	_migrate_category_levels()
+
 	# Apply all default settings
 	for setting_name in DEFAULT_SETTINGS:
 		_set_default_if_missing(setting_name, DEFAULT_SETTINGS[setting_name])
@@ -262,7 +269,7 @@ func _resolve_colony_profile() -> void:
 			_set_colony_profile(loaded, profile_path)
 			return
 
-	push_error("No colony profile could be resolved (catalog empty and no valid path)")
+	logger.error("No colony profile could be resolved (catalog empty and no valid path)")
 
 
 func _set_colony_profile(profile: ColonyProfile, path: String) -> void:
@@ -332,14 +339,38 @@ func save_colony_profile() -> Result:
 
 ## Apply debug-related settings to DebugLogger
 func apply_debug_settings() -> void:
-	DebugLogger.set_log_level(get_setting("log_level"))
+	DebugLogger.set_log_level(int(get_setting("log_level")) as DebugLogger.LogLevel)
 	DebugLogger.set_show_context(get_setting("show_context"))
 
 	for category in DebugLogger.Category.keys():
 		var setting_key: String = "category_" + category.to_lower()
-		var value: Variant = get_setting(setting_key)
-		var enabled: bool = value if value is bool else false
-		DebugLogger.set_category_enabled(DebugLogger.Category[category], enabled)
+		DebugLogger.set_category_level(
+			DebugLogger.Category[category],
+			_coerce_level(get_setting(setting_key))
+		)
+
+
+## Normalize a stored category value into a LogLevel.
+## Handles: legacy bools (true -> TRACE, false -> NONE), JSON round-trip
+## floats (ints come back as floats from JSON.parse_string), and nulls.
+func _coerce_level(value: Variant) -> DebugLogger.LogLevel:
+	if value is bool:
+		return DebugLogger.LogLevel.TRACE if value else DebugLogger.LogLevel.NONE
+	if value is float or value is int:
+		return clampi(int(value), DebugLogger.LogLevel.NONE, DebugLogger.LogLevel.TRACE) as DebugLogger.LogLevel
+	return DebugLogger.LogLevel.NONE
+
+
+## One-time in-place migration of legacy bool category values in _settings.
+## Runs inside ensure_defaults() so it covers both load paths.
+func _migrate_category_levels() -> void:
+	var migrated := false
+	for key in _settings.keys():
+		if key is String and key.begins_with("category_") and _settings[key] is bool:
+			_settings[key] = int(_coerce_level(_settings[key]))
+			migrated = true
+	if migrated:
+		logger.info("Migrated legacy bool category settings to per-category log levels")
 
 #endregion
 
@@ -368,21 +399,20 @@ func load_settings() -> void:
 		return
 
 	var file := FileAccess.open(settings_path, FileAccess.READ)
-	if not file:
-		push_error("Failed to open settings file: %s" % FileAccess.get_open_error())
+	if not logger.require(file != null,
+			"Failed to open settings file: %s" % FileAccess.get_open_error()):
 		ensure_defaults()
 		return
 
 	var json_string: String = file.get_as_text()
 	var parse_result: Variant = JSON.parse_string(json_string)
 
-	if parse_result == null:
-		push_error("Failed to parse settings JSON")
+	if not logger.require(parse_result != null, "Failed to parse settings JSON"):
 		ensure_defaults()
 		return
 
 	_settings = parse_result
-	ensure_defaults()  # Fill in any missing settings
+	ensure_defaults()  # Fill in any missing settings + migrate legacy values
 	logger.info("Settings loaded successfully")
 
 
@@ -392,8 +422,8 @@ func save_settings() -> void:
 	var json_string: String = JSON.stringify(_settings, "\t")
 
 	var file := FileAccess.open(settings_path, FileAccess.WRITE)
-	if not file:
-		push_error("Failed to save settings: %s" % FileAccess.get_open_error())
+	if not logger.require(file != null,
+			"Failed to save settings: %s" % FileAccess.get_open_error()):
 		return
 
 	file.store_string(json_string)

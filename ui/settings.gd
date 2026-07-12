@@ -32,6 +32,10 @@ var settings_manager: SettingsManager
 
 var speed_spins: Array[SpinBox] = []
 
+## Category -> OptionButton, populated by _setup_category_level_options()
+var _category_options: Dictionary = {}
+
+
 func _init() -> void:
 	logger = iLogger.new("settings", DebugLogger.Category.UI)
 
@@ -39,7 +43,7 @@ func _init() -> void:
 func _ready() -> void:
 	# Get the autoload reference
 	settings_manager = SettingsManager
-	
+
 	logger.info("Initializing Settings UI")
 	_setup_ui_structure()
 	_apply_constraints()
@@ -56,12 +60,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 #region UI Setup
 
-## Sets up the structure of UI elements (options, checkboxes, etc.)
+## Sets up the structure of UI elements (options, dropdowns, etc.)
 func _setup_ui_structure() -> void:
 	_setup_difficulty_options()
 	_setup_log_level_options()
-	_setup_category_checkboxes()
+	_setup_category_level_options()
 	_setup_speed_rows()
+
 
 ## Build the three simulation-speed rows in the Simulation section
 func _setup_speed_rows() -> void:
@@ -83,6 +88,7 @@ func _setup_speed_rows() -> void:
 		spin.value = settings_manager.get_setting(setting)
 		spin.value_changed.connect(_on_setting_changed.bind(setting))
 
+
 ## Setup difficulty dropdown options
 func _setup_difficulty_options() -> void:
 	difficulty_option.clear()
@@ -91,7 +97,7 @@ func _setup_difficulty_options() -> void:
 	difficulty_option.add_item("Hard", 2)
 
 
-## Setup log level dropdown options
+## Setup global log level (cap) dropdown options
 func _setup_log_level_options() -> void:
 	log_level_option.clear()
 	for level_name in DebugLogger.LogLevel.keys():
@@ -99,19 +105,37 @@ func _setup_log_level_options() -> void:
 		log_level_option.add_item(level_name, level_value)
 
 
-## Dynamically create category checkboxes
-func _setup_category_checkboxes() -> void:
+## Dynamically create a per-category level dropdown (replaces the old
+## on/off checkboxes). Each grid cell is a self-contained label+dropdown
+## row, so it works regardless of the GridContainer's column count.
+## Signals are connected here at creation time (no deferred pass needed).
+func _setup_category_level_options() -> void:
 	# Clear any existing children first
 	for child in category_grid.get_children():
 		child.queue_free()
-	
-	# Create a checkbox for each category
+	_category_options.clear()
+
 	for category_name in DebugLogger.Category.keys():
-		var check := CheckBox.new()
-		check.text = category_name
-		check.name = category_name + "Check"
-		check.add_theme_font_size_override("font_size", 16)
-		category_grid.add_child(check)
+		var row := HBoxContainer.new()
+		row.name = category_name + "Row"
+
+		var label := Label.new()
+		label.text = category_name
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 16)
+		row.add_child(label)
+
+		var option := OptionButton.new()
+		option.name = category_name + "Level"
+		for level_name in DebugLogger.LogLevel.keys():
+			option.add_item(level_name, DebugLogger.LogLevel[level_name])
+		row.add_child(option)
+
+		category_grid.add_child(row)
+
+		var category: DebugLogger.Category = DebugLogger.Category[category_name]
+		_category_options[category] = option
+		option.item_selected.connect(_on_category_level_changed.bind(option, category))
 
 
 ## Apply constraints from SettingsManager to all spinboxes/sliders
@@ -122,7 +146,7 @@ func _apply_constraints() -> void:
 	_apply_spinbox_constraints(obstacle_size_min, "obstacle_size_min")
 	_apply_spinbox_constraints(obstacle_size_max, "obstacle_size_max")
 	_apply_spinbox_constraints(terrain_seed, "terrain_seed")
-	
+
 	# Volume slider
 	var volume_constraints := settings_manager.get_constraints("master_volume")
 	if not volume_constraints.is_empty():
@@ -135,11 +159,11 @@ func _apply_constraints() -> void:
 func _apply_spinbox_constraints(spinbox: SpinBox, setting_name: String) -> void:
 	if not spinbox:
 		return
-	
+
 	var constraints := settings_manager.get_constraints(setting_name)
 	if constraints.is_empty():
 		return
-	
+
 	spinbox.min_value = constraints.get("min", spinbox.min_value)
 	spinbox.max_value = constraints.get("max", spinbox.max_value)
 	spinbox.step = constraints.get("step", spinbox.step)
@@ -175,21 +199,32 @@ func _load_simulation_values() -> void:
 
 ## Load debug-related settings
 func _load_debug_values() -> void:
-	# Load log level - find the item index that matches the stored value
-	var stored_level: int = settings_manager.get_setting("log_level")
-	for i in range(log_level_option.item_count):
-		if log_level_option.get_item_id(i) == stored_level:
-			log_level_option.selected = i
-			break
-	
+	# Load global log level cap - find the item index matching the stored value
+	var stored_level: int = int(settings_manager.get_setting("log_level"))
+	_select_option_by_id(log_level_option, stored_level)
+
 	show_context_check.button_pressed = settings_manager.get_setting("show_context")
-	
-	# Load category checkbox states - wait a frame for dynamically created checkboxes
-	await get_tree().process_frame
-	for check in category_grid.get_children():
-		if check is CheckBox:
-			var setting_key: String = "category_" + check.text.to_lower()
-			check.button_pressed = settings_manager.get_setting(setting_key)
+
+	# Load per-category levels (dropdowns exist synchronously; no await needed)
+	for category in _category_options:
+		var option: OptionButton = _category_options[category]
+		var setting_key: String = "category_" + DebugLogger.Category.keys()[category].to_lower()
+		var stored: Variant = settings_manager.get_setting(setting_key)
+		# Defensive: legacy bool values map true -> TRACE, false -> NONE
+		var level: int
+		if stored is bool:
+			level = DebugLogger.LogLevel.TRACE if stored else DebugLogger.LogLevel.NONE
+		else:
+			level = int(stored)
+		_select_option_by_id(option, level)
+
+
+## Select the OptionButton item whose id matches the given value
+func _select_option_by_id(option: OptionButton, id: int) -> void:
+	for i in range(option.item_count):
+		if option.get_item_id(i) == id:
+			option.selected = i
+			return
 
 #endregion
 
@@ -199,11 +234,11 @@ func _load_debug_values() -> void:
 ## Connect all UI signals to handlers
 func _connect_signals() -> void:
 	logger.trace("Connecting UI signals")
-	
+
 	# Game settings
 	difficulty_option.item_selected.connect(_on_difficulty_changed)
 	master_volume.value_changed.connect(_on_master_volume_changed)
-	
+
 	# Simulation settings
 	map_size_x.value_changed.connect(_on_map_size_changed)
 	map_size_y.value_changed.connect(_on_map_size_changed)
@@ -211,26 +246,13 @@ func _connect_signals() -> void:
 	obstacle_size_min.value_changed.connect(_on_setting_changed.bind("obstacle_size_min"))
 	obstacle_size_max.value_changed.connect(_on_setting_changed.bind("obstacle_size_max"))
 	terrain_seed.value_changed.connect(_on_setting_changed.bind("terrain_seed"))
-	
-	# Debug settings
+
+	# Debug settings (category dropdowns are connected at creation time)
 	log_level_option.item_selected.connect(_on_log_level_changed)
 	show_context_check.toggled.connect(_on_show_context_toggled)
-	
-	# Category checkboxes - connect after waiting for them to be created
-	_connect_category_signals()
-	
+
 	# Navigation
 	$MarginContainer/VBoxContainer/ButtonContainer/BackButton.pressed.connect(_on_back_button_pressed)
-
-
-## Connect category checkbox signals (called after checkboxes are created)
-func _connect_category_signals() -> void:
-	# Wait for dynamically created checkboxes
-	await get_tree().process_frame
-	for check in category_grid.get_children():
-		if check is CheckBox:
-			var category: DebugLogger.Category = DebugLogger.Category[check.text]
-			check.toggled.connect(_on_category_toggled.bind(category))
 
 #endregion
 
@@ -269,7 +291,7 @@ func _on_map_size_changed(_value: float) -> void:
 
 func _on_log_level_changed(index: int) -> void:
 	var level: int = log_level_option.get_item_id(index)
-	logger.info("Changing log level to: %s" % DebugLogger.LogLevel.keys()[level])
+	logger.info("Changing global log level cap to: %s" % DebugLogger.LogLevel.keys()[level])
 	settings_manager.set_setting("log_level", level)
 
 
@@ -278,11 +300,13 @@ func _on_show_context_toggled(button_pressed: bool) -> void:
 	settings_manager.set_setting("show_context", button_pressed)
 
 
-func _on_category_toggled(button_pressed: bool, category: DebugLogger.Category) -> void:
+func _on_category_level_changed(index: int, option: OptionButton, category: DebugLogger.Category) -> void:
+	var level: int = option.get_item_id(index)
 	var category_name: String = DebugLogger.Category.keys()[category]
-	logger.info("%s category: %s" % ["Enabling" if button_pressed else "Disabling", category_name])
+	logger.info("Setting category %s to level %s" % [
+		category_name, DebugLogger.LogLevel.keys()[level]])
 	var setting_key := "category_" + category_name.to_lower()
-	settings_manager.set_setting(setting_key, button_pressed)
+	settings_manager.set_setting(setting_key, level)
 
 #endregion
 
