@@ -349,7 +349,7 @@ static func _finish_logic(manifest: ConfigFile, ctx: Dictionary, logic: Logic,
 	for nid: String in nested_ids:
 		var dep: Logic = ctx.get("logic/%s" % nid)
 		if not dep:
-			push_warning("Seeder: skipping logic '%s' — dependency '%s' unavailable (deleted by user?)" % [id, nid])
+			DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping logic '%s' — dependency '%s' unavailable (deleted by user?)" % [id, nid])
 			return
 		nested.append(dep)
 
@@ -361,7 +361,7 @@ static func _finish_logic(manifest: ConfigFile, ctx: Dictionary, logic: Logic,
 
 	var errors := LogicValidator.validate_logic(logic)
 	if not errors.is_empty():
-		push_error("Seeder: default logic '%s' failed validation: %s" % [id, "; ".join(errors)])
+		DebugLogger.error(DebugLogger.Category.DATA, "Seeder: default logic '%s' failed validation: %s" % [id, "; ".join(errors)])
 		return
 
 	_save_and_record(manifest, ctx, "logic", id, path, logic)
@@ -378,7 +378,7 @@ static func _seed_action(manifest: ConfigFile, ctx: Dictionary, p_name: String,
 		return
 
 	if method not in Ant.ACTION_API:
-		push_error("Seeder: default action '%s' uses non-whitelisted method '%s'" % [id, method])
+		DebugLogger.error(DebugLogger.Category.DATA, "Seeder: default action '%s' uses non-whitelisted method '%s'" % [id, method])
 		return
 
 	var action := AntAction.new()
@@ -403,7 +403,7 @@ static func _seed_rule(manifest: ConfigFile, ctx: Dictionary, p_name: String,
 	var condition: Logic = ctx.get("logic/%s" % condition_id)
 	var action: AntAction = ctx.get("action/%s" % action_id)
 	if not condition or not action:
-		push_warning("Seeder: skipping rule '%s' — missing %s (deleted by user?)" % [
+		DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping rule '%s' — missing %s (deleted by user?)" % [
 			id, "condition" if not condition else "action"])
 		return
 
@@ -437,7 +437,7 @@ static func _seed_pheromone(manifest: ConfigFile, ctx: Dictionary,
 	if not condition_id.is_empty():
 		condition = ctx.get("logic/%s" % condition_id)
 		if not condition:
-			push_warning("Seeder: skipping pheromone '%s' — emit condition '%s' unavailable (deleted by user?)" % [id, condition_id])
+			DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping pheromone '%s' — emit condition '%s' unavailable (deleted by user?)" % [id, condition_id])
 			return
 
 	var pheromone := Pheromone.new()
@@ -472,7 +472,7 @@ static func _seed_influence(manifest: ConfigFile, ctx: Dictionary,
 	if not condition_id.is_empty():
 		condition = ctx.get("logic/%s" % condition_id)
 		if not condition:
-			push_warning("Seeder: skipping influence '%s' — gate condition '%s' unavailable (deleted by user?)" % [id, condition_id])
+			DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping influence '%s' — gate condition '%s' unavailable (deleted by user?)" % [id, condition_id])
 			return
 
 	var influence := Influence.new()
@@ -485,7 +485,7 @@ static func _seed_influence(manifest: ConfigFile, ctx: Dictionary,
 
 	var errors := LogicValidator.validate_logic(influence)
 	if not errors.is_empty():
-		push_error("Seeder: default influence '%s' failed validation: %s" % [id, "; ".join(errors)])
+		DebugLogger.error(DebugLogger.Category.DATA, "Seeder: default influence '%s' failed validation: %s" % [id, "; ".join(errors)])
 		return
 
 	_save_and_record(manifest, ctx, "influence", id, path, influence)
@@ -508,7 +508,7 @@ static func _seed_influence_profile(manifest: ConfigFile, ctx: Dictionary,
 	for cid: String in enter_ids:
 		var c: Logic = ctx.get("logic/%s" % cid)
 		if not c:
-			push_warning("Seeder: skipping influence profile '%s' — enter condition '%s' unavailable" % [id, cid])
+			DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping influence profile '%s' — enter condition '%s' unavailable" % [id, cid])
 			return
 		enter.append(c)
 
@@ -516,7 +516,7 @@ static func _seed_influence_profile(manifest: ConfigFile, ctx: Dictionary,
 	for cid: String in exit_ids:
 		var c: Logic = ctx.get("logic/%s" % cid)
 		if not c:
-			push_warning("Seeder: skipping influence profile '%s' — exit condition '%s' unavailable" % [id, cid])
+			DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping influence profile '%s' — exit condition '%s' unavailable" % [id, cid])
 			return
 		exit.append(c)
 
@@ -524,7 +524,7 @@ static func _seed_influence_profile(manifest: ConfigFile, ctx: Dictionary,
 	for iid: String in influence_ids:
 		var infl: Influence = ctx.get("influence/%s" % iid)
 		if not infl:
-			push_warning("Seeder: skipping influence profile '%s' — influence '%s' unavailable" % [id, iid])
+			DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping influence profile '%s' — influence '%s' unavailable" % [id, iid])
 			return
 		influences.append(infl)
 
@@ -603,7 +603,7 @@ static func _seed_standard_colony(manifest: ConfigFile, ctx: Dictionary) -> void
 
 	var worker: AntProfile = ctx.get("profile/worker")
 	if not worker:
-		push_warning("Seeder: skipping colony 'standard_colony' — worker profile unavailable (deleted by user?)")
+		DebugLogger.warn(DebugLogger.Category.DATA, "Seeder: skipping colony 'standard_colony' — worker profile unavailable (deleted by user?)")
 		return
 
 	var colony := ColonyProfile.new()
@@ -715,9 +715,9 @@ static func _migrate_colony_profiles(manifest: ConfigFile, ctx: Dictionary) -> v
 				legacy.take_over_path(lpath)
 				ctx["colony/%s" % lid] = legacy
 				manifest.set_value("colony", lid, SEED_VERSION)
-				print("Seeder: imported legacy colony save as %s" % lpath)
+				DebugLogger.info(DebugLogger.Category.DATA, "Seeder: imported legacy colony save as %s" % lpath)
 			else:
-				push_error("Seeder: failed to import legacy colony save (%s)" % error_string(err))
+				DebugLogger.error(DebugLogger.Category.DATA, "Seeder: failed to import legacy colony save (%s)" % error_string(err))
 
 	# 2. Swap res:// ant-profile references in every cataloged colony.
 	var profiles_by_id := {}
@@ -768,9 +768,9 @@ static func _migrate_one_colony(colony: ColonyProfile, path: String,
 		colony.initial_ants = renamed
 		var err := ResourceSaver.save(colony, path)
 		if err != OK:
-			push_error("Seeder: colony migration failed for %s (%s)" % [path, error_string(err)])
+			DebugLogger.error(DebugLogger.Category.DATA, "Seeder: colony migration failed for %s (%s)" % [path, error_string(err)])
 		else:
-			print("Seeder: migrated colony profile %s" % path)
+			DebugLogger.info(DebugLogger.Category.DATA, "Seeder: migrated colony profile %s" % path)
 
 
 static func _for_each_profile(fn: Callable) -> void:
@@ -792,10 +792,10 @@ static func _for_each_profile(fn: Callable) -> void:
 static func _resave_profile(profile: AntProfile, path: String, what: String) -> void:
 	var err := ResourceSaver.save(profile, path)
 	if err != OK:
-		push_error("Seeder: %s-ref migration failed for %s (%s)" % [
+		DebugLogger.error(DebugLogger.Category.DATA, "Seeder: %s-ref migration failed for %s (%s)" % [
 			what, path, error_string(err)])
 	else:
-		print("Seeder: migrated %s references in %s" % [what, path])
+		DebugLogger.info(DebugLogger.Category.DATA, "Seeder: migrated %s references in %s" % [what, path])
 #endregion
 
 
@@ -825,7 +825,7 @@ static func _save_and_record(manifest: ConfigFile, ctx: Dictionary,
 		kind: String, id: String, path: String, res: Resource) -> void:
 	var err := ResourceSaver.save(res, path)
 	if err != OK:
-		push_error("Seeder: failed to save %s '%s' (%s)" % [kind, id, error_string(err)])
+		DebugLogger.error(DebugLogger.Category.DATA, "Seeder: failed to save %s '%s' (%s)" % [kind, id, error_string(err)])
 		return
 	# Claim the on-disk path so anything saved later references this file as
 	# an ext_resource instead of embedding a duplicate subresource.

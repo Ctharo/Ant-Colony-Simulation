@@ -252,8 +252,10 @@ func _resolve_colony_profile() -> void:
 				_set_colony_profile(entry.resource, entry.path)
 				return
 
+	# Probe lookup (required = false): a missing "standard_colony" is normal
+	# flow — resolution falls through to the first cataloged colony below.
 	var by_id: ColonyProfile = ResourceLibrary.get_by_id(
-		ResourceLibrary.KIND_COLONY, "standard_colony") as ColonyProfile
+		ResourceLibrary.KIND_COLONY, "standard_colony", false) as ColonyProfile
 	if by_id:
 		_set_colony_profile(by_id, by_id.resource_path)
 		return

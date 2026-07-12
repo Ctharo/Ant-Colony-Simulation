@@ -233,7 +233,7 @@ func _ensure_ready(state: LogicState) -> bool:
 
 	var errors := LogicValidator.validate_logic(state.logic)
 	if not errors.is_empty():
-		push_error("Logic '%s' rejected by validator: %s" % [
+		logger.error("Logic '%s' rejected by validator: %s" % [
 			state.logic.id, "; ".join(errors)
 		])
 		state.validation_failed = true

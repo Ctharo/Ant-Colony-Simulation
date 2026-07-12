@@ -89,14 +89,31 @@ func get_entries(kind: String) -> Array:
 
 ## Resource with the given id, or null. This is the lookup that replaced
 ## hardcoded res:// paths (e.g. Ant.DEFAULT_RULE_IDS).
-func get_by_id(kind: String, id: String) -> Resource:
-	if get_entries(kind).is_empty():
-		push_error("Attempting to get resource but none are found")
-		#assert(false, "Attempting to get resource but none are found")
-	for entry: Entry in get_entries(kind):
+##
+## Doctrine: this is the DETECTING function — it logs a miss ONCE with
+## kind+id context and returns null; callers check the null silently and
+## decide recovery (fallback, skip, toast) without re-logging.
+##
+## Pass required = false for probe lookups where a miss is normal control
+## flow (e.g. SettingsManager trying "standard_colony" before falling back
+## to the first cataloged colony) — probes log nothing.
+##
+## An EMPTY catalog is reachable in release (deletions stick, so a user can
+## permanently delete every entry of a kind) — it is a data failure, NOT an
+## invariant. It logs at ERROR because nothing downstream of an empty kind
+## can work; ERROR always surfaces regardless of category filters.
+func get_by_id(kind: String, id: String, required: bool = true) -> Resource:
+	var entries := get_entries(kind)
+	if entries.is_empty():
+		if required:
+			logger.error("get_by_id('%s', '%s'): catalog for kind '%s' is empty" % [
+				kind, id, kind])
+		return null
+	for entry: Entry in entries:
 		if entry.resource.get("id") == id:
 			return entry.resource
-	push_warning("get_by_id failed to return a resource")
+	if required:
+		logger.warn("No %s with id '%s' in catalog" % [kind, id])
 	return null
 
 
@@ -119,15 +136,21 @@ func has_id_conflict(kind: String, id: String, exclude: Resource) -> bool:
 ##    condition) and each is validated too — a hand-edited .tres can't
 ##    smuggle a non-whitelisted expression in through a parent resource.
 func save_resource(res: Resource, kind: String, previous_path: String = "") -> Error:
+	# Programmer invariant: kind strings come from the KIND_* constants in
+	# code, never from data. An unknown kind is a typo at a call site.
+	if not logger.invariant(USER_ROOTS.has(kind),
+			"save_resource called with unknown kind '%s'" % kind):
+		return ERR_INVALID_PARAMETER
+
 	if kind == KIND_LOGIC or kind == KIND_INFLUENCE:
 		var errors := LogicValidator.validate_logic(res)
 		if not errors.is_empty():
-			push_error("Refusing to save %s '%s': %s" % [kind, res.id, "; ".join(errors)])
+			logger.error("Refusing to save %s '%s': %s" % [kind, res.id, "; ".join(errors)])
 			return ERR_INVALID_DATA
 
 	var embedded := _embedded_logic_errors(res, kind)
 	if not embedded.is_empty():
-		push_error("Refusing to save %s '%s': %s" % [
+		logger.error("Refusing to save %s '%s': %s" % [
 			kind, str(res.get("id")), "; ".join(embedded)])
 		return ERR_INVALID_DATA
 
