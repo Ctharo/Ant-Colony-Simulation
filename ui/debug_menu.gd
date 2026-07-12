@@ -181,9 +181,10 @@ func _input(event: InputEvent) -> void:
 	if not key.pressed or key.echo:
 		return
 
-	## Don't hijack keys while the user is typing in a field
-	var focus: Control = get_viewport().gui_get_focus_owner()
-	if focus is LineEdit or focus is TextEdit:
+	## Don't hijack keys while the user is typing anywhere — including
+	## inside embedded tool windows, which the old viewport-focus check
+	## couldn't see.
+	if CameraController.is_keyboard_captured(get_tree()):
 		return
 
 	match key.keycode:

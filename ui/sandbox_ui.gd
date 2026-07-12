@@ -142,10 +142,7 @@ func _show_colony_context_menu() -> void:
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_colony_menu_button_pressed(index, colony))
 	active_context_menu.track_object(colony)
-	active_context_menu.show_at(
-		world_to_screen(colony.global_position),
-		colony.radius
-	)
+	active_context_menu.show_at_world(colony.global_position, colony.radius)
 
 
 func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
@@ -153,7 +150,6 @@ func _on_colony_menu_button_pressed(index: int, colony: Colony) -> void:
 		return
 
 	clear_active_menus()
-
 
 	match index:
 		0: # Spawn Ants
@@ -181,6 +177,12 @@ func _create_context_window() -> void:
 func show_empty_context_menu() -> void:
 	_create_context_window()
 
+	# Capture the WORLD position of the click ONCE, right now. The old
+	# code stored the screen position and converted it to world at
+	# button-press time — panning the camera between opening the menu
+	# and clicking a button moved the spawn point.
+	var world_pos: Vector2 = camera.get_global_mouse_position()
+
 	active_context_menu.add_button("Spawn Colony",
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
@@ -188,18 +190,16 @@ func show_empty_context_menu() -> void:
 		preload("res://ui/styles/spawn_normal.tres"),
 		preload("res://ui/styles/spawn_hover.tres"))
 
-	var pos = get_global_mouse_position()
 	active_context_menu.button_pressed.connect(
-		func(index: int): _on_empty_menu_button_pressed(index, pos))
-	active_context_menu.show_at(pos)
+		func(index: int): _on_empty_menu_button_pressed(index, world_pos))
+	active_context_menu.show_at_world(world_pos)
 
-func _on_empty_menu_button_pressed(index: int, pos: Vector2) -> void:
-	var global_pos = screen_to_world(pos)
+func _on_empty_menu_button_pressed(index: int, world_pos: Vector2) -> void:
 	match index:
 		0: # Spawn Colony
-			_on_spawn_colony_requested(global_pos)
+			_on_spawn_colony_requested(world_pos)
 		1: # Spawn Food
-			_on_spawn_food_requested(global_pos)
+			_on_spawn_food_requested(world_pos)
 
 	clear_active_menus()
 
@@ -223,7 +223,7 @@ func _show_ant_context_menu() -> void:
 	active_context_menu.button_pressed.connect(
 		func(index: int): _on_ant_menu_button_pressed(index, ant))
 	active_context_menu.track_object(ant)
-	active_context_menu.show_at(world_to_screen(ant.global_position))
+	active_context_menu.show_at_world(ant.global_position)
 
 func _on_ant_menu_button_pressed(index: int, ant: Ant) -> void:
 	if not is_instance_valid(ant):
@@ -305,14 +305,41 @@ func _spawn_food_at(pos: Vector2, count: int = -1) -> void:
 	food_manager.spawn_food_cluster(pos, count)
 #endregion
 
+#region Cursor Indicator
+## Drawn here, in SCREEN space, instead of in the camera's world-space
+## _draw(). Camera-space drawing renders with the previous frame's canvas
+## transform relative to input, which made the circle trail behind the
+## mouse during pans. Screen space can't lag: the mouse position IS the
+## draw position.
+func _draw() -> void:
+	_draw_cursor_indicator()
+
+
+func _draw_cursor_indicator() -> void:
+	if initializing or not is_instance_valid(camera):
+		return
+
+	var pos := get_global_mouse_position()   # UI layer == screen space
+	var radius := 8.0                        # constant screen size for free cursor
+	var zoom: float = camera.zoom.x
+
+	if is_instance_valid(camera.hovered_entity):
+		var entity: Node2D = camera.hovered_entity
+		if entity is Ant:
+			radius = 12.0 * zoom
+		elif entity is Colony:
+			radius = (entity.radius + 12.0) * zoom
+		pos = world_to_screen(entity.global_position)
+
+	draw_arc(pos, radius, 0, TAU, 32, Color.WHITE)
+#endregion
+
 #region Coordinate Conversion
 
 func world_to_screen(world_pos: Vector2) -> Vector2:
 	return get_viewport().get_canvas_transform() * world_pos
 
 func screen_to_world(screen_pos: Vector2) -> Vector2:
-	var vp = get_viewport()
-	return (vp.get_screen_transform() * vp.get_canvas_transform()).affine_inverse() \
-		* screen_pos
+	return get_viewport().get_canvas_transform().affine_inverse() * screen_pos
 
 #endregion
