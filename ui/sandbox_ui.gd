@@ -1,6 +1,6 @@
 class_name SandboxUI
 extends Control
-##UI controller for the sandbox simulation view
+## UI controller for the sandbox simulation view
 
 #region Getters
 
@@ -53,8 +53,6 @@ func _ready() -> void:
 		overlay.visible = true
 
 	_setup_debug_menu()
-
-
 
 func _process(_delta: float) -> void:
 	queue_redraw()

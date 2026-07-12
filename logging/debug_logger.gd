@@ -17,7 +17,6 @@ enum Category {
 	LOGIC,          ## Logic evaluation messages
 	MOVEMENT,       ## Movement-related messages
 	INFLUENCE,      ## Influence system messages
-	ACTION,         ## Action-related messages
 	BEHAVIOR,       ## Behavior-related messages
 	CONDITION,      ## Condition evaluation messages
 	CONTEXT,        ## Context building messages
@@ -85,7 +84,6 @@ const COLORS := {
 ## Category names for pretty printing
 const CATEGORY_NAMES := {
 	Category.TASK: "TASK",
-	Category.ACTION: "ACTION",
 	Category.MOVEMENT: "MOVEMENT",
 	Category.LOGIC: "LOGIC",
 	Category.INFLUENCE: "INFLUENCE",

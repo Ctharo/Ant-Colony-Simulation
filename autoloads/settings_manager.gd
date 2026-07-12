@@ -53,6 +53,7 @@ const DEFAULT_CATEGORY_STATES := {
 	"category_logic": true,
 	"category_movement": false,
 	"category_influence": false,
+	"category_action": false,
 	"category_behavior": false,
 	"category_condition": false,
 	"category_context": false,
@@ -331,14 +332,13 @@ func save_colony_profile() -> Result:
 
 ## Apply debug-related settings to DebugLogger
 func apply_debug_settings() -> void:
-	# Apply logger settings
 	DebugLogger.set_log_level(get_setting("log_level"))
 	DebugLogger.set_show_context(get_setting("show_context"))
 
-	# Apply category settings from our stored values
 	for category in DebugLogger.Category.keys():
 		var setting_key: String = "category_" + category.to_lower()
-		var enabled: bool = get_setting(setting_key)
+		var value: Variant = get_setting(setting_key)
+		var enabled: bool = value if value is bool else false
 		DebugLogger.set_category_enabled(DebugLogger.Category[category], enabled)
 
 #endregion

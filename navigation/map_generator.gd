@@ -199,7 +199,7 @@ func _calculate_safe_area() -> Dictionary:
 func _generate_obstacles(safe_area: Dictionary) -> Array[PackedVector2Array]:
 	# Calculate number of obstacles based on area rather than length
 	var area = map_size.x * map_size.y
-	var obstacles_num = floori(NAVIGATION_OBSTACLES_DENSITY * area) * 0.00001  # Adjusted for large maps
+	var obstacles_num = floori(NAVIGATION_OBSTACLES_DENSITY * area)
 
 	logger.debug("Attempting to generate %d obstacles for map size %s" % [obstacles_num, map_size])
 	logger.debug("Safe area: %s" % [safe_area])

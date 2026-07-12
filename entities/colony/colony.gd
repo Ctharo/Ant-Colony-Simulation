@@ -149,7 +149,6 @@ func add_ant(ant: Ant) -> Result:
 
 func _exit_tree() -> void:
 	HeatmapManager.unregister_entity(self)
-	EvaluationSystem.cleanup_entity(self)
 	delete_all()
 
 func delete_all():

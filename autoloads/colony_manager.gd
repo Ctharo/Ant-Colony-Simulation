@@ -151,7 +151,6 @@ func _setup_colony_sandbox_reference(colony: Colony, container: Node2D) -> void:
 	if sandbox and sandbox.has_node("AntContainer"):
 		colony.sandbox = sandbox
 
-
 ## Remove a colony from management
 func remove_colony(colony: Colony) -> Result:
 	if not colony:

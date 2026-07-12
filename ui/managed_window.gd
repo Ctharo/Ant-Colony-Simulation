@@ -83,17 +83,20 @@ func setup_window(id: String, p_title: String, p_size: Vector2i,
 func present() -> void:
 	var restored := _restore_geometry()
 
-	var eff_min := _effective_min_size()
-	min_size = eff_min  # user resizing can't hide controls either
-
 	var bounds := _viewport_bounds()
 	var top := _decoration_top()
 	var usable_h := maxi(bounds.y - top, 1)
 
+	## Never enforce a minimum larger than the visible area — a content
+	## minimum taller than the screen would pin the window with its bottom
+	## off-screen AND block every user resize on that axis.
+	var eff_min := _effective_min_size()
+	min_size = Vector2i(mini(eff_min.x, bounds.x), mini(eff_min.y, usable_h))
+
 	var desired: Vector2i = size if restored else _default_size
 	size = Vector2i(
-		mini(maxi(desired.x, eff_min.x), bounds.x),
-		mini(maxi(desired.y, eff_min.y), usable_h),
+		mini(maxi(desired.x, min_size.x), bounds.x),
+		mini(maxi(desired.y, min_size.y), usable_h),
 	)
 
 	if restored:
@@ -106,7 +109,6 @@ func present() -> void:
 
 	show()
 	grab_focus()
-
 
 ## Update the visible title while keeping the dirty marker consistent.
 ## Use this instead of assigning `title` for dynamic titles
