@@ -823,6 +823,7 @@ static func _was_deleted(manifest: ConfigFile, kind: String, id: String) -> bool
 
 static func _save_and_record(manifest: ConfigFile, ctx: Dictionary,
 		kind: String, id: String, path: String, res: Resource) -> void:
+	_assert_leaves_first(kind, id, res)
 	var err := ResourceSaver.save(res, path)
 	if err != OK:
 		DebugLogger.error(DebugLogger.Category.DATA, "Seeder: failed to save %s '%s' (%s)" % [kind, id, error_string(err)])
@@ -832,4 +833,42 @@ static func _save_and_record(manifest: ConfigFile, ctx: Dictionary,
 	res.take_over_path(path)
 	ctx["%s/%s" % [kind, id]] = res
 	manifest.set_value(kind, id, SEED_VERSION)
+
+## Save-order invariant (leaves before parents): every resource a parent is
+## about to reference must already be on disk with its path claimed via
+## take_over_path(), or ResourceSaver embeds a duplicate subresource —
+## silently forking the child and bypassing the catalog's validation gates.
+## Debug builds only; a violation stops at the assert with the parent and
+## child named. Covers every kind the seeder writes, so a single call in
+## _save_and_record() protects all current AND future seed definitions.
+static func _assert_leaves_first(kind: String, id: String, res: Resource) -> void:
+	if not OS.is_debug_build():
+		return
+	var refs: Array = []
+	match kind:
+		"logic", "influence":
+			refs.append_array(res.get("nested_expressions"))
+			if kind == "influence":
+				refs.append(res.get("condition"))
+		"rule":
+			refs.append(res.get("condition"))
+			refs.append(res.get("action"))
+		"pheromone":
+			refs.append(res.get("condition"))
+		"influence_profile":
+			refs.append_array(res.get("enter_conditions"))
+			refs.append_array(res.get("exit_conditions"))
+			refs.append_array(res.get("influences"))
+		"profile":
+			refs.append(res.get("spawn_condition"))
+			refs.append_array(res.get("pheromones"))
+			refs.append_array(res.get("behavior_rules"))
+		"colony":
+			refs.append_array(res.get("ant_profiles"))
+	for child in refs:
+		if child == null:
+			continue
+		assert(String(child.resource_path).begins_with("user://"),
+			"Seeder save-order violation: %s '%s' references un-saved '%s' — leaves before parents!" % [
+				kind, id, str(child.get("name"))])
 #endregion

@@ -127,6 +127,13 @@ func _init(p_logic: Logic, p_entity: Node) -> void:
 	if not (logic is PropertyLogic or logic is SourceLogic):
 		expression = Expression.new()
 
+	# Whitelist boundary invariant: an entity that provides a value-type
+	# facade must NEVER be executed against directly — the raw entity would
+	# expose mutating methods to authored expressions, which is exactly what
+	# gate 3 forbids. Tautological today; catches a future _init refactor
+	# that breaks the facade assignment.
+	assert(not p_entity.has_method("get_expression_context") or context != p_entity,
+		"LogicState for '%s' bound to raw entity instead of its facade" % p_logic.id)
 
 #region Parsing
 func parse(variables: PackedStringArray) -> Error:
@@ -228,11 +235,14 @@ func has_error() -> bool:
 func cache(value: Variant) -> void:
 	if not has_value or cached_value != value:
 		_version_serial += 1
+		# Serial monotonicity is the ENTIRE aliasing fix: version equality
+		# means "same value as last remembered" only because serials are
+		# never reused across state drop/recreate cycles. If this ever
+		# fires, someone reintroduced a per-state counter or reset the
+		# static — the stale-cache-across-recreate bug is back.
+		assert(_version_serial > version,
+			"LogicState version serial regressed for '%s' (aliasing bug)" % logic.id)
 		version = _version_serial
-	cached_value = value
-	has_value = true
-	stale = false
-	last_evaluation_time = Time.get_ticks_msec()
 
 
 ## True if the cached value may still be served under this logic's

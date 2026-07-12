@@ -103,15 +103,14 @@ func _spawn_colony(profile: ColonyProfile = null) -> Colony:
 		return null
 
 	var colony: Colony = load("res://entities/colony/colony.tscn").instantiate() as Colony
-	if not colony:
-		logger.error("Failed to instantiate colony scene")
+	if not logger.require(colony != null, "Failed to instantiate colony scene"):
 		return null
 
 	var colony_profile: ColonyProfile = profile
 	if not colony_profile:
 		colony_profile = SettingsManager.get_colony_profile()
-	if not colony_profile:
-		logger.error("Cannot spawn colony — no colony profile could be resolved")
+	if not logger.require(colony_profile != null,
+			"Cannot spawn colony — no colony profile could be resolved"):
 		colony.queue_free()
 		return null
 

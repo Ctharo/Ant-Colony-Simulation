@@ -62,8 +62,8 @@ func _ready() -> void:
 
 
 func init_colony_profile(p_profile: ColonyProfile) -> void:
-	if not is_instance_valid(p_profile):
-		logger.error("Cannot initialize with invalid profile")
+	if not logger.require(is_instance_valid(p_profile),
+			"Cannot initialize colony with invalid profile"):
 		return
 
 	# Store reference to profile

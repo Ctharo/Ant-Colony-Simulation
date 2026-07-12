@@ -54,7 +54,7 @@ var _slow_threshold_ms := 1.0
 
 #region Initialization
 func _init() -> void:
-	logger = iLogger.new("expr_mgr", DebugLogger.Category.LOGIC)
+	logger = iLogger.new("evaluation_system", DebugLogger.Category.LOGIC)
 	_controller = EvaluationController.new()
 #endregion
 
@@ -70,8 +70,8 @@ func _get_entity_states(entity: Node) -> Dictionary:
 
 ## Gets or creates the LogicState for a (logic, entity) pair
 func _get_or_create_state(logic: Logic, entity: Node) -> LogicState:
-	if logic.id.is_empty():
-		logger.error("Expression has empty ID: %s" % logic)
+	if not logger.invariant(not logic.id.is_empty(),
+			"Logic reached state creation with an empty id: %s" % logic):
 		return null
 
 	var states := _get_entity_states(entity)
@@ -91,8 +91,7 @@ func register_expression(expression: Logic, entity: Node) -> void:
 	# Create state (validation and parsing happen lazily on first use)
 	var state := _get_or_create_state(expression, entity)
 	if not state:
-		logger.error("Failed to create state for expression %s" % expression.id)
-		return
+		return  # already logged at the source (_get_or_create_state)
 
 	_connect_triggers(expression, entity)
 
@@ -142,8 +141,7 @@ func get_value(expression: Logic, entity: Node) -> Variant:
 
 	var state: LogicState = states.get(expression.id)
 	if not state:
-		logger.error("Failed to get/create state for expression %s" % expression.id)
-		return null
+		return null  # creation failure already logged at the source
 
 	# Lazy validation + parsing (gate 3 of the whitelist boundary)
 	if not _ensure_ready(state):
@@ -207,7 +205,7 @@ func get_value(expression: Logic, entity: Node) -> Variant:
 	if _perf_monitor_enabled and logger.is_debug_enabled():
 		var duration_ms := duration_us / 1000.0
 		if duration_ms > _slow_threshold_ms:
-			logger.warn("Slow expression calculation: id=%s entity=%s duration=%.2fms" % [
+			logger.info("Slow expression calculation: id=%s entity=%s duration=%.2fms" % [
 				expression.id,
 				entity.name,
 				duration_ms

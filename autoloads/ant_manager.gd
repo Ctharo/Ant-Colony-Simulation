@@ -24,8 +24,7 @@ func _init() -> void:
 ## Spawns multiple ants at a colony
 ## Returns an array of spawned ants
 func spawn_ants(colony: Colony, num: int = 1, profile: AntProfile = null) -> Array[Ant]:
-	if not colony:
-		logger.error("Cannot spawn ants - invalid colony provided")
+	if not logger.require(colony != null, "Cannot spawn ants — invalid colony provided"):
 		return []
 
 	var spawned_ants: Array[Ant] = []
@@ -35,8 +34,8 @@ func spawn_ants(colony: Colony, num: int = 1, profile: AntProfile = null) -> Arr
 	if not spawn_profile and colony.ant_profiles.size() > 0:
 		spawn_profile = colony.ant_profiles[0]
 
-	if not spawn_profile:
-		logger.error("No ant profile available for spawning")
+	if not logger.require(spawn_profile != null,
+			"No ant profile available for spawning at colony %s" % colony.name):
 		return spawned_ants
 
 	for i in range(num):
@@ -47,8 +46,6 @@ func spawn_ants(colony: Colony, num: int = 1, profile: AntProfile = null) -> Arr
 			spawned_ants.append(ant)
 
 	if spawned_ants.size() > 0:
-		if spawned_ants.size() == 5:
-			pass
 		logger.info("Spawned %s %s at colony %s" % [
 			spawned_ants.size(),
 			"ant" if spawned_ants.size() == 1 else "ants",
