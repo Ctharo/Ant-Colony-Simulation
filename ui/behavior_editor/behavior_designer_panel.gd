@@ -274,9 +274,9 @@ func _build_policy_editor() -> PanelContainer:
 	mode_label.text = "Re-evaluate:"
 	mode_row.add_child(mode_label)
 	_mode_select = OptionButton.new()
-	for mode in MODE_ORDER:
-		_mode_select.add_item(MODE_LABELS[mode])
-		_mode_select.set_item_metadata(_mode_select.item_count - 1, mode)
+	for _mode in MODE_ORDER:
+		_mode_select.add_item(MODE_LABELS[_mode])
+		_mode_select.set_item_metadata(_mode_select.item_count - 1, _mode)
 	_mode_select.item_selected.connect(func(_i: int) -> void: _sync_editor_visibility())
 	mode_row.add_child(_mode_select)
 	vbox.add_child(mode_row)
@@ -341,10 +341,10 @@ func _set_editor_enabled(enabled: bool) -> void:
 
 
 func _sync_editor_visibility() -> void:
-	var mode: int = _current_mode()
-	_interval_row.visible = mode == Logic.EvalMode.TIMER
-	_trigger_row.visible = mode == Logic.EvalMode.EVENT
-	_hint_label.text = MODE_HINTS.get(mode, "")
+	var _mode: int = _current_mode()
+	_interval_row.visible = _mode == Logic.EvalMode.TIMER
+	_trigger_row.visible = _mode == Logic.EvalMode.EVENT
+	_hint_label.text = MODE_HINTS.get(_mode, "")
 
 
 func _current_mode() -> int:
@@ -514,14 +514,14 @@ func _on_delete() -> void:
 	_confirm.popup_centered()
 
 
-func _open_editor(popup: Window, res: Resource, path: String, writable: bool) -> void:
-	add_child(popup)
-	popup.open_for(res, path, writable)
+func _open_editor(p_popup: Window, res: Resource, path: String, writable: bool) -> void:
+	add_child(p_popup)
+	p_popup.open_for(res, path, writable)
 	# library_changed (already connected) refreshes the list on save; this
 	# restores the tree, whose selection is lost when the saved resource
 	# instance replaces the one being displayed.
-	if popup.has_signal("saved"):
-		popup.saved.connect(func(_r: Resource) -> void: _rebuild_tree())
+	if p_popup.has_signal("saved"):
+		p_popup.saved.connect(func(_r: Resource) -> void: _rebuild_tree())
 
 
 ## Double-click on a tree row: open the Logic editor for that expression.
