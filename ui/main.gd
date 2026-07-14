@@ -1,6 +1,7 @@
 extends Control
 
 var title_label: Label
+var _designer_panel: BehaviorDesignerPanel
 var button_container: VBoxContainer
 
 var logger: iLogger
@@ -55,6 +56,7 @@ func create_ui():
 
 	# Create buttons
 	create_button("Start Simulation", button_container)
+	create_button("Behavior Designer", button_container)
 	create_button("Settings", button_container)
 	create_button("Quit", button_container)
 
@@ -119,6 +121,15 @@ func _on_start_simulation_button_pressed():
 func _on_settings_button_pressed():
 	logger.info("Settings pressed")
 	transition_to_scene("settings")
+
+func _on_behavior_designer_button_pressed() -> void:
+	logger.info("Behavior Designer pressed")
+	# Single instance: pressing again focuses the open window.
+	if is_instance_valid(_designer_panel):
+		_designer_panel.grab_focus()
+		return
+	_designer_panel = BehaviorDesignerPanel.new()
+	add_child(_designer_panel)
 
 func _on_quit_button_pressed():
 	get_tree().quit()

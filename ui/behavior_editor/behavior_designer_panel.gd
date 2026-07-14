@@ -1,18 +1,26 @@
 class_name BehaviorDesignerPanel
 extends ManagedWindow
-## Visual behavior designer: renders rules and their nested Logic expression
-## trees, shows live values and evaluation costs against a probe ant, and
-## edits each expression's re-evaluation policy (frame cache, always, timer,
-## event triggers, sticky). Policies persist through ResourceLibrary exactly
-## like other behavior resources — editing a built-in forks it to user://.
+## Visual behavior designer: renders behaviors and their nested Logic
+## expression trees, shows live values and evaluation costs against a probe
+## ant, and edits each expression's re-evaluation policy (frame cache,
+## always, timer, event triggers, sticky). Policies persist through
+## ResourceLibrary exactly like other behavior resources — editing a
+## built-in forks it to user://.
+##
+## TERMINOLOGY: a "Behavior" is what the data layer still calls an AntRule
+## (condition + action + priority). The rename is display-layer only —
+## class names, ResourceLibrary.KIND_RULE, and .tres files are unchanged.
 ##
 ## This is the PRIMARY authoring window: the left pane offers full CRUD
 ## (New / Edit / Duplicate / Delete), double-clicking a list entry opens the
 ## matching editor popup, and double-clicking any expression row in the tree
 ## opens the Logic editor for that expression directly.
 ##
-## Opened from the sandbox debug menu ("Designer"). Built entirely in code to
-## match the project's runtime-UI convention (no separate .tscn).
+## Opened from the sandbox debug menu ("Designer") and from the main menu.
+## Without a running sandbox there are no live ants: the probe label reads
+## "no live ants" and the Value column stays blank, but all authoring works.
+## Built entirely in code to match the project's runtime-UI convention
+## (no separate .tscn).
 ##
 ## Reading the tree:
 ## - Each row is one Logic expression: "name — expression string".
@@ -61,7 +69,7 @@ const MODE_HINTS: Dictionary = {
 enum Col { NAME, MODE, VALUE, RECALCS, HITS, AVG }
 
 const KINDS: Array[String] = [ResourceLibrary.KIND_RULE, ResourceLibrary.KIND_LOGIC]
-const KIND_LABELS: Array[String] = ["Rules", "Expressions"]
+const KIND_LABELS: Array[String] = ["Behaviors", "Expressions"]
 
 var logger: iLogger
 
@@ -398,7 +406,7 @@ func _rebuild_tree() -> void:
 	if entry.resource is AntRule:
 		var rule: AntRule = entry.resource
 		var header := _tree.create_item(root)
-		header.set_text(Col.NAME, "Rule: %s   (priority %d%s)" % [
+		header.set_text(Col.NAME, "Behavior: %s   (priority %d%s)" % [
 			rule.name, rule.priority, "" if rule.enabled else ", disabled"
 		])
 		header.set_selectable(Col.NAME, false)
@@ -466,8 +474,8 @@ func _on_new() -> void:
 			_open_editor(RuleEditorPopup.new(), AntRule.new(), "", true)
 
 
-## Double-click on the left list, or the Edit button: Rule entries open the
-## rule editor, Expression entries open the logic editor.
+## Double-click on the left list, or the Edit button: Behavior entries open
+## the behavior editor, Expression entries open the logic editor.
 func _edit_selected_entry() -> void:
 	var entry := _selected_entry()
 	if not entry:

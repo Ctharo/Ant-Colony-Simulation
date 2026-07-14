@@ -1,6 +1,10 @@
 class_name RuleEditorPopup
 extends ManagedWindow
-## Runtime editor for AntRule resources.
+## Runtime editor for AntRule resources — presented to the user as the
+## "Behavior Editor". A Behavior = condition + action + priority. The rename
+## is display-layer only: the class, ResourceLibrary.KIND_RULE, the window
+## id "rule_editor" (kept so saved window geometry survives), and all .tres
+## files are unchanged.
 
 signal saved(resource: AntRule)
 
@@ -17,7 +21,7 @@ var _status: Label
 
 
 func _init() -> void:
-	setup_window("rule_editor", "Rule Editor", 
+	setup_window("rule_editor", "Behavior Editor",
 		Vector2i(420, 380), Vector2i(380, 340))
 
 
@@ -98,12 +102,12 @@ func _build_ui(is_builtin: bool) -> void:
 	cancel_btn.pressed.connect(queue_free)
 	button_row.add_child(cancel_btn)
 	vbox.add_child(button_row)
-	
+
 	_name_edit.tooltip_text = "Unique name; the id is derived from it"
-	_condition_select.tooltip_text = "Logic expression gating this rule; (none) means it always fires"
+	_condition_select.tooltip_text = "Logic expression gating this behavior; (none) means it always fires"
 	_action_select.tooltip_text = "Action executed when the condition passes"
-	_priority_spin.tooltip_text = "Higher priority rules are evaluated first; first passing rule acts"
-	_enabled_check.tooltip_text = "Disabled rules stay in the profile but are skipped at runtime"
+	_priority_spin.tooltip_text = "Higher priority behaviors are evaluated first; first passing behavior acts"
+	_enabled_check.tooltip_text = "Disabled behaviors stay in the profile but are skipped at runtime"
 	_desc_edit.tooltip_text = "Shown in library lists and profile editors"
 
 	watch([_name_edit, _condition_select, _action_select,
@@ -128,10 +132,10 @@ func _on_save() -> void:
 		_status.text = "Name is required."
 		return
 	if ResourceLibrary.has_id_conflict(ResourceLibrary.KIND_RULE, editing.id, editing):
-		_status.text = "Another rule already uses the id '%s'." % editing.id
+		_status.text = "Another behavior already uses the id '%s'." % editing.id
 		return
 	if _action_select.selected < 0:
-		_status.text = "A rule needs an action."
+		_status.text = "A behavior needs an action."
 		return
 
 	editing.condition = _condition_select.get_item_metadata(_condition_select.selected)
@@ -152,5 +156,5 @@ func _on_save() -> void:
 
 	saved.emit(editing)
 	clear_dirty()
-	Toast.success(get_parent(), "Saved rule '%s'" % editing.name)
+	Toast.success(get_parent(), "Saved behavior '%s'" % editing.name)
 	_request_close()
