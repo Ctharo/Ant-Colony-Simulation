@@ -30,14 +30,20 @@ extends VBoxContainer
 ## escape hatch for anything beyond it.
 ##
 ## SERIALIZATION: to_data()/load_data() round-trip the visual structure as
-## a plain Dictionary (persisted on the Logic resource in Batch 3). The
-## model contains only value types — widget references are never stored.
+## a plain Dictionary (persisted as Logic.builder_data). The model contains
+## only value types — widget references are never stored.
+##
+## HEADLESS USE: the model works without the control ever entering the
+## tree — load_data()/get_expression() are UI-safe when _ready hasn't run.
+## compile_data() wraps that for one-shot recompiles (the Behavior Editor
+## uses it for divergence detection against a hand-edited
+## expression_string).
 ##
 ## Built entirely in code, per the project's runtime-UI convention.
 
 signal changed
 
-## Bump when the to_data() schema changes (Batch 3 persists this).
+## Bump when the to_data() schema changes (persisted in Logic.builder_data).
 const DATA_VERSION := 1
 
 const OP_AND := "and"
@@ -75,11 +81,21 @@ var _by_key: Dictionary = {}
 
 var _sections_box: VBoxContainer
 var _scroll: ScrollContainer
-var _empty_hint: Label
 var _preview_label: Label
 var _status_label: Label
 
 var _no_nested: Array[Logic] = []  # builder output never uses nested ids
+
+
+## One-shot headless recompile: what expression would this builder_data
+## produce today? Used for divergence detection (compare against the
+## Logic's stored expression_string).
+static func compile_data(data: Dictionary) -> String:
+	var builder := ConditionBuilder.new()
+	builder.load_data(data)
+	var expr := builder.get_expression()
+	builder.free()  # never entered the tree — free manually
+	return expr
 
 
 func _init() -> void:
@@ -176,8 +192,8 @@ func clear() -> void:
 	changed.emit()
 
 
-## Visual structure as plain data (Batch 3 persists this on the Logic
-## resource so builder-authored conditions reopen in the builder).
+## Visual structure as plain data (persisted as Logic.builder_data so
+## builder-authored conditions reopen in the builder).
 func to_data() -> Dictionary:
 	var sections_out: Array = []
 	for section: Dictionary in _sections:
@@ -197,7 +213,8 @@ func to_data() -> Dictionary:
 
 ## Restores a to_data() structure. Rows referencing senses that no longer
 ## exist in the catalog are dropped with a status warning (vocabulary may
-## have changed since the data was authored).
+## have changed since the data was authored). Safe to call before the
+## control enters the tree (headless).
 func load_data(data: Dictionary) -> void:
 	_sections.clear()
 	var dropped := 0
@@ -227,7 +244,7 @@ func load_data(data: Dictionary) -> void:
 	if _sections.is_empty():
 		_sections.append(_new_section())
 	_rebuild_ui()
-	if dropped > 0:
+	if dropped > 0 and is_instance_valid(_status_label):
 		_status_label.text = "%d condition(s) referenced senses that no longer exist and were dropped or reset." % dropped
 		_status_label.add_theme_color_override("font_color", Color.GOLD)
 	changed.emit()
@@ -340,7 +357,12 @@ func _new_row() -> Dictionary:
 ## Full rebuild from the model. Structural edits (add/remove, first-value
 ## or second-kind changes) rebuild; op/literal edits only touch the model
 ## and preview — that split is what keeps the builder feeling snappy.
+## No-op headless (before _ready): the model is authoritative, the UI is
+## a projection of it.
 func _rebuild_ui() -> void:
+	if not is_instance_valid(_sections_box):
+		return
+
 	for child in _sections_box.get_children():
 		child.queue_free()
 
