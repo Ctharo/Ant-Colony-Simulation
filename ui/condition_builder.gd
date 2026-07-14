@@ -15,6 +15,9 @@ extends VBoxContainer
 ##   - second value: a typed literal, or another sense/constant of a
 ##     compatible type.
 ## - A SECTION groups rows; rows chain left-to-right inside it.
+## - Rows reorder within their section (↑/↓); whole sections reorder too.
+##   Operators travel with their row/section; the slot that lands first
+##   simply has its operator ignored/hidden (first-position semantics).
 ##
 ## COMPILATION: the builder is a pure front-end — it emits an ordinary
 ## expression string (left-associative, explicitly parenthesized, so
@@ -35,9 +38,9 @@ extends VBoxContainer
 ##
 ## HEADLESS USE: the model works without the control ever entering the
 ## tree — load_data()/get_expression() are UI-safe when _ready hasn't run.
-## compile_data() wraps that for one-shot recompiles (the Behavior Editor
-## uses it for divergence detection against a hand-edited
-## expression_string).
+## compile_data() wraps that for one-shot recompiles (divergence
+## detection); describe_data() renders stored builder_data as
+## human-readable section/row lines (the designer tree uses it).
 ##
 ## Built entirely in code, per the project's runtime-UI convention.
 
@@ -84,6 +87,13 @@ var _scroll: ScrollContainer
 var _preview_label: Label
 var _status_label: Label
 
+## Focus restoration across full rebuilds: which control of which row/
+## section should grab focus after the next _rebuild_ui. ri == -1 targets
+## the section header. Consumed (cleared) by the maker that honors it —
+## this is what lets ↑/↑/↑ be pressed repeatedly without re-mousing.
+## { "si": int, "ri": int, "what": "first"|"up"|"down"|"sec_up"|"sec_down" }
+var _focus_target: Dictionary = {}
+
 var _no_nested: Array[Logic] = []  # builder output never uses nested ids
 
 
@@ -96,6 +106,27 @@ static func compile_data(data: Dictionary) -> String:
 	var expr := builder.get_expression()
 	builder.free()  # never entered the tree — free manually
 	return expr
+
+
+## Human-readable rendering of stored builder_data, for read-only views
+## (the designer tree). One entry per section:
+##   { "op": "and"|"or", "rows": PackedStringArray }
+## Row lines are already prefixed with their chaining operator ("AND ...")
+## except the first row of each section. Rows whose senses have left the
+## vocabulary are dropped (same policy as load_data).
+static func describe_data(data: Dictionary) -> Array[Dictionary]:
+	var builder := ConditionBuilder.new()
+	builder.load_data(data)
+	var out: Array[Dictionary] = []
+	for section: Dictionary in builder._sections:
+		var rows := PackedStringArray()
+		for ri in section.rows.size():
+			var row: Dictionary = section.rows[ri]
+			var prefix := "" if ri == 0 else "%s " % str(row.op).to_upper()
+			rows.append(prefix + builder._describe_row(row))
+		out.append({ "op": section.op, "rows": rows })
+	builder.free()
+	return out
 
 
 func _init() -> void:
@@ -354,11 +385,11 @@ func _new_row() -> Dictionary:
 
 
 #region UI construction
-## Full rebuild from the model. Structural edits (add/remove, first-value
-## or second-kind changes) rebuild; op/literal edits only touch the model
-## and preview — that split is what keeps the builder feeling snappy.
-## No-op headless (before _ready): the model is authoritative, the UI is
-## a projection of it.
+## Full rebuild from the model. Structural edits (add/remove/move, first-
+## value type change, literal↔sense toggle) rebuild; op/literal edits only
+## touch the model and preview — that split is what keeps the builder
+## feeling snappy. No-op headless (before _ready): the model is
+## authoritative, the UI is a projection of it.
 func _rebuild_ui() -> void:
 	if not is_instance_valid(_sections_box):
 		return
@@ -397,12 +428,28 @@ func _make_section_panel(si: int) -> PanelContainer:
 	add_btn.pressed.connect(func() -> void: _on_add_row(si))
 	header.add_child(add_btn)
 
+	var sec_up := Button.new()
+	sec_up.text = "↑"
+	sec_up.tooltip_text = "Move this section up"
+	sec_up.disabled = si == 0
+	sec_up.pressed.connect(func() -> void: _on_move_section(si, -1))
+	header.add_child(sec_up)
+
+	var sec_down := Button.new()
+	sec_down.text = "↓"
+	sec_down.tooltip_text = "Move this section down"
+	sec_down.disabled = si == _sections.size() - 1
+	sec_down.pressed.connect(func() -> void: _on_move_section(si, 1))
+	header.add_child(sec_down)
+
 	var del_btn := Button.new()
 	del_btn.text = "✕"
 	del_btn.tooltip_text = "Delete this section and its conditions"
 	del_btn.pressed.connect(func() -> void: _on_delete_section(si))
 	header.add_child(del_btn)
 	vbox.add_child(header)
+
+	_consume_focus_target(si, -1, { "sec_up": sec_up, "sec_down": sec_down })
 
 	var rows: Array = _sections[si].rows
 	if rows.is_empty():
@@ -419,6 +466,7 @@ func _make_section_panel(si: int) -> PanelContainer:
 
 func _make_row(si: int, ri: int) -> HBoxContainer:
 	var row: Dictionary = _sections[si].rows[ri]
+	var row_count: int = _sections[si].rows.size()
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 6)
 
@@ -455,6 +503,7 @@ func _make_row(si: int, ri: int) -> HBoxContainer:
 			row.second_kind = "literal"
 			row.second = _default_literal(key)
 			row.second_sense = ""
+			_focus_target = { "si": si, "ri": ri, "what": "first" }
 			_rebuild_ui()
 		else:
 			_refresh_preview()
@@ -488,20 +537,49 @@ func _make_row(si: int, ri: int) -> HBoxContainer:
 			row.second_kind = "sense" if idx == 1 else "literal"
 			if row.second_kind == "sense" and row.second_sense.is_empty():
 				row.second_sense = _first_compatible_sense(row.first)
+			_focus_target = { "si": si, "ri": ri, "what": "first" }
 			_rebuild_ui()
 			changed.emit()
 		)
 		hbox.add_child(kind_select)
 		hbox.add_child(_make_second_widget(row))
 
-	# --- Delete row ---
+	# --- Reorder / delete ---
+	var up_btn := Button.new()
+	up_btn.text = "↑"
+	up_btn.tooltip_text = "Move this condition up"
+	up_btn.disabled = ri == 0
+	up_btn.pressed.connect(func() -> void: _on_move_row(si, ri, -1))
+	hbox.add_child(up_btn)
+
+	var down_btn := Button.new()
+	down_btn.text = "↓"
+	down_btn.tooltip_text = "Move this condition down"
+	down_btn.disabled = ri == row_count - 1
+	down_btn.pressed.connect(func() -> void: _on_move_row(si, ri, 1))
+	hbox.add_child(down_btn)
+
 	var del_btn := Button.new()
 	del_btn.text = "✕"
 	del_btn.tooltip_text = "Remove this condition"
 	del_btn.pressed.connect(func() -> void: _on_delete_row(si, ri))
 	hbox.add_child(del_btn)
 
+	_consume_focus_target(si, ri,
+		{ "first": first_select, "up": up_btn, "down": down_btn })
+
 	return hbox
+
+
+## Honors a pending focus target for this (si, ri): grabs focus on the
+## matching control after the rebuild settles, then clears the target.
+func _consume_focus_target(si: int, ri: int, controls: Dictionary) -> void:
+	if _focus_target.get("si", -99) != si or _focus_target.get("ri", -99) != ri:
+		return
+	var target: Control = controls.get(_focus_target.get("what", "first"))
+	_focus_target = {}
+	if target:
+		target.grab_focus.call_deferred()
 
 
 ## The leading slot: nothing on the very first row, the SECTION operator on
@@ -601,6 +679,7 @@ func _on_add_section() -> void:
 	var section := _new_section()
 	section.rows.append(_new_row())
 	_sections.append(section)
+	_focus_target = { "si": _sections.size() - 1, "ri": 0, "what": "first" }
 	_rebuild_ui()
 	changed.emit()
 
@@ -615,12 +694,43 @@ func _on_delete_section(si: int) -> void:
 
 func _on_add_row(si: int) -> void:
 	_sections[si].rows.append(_new_row())
+	_focus_target = { "si": si, "ri": _sections[si].rows.size() - 1, "what": "first" }
 	_rebuild_ui()
 	changed.emit()
 
 
 func _on_delete_row(si: int, ri: int) -> void:
 	_sections[si].rows.remove_at(ri)
+	_rebuild_ui()
+	changed.emit()
+
+
+## Swap-based reorder within a section. The row's operator travels with it;
+## whichever row lands in position 0 has its operator ignored (first-
+## position semantics) — same rule Maintainerr applies.
+func _on_move_row(si: int, ri: int, delta: int) -> void:
+	var rows: Array = _sections[si].rows
+	var to := ri + delta
+	if to < 0 or to >= rows.size():
+		return
+	var tmp: Dictionary = rows[ri]
+	rows[ri] = rows[to]
+	rows[to] = tmp
+	# Refocus the same arrow on the moved row so ↑↑↑ chains without re-mousing.
+	_focus_target = { "si": si, "ri": to, "what": "up" if delta < 0 else "down" }
+	_rebuild_ui()
+	changed.emit()
+
+
+func _on_move_section(si: int, delta: int) -> void:
+	var to := si + delta
+	if to < 0 or to >= _sections.size():
+		return
+	var tmp: Dictionary = _sections[si]
+	_sections[si] = _sections[to]
+	_sections[to] = tmp
+	_focus_target = { "si": to, "ri": -1,
+		"what": "sec_up" if delta < 0 else "sec_down" }
 	_rebuild_ui()
 	changed.emit()
 #endregion
@@ -670,6 +780,33 @@ func _compile_second(row: Dictionary) -> String:
 	if absf(value - roundf(value)) < 0.000001:
 		return "%d" % int(value)
 	return str(value)
+
+
+## Human-readable form of one row, using catalog LABELS (not compile
+## fragments): "distance to nearest_food_in_view < 50", "carrying food is
+## false", "role begins with \"w\"".
+func _describe_row(row: Dictionary) -> String:
+	if not _by_key.has(row.first):
+		return "(unknown sense)"
+	var entry: Dictionary = _by_key[row.first]
+
+	var op_label := str(row.action)
+	for op: Array in _ops_for(row.first):
+		if op[1] == row.action:
+			op_label = op[0]
+			break
+
+	if entry.type == "bool":
+		return "%s %s" % [entry.label, op_label]
+
+	var second: String
+	if row.second_kind == "sense" and _by_key.has(row.second_sense):
+		second = _by_key[row.second_sense].label
+	elif entry.type == "String":
+		second = "\"%s\"" % str(row.second)
+	else:
+		second = _compile_second(row)
+	return "%s %s %s" % [entry.label, op_label, second]
 #endregion
 
 

@@ -16,6 +16,14 @@ extends ManagedWindow
 ## matching editor popup, and double-clicking any expression row in the tree
 ## opens the Logic editor for that expression directly.
 ##
+## BUILDER CONDITIONS: expressions with non-empty builder_data (authored in
+## the ConditionBuilder) render their sections/rows as readable child lines
+## and carry a "[built]" tag. If the raw expression no longer matches what
+## the rows compile to (hand edit / vocabulary change), the tag becomes a
+## gold "⚠ built, diverged" badge — the raw expression is what runs.
+## Double-click still opens the raw expression editor (the escape hatch);
+## visual editing happens through the owning behavior.
+##
 ## Opened from the sandbox debug menu ("Designer") and from the main menu.
 ## Without a running sandbox there are no live ants: the probe label reads
 ## "no live ants" and the Value column stays blank, but all authoring works.
@@ -274,9 +282,9 @@ func _build_policy_editor() -> PanelContainer:
 	mode_label.text = "Re-evaluate:"
 	mode_row.add_child(mode_label)
 	_mode_select = OptionButton.new()
-	for _mode in MODE_ORDER:
-		_mode_select.add_item(MODE_LABELS[_mode])
-		_mode_select.set_item_metadata(_mode_select.item_count - 1, _mode)
+	for mode in MODE_ORDER:
+		_mode_select.add_item(MODE_LABELS[mode])
+		_mode_select.set_item_metadata(_mode_select.item_count - 1, mode)
 	_mode_select.item_selected.connect(func(_i: int) -> void: _sync_editor_visibility())
 	mode_row.add_child(_mode_select)
 	vbox.add_child(mode_row)
@@ -341,10 +349,10 @@ func _set_editor_enabled(enabled: bool) -> void:
 
 
 func _sync_editor_visibility() -> void:
-	var _mode: int = _current_mode()
-	_interval_row.visible = _mode == Logic.EvalMode.TIMER
-	_trigger_row.visible = _mode == Logic.EvalMode.EVENT
-	_hint_label.text = MODE_HINTS.get(_mode, "")
+	var mode: int = _current_mode()
+	_interval_row.visible = mode == Logic.EvalMode.TIMER
+	_trigger_row.visible = mode == Logic.EvalMode.EVENT
+	_hint_label.text = MODE_HINTS.get(mode, "")
 
 
 func _current_mode() -> int:
@@ -446,6 +454,9 @@ func _add_logic_item(parent: TreeItem, logic: Logic, seen: Dictionary, prefix: S
 	item.set_metadata(Col.NAME, logic)
 	_update_mode_cell(item, logic)
 
+	if not logic.builder_data.is_empty():
+		_decorate_builder_item(item, logic)
+
 	if seen.has(logic.id):
 		item.set_text(Col.NAME, item.get_text(Col.NAME) + "  (cycle!)")
 		return
@@ -453,6 +464,46 @@ func _add_logic_item(parent: TreeItem, logic: Logic, seen: Dictionary, prefix: S
 	for nested: Logic in logic.nested_expressions:
 		_add_logic_item(item, nested, seen, "")
 	seen.erase(logic.id)
+
+
+## Builder-authored condition: "[built]" tag (gold "⚠ built, diverged" when
+## the raw expression no longer matches the rows), plus readable
+## section/row child lines. The child lines carry no Logic metadata, so
+## the policy editor and live-value walker skip them automatically.
+func _decorate_builder_item(item: TreeItem, logic: Logic) -> void:
+	var recompiled := ConditionBuilder.compile_data(logic.builder_data).strip_edges()
+	var diverged := recompiled != logic.expression_string.strip_edges()
+
+	item.set_text(Col.NAME, item.get_text(Col.NAME)
+		+ ("   ⚠ built, diverged" if diverged else "   [built]"))
+
+	var tooltip := item.get_tooltip_text(Col.NAME)
+	tooltip += "\n\nBuilt with the condition builder — edit the owning behavior for the visual editor; the expression editor here is the raw escape hatch."
+	if diverged:
+		item.set_custom_color(Col.NAME, Color.GOLD)
+		tooltip += "\n\n⚠ The raw expression no longer matches the builder rows (hand-edited, or the vocabulary changed how rows compile). The raw expression is what runs; saving from the builder would overwrite it."
+	item.set_tooltip_text(Col.NAME, tooltip)
+
+	var sections := ConditionBuilder.describe_data(logic.builder_data)
+	var single := sections.size() == 1
+	for si in sections.size():
+		var sec: Dictionary = sections[si]
+		# One section: flatten rows directly under the expression — the
+		# grouping adds nothing. Multiple: show section headers with the
+		# combining operator, exactly as the builder lays them out.
+		var row_parent := item
+		if not single:
+			var sec_item := _tree.create_item(item)
+			sec_item.set_text(Col.NAME, ("Section %d" % (si + 1)) if si == 0
+				else "%s Section %d" % [str(sec.op).to_upper(), si + 1])
+			sec_item.set_selectable(Col.NAME, false)
+			sec_item.set_custom_color(Col.NAME, Color(0.75, 0.85, 1.0, 0.9))
+			row_parent = sec_item
+		for line: String in sec.rows:
+			var row_item := _tree.create_item(row_parent)
+			row_item.set_text(Col.NAME, line)
+			row_item.set_selectable(Col.NAME, false)
+			row_item.set_custom_color(Col.NAME, Color(1, 1, 1, 0.65))
 
 
 func _update_mode_cell(item: TreeItem, logic: Logic) -> void:
@@ -514,14 +565,14 @@ func _on_delete() -> void:
 	_confirm.popup_centered()
 
 
-func _open_editor(p_popup: Window, res: Resource, path: String, writable: bool) -> void:
-	add_child(p_popup)
-	p_popup.open_for(res, path, writable)
+func _open_editor(popup: Window, res: Resource, path: String, writable: bool) -> void:
+	add_child(popup)
+	popup.open_for(res, path, writable)
 	# library_changed (already connected) refreshes the list on save; this
 	# restores the tree, whose selection is lost when the saved resource
 	# instance replaces the one being displayed.
-	if p_popup.has_signal("saved"):
-		p_popup.saved.connect(func(_r: Resource) -> void: _rebuild_tree())
+	if popup.has_signal("saved"):
+		popup.saved.connect(func(_r: Resource) -> void: _rebuild_tree())
 
 
 ## Double-click on a tree row: open the Logic editor for that expression.
