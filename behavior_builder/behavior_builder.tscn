@@ -1,12 +1,12 @@
 [gd_scene format=3 uid="uid://b83h7dc04ogte"]
 
-[ext_resource type="Script" uid="uid://cduyyuvcsaebp" path="res://behavior_builder/behavior_builder.gd" id="1_543bo"]
+[ext_resource type="Script" uid="uid://cduyyuvcsaebp" path="res://behavior_builder/behavior_builder.gd" id="1_main"]
 
-[node name="BehaviorBuilder" type="Control" unique_id=1961847709]
+[node name="BehaviorBuilder" type="Control" unique_id=1509841658]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_543bo")
+script = ExtResource("1_main")

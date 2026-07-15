@@ -42,7 +42,7 @@ func input_type(_port: int) -> int:
 
 func on_value(v) -> void:
 	super.on_value(v)
-	var now: bool = v == true
+	var now: bool = v is bool and v
 	if now and not _prev:
 		fires += 1
 		fire_label.text = "fired ×%d" % fires

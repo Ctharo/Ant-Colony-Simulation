@@ -103,7 +103,7 @@ func refresh_preview() -> void:
 	for c in data.get("connections", []):
 		_preview.set_connection_activity(
 			"P_" + str(c.from), 0, "P_" + str(c.to), int(c.to_port),
-			1.0 if memo.get(str(c.from)) == true else 0.0)
+			1.0 if _is_true(memo.get(str(c.from))) else 0.0)
 
 
 func _build_preview() -> void:
@@ -147,6 +147,10 @@ func _build_preview() -> void:
 	move_child(_preview, 1)  # between the OUT row and the value footer
 	if minp.x != INF:
 		_preview.set_deferred("scroll_offset", (minp - Vector2(40, 40)) * _preview.zoom)
+
+
+static func _is_true(v) -> bool:
+	return v is bool and v
 
 
 static func _title_for(nd: Dictionary) -> String:

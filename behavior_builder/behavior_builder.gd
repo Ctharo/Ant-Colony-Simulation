@@ -719,8 +719,9 @@ func _reevaluate() -> void:
 	for n in _all_bb_nodes():
 		_eval_live(str(n.name), incoming, memo, {}, cycle)
 	for c in conns:  # light up wires carrying TRUE
+		var wv = memo.get(c.from)
 		graph.set_connection_activity(c.from, c.from_port, c.to, c.to_port,
-			1.0 if memo.get(c.from) == true else 0.0)
+			1.0 if (wv is bool and wv) else 0.0)
 	for n in _all_bb_nodes():
 		if n is BBConditionNode:
 			n.refresh_preview()
