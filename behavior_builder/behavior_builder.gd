@@ -31,6 +31,10 @@ var overwrite_dialog: ConfirmationDialog
 var _overwrite_name := ""
 var _suppress_cancel := false
 
+var settings: BBBuilderSettings = BBBuilderSettings.new()
+var _last_show_grid: bool = true
+var _last_snapping: bool = true
+
 var _uid := 0
 var _dirty := false
 var _cycle_warned := false
@@ -66,6 +70,7 @@ const ADD_ITEMS := [
 
 
 func _ready() -> void:
+	settings.load_from_disk()
 	library.load_from_disk()
 	_build_ui()
 	library.changed.connect(_refresh_library_list)
@@ -77,12 +82,22 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_process_panning(delta)
+	_check_grid_snap_change()
 	if _has_timers:
 		_timer_accum += delta
 		if _timer_accum >= 0.2:
 			_timer_accum = 0.0
 			_reevaluate()
 
+
+func _check_grid_snap_change() -> void:
+	if graph.show_grid == _last_show_grid and graph.snapping_enabled == _last_snapping:
+		return
+	_last_show_grid = graph.show_grid
+	_last_snapping = graph.snapping_enabled
+	settings.show_grid = _last_show_grid
+	settings.snapping_enabled = _last_snapping
+	settings.save_to_disk()
 
 ## WASD / arrow-key panning. Suppressed while a text field has focus or any
 ## popup/dialog is open, so typing values never moves the grid. Uses raw key
@@ -124,6 +139,10 @@ func _build_ui() -> void:
 	graph.custom_minimum_size = Vector2(680, 0)
 	graph.minimap_enabled = true
 	graph.right_disconnects = true
+	graph.show_grid = settings.show_grid
+	graph.snapping_enabled = settings.snapping_enabled
+	_last_show_grid = graph.show_grid
+	_last_snapping = graph.snapping_enabled
 	# Activity glow (pulses on wires carrying TRUE) — green to match ports.
 	graph.add_theme_color_override("activity", BBNode.COL_TRUE)
 	split.add_child(graph)

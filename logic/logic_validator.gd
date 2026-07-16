@@ -98,7 +98,7 @@ static func validate(expression_string: String, nested: Array[Logic]) -> PackedS
 	var unknown := PackedStringArray()
 	for ident in _extract_identifiers(expression_string):
 		if not allowed.has(ident) and not unknown.has(ident):
-			unknown.append(ident)
+			var _result: bool = unknown.append(ident)
 
 	for ident in unknown:
 		errors.append(

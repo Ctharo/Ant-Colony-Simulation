@@ -163,65 +163,128 @@ func _build_list() -> void:
 		return
 	var data: Dictionary = library.get_condition(cond_name)
 
-	var nodes := {}
-	for nd in data.get("nodes", []):
+	var nodes: Dictionary = {}
+	for nd: Dictionary in data.get("nodes", []):
 		nodes[str(nd.id)] = nd
-	var incoming := {}
-	for c in data.get("connections", []):
-		var t := str(c.to)
-		if not incoming.has(t):
-			incoming[t] = {}
-		incoming[t][int(c.to_port)] = str(c.from)
+	var incoming: Dictionary = {}
+	for c: Dictionary in data.get("connections", []):
+		var to_id: String = str(c.to)
+		if not incoming.has(to_id):
+			incoming[to_id] = {}
+		incoming[to_id][int(c.to_port)] = str(c.from)
 
-	# Rows ordered from the output node down through its inputs (indented),
-	# so the list reads like the expression tree.
 	var rows: Array = []
-	var seen := {}
-	_collect_rows(str(data.get("output_id", "")), nodes, incoming, 0, rows, seen)
-	var leftovers := []
-	for id in nodes:
-		if not seen.has(id):
-			leftovers.append(id)
+	var seen: Dictionary = {}
+	var output_id: String = str(data.get("output_id", ""))
+	_collect_rows(output_id, nodes, incoming, 0, rows, seen)
+	var leftovers: Array = []
+	for leftover_id: String in nodes:
+		if not seen.has(leftover_id):
+			leftovers.append(leftover_id)
 	if not leftovers.is_empty():
 		rows.append({"separator": "not wired to the output"})
-		for id in leftovers:
-			if not seen.has(id):
-				_collect_rows(id, nodes, incoming, 1, rows, seen)
+		for leftover_id: String in leftovers:
+			if not seen.has(leftover_id):
+				_collect_rows(leftover_id, nodes, incoming, 1, rows, seen)
 
 	_list = VBoxContainer.new()
 	_list.add_theme_constant_override("separation", 2)
 	_list.custom_minimum_size = Vector2(260, 0)
 
-	for r in rows:
+	for r: Dictionary in rows:
 		if r.has("separator"):
-			var sep := Label.new()
+			var sep: Label = Label.new()
 			sep.text = "— %s —" % r.separator
 			sep.add_theme_color_override("font_color", Color(0.55, 0.5, 0.5))
 			_list.add_child(sep)
 			continue
-		var nd: Dictionary = nodes[r.id]
-		var hb := HBoxContainer.new()
-		var lab := Label.new()
+		var row_id: String = str(r.id)
+		var nd: Dictionary = nodes[row_id]
+		var is_repeat: bool = bool(r.get("repeat", false))
+		# The root row's value is already shown by this node's own OUT
+		# header, so don't re-render it here — that's what caused the
+		# "twice as many falses" count.
+		var is_root: bool = not is_repeat and row_id == output_id
+		var hb: HBoxContainer = HBoxContainer.new()
+		var lab: Label = Label.new()
 		var indent: String = "    ".repeat(int(r.depth))
 		var branch: String = "└ " if int(r.depth) > 0 else ""
-		if r.get("repeat", false):
+		if is_repeat:
 			lab.text = "%s%s↺ %s (shown above)" % [indent, branch, _title_for(nd)]
 			lab.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 		else:
-			lab.text = "%s%s%s" % [indent, branch, _row_text(nd)]
+			lab.text = "%s%s%s" % [indent, branch, _row_text(row_id, nd, nodes, incoming)]
 		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(lab)
-		var vl := Label.new()
-		vl.text = "= —"
-		vl.add_theme_color_override("font_color", COL_NULL)
-		hb.add_child(vl)
-		if not r.get("repeat", false) and not _preview_value_labels.has(r.id):
-			_preview_value_labels[r.id] = vl
+		if not is_root:
+			var vl: Label = Label.new()
+			vl.text = "= —"
+			vl.add_theme_color_override("font_color", COL_NULL)
+			hb.add_child(vl)
+			if not is_repeat and not _preview_value_labels.has(row_id):
+				_preview_value_labels[row_id] = vl
 		_list.add_child(hb)
 
 	add_child(_list)
-	move_child(_list, 1)  # between the OUT row and the value footer
+	move_child(_list, 1)
 
+
+static func _row_text(id: String, nd: Dictionary, nodes: Dictionary, incoming: Dictionary) -> String:
+	var node_type: String = str(nd.type)
+	if node_type == "compare" or node_type == "math":
+		return _sentence_for(id, nd, nodes, incoming)
+	var s: String = _summary_for(nd)
+	if s.strip_edges().is_empty():
+		return _title_for(nd)
+	return "%s  %s" % [_title_for(nd), s]
+
+
+## Builds a single natural-language sentence with the wired variable's name
+## in place of the generic "A" — e.g. "Compare enemy_dist is less than 30.0".
+static func _sentence_for(id: String, nd: Dictionary, nodes: Dictionary, incoming: Dictionary) -> String:
+	var p: Dictionary = nd.get("params", {})
+	var a_text: String = _variable_name_for(id, 0, incoming, nodes)
+	var b_text: String = _b_text_for(id, incoming, nodes, p)
+	if str(nd.type) == "compare":
+		var i: int = BBCompareNode.OPS.find(str(p.get("op", "<")))
+		var opl: String = BBCompareNode.OP_LABELS[i] if i >= 0 else str(p.get("op", "?"))
+		return "Compare %s %s %s" % [a_text, opl, b_text]
+	var j: int = BBMathNode.OPS.find(str(p.get("op", "+")))
+	var opl2: String = BBMathNode.OP_LABELS[j] if j >= 0 else str(p.get("op", "?"))
+	return "%s %s %s" % [a_text, opl2, b_text]
+
+
+static func _b_text_for(id: String, incoming: Dictionary, nodes: Dictionary, p: Dictionary) -> String:
+	var inc: Dictionary = incoming.get(id, {})
+	if inc.has(1):
+		return _variable_name_for(id, 1, incoming, nodes)
+	return str(p.get("b", 0.0))
+
+
+## Resolves what's wired into a given port to a readable name: a world/ant
+## value's key, a constant's literal, a nested condition's name, or —
+## recursively — a math node's own sentence. Falls back to "value" for
+## anything unwired or unrecognized.
+static func _variable_name_for(id: String, port: int, incoming: Dictionary, nodes: Dictionary) -> String:
+	var inc: Dictionary = incoming.get(id, {})
+	if not inc.has(port):
+		return "value"
+	var src_id: String = str(inc[port])
+	if not nodes.has(src_id):
+		return "value"
+	var src: Dictionary = nodes[src_id]
+	var sp: Dictionary = src.get("params", {})
+	match str(src.type):
+		"world_value":
+			return str(sp.get("key", "value"))
+		"constant":
+			return str(sp.get("value", 0))
+		"condition":
+			return "◈ " + str(sp.get("name", "condition"))
+		"math":
+			return _sentence_for(src_id, src, nodes, incoming)
+		_:
+			return "value"
 
 func _collect_rows(id: String, nodes: Dictionary, incoming: Dictionary, depth: int, rows: Array, seen: Dictionary) -> void:
 	if id == "" or not nodes.has(id) or depth > 24:
@@ -236,14 +299,6 @@ func _collect_rows(id: String, nodes: Dictionary, incoming: Dictionary, depth: i
 	ports.sort()
 	for p in ports:
 		_collect_rows(str(inc[p]), nodes, incoming, depth + 1, rows, seen)
-
-
-static func _row_text(nd: Dictionary) -> String:
-	var s := _summary_for(nd)
-	if s.strip_edges().is_empty():
-		return _title_for(nd)
-	return "%s  %s" % [_title_for(nd), s]
-
 
 static func _title_for(nd: Dictionary) -> String:
 	var t := str(nd.type)
