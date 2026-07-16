@@ -239,6 +239,11 @@ static func seed() -> void:
 		Color(1.0, 0.15, 0.05, 0.12),
 		Color(0.6, 0.0, 0.0, 0.28),
 		"enemies_in_view")
+		
+	_seed_pheromone(manifest, ctx, "queen", 0.15, 15.0, 3, 1.0,
+		Color.BURLYWOOD,
+		Color.BROWN,
+		"always")
 
 	# ---- Influences (steering vectors, all whitelisted vocabulary) ---------
 	_seed_influence(manifest, ctx, "forward influence",
