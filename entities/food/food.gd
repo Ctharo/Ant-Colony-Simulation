@@ -3,7 +3,7 @@ class_name Food
 extends Node2D
 
 enum State { STORED = 0, CARRIED = 1, TARGETED = 2, AVAILABLE = 3 }
-var _state = State.AVAILABLE : set = set_state
+var _state: State = State.AVAILABLE : set = set_state
 var size: float
 ## Whether this food unit is available for pickup
 @export var is_available: bool
@@ -12,7 +12,7 @@ func _init() -> void:
 	add_to_group("food")
 	set_state(State.AVAILABLE)
 
-func set_state(value: State):
+func set_state(value: State) -> void:
 	_state = value
 	is_available = (_state == State.AVAILABLE)
 

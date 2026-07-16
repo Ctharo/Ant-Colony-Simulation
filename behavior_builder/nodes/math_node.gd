@@ -1,14 +1,16 @@
-class_name BBCompareNode
+class_name BBMathNode
 extends BBNode
-## Compares two floats -> bool, written as a single natural-language sentence:
-##     (A ▸) "is less than" [30]  ▸ true/false
-## B can be an inline value OR a wired float. When B is wired, the spinbox is
-## replaced by a live read-out of the wired value tagged "(wired)", so it's
-## unmistakable that the inline number is no longer being used.
-## Input ports: 0 = A (float), 1 = B (float, optional). Output port 0: bool.
+## A op B -> float, written as a sentence like the compare node:
+##     (A ▸) "divided by" [100]  ▸ number
+## Lets you build derived values ("expressions"), e.g. health percentage:
+##     ANT VALUE(health) → MATH "divided by" ← ANT VALUE(max_health) → MATH "times 100"
+## Save the result with Ctrl+G to get a reusable named VALUE (◈ node with a
+## float output) you can wire into any compare.
+## B can be inline or wired; wired B replaces the spinbox with a live
+## "(wired)" read-out, same as COMPARE.
 
-const OPS := [">", "<", ">=", "<=", "==", "!="]
-const OP_LABELS := ["is more than", "is less than", "is at least", "is at most", "is exactly", "is not"]
+const OPS := ["+", "-", "*", "/", "min", "max"]
+const OP_LABELS := ["plus", "minus", "times", "divided by", "min of A and", "max of A and"]
 
 var op_btn: OptionButton
 var b_spin: SpinBox
@@ -17,13 +19,11 @@ var _b_wired := false
 
 
 func _init() -> void:
-	bb_type = "compare"
-	title = "COMPARE"
+	bb_type = "math"
+	title = "MATH"
 
 
 func _build() -> void:
-	# --- slot 0: the sentence.  A flows in on the left, the bool answer
-	#     flows out on the right of this same row.
 	var sentence := HBoxContainer.new()
 	sentence.add_theme_constant_override("separation", 6)
 
@@ -36,13 +36,13 @@ func _build() -> void:
 	op_btn.focus_mode = Control.FOCUS_NONE
 	for o in OP_LABELS:
 		op_btn.add_item(o)
-	op_btn.select(1)
+	op_btn.select(0)
 	op_btn.item_selected.connect(func(_i): params_changed.emit())
 	sentence.add_child(op_btn)
 
 	b_spin = SpinBox.new()
-	b_spin.min_value = -1000.0
-	b_spin.max_value = 1000.0
+	b_spin.min_value = -100000.0
+	b_spin.max_value = 100000.0
 	b_spin.step = 0.1
 	b_spin.custom_minimum_size = Vector2(90, 0)
 	b_spin.value_changed.connect(func(_v): params_changed.emit())
@@ -54,15 +54,14 @@ func _build() -> void:
 	b_wired_label.tooltip_text = "B is wired — this is the live value coming in on the B port below.\nDisconnect the wire to go back to typing a number."
 	sentence.add_child(b_wired_label)
 
-	add_child(sentence)  # slot 0 — input port 0 (A), output port 0 (bool)
+	add_child(sentence)  # slot 0 — input port 0 (A), output port 0 (float)
 
-	# --- slot 1: optional wired B.
 	var b_row := Label.new()
 	b_row.text = "▸ or wire a number in here as B"
 	b_row.add_theme_color_override("font_color", Color(0.6, 0.6, 0.66))
 	add_child(b_row)  # slot 1 — input port 1 (B)
 
-	set_slot(0, true, TYPE_FLOAT, COL_FLOAT, true, TYPE_BOOL, COL_BOOL)
+	set_slot(0, true, TYPE_FLOAT, COL_FLOAT, true, TYPE_FLOAT, COL_FLOAT)
 	set_slot(1, true, TYPE_FLOAT, COL_FLOAT, false, 0, Color.WHITE)
 	_make_value_footer()
 
@@ -76,7 +75,7 @@ func input_type(_port: int) -> int:
 
 
 func output_type() -> int:
-	return TYPE_BOOL
+	return TYPE_FLOAT
 
 
 func get_params() -> Dictionary:
@@ -84,7 +83,7 @@ func get_params() -> Dictionary:
 
 
 func set_params(p: Dictionary) -> void:
-	var i := OPS.find(str(p.get("op", "<")))
+	var i := OPS.find(str(p.get("op", "+")))
 	if i >= 0:
 		op_btn.select(i)
 	b_spin.value = float(p.get("b", 0.0))
@@ -99,5 +98,4 @@ func on_inputs(values: Array, connected: Array) -> void:
 		_b_wired = b_wired
 		b_spin.visible = not b_wired
 		b_wired_label.visible = b_wired
-		size = Vector2.ZERO  # refit to contents
-	b_spin.tooltip_text = "Inline value for B (or wire any number into the B port below)"
+		size = Vector2.ZERO

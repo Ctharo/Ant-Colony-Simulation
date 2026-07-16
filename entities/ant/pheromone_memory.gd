@@ -63,8 +63,8 @@ func get_concentration_vector() -> Vector2:
 	if samples.size() < 2:
 		return Vector2.ZERO
 
-	var weighted_direction := Vector2.ZERO
-	var total_weight := 0.0
+	var weighted_direction: Vector2 = Vector2.ZERO
+	var total_weight: float = 0.0
 
 	# Walk consecutive sample pairs to estimate the local gradient.
 	for i: int in range(samples.size() - 1):
@@ -72,13 +72,13 @@ func get_concentration_vector() -> Vector2:
 		var to_sample: ConcentrationSample = samples[i + 1]
 
 		# Direction of travel from the older sample to the newer one.
-		var direction := Vector2(to_sample.cell_pos - from_sample.cell_pos).normalized()
+		var direction: Vector2 = Vector2(to_sample.cell_pos - from_sample.cell_pos).normalized()
 
 		# Positive when concentration rose along that step.
-		var concentration_diff := to_sample.concentration - from_sample.concentration
+		var concentration_diff: float = to_sample.concentration - from_sample.concentration
 
 		# Bias toward the most recent movement history.
-		var recency_weight := float(i + 1) / samples.size()
+		var recency_weight: float = float(i + 1) / samples.size()
 
 		weighted_direction += direction * concentration_diff * recency_weight
 		total_weight += absf(concentration_diff) * recency_weight

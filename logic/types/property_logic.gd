@@ -12,7 +12,7 @@ extends Logic
 
 
 func evaluate(state: LogicState, _bindings: Array) -> Variant:
-	var sense := expression_string.strip_edges()
+	var sense: String = expression_string.strip_edges()
 	if sense.is_empty() or state.context == null:
 		return null
 	# AntSenses exposes both properties (energy_level) and zero-arg methods;

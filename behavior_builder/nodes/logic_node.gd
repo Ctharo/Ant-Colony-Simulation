@@ -73,20 +73,22 @@ func set_input_count(n: int) -> void:
 	size = Vector2.ZERO  # shrink-to-fit
 
 
-func on_inputs(_values: Array, connected: Array) -> void:
-	if bb_type == "not":
-		return
-	var last_wired := -1
-	var all_wired := connected.size() > 0
-	for i in connected.size():
-		if connected[i]:
-			last_wired = i
-		else:
-			all_wired = false
-	var target := connected.size() + 1 if all_wired else maxi(2, last_wired + 2)
-	target = mini(target, 8)
-	if target != _input_labels.size():
-		set_input_count(target)
+func on_inputs(values: Array, connected: Array) -> void:
+	if bb_type != "not":
+		var last_wired := -1
+		var all_wired := connected.size() > 0
+		for i in connected.size():
+			if connected[i]:
+				last_wired = i
+			else:
+				all_wired = false
+		var target := connected.size() + 1 if all_wired else maxi(2, last_wired + 2)
+		target = mini(target, 8)
+		if target != _input_labels.size():
+			set_input_count(target)
+	# Base class colors each connected input port from the value flowing in
+	# (green/red for bools), so the wires light up. Runs AFTER any resize.
+	super.on_inputs(values, connected)
 
 
 func on_value(v) -> void:
