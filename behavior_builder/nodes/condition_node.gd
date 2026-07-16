@@ -87,6 +87,21 @@ func toggle_expanded() -> void:
 	size = Vector2.ZERO  # refit to contents
 
 
+## Rebuilds the preview from the (possibly changed) library definition.
+## Called when the library changes so expanded instances don't show stale structure.
+func rebuild_preview() -> void:
+	if not expanded:
+		return
+	if _preview:
+		remove_child(_preview)
+		_preview.queue_free()
+		_preview = null
+		_preview_value_labels.clear()
+	_build_preview()
+	refresh_preview()
+	size = Vector2.ZERO
+
+
 ## Re-evaluates the internal subgraph and pushes values into the preview.
 ## Called by the main controller on every evaluation pass while expanded.
 func refresh_preview() -> void:
@@ -111,23 +126,24 @@ func _build_preview() -> void:
 		return
 	var data: Dictionary = library.get_condition(cond_name)
 	_preview = GraphEdit.new()
-	_preview.custom_minimum_size = Vector2(460, 300)
 	_preview.minimap_enabled = false
 	if _preview.has_method("get_menu_hbox"):
 		_preview.get_menu_hbox().visible = false
 	_preview_value_labels.clear()
 
 	var minp := Vector2(INF, INF)
+	var maxp := Vector2(-INF, -INF)
 	for nd in data.get("nodes", []):
 		var gn := GraphNode.new()
 		gn.name = "P_" + str(nd.id)
 		gn.title = _title_for(nd)
 		var pos := Vector2(float(nd.pos[0]), float(nd.pos[1])) * 0.85
 		gn.position_offset = pos
+		var cnt := int(nd.get("in_count", 0))
 		minp = minp.min(pos)
+		maxp = maxp.max(pos + Vector2(215.0, 72.0 + maxi(cnt, 1) * 27.0))
 		gn.draggable = false
 		gn.selectable = false
-		var cnt := int(nd.get("in_count", 0))
 		for p in maxi(cnt, 1):
 			var l := Label.new()
 			l.text = _summary_for(nd) if p == 0 else "·"
@@ -143,10 +159,19 @@ func _build_preview() -> void:
 	for c in data.get("connections", []):
 		_preview.connect_node("P_" + str(c.from), 0, "P_" + str(c.to), int(c.to_port))
 
+	# Size the preview to fit its contents; zoom out instead of growing past max.
+	if minp.x != INF:
+		var extent := (maxp - minp) + Vector2(90, 70)
+		var psize := extent.clamp(Vector2(400, 250), Vector2(940, 600))
+		_preview.custom_minimum_size = psize
+		var z := minf(minf(psize.x / extent.x, psize.y / extent.y), 1.0)
+		_preview.zoom = maxf(z, 0.35)
+		_preview.set_deferred("scroll_offset", (minp - Vector2(45, 35)) * _preview.zoom)
+	else:
+		_preview.custom_minimum_size = Vector2(400, 250)
+
 	add_child(_preview)
 	move_child(_preview, 1)  # between the OUT row and the value footer
-	if minp.x != INF:
-		_preview.set_deferred("scroll_offset", (minp - Vector2(40, 40)) * _preview.zoom)
 
 
 static func _is_true(v) -> bool:

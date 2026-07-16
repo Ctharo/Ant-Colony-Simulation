@@ -23,6 +23,8 @@ const GLYPH_EYE := "👁"
 var bb_type := ""
 var last_value = null
 var value_label: Label
+var _base_panel: StyleBox
+var _base_titlebar: StyleBox
 
 
 func _ready() -> void:
@@ -66,6 +68,35 @@ func on_value(v) -> void:
 	if value_label:
 		value_label.text = "= %s" % fmt(v)
 		value_label.add_theme_color_override("font_color", val_color(v))
+	_update_outline(v)
+
+
+## Green outline when the node's value is TRUE, red when false; none otherwise.
+func _update_outline(v) -> void:
+	if not (v is bool):
+		remove_theme_stylebox_override("panel")
+		remove_theme_stylebox_override("titlebar")
+		return
+	if _base_panel == null:
+		_base_panel = get_theme_stylebox("panel")
+		_base_titlebar = get_theme_stylebox("titlebar")
+	var col: Color = COL_TRUE if v else COL_FALSE
+	var panel := _base_panel.duplicate()
+	if panel is StyleBoxFlat:
+		panel.border_width_left = 3
+		panel.border_width_right = 3
+		panel.border_width_bottom = 3
+		panel.border_width_top = 0
+		panel.border_color = col
+		add_theme_stylebox_override("panel", panel)
+	var tbar := _base_titlebar.duplicate()
+	if tbar is StyleBoxFlat:
+		tbar.border_width_left = 3
+		tbar.border_width_right = 3
+		tbar.border_width_top = 3
+		tbar.border_width_bottom = 0
+		tbar.border_color = col
+		add_theme_stylebox_override("titlebar", tbar)
 
 
 static func fmt(v) -> String:

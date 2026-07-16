@@ -24,6 +24,9 @@ var add_menu: PopupMenu
 var node_menu: PopupMenu
 var name_dialog: ConfirmationDialog
 var name_edit: LineEdit
+var overwrite_dialog: ConfirmationDialog
+var _overwrite_name := ""
+var _suppress_cancel := false
 
 var _uid := 0
 var _dirty := false
@@ -181,6 +184,20 @@ func _build_ui() -> void:
 	name_dialog.register_text_enter(name_edit)
 	name_dialog.confirmed.connect(_on_name_confirmed)
 	add_child(name_dialog)
+
+	overwrite_dialog = ConfirmationDialog.new()
+	overwrite_dialog.title = "Condition already exists"
+	overwrite_dialog.ok_button_text = "Overwrite all instances"
+	overwrite_dialog.add_button("Save as new…", true, "save_new")
+	overwrite_dialog.confirmed.connect(_on_overwrite_confirmed)
+	overwrite_dialog.custom_action.connect(_on_overwrite_custom)
+	overwrite_dialog.canceled.connect(func():
+		if _suppress_cancel:
+			_suppress_cancel = false
+			return
+		_pending_save = {}
+		_toast("Save cancelled."))
+	add_child(overwrite_dialog)
 
 
 func _header(t: String) -> Label:
@@ -603,6 +620,42 @@ func _on_name_confirmed() -> void:
 	if cname == "":
 		_toast("Condition needs a name.")
 		return
+	if library.has_condition(cname):
+		var count := 0
+		for n in _all_bb_nodes():
+			if n is BBConditionNode and n.cond_name == cname:
+				count += 1
+		_overwrite_name = cname
+		overwrite_dialog.dialog_text = (
+			'A condition named "%s" already exists (%d instance(s) in the graph, plus any nested uses).\n\nOverwrite it and update every instance, or save under a new name?'
+			% [cname, count])
+		overwrite_dialog.popup_centered()
+		return
+	_commit_save(cname)
+
+
+func _on_overwrite_confirmed() -> void:
+	_commit_save(_overwrite_name)
+
+
+func _on_overwrite_custom(action: StringName) -> void:
+	if action == &"save_new":
+		_suppress_cancel = true
+		overwrite_dialog.hide()
+		name_edit.text = _unique_cond_name(_overwrite_name)
+		name_dialog.popup_centered()
+		name_edit.grab_focus()
+		name_edit.select_all()
+
+
+func _unique_cond_name(base: String) -> String:
+	var i := 2
+	while library.has_condition("%s_%d" % [base, i]):
+		i += 1
+	return "%s_%d" % [base, i]
+
+
+func _commit_save(cname: String) -> void:
 	var sel: Array = _pending_save.get("sel", []).filter(func(n): return is_instance_valid(n))
 	var out_node = _pending_save.get("output")
 	_pending_save = {}
@@ -619,6 +672,15 @@ func _on_name_confirmed() -> void:
 	var names := {}
 	for n in sel:
 		names[str(n.name)] = true
+
+	# Selected nodes (other than the terminal) that ALSO feed nodes outside the
+	# selection are "shared": they stay in the graph with their external wires
+	# intact, and the condition keeps its own internal copy of them.
+	var shared := {}
+	for c in _conns():
+		if names.has(c.from) and not names.has(c.to) and c.from != str(out_node.name):
+			shared[c.from] = true
+
 	var external_out := []
 	var dropped_in := 0
 	for c in _conns():
@@ -627,32 +689,40 @@ func _on_name_confirmed() -> void:
 		if fi and not ti:
 			if c.from == str(out_node.name):
 				external_out.append(c)
-			graph.disconnect_node(c.from, c.from_port, c.to, c.to_port)
+				graph.disconnect_node(c.from, c.from_port, c.to, c.to_port)
+			# shared nodes keep their outgoing external wires
 		elif ti and not fi:
-			dropped_in += 1
-			graph.disconnect_node(c.from, c.from_port, c.to, c.to_port)
+			if not shared.has(c.to):
+				dropped_in += 1
+				graph.disconnect_node(c.from, c.from_port, c.to, c.to_port)
+			# shared nodes keep their incoming external wires too
 
 	var centroid := Vector2(data.centroid[0], data.centroid[1])
 	var cnode := _spawn_condition(cname, centroid)
 	for c in external_out:
 		graph.connect_node(cnode.name, 0, c.to, c.to_port)
 
-	# Shrink the source nodes into the new condition node.
+	# Shrink the consumed source nodes into the new condition node.
 	for n in sel:
-		_disconnect_all(str(n.name))
 		n.selected = false
+		if shared.has(str(n.name)):
+			continue
+		_disconnect_all(str(n.name))
 		var tw := create_tween()
 		tw.set_parallel(true)
 		tw.tween_property(n, "position_offset", centroid, 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 		tw.tween_property(n, "modulate:a", 0.0, 0.25)
 		tw.chain().tween_callback(n.queue_free)
 
+	var extras := ""
+	if shared.size() > 0:
+		extras += " %d node(s) also feed things outside the selection, so they stayed in the graph — the condition has its own copy." % shared.size()
 	if dropped_in > 0:
-		_toast('Saved "%s" — %d incoming wire(s) from outside the selection were dropped (conditions must be self-contained).' % [cname, dropped_in])
-	elif overwrote:
-		_toast('Overwrote condition "%s".' % cname)
+		extras += " %d incoming wire(s) from outside were dropped (conditions are self-contained)." % dropped_in
+	if overwrote:
+		_toast('Overwrote "%s" — every instance updated.%s' % [cname, extras])
 	else:
-		_toast('Saved condition "%s" — reuse it from the library or the right-click menu.' % cname)
+		_toast('Saved condition "%s".%s' % [cname, extras])
 	_mark_dirty()
 
 
@@ -695,6 +765,10 @@ func _refresh_library_list() -> void:
 	lib_list.clear()
 	for cname in library.names():
 		lib_list.add_item(cname)
+	if graph:
+		for n in _all_bb_nodes():
+			if n is BBConditionNode:
+				n.rebuild_preview()
 
 
 # ---------------------------------------------------------------- evaluation
