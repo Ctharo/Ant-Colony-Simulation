@@ -59,7 +59,7 @@ func set_params(p: Dictionary) -> void:
 		if option:
 			_populate()
 			if is_inside_tree():
-				_apply_style()
+				refresh_style()
 	for i in _fields.size():
 		if _fields[i].key == key:
 			option.select(i)

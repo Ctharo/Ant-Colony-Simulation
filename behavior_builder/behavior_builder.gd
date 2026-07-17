@@ -55,7 +55,7 @@ var _timer_accum := 0.0
 const PAN_SPEED := 900.0
 
 ## [label, node type, params]
-const ADD_ITEMS := [
+const ADD_ITEMS: Array[Array] = [
 	["Ant value  (health, energy, …)", "world_value", {"group": "ant"}],
 	["World value  (distances, pheromones, …)", "world_value", {"group": "world"}],
 	["Constant", "constant", {}],
@@ -66,6 +66,12 @@ const ADD_ITEMS := [
 	["NOT", "not", {}],
 	["⏱ Hold true  (timer)", "timer", {}],
 	["⚡ Behavior (fires when true)", "behavior", {}],
+	["👁 Sense  (list of ants / food)", "sense_list", {}],
+	["Filter list  (keep items where …)", "filter", {}],
+	["Sort list  (by distance, health, or a ◈ value)", "sort", {}],
+	["Pick from list  (nearest / farthest / first)", "pick", {}],
+	["Item value  (read distance / health / … of a picked item)", "item_value", {}],
+	["Count list  (→ number)", "list_count", {}],
 ]
 
 
@@ -73,8 +79,16 @@ func _ready() -> void:
 	settings.load_from_disk()
 	library.load_from_disk()
 	_build_ui()
-	library.changed.connect(_refresh_library_list)
+	var _err_lib: Error = library.changed.connect(
+		func() -> void:
+			for n: BBNode in _all_bb_nodes():
+				var sort_node: BBSortNode = n as BBSortNode
+				if sort_node != null:
+					sort_node.set_params(sort_node.get_params())  # repopulates keys, keeps selection
+	)
 	world.changed.connect(func(_k, _v): _mark_dirty())
+	var _err_ent: Error = world.entities_changed.connect(
+		func() -> void: _mark_dirty())
 	_refresh_library_list()
 	_seed_demo()
 	_mark_dirty()
@@ -191,6 +205,27 @@ func _build_ui() -> void:
 	for f in BBWorldState.fields_in_group("world"):
 		side.add_child(_make_slider_row(f))
 
+	side.add_child(_header("Mock entities (senses)"))
+
+	var ant_row: Control = _make_count_row("Ants in view", world.ant_count,
+		func(v: int) -> void: world.set_entity_counts(v, world.food_count)
+		)
+	side.add_child(ant_row)
+
+	var food_row: Control = _make_count_row("Food in view", world.food_count,
+		func(v: int) -> void: world.set_entity_counts(world.ant_count, v)
+		)
+	side.add_child(food_row)
+
+	var reroll_btn: Button = Button.new()
+	reroll_btn.text = "🎲 Reroll entities"
+	reroll_btn.tooltip_text = "New random positions, allegiances, and stats for all sensed items"
+	reroll_btn.focus_mode = Control.FOCUS_NONE
+	var _err_reroll: Error = reroll_btn.pressed.connect(
+		func() -> void: world.reroll_entities()
+	)
+	side.add_child(reroll_btn)
+
 	side.add_child(HSeparator.new())
 	side.add_child(_header("CONDITION LIBRARY — double-click to add to graph"))
 	lib_list = ItemList.new()
@@ -278,6 +313,30 @@ func _build_ui() -> void:
 		_toast("Save cancelled."))
 	add_child(overwrite_dialog)
 
+func _make_count_row(label_text: String, initial: int, on_change: Callable) -> Control:
+	var box: VBoxContainer = VBoxContainer.new()
+	var top: HBoxContainer = HBoxContainer.new()
+	var lab: Label = Label.new()
+	lab.text = label_text
+	lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var val: Label = Label.new()
+	val.text = str(initial)
+	top.add_child(lab)
+	top.add_child(val)
+	var slider: HSlider = HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 12.0
+	slider.step = 1.0
+	slider.value = float(initial)
+	slider.focus_mode = Control.FOCUS_NONE
+	var _err: Error = slider.value_changed.connect(
+		func(x: float) -> void:
+			val.text = str(int(x))
+			on_change.call(int(x)))
+	box.add_child(top)
+	box.add_child(slider)
+	return box
+
 
 func _header(t: String) -> Label:
 	var l := Label.new()
@@ -333,6 +392,20 @@ func _create_node(type: String, params: Dictionary, pos: Vector2) -> BBNode:
 		"constant": n = BBConstantNode.new()
 		"compare": n = BBCompareNode.new()
 		"math": n = BBMathNode.new()
+		"sense_list":
+			n = BBSenseListNode.new()
+		"filter":
+			n = BBFilterNode.new()
+		"sort":
+			var sort_node: BBSortNode = BBSortNode.new()
+			sort_node.setup_library(library)  # exposes ◈ float values as sort keys
+			n = sort_node
+		"pick":
+			n = BBPickNode.new()
+		"item_value":
+			n = BBItemValueNode.new()
+		"list_count":
+			n = BBListCountNode.new()
 		"timer": n = BBTimerNode.new()
 		"and", "or", "not":
 			n = BBLogicNode.new()
@@ -362,11 +435,29 @@ func _finalize_node(n: BBNode, type: String, pos: Vector2) -> void:
 	n.name = "%s_%d" % [type, _uid]
 	n.position_offset = pos
 	graph.add_child(n)
-	n.params_changed.connect(_mark_dirty)
+	var _err_params: Error = n.params_changed.connect(
+		func() -> void:
+			_drop_mismatched_output_wires(n)
+			_mark_dirty()
+	)
 	n.copy_debug_requested.connect(_copy_debug_node)
 	n.node_context_requested.connect(_open_node_menu)
 	_mark_dirty()
 
+## Disconnects outgoing wires whose destination port no longer matches this
+## node's output type (ITEM VALUE retypes float ⇄ bool with its property).
+func _drop_mismatched_output_wires(n: BBNode) -> void:
+	if n.output_type() < 0:
+		return
+	for c: Dictionary in _conns():
+		if str(c.from) != str(n.name):
+			continue
+		var dst: BBNode = _bb(str(c.to))
+		if dst != null and dst.input_type(int(c.to_port)) != n.output_type():
+			graph.disconnect_node(
+				StringName(str(c.from)), int(c.from_port),
+				StringName(str(c.to)), int(c.to_port))
+			_toast("Disconnected a wire — %s now outputs a different type." % n.title)
 
 func _bb(nm: String) -> BBNode:
 	var n := graph.get_node_or_null(NodePath(nm))
@@ -741,6 +832,11 @@ func _save_selection_as_condition() -> void:
 	if terminals.size() != 1:
 		_toast("A condition needs exactly ONE final output node in the selection (found %d)." % terminals.size())
 		return
+		
+	if terminals[0].output_type() >= BBNode.TYPE_LIST:
+		_toast("A saved condition/value must end in a true/false or number node — add a PICK + ITEM VALUE, or a COUNT, after the list.")
+		return
+		
 	_pending_save = {"sel": sel, "output": terminals[0]}
 	# Pre-fill with the name of the condition we last unpacked, so re-saving
 	# it under the same name is a single Enter.

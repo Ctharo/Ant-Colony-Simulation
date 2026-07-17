@@ -86,8 +86,17 @@ func on_value(v) -> void:
 ## Golden tint used by the builder to highlight every instance (reference)
 ## of the same condition when one of them is selected.
 func set_reference_glow(on: bool) -> void:
+	if _ref_glow == on:
+		return
 	_ref_glow = on
-	self_modulate = Color(1.35, 1.25, 0.72) if on else Color.WHITE
+	refresh_style()
+
+
+## Gold border on the UNSELECTED style marks "another reference of the
+## selected ◈ condition". Selection itself stays white via the base class.
+func _style_extra(panel: StyleBoxFlat, tbar: StyleBoxFlat) -> void:
+	if _ref_glow:
+		BBNode.apply_reference_border(panel, tbar)
 
 
 func _add_title_buttons() -> void:
