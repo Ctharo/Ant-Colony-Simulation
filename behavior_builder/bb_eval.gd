@@ -21,6 +21,24 @@ extends RefCounted
 static var _states: Dictionary = {}
 
 
+## Drops every stateful-node memory whose key contains `tag`. Two callers:
+## entity despawn ("@<iid>" — an ant's timer holds die with it) and
+## GraphLogic re-save ("glogic:<id>@" — an edited graph restarts its
+## holds). Substring matching is deliberate: keys are
+## "<name_stack>#<node_id>" strings, and GraphLogic.entity_tag constructs
+## tags (colon/at characters) that cannot collide with condition names or
+## node ids.
+static func clear_states_tagged(tag: String) -> void:
+	if tag.is_empty():
+		return
+	var doomed: Array[String] = []
+	for key: String in _states:
+		if key.contains(tag):
+			doomed.append(key)
+	for key: String in doomed:
+		var _erased: bool = _states.erase(key)
+
+
 ## Evaluates one item's sort key against a saved ◈ VALUE from the library:
 ## world_value reads hit the item's own properties first (distance, health,
 ## …) and fall back to the surrounding world. This is what makes "sort by a

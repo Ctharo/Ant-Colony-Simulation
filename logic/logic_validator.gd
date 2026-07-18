@@ -107,10 +107,16 @@ static func validate(expression_string: String, nested: Array[Logic]) -> PackedS
 	return errors
 
 
-## Convenience wrapper for a Logic resource.
+## Convenience wrapper for a Logic resource. GraphLogic branches to the
+## graph whitelist (BBGraphValidator): its runtime truth is graph_data,
+## not an expression string, and this one seam covers gate 2
+## (ResourceLibrary.save_resource + the embedded-Logic walk) and gate 3
+## (EvaluationSystem._ensure_ready) simultaneously.
 static func validate_logic(logic: Logic) -> PackedStringArray:
+	if logic is GraphLogic:
+		return BBGraphValidator.validate(
+			(logic as GraphLogic).graph_data, BBGraphLibrary.shared())
 	return validate(logic.expression_string, logic.nested_expressions)
-
 
 ## Full identifier whitelist for a given nested set — for tooling
 ## (editor autocomplete, vocabulary picker, audits). name -> true.

@@ -454,8 +454,8 @@ func _add_logic_item(parent: TreeItem, logic: Logic, seen: Dictionary, prefix: S
 	item.set_metadata(Col.NAME, logic)
 	_update_mode_cell(item, logic)
 
-	if not logic.builder_data.is_empty():
-		_decorate_builder_item(item, logic)
+	if logic is GraphLogic:
+		_decorate_graph_item(item, logic as GraphLogic)
 
 	if seen.has(logic.id):
 		item.set_text(Col.NAME, item.get_text(Col.NAME) + "  (cycle!)")
@@ -466,45 +466,33 @@ func _add_logic_item(parent: TreeItem, logic: Logic, seen: Dictionary, prefix: S
 	seen.erase(logic.id)
 
 
-## Builder-authored condition: "[built]" tag (gold "⚠ built, diverged" when
-## the raw expression no longer matches the rows), plus readable
-## section/row child lines. The child lines carry no Logic metadata, so
-## the policy editor and live-value walker skip them automatically.
-func _decorate_builder_item(item: TreeItem, logic: Logic) -> void:
-	var recompiled := ConditionBuilder.compile_data(logic.builder_data).strip_edges()
-	var diverged := recompiled != logic.expression_string.strip_edges()
-
-	item.set_text(Col.NAME, item.get_text(Col.NAME)
-		+ ("   ⚠ built, diverged" if diverged else "   [built]"))
-
-	var tooltip := item.get_tooltip_text(Col.NAME)
-	tooltip += "\n\nBuilt with the condition builder — edit the owning behavior for the visual editor; the expression editor here is the raw escape hatch."
-	if diverged:
+## Graph-authored condition: "[graph]" tag plus a readable node summary.
+## Child lines carry no Logic metadata, so the policy editor and
+## live-value walker skip them automatically (same trick as before).
+func _decorate_graph_item(item: TreeItem, logic: GraphLogic) -> void:
+	item.set_text(Col.NAME, item.get_text(Col.NAME) + "   [graph]")
+	var problems: PackedStringArray = BBGraphValidator.validate(
+		logic.graph_data, BBGraphLibrary.shared())
+	var tooltip: String = item.get_tooltip_text(Col.NAME)
+	tooltip += "\n\nAuthored in the graph editor — edit the owning behavior to open it."
+	if not problems.is_empty():
 		item.set_custom_color(Col.NAME, Color.GOLD)
-		tooltip += "\n\n⚠ The raw expression no longer matches the builder rows (hand-edited, or the vocabulary changed how rows compile). The raw expression is what runs; saving from the builder would overwrite it."
+		item.set_text(Col.NAME, item.get_text(Col.NAME).replace("[graph]", "⚠ graph, invalid"))
+		tooltip += "\n\n⚠ " + "\n⚠ ".join(problems)
 	item.set_tooltip_text(Col.NAME, tooltip)
 
-	var sections := ConditionBuilder.describe_data(logic.builder_data)
-	var single := sections.size() == 1
-	for si in sections.size():
-		var sec: Dictionary = sections[si]
-		# One section: flatten rows directly under the expression — the
-		# grouping adds nothing. Multiple: show section headers with the
-		# combining operator, exactly as the builder lays them out.
-		var row_parent := item
-		if not single:
-			var sec_item := _tree.create_item(item)
-			sec_item.set_text(Col.NAME, ("Section %d" % (si + 1)) if si == 0
-				else "%s Section %d" % [str(sec.op).to_upper(), si + 1])
-			sec_item.set_selectable(Col.NAME, false)
-			sec_item.set_custom_color(Col.NAME, Color(0.75, 0.85, 1.0, 0.9))
-			row_parent = sec_item
-		for line: String in sec.rows:
-			var row_item := _tree.create_item(row_parent)
-			row_item.set_text(Col.NAME, line)
-			row_item.set_selectable(Col.NAME, false)
-			row_item.set_custom_color(Col.NAME, Color(1, 1, 1, 0.65))
-
+	var type_counts: Dictionary = {}
+	for node: Dictionary in logic.graph_data.get("nodes", []):
+		var node_type: String = str(node.get("type", "?"))
+		type_counts[node_type] = int(type_counts.get(node_type, 0)) + 1
+	var parts: Array[String] = []
+	for node_type: String in type_counts:
+		parts.append("%d× %s" % [int(type_counts[node_type]), node_type])
+	if not parts.is_empty():
+		var summary: TreeItem = _tree.create_item(item)
+		summary.set_text(Col.NAME, ", ".join(parts))
+		summary.set_selectable(Col.NAME, false)
+		summary.set_custom_color(Col.NAME, Color(1, 1, 1, 0.65))
 
 func _update_mode_cell(item: TreeItem, logic: Logic) -> void:
 	var label: String = MODE_LABELS.get(logic.eval_mode, "?")
@@ -522,8 +510,7 @@ func _on_new() -> void:
 		ResourceLibrary.KIND_LOGIC:
 			_open_editor(LogicEditorPopup.new(), Logic.new(), "", true)
 		ResourceLibrary.KIND_RULE:
-			_open_editor(RuleEditorPopup.new(), AntRule.new(), "", true)
-
+			_open_editor(BehaviorGraphEditorPopup.new(), AntRule.new(), "", true)
 
 ## Double-click on the left list, or the Edit button: Behavior entries open
 ## the behavior editor, Expression entries open the logic editor.
