@@ -16,13 +16,12 @@ extends ManagedWindow
 ## matching editor popup, and double-clicking any expression row in the tree
 ## opens the Logic editor for that expression directly.
 ##
-## BUILDER CONDITIONS: expressions with non-empty builder_data (authored in
-## the ConditionBuilder) render their sections/rows as readable child lines
-## and carry a "[built]" tag. If the raw expression no longer matches what
-## the rows compile to (hand edit / vocabulary change), the tag becomes a
-## gold "⚠ built, diverged" badge — the raw expression is what runs.
-## Double-click still opens the raw expression editor (the escape hatch);
-## visual editing happens through the owning behavior.
+## GRAPH CONDITIONS: GraphLogic expressions (authored in the graph editor)
+## carry a "[graph]" tag plus a node-type summary child line; validator
+## problems turn the tag into a gold "⚠ graph, invalid" badge with the
+## errors in the tooltip. graph_data is the runtime truth — there is no
+## raw-expression fallback for a graph. Visual editing happens through the
+## owning behavior (BehaviorGraphEditorPopup).
 ##
 ## Opened from the sandbox debug menu ("Designer") and from the main menu.
 ## Without a running sandbox there are no live ants: the probe label reads
@@ -515,26 +514,27 @@ func _on_new() -> void:
 ## Double-click on the left list, or the Edit button: Behavior entries open
 ## the behavior editor, Expression entries open the logic editor.
 func _edit_selected_entry() -> void:
-	var entry := _selected_entry()
-	if not entry:
+	var entry: ResourceLibrary.Entry = _selected_entry()
+	if entry == null:
 		return
 	if entry.resource is AntRule:
-		_open_editor(RuleEditorPopup.new(), entry.resource, entry.path, entry.writable)
+		_open_editor(BehaviorGraphEditorPopup.new(), entry.resource, entry.path, entry.writable)
 	elif entry.resource is Logic:
 		_open_editor(LogicEditorPopup.new(), entry.resource, entry.path, entry.writable)
 
-
 func _on_duplicate() -> void:
-	var entry := _selected_entry()
-	if not entry:
+	var entry: ResourceLibrary.Entry = _selected_entry()
+	if entry == null:
 		return
 	var copy: Resource = ResourceLibrary.duplicate_for_edit(entry.resource)
-	copy.name = "%s copy" % copy.name
 	if copy is AntRule:
-		_open_editor(RuleEditorPopup.new(), copy, "", true)
+		var rule_copy: AntRule = copy
+		rule_copy.name = "%s copy" % rule_copy.name
+		_open_editor(BehaviorGraphEditorPopup.new(), rule_copy, "", true)
 	elif copy is Logic:
-		_open_editor(LogicEditorPopup.new(), copy, "", true)
-
+		var logic_copy: Logic = copy
+		logic_copy.name = "%s copy" % logic_copy.name
+		_open_editor(LogicEditorPopup.new(), logic_copy, "", true)
 
 func _on_delete() -> void:
 	var entry := _selected_entry()

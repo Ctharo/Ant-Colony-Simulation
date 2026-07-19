@@ -132,7 +132,8 @@ func _on_duplicate() -> void:
 	match _current_kind():
 		"logic": p_popup = LogicEditorPopup.new()
 		"action": p_popup = ActionEditorPopup.new()
-		"rule": p_popup = RuleEditorPopup.new()
+		"rule":
+			_open_editor(BehaviorGraphEditorPopup.new(), AntRule.new(), "", true)
 	_open_editor(p_popup, copy, "", true)
 
 

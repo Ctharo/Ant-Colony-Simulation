@@ -120,6 +120,10 @@ func remove_ant(ant: Ant) -> void:
 
 	# Cleanup systems
 	HeatmapManager.unregister_entity(ant)
+	# Graph timer holds are keyed by "...@<iid>": drop this ant's entries
+	# now, while the instance id is still valid (BBEval's documented
+	# despawn contract — skipping it leaks _states entries per despawn).
+	BBEval.clear_states_tagged("@%d" % ant.get_instance_id())
 
 	# Delete node
 	ant.queue_free()
