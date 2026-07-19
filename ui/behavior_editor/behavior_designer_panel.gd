@@ -119,7 +119,7 @@ func _init() -> void:
 func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
+	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_%s" % side, 10)
 	add_child(margin)
 
@@ -166,7 +166,7 @@ func _build_top_bar() -> HBoxContainer:
 	top.add_theme_constant_override("separation", 10)
 
 	_kind_select = OptionButton.new()
-	for label in KIND_LABELS:
+	for label: String in KIND_LABELS:
 		_kind_select.add_item(label)
 	_kind_select.item_selected.connect(func(_i: int) -> void: _refresh_list())
 	top.add_child(_kind_select)
@@ -245,7 +245,7 @@ func _build_right_pane() -> VBoxContainer:
 	_tree.set_column_title(Col.HITS, "Cache hits")
 	_tree.set_column_title(Col.AVG, "Avg cost")
 	_tree.set_column_expand(Col.NAME, true)
-	for col in [Col.MODE, Col.VALUE, Col.RECALCS, Col.HITS, Col.AVG]:
+	for col: int in [Col.MODE, Col.VALUE, Col.RECALCS, Col.HITS, Col.AVG]:
 		_tree.set_column_expand(col, false)
 	_tree.set_column_custom_minimum_width(Col.MODE, 64)
 	_tree.set_column_custom_minimum_width(Col.VALUE, 110)
@@ -263,7 +263,7 @@ func _build_right_pane() -> VBoxContainer:
 func _build_policy_editor() -> PanelContainer:
 	_editor_box = PanelContainer.new()
 	var inner := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
+	for side: String in ["left", "right", "top", "bottom"]:
 		inner.add_theme_constant_override("margin_%s" % side, 8)
 	_editor_box.add_child(inner)
 
@@ -355,7 +355,7 @@ func _sync_editor_visibility() -> void:
 
 
 func _current_mode() -> int:
-	var idx := _mode_select.selected
+	var idx: int = _mode_select.selected
 	return _mode_select.get_item_metadata(idx) if idx >= 0 else Logic.EvalMode.FRAME
 #endregion
 
@@ -366,7 +366,7 @@ func _current_kind() -> String:
 
 
 func _selected_entry() -> ResourceLibrary.Entry:
-	var sel := _item_list.get_selected_items()
+	var sel: PackedInt32Array = _item_list.get_selected_items()
 	if sel.is_empty():
 		return null
 	return _item_list.get_item_metadata(sel[0])
@@ -380,7 +380,7 @@ func _refresh_list() -> void:
 
 	_item_list.clear()
 	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(_current_kind()):
-		var idx := _item_list.add_item(entry.display_name())
+		var idx: int = _item_list.add_item(entry.display_name())
 		_item_list.set_item_metadata(idx, entry)
 		_item_list.set_item_tooltip(idx, entry.path)
 		if entry.resource == previous:
@@ -393,7 +393,7 @@ func _refresh_list() -> void:
 
 
 func _update_crud_buttons() -> void:
-	var entry := _selected_entry()
+	var entry: ResourceLibrary.Entry = _selected_entry()
 	_edit_btn.disabled = entry == null
 	_dup_btn.disabled = entry == null
 	_del_btn.disabled = entry == null or not entry.writable
@@ -542,7 +542,7 @@ func _on_delete() -> void:
 		return
 	_confirm.dialog_text = "Delete '%s'?\nAnts currently referencing it keep the in-memory copy until restart." % entry.resource.name
 	# Reconnect confirmed for this specific entry
-	for conn in _confirm.confirmed.get_connections():
+	for conn: Dictionary in _confirm.confirmed.get_connections():
 		_confirm.confirmed.disconnect(conn.callable)
 	_confirm.confirmed.connect(func() -> void:
 		var deleted_name: String = entry.resource.name

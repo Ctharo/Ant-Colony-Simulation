@@ -20,15 +20,6 @@ extends Resource
 ## Expected return type of the expression
 @export var type: Variant.Type = TYPE_FLOAT
 
-## Visual-builder metadata. Non-empty when this expression was authored in
-## the ConditionBuilder: holds its sections/rows structure
-## (ConditionBuilder.to_data(), versioned). PURELY editor-facing — the
-## runtime truth is always expression_string; EvaluationSystem and
-## LogicValidator never read this. If the raw expression is later
-## hand-edited, the two diverge: the Behavior Editor detects that
-## (recompiles builder_data headlessly and compares) and warns that saving
-## from the builder overwrites the hand edit.
-@export var builder_data: Dictionary = {}
 
 #region Re-evaluation Policy
 ## How EvaluationSystem caches this expression's result per entity.

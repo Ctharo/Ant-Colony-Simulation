@@ -14,17 +14,20 @@ extends BBNode
 
 signal unpack_requested(node: BBConditionNode)
 
-var cond_name := ""
-var library  # BBConditionLibrary
-var world    # BBWorldState
-var expanded := false
+var cond_name: String = ""
+## Duck-typed library contract (has_condition/get_condition):
+## BBGraphLibrary in-game. Typed RefCounted, resolved dynamically.
+var library: RefCounted = null
+## Duck-typed world: BBWorldState (mock) or AntWorldAdapter (live).
+var world: RefCounted = null
+var expanded: bool = false
 
-var _out_type := TYPE_BOOL
+var _out_type: int = TYPE_BOOL
 var _expand_btn: Button
 var _list: VBoxContainer
-var _preview_value_labels := {}
+var _preview_value_labels: Dictionary = {}
 var _name_label: Label
-var _ref_glow := false
+var _ref_glow: bool = false
 
 
 func _init() -> void:
@@ -54,8 +57,8 @@ func _build() -> void:
 
 ## Reads the saved output type ("bool"/"float") and retypes the output port.
 func _sync_output_type() -> void:
-	var t := "bool"
-	if library and library.has_condition(cond_name):
+	var t: String = "bool"
+	if library != null and library.has_condition(cond_name):
 		t = str(library.get_condition(cond_name).get("output_type", "bool"))
 	_out_type = TYPE_FLOAT if t == "float" else TYPE_BOOL
 	set_slot(0, false, 0, Color.WHITE, true, _out_type,
@@ -76,7 +79,7 @@ func set_params(p: Dictionary) -> void:
 	_sync_output_type()
 
 
-func on_value(v) -> void:
+func on_value(v: Variant) -> void:
 	super.on_value(v)
 	if _name_label:
 		_name_label.text = "OUT ▸ %s" % fmt(v)
@@ -106,7 +109,7 @@ func _add_title_buttons() -> void:
 	_expand_btn.flat = true
 	_expand_btn.focus_mode = Control.FOCUS_NONE
 	_expand_btn.tooltip_text = "Show what's inside — expands an organized list of the contained nodes with live values"
-	_expand_btn.pressed.connect(toggle_expanded)
+	var _err_expand: Error = _expand_btn.pressed.connect(toggle_expanded)	
 	hb.add_child(_expand_btn)
 
 	var unpack_btn := Button.new()
@@ -114,7 +117,8 @@ func _add_title_buttons() -> void:
 	unpack_btn.flat = true
 	unpack_btn.focus_mode = Control.FOCUS_NONE
 	unpack_btn.tooltip_text = "Unpack into the graph for editing (Ctrl+G afterwards re-saves it under the same name)"
-	unpack_btn.pressed.connect(func(): unpack_requested.emit(self))
+	var _err_unpack: Error = unpack_btn.pressed.connect(
+		func() -> void: unpack_requested.emit(self))
 	hb.add_child(unpack_btn)
 
 	super._add_title_buttons()

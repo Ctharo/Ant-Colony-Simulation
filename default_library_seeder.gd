@@ -35,7 +35,9 @@ const PHEROMONE_DIR := "user://behavior/pheromones"
 const INFLUENCE_DIR := "user://behavior/influences"
 const INFLUENCE_PROFILE_DIR := "user://behavior/influence_profiles"
 const COLONY_DIR := "user://behavior/colonies"
-
+## Prototype graph library (pre-BBGraphLibrary). Lived at user:// root, so
+## the behavior-directory wipe never touched it; removed on sight.
+const RETIRED_PROTOTYPE_LIBRARY: String = "user://behavior_conditions.json"
 ## DEV ONLY: wipe user://behavior on every launch so the seeder's output is
 ## always fresh while the defaults are still churning. NOTE: while true,
 ## this defeats seeding policies 1 and 2 above — user edits and deletions do
@@ -97,6 +99,19 @@ static func seed() -> void:
 		# deliberate user deletion and silently skips ALL seeding — empty
 		# catalog, null colony profile at spawn. Manifest goes with the files.
 		DirAccess.remove_absolute(MANIFEST_PATH)
+
+	# Retired data (graph-editor integration): the prototype JSON library
+	# predates the BBVocabulary clean break and fails validation anyway.
+	# Not gated on DEV_WIPE — it is dead data on every install.
+	if FileAccess.file_exists(RETIRED_PROTOTYPE_LIBRARY):
+		var err_retired: Error = DirAccess.remove_absolute(RETIRED_PROTOTYPE_LIBRARY)
+		if err_retired != OK:
+			DebugLogger.warn(DebugLogger.Category.DATA,
+				"Seeder: could not remove retired prototype library %s (%s)" % [
+					RETIRED_PROTOTYPE_LIBRARY, error_string(err_retired)])
+		else:
+			DebugLogger.info(DebugLogger.Category.DATA,
+				"Seeder: removed retired prototype library %s" % RETIRED_PROTOTYPE_LIBRARY)
 
 	var manifest := ConfigFile.new()
 	manifest.load(MANIFEST_PATH)  # missing file is fine — starts empty

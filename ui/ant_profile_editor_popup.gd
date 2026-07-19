@@ -158,7 +158,7 @@ func _add_movement_influences_section(parent: Control) -> void:
 	container.add_theme_constant_override("separation", 5)
 	parent.add_child(container)
 	
-	var list = ItemList.new()
+	var list: ItemList = ItemList.new()
 	list.name = "InfluencesList"
 	list.custom_minimum_size = Vector2(0, 100)
 	list.select_mode = ItemList.SELECT_SINGLE
@@ -185,14 +185,14 @@ func _add_behavior_rules_section(parent: Control) -> void:
 	container.add_theme_constant_override("separation", 5)
 	parent.add_child(container)
 
-	var hint = Label.new()
+	var hint: Label = Label.new()
 	hint.name = "RulesHint"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 11)
 	hint.modulate = Color(1, 1, 1, 0.6)
 	container.add_child(hint)
 
-	var list = ItemList.new()
+	var list: ItemList = ItemList.new()
 	list.name = "RulesList"
 	list.custom_minimum_size = Vector2(0, 100)
 	list.select_mode = ItemList.SELECT_SINGLE
@@ -237,14 +237,14 @@ func _on_rule_selected(_index: int) -> void:
 
 
 func _refresh_rules_list() -> void:
-	var list = _find_node("RulesList") as ItemList
-	var hint = _find_node("RulesHint") as Label
+	var list: ItemList = _find_node("RulesList") as ItemList
+	var hint: Label = _find_node("RulesHint") as Label
 	if not list:
 		return
 
 	list.clear()
 	# Display in evaluation order
-	var sorted := _rules.duplicate()
+	var sorted: Array[AntRule] = _rules.duplicate()
 	sorted.sort_custom(func(a: AntRule, b: AntRule) -> bool: return a.priority > b.priority)
 	for rule: AntRule in sorted:
 		var idx := list.add_item("[%d]  %s%s" % [
@@ -269,9 +269,9 @@ func _on_add_rule_pressed() -> void:
 
 
 func _on_new_rule_pressed() -> void:
-	var p_popup := RuleEditorPopup.new()
+	var p_popup: BehaviorGraphEditorPopup = BehaviorGraphEditorPopup.new()
 	add_child(p_popup)
-	p_popup.saved.connect(func(rule: AntRule) -> void:
+	var _err_saved: Error = p_popup.saved.connect(func(rule: AntRule) -> void:
 		if rule not in _rules:
 			_rules.append(rule)
 		_commit_rules()
@@ -280,31 +280,30 @@ func _on_new_rule_pressed() -> void:
 
 
 func _on_edit_rule_pressed() -> void:
-	var list = _find_node("RulesList") as ItemList
-	var sel := list.get_selected_items()
+	var list: ItemList = _find_node("RulesList") as ItemList
+	var sel: PackedInt32Array = list.get_selected_items()
 	if sel.is_empty():
 		return
 	var rule: AntRule = list.get_item_metadata(sel[0])
-	var entry := _library_entry_for(rule)
+	var entry: ResourceLibrary.Entry = _library_entry_for(rule)
 
-	var p_popup := RuleEditorPopup.new()
+	var p_popup: BehaviorGraphEditorPopup = BehaviorGraphEditorPopup.new()
 	add_child(p_popup)
-	p_popup.saved.connect(func(saved_rule: AntRule) -> void:
+	var _err_saved: Error = p_popup.saved.connect(func(saved_rule: AntRule) -> void:
 		# Editing a built-in forks it: swap the profile's reference to the fork
-		var idx := _rules.find(rule)
+		var idx: int = _rules.find(rule)
 		if idx >= 0 and saved_rule != rule:
 			_rules[idx] = saved_rule
 		_commit_rules()
 	)
-	if entry:
+	if entry != null:
 		p_popup.open_for(entry.resource, entry.path, entry.writable)
 	else:
 		# Rule not in library (e.g. embedded in the .tres) — edit in place, writable
 		p_popup.open_for(rule, "", true)
 
-
 func _on_remove_rule_pressed() -> void:
-	var list = _find_node("RulesList") as ItemList
+	var list: ItemList = _find_node("RulesList") as ItemList
 	var sel := list.get_selected_items()
 	if sel.is_empty():
 		return
@@ -402,7 +401,7 @@ func _on_influence_selected(_index: int) -> void:
 
 
 func _on_view_influence_pressed() -> void:
-	var list = _find_node("InfluencesList") as ItemList
+	var list: ItemList = _find_node("InfluencesList") as ItemList
 	if not list:
 		return
 	
@@ -431,7 +430,7 @@ func _add_pheromones_section(parent: Control) -> void:
 	container.add_theme_constant_override("separation", 5)
 	parent.add_child(container)
 	
-	var list = ItemList.new()
+	var list: ItemList = ItemList.new()
 	list.name = "PheromonesList"
 	list.custom_minimum_size = Vector2(0, 80)
 	list.select_mode = ItemList.SELECT_SINGLE
