@@ -23,7 +23,7 @@ extends RefCounted
 ## Called by ResourceLibrary._ready() before the first rescan(), so the
 ## catalog always includes freshly seeded defaults.
 
-const SEED_VERSION := 6
+const SEED_VERSION := 7
 
 const MANIFEST_PATH := "user://behavior/seed_manifest.cfg"
 

@@ -28,6 +28,9 @@ const KIND_PHEROMONE := "pheromone"
 const KIND_INFLUENCE := "influence"
 const KIND_INFLUENCE_PROFILE := "influence_profile"
 const KIND_COLONY := "colony"
+const KIND_CHANNEL: String = "channel"
+const KIND_BEHAVIOR: String = "behavior"
+const KIND_BEHAVIOR_PROFILE: String = "behavior_profile"
 
 const USER_ROOTS: Dictionary = {
 	KIND_LOGIC: "user://behavior/expressions",
@@ -38,7 +41,11 @@ const USER_ROOTS: Dictionary = {
 	KIND_INFLUENCE: "user://behavior/influences",
 	KIND_INFLUENCE_PROFILE: "user://behavior/influence_profiles",
 	KIND_COLONY: "user://behavior/colonies",
+	KIND_CHANNEL: "user://behavior/channels",
+	KIND_BEHAVIOR: "user://behavior/behaviors",
+	KIND_BEHAVIOR_PROFILE: "user://behavior/behavior_profiles",
 }
+
 
 class Entry:
 	var resource: Resource
@@ -340,6 +347,12 @@ func _kind_of(res: Resource) -> String:
 		return KIND_PROFILE
 	if res is AntRule:
 		return KIND_RULE
+	if res is AntBehavior:
+		return KIND_BEHAVIOR
+	if res is BehaviorProfile:
+		return KIND_BEHAVIOR_PROFILE
+	if res is BehaviorChannel:
+		return KIND_CHANNEL
 	if res is AntAction:
 		return KIND_ACTION
 	if res is Pheromone:
