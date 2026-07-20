@@ -1,8 +1,10 @@
 class_name AntProfile
 extends Resource
 ## Data definition of an ant type/role: identity, movement and combat stats,
-## the pheromones it emits, the steering (influence) profiles it uses, and
-## the behavior rules it runs.
+## and the BehaviorProfile that is its complete decision surface — behaviors,
+## priorities, and channels, replacing the separate behavior_rules and
+## movement_influences of the pre-E2 model (one selection system instead of
+## two that could disagree).
 ##
 ## Authored through AntDesignerPanel and persisted via ResourceLibrary
 ## (KIND_PROFILE) under user://behavior/profiles. The default "Worker" role
@@ -51,13 +53,18 @@ var role_type: String = "worker"
 
 #region Composition
 @export_group("")
-## Pheromones this role emits (each carries its own emit condition).
+## DEPRECATED (write-orphaned since E2): emission DECISIONS moved to
+## signaling-channel behaviors calling emit_pheromone, and heatmap layer
+## registration now reads the full KIND_PHEROMONE catalog
+## (Ant.register_to_heatmap) — nothing consumes this list at runtime.
+## Kept one batch so existing .tres files load without warnings; removal
+## is an explicit E3/E4 decision (the builder_data lesson: no silent
+## write-orphaned exports left behind).
 @export var pheromones: Array[Pheromone]
 
-## Steering profiles evaluated by InfluenceManager for default movement.
-@export var movement_influences: Array[InfluenceProfile]
-
-## Behavior rules evaluated each tick, highest priority first.
-## Leave empty to use Ant.DEFAULT_RULE_IDS.
-@export var behavior_rules: Array[AntRule] = []
+## The ant's full decision surface: behaviors, priorities, and channels
+## (see BehaviorProfile). Referenced, never embedded — the profile resource
+## is saved leaves-first like everything else. Null means the ant idles,
+## warned once at profile application (Ant._apply_profile_internal).
+@export var behavior_profile: BehaviorProfile
 #endregion

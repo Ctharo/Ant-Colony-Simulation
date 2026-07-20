@@ -52,8 +52,9 @@ var _panel_ready: bool = false
 #region UI Components - Info Section (shared)
 @onready var info_container: VBoxContainer = %InfoContainer
 var _rules_container: VBoxContainer
+var _movement_label: Label
 var _last_fired_label: Label
-var _rule_checks: Dictionary = {}  # AntRule -> CheckBox
+var _rule_checks: Dictionary = {}  # ProfileEntry -> CheckBox
 #endregion
 
 #region UI Components - Ant Section
@@ -123,6 +124,14 @@ func _on_panel_ready() -> void:
 	_setup_styling()
 	_connect_signals()
 	_setup_scroll_handling()
+	_build_behavior_rules_section()
+
+	# Retired editors: these buttons' destinations are gone until E3
+	# repoints them (behavior editor / designer). Hidden, not removed, so
+	# the scene keeps its nodes.
+	edit_ant_profile_button.visible = false
+	view_influence_profile_button.visible = false
+	edit_colony_ant_profile_button.visible = false
 
 	_panel_ready = true
 
@@ -146,17 +155,17 @@ func _on_scroll_gui_input(event: InputEvent) -> void:
 		return
 	if event.button_index not in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		return
- 
+
 	var v_bar: VScrollBar = scroll_container.get_v_scroll_bar()
- 
+
 	# Nothing to scroll — swallow the wheel so the camera doesn't zoom
 	if not v_bar.visible:
 		accept_event()
 		return
- 
+
 	var at_top: bool = v_bar.value <= v_bar.min_value
 	var at_bottom: bool = v_bar.value >= v_bar.max_value - v_bar.page
- 
+
 	if (event.button_index == MOUSE_BUTTON_WHEEL_UP and at_top) \
 			or (event.button_index == MOUSE_BUTTON_WHEEL_DOWN and at_bottom):
 		# Container can't scroll further in this direction; eat the
@@ -227,11 +236,11 @@ func show_entity_info(entity: Node) -> void:
 		return
 
 	current_entity = entity
-	
+
 	if not _panel_ready:
 		_pending_show = true
 		return  # Setup will run once _on_panel_ready fires
-		
+
 	_run_entity_setup(entity)
 	show()
 	queue_redraw()
@@ -255,7 +264,7 @@ func get_current_colony() -> Colony:
 	return null
 #endregion
 
-#region Behavior Rules Section
+#region Behaviors Section
 func _build_behavior_rules_section() -> void:
 	_rules_container = VBoxContainer.new()
 	_rules_container.add_theme_constant_override("separation", 4)
@@ -263,32 +272,49 @@ func _build_behavior_rules_section() -> void:
 
 
 func _refresh_behavior_rules() -> void:
-	for child in _rules_container.get_children():
+	for child: Node in _rules_container.get_children():
 		child.queue_free()
 	_rule_checks.clear()
 
-	var ant := get_current_ant()
+	var ant: Ant = get_current_ant()
 	if not ant or not ant.behavior_manager:
 		return
 
-	var header := Label.new()
-	header.text = "Behavior Rules"
+	var header: Label = Label.new()
+	header.text = "Behaviors"
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rules_container.add_child(header)
 
-	for rule: AntRule in ant.behavior_manager.rules:
-		var check := CheckBox.new()
-		check.text = "[%d] %s" % [rule.priority, rule.name]
-		check.tooltip_text = rule.description
-		# Reflect both layers: shared resource state AND this ant's override
-		check.button_pressed = rule.enabled and ant.behavior_manager.is_rule_enabled_local(rule)
-		check.disabled = not rule.enabled  # profile-disabled: can't re-enable per-ant
-		check.toggled.connect(func(pressed: bool) -> void:
-			if is_instance_valid(ant) and ant.behavior_manager:
-				ant.behavior_manager.set_rule_enabled_local(rule, pressed)
-		)
-		_rules_container.add_child(check)
-		_rule_checks[rule] = check
+	var manager: BehaviorManager = ant.behavior_manager
+	if manager.profile == null:
+		var empty_label: Label = Label.new()
+		empty_label.text = "No behavior profile assigned."
+		empty_label.modulate = Color(1, 1, 1, 0.6)
+		_rules_container.add_child(empty_label)
+	else:
+		for entry: ProfileEntry in manager.profile.sorted_entries():
+			if entry == null or entry.behavior == null:
+				continue
+			var behavior: AntBehavior = entry.behavior
+			var check: CheckBox = CheckBox.new()
+			check.text = "[%d] %s  (%s)" % [
+				entry.priority, behavior.name, behavior.channel_id()]
+			check.tooltip_text = behavior.description
+			# Reflect both layers: profile entry state AND this ant's override
+			check.button_pressed = entry.enabled and manager.is_entry_enabled_local(entry)
+			check.disabled = not entry.enabled  # profile-disabled: can't re-enable per-ant
+			check.toggled.connect(func(pressed: bool) -> void:
+				if is_instance_valid(ant) and ant.behavior_manager:
+					ant.behavior_manager.set_entry_enabled_local(entry, pressed)
+			)
+			_rules_container.add_child(check)
+			_rule_checks[entry] = check
+
+	_movement_label = Label.new()
+	_movement_label.text = "Movement: —"
+	_movement_label.add_theme_font_size_override("font_size", 11)
+	_movement_label.modulate = Color(1, 1, 1, 0.6)
+	_rules_container.add_child(_movement_label)
 
 	_last_fired_label = Label.new()
 	_last_fired_label.text = "Last fired: —"
@@ -296,15 +322,30 @@ func _refresh_behavior_rules() -> void:
 	_last_fired_label.modulate = Color(1, 1, 1, 0.6)
 	_rules_container.add_child(_last_fired_label)
 
-	if not ant.behavior_manager.rule_fired.is_connected(_on_rule_fired):
-		ant.behavior_manager.rule_fired.connect(_on_rule_fired)
-	if not ant.behavior_manager.rules_changed.is_connected(_refresh_behavior_rules):
-		ant.behavior_manager.rules_changed.connect(_refresh_behavior_rules)
+	if not manager.behavior_fired.is_connected(_on_behavior_fired):
+		manager.behavior_fired.connect(_on_behavior_fired)
+	if not manager.movement_behavior_changed.is_connected(_on_movement_behavior_changed):
+		manager.movement_behavior_changed.connect(_on_movement_behavior_changed)
+	if not manager.profile_changed.is_connected(_refresh_behavior_rules):
+		manager.profile_changed.connect(_refresh_behavior_rules)
 
 
-func _on_rule_fired(rule: AntRule) -> void:
+## Exclusive-channel fires only: concurrent behaviors (signaling) fire every
+## tick and would drown the label with no information gained.
+func _on_behavior_fired(behavior: AntBehavior) -> void:
+	if behavior.channel and not behavior.channel.is_exclusive():
+		return
 	if is_instance_valid(_last_fired_label):
-		_last_fired_label.text = "Last fired: %s" % rule.name
+		_last_fired_label.text = "Last fired: %s" % behavior.name
+
+
+func _on_movement_behavior_changed(behavior: AntBehavior) -> void:
+	if not is_instance_valid(_movement_label):
+		return
+	if behavior == null:
+		_movement_label.text = "Movement: — (idle)"
+	else:
+		_movement_label.text = "Movement: %s" % behavior.name
 #endregion
 #region Ant View Setup
 func _setup_ant_view(ant: Ant) -> void:
@@ -327,6 +368,7 @@ func _setup_ant_view(ant: Ant) -> void:
 	_update_movement_influences_section()
 	_update_status_bars()
 	_sync_ant_visualization()
+	_refresh_behavior_rules()
 
 	## Automatically enable influence arrows when viewing ant info
 	_enable_influence_visualization(ant)
@@ -373,37 +415,37 @@ func _update_status_bars() -> void:
 	if not current_entity is Ant:
 		return
 	var ant: Ant = current_entity as Ant
- 
+
 	health_bar.max_value = Ant.HEALTH_MAX
 	health_bar.value = ant.health_level
 	health_value_label.text = "%d/%d" % [int(ant.health_level), int(Ant.HEALTH_MAX)]
- 
+
 	energy_bar.max_value = Ant.ENERGY_MAX
 	energy_bar.value = ant.energy_level
 	energy_value_label.text = "%d/%d" % [int(ant.energy_level), int(Ant.ENERGY_MAX)]
- 
+
 	_update_bar_colors()
 
 func _update_bar_colors() -> void:
 	if not current_entity is Ant:
 		return
 	var ant: Ant = current_entity as Ant
- 
+
 	var health_pct: float = ant.health_level / Ant.HEALTH_MAX
 	var energy_pct: float = ant.energy_level / Ant.ENERGY_MAX
- 
+
 	var health_color: Color = STYLE.HEALTH_COLOR
 	if health_pct < 0.25:
 		health_color = STYLE.LOW_COLOR
 	elif health_pct < 0.5:
 		health_color = STYLE.MED_COLOR
- 
+
 	var energy_color: Color = STYLE.ENERGY_COLOR
 	if energy_pct < 0.25:
 		energy_color = STYLE.LOW_COLOR
 	elif energy_pct < 0.5:
 		energy_color = STYLE.MED_COLOR
- 
+
 	health_bar.add_theme_stylebox_override("fill", _create_stylebox(health_color))
 	energy_bar.add_theme_stylebox_override("fill", _create_stylebox(energy_color))
 
@@ -593,7 +635,7 @@ func _on_darker_dirt_changed(color: Color) -> void:
 
 
 func _on_colony_ant_profile_selected(_index: int) -> void:
-	edit_colony_ant_profile_button.disabled = false
+	pass  # Edit button retired until E3; selection currently drives nothing.
 
 
 #endregion
@@ -671,19 +713,21 @@ func _update_legend() -> void:
 	var total_magnitude: float = 0.0
 	var influence_data: Array[Dictionary] = [] as Array[Dictionary]
 
-	var influences = ant.influence_manager.get_entries()
+	var entries: Array[InfluenceEntry] = ant.influence_manager.get_entries()
 
 	## First pass: collect data and calculate total magnitude
-	for influence: Influence in influences:
-		if _should_ignore_influence(influence):
+	for entry: InfluenceEntry in entries:
+		if entry == null or entry.influence == null:
+			continue
+		if _should_ignore_influence(entry.influence):
 			continue
 
-		## Check if influence is valid for this ant
-		if not influence.is_valid(ant):
+		## Entry gate AND the influence's own condition
+		if not entry.is_active(ant):
 			continue
 
-		## Get vector and weight
-		var vector: Vector2 = EvaluationSystem.get_value(influence, ant)
+		## Weighted contribution — what the integrator actually sums
+		var vector: Vector2 = entry.weighted_vector(ant)
 		var magnitude: float = vector.length()
 
 		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
@@ -691,29 +735,29 @@ func _update_legend() -> void:
 
 		total_magnitude += magnitude
 		influence_data.append({
-			"name": influence.name,
+			"name": entry.influence.name,
 			"magnitude": magnitude,
-			"color": influence.color
+			"color": entry.influence.color
 		})
 
 	## Second pass: create legend entries
 	for data: Dictionary in influence_data:
-		var entry: HBoxContainer = HBoxContainer.new()
+		var entry_row: HBoxContainer = HBoxContainer.new()
 
 		## Color indicator
 		var color_rect: ColorRect = ColorRect.new()
 		color_rect.custom_minimum_size = Vector2(16, 16)
 		color_rect.color = data.color
-		entry.add_child(color_rect)
+		entry_row.add_child(color_rect)
 
 		## Name and percentage
 		var percentage: float = (data.magnitude / total_magnitude * 100.0) if total_magnitude > 0 else 0.0
 		var label: Label = Label.new()
 		label.text = " %s: %.1f%%" % [data.name, percentage]
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		entry.add_child(label)
+		entry_row.add_child(label)
 
-		influences_legend.add_child(entry)
+		influences_legend.add_child(entry_row)
 
 		## Store color for this influence
 		_influence_colors[data.name] = data.color
