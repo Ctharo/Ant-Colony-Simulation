@@ -208,6 +208,14 @@ func _publish_movement(winner: ProfileEntry) -> void:
 	entity.influence_manager.set_entries(movement_entries)
 
 
+## The movement channel's current winner, or null when idling. Public read
+## surface for UI (entity info panel's "Active:" line and legend timing).
+func movement_behavior() -> AntBehavior:
+	if _movement_winner == null:
+		return null
+	return _movement_winner.behavior
+
+
 func _entry_live(entry: ProfileEntry) -> bool:
 	return entry != null \
 		and entry.enabled \

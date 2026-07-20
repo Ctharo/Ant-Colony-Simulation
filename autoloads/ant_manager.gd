@@ -73,7 +73,6 @@ func _create_ant(profile: AntProfile) -> Ant:
 	ant.profile = profile
 	ant.movement_rate = profile.movement_rate
 	ant.vision_range = profile.vision_range
-	ant.pheromones = profile.pheromones
 	ant.role = profile.name.to_snake_case()
 
 	return ant

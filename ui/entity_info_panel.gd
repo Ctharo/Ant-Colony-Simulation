@@ -170,7 +170,6 @@ func _connect_signals() -> void:
 	close_button.pressed.connect(_on_close_pressed)
 
 	## Ant signals
-	edit_ant_profile_button.pressed.connect(_on_edit_ant_profile_pressed)
 	view_influence_profile_button.pressed.connect(_on_view_influence_profile_pressed)
 
 	## Colony signals
@@ -182,7 +181,6 @@ func _connect_signals() -> void:
 	dirt_color_picker.color_changed.connect(_on_dirt_color_changed)
 	darker_dirt_color_picker.color_changed.connect(_on_darker_dirt_changed)
 	colony_ant_profiles_list.item_selected.connect(_on_colony_ant_profile_selected)
-	edit_colony_ant_profile_button.pressed.connect(_on_edit_colony_ant_profile_pressed)
 
 	## Visualization signals
 	show_heatmap_check.toggled.connect(_on_show_heatmap_toggled)
@@ -363,11 +361,13 @@ func _update_movement_influences_section() -> void:
 		return
 	var ant: Ant = current_entity as Ant
 
-	if ant.influence_manager and ant.influence_manager.active_profile:
-		active_profile_label.text = "Active: %s" % ant.influence_manager.active_profile.name
+	var winner: AntBehavior = null
+	if ant.behavior_manager:
+		winner = ant.behavior_manager.movement_behavior()
+	if winner:
+		active_profile_label.text = "Active: %s" % winner.name
 	else:
-		active_profile_label.text = "Active: None"
-
+		active_profile_label.text = "Active: — (idle)"
 
 func _update_status_bars() -> void:
 	if not current_entity is Ant:
@@ -437,8 +437,8 @@ func _update_ant_info() -> void:
 
 	## Update legend periodically
 	if Engine.get_physics_frames() % 20 == 0:
-		if ant.influence_manager and ant.influence_manager.active_profile:
-			_update_legend(ant.influence_manager.active_profile.influences)
+		if ant.influence_manager:
+			_update_legend()
 #endregion
 
 
@@ -530,28 +530,11 @@ func _update_colony_info() -> void:
 
 
 #region Signal Handlers - Ant
-func _on_edit_ant_profile_pressed() -> void:
-	if not current_entity is Ant:
-		return
-	var ant: Ant = current_entity as Ant
 
-	if not ant.profile:
-		return
-
-	var editor: AntProfileEditorPopup = AntProfileEditorPopup.new()
-	add_child(editor)
-	editor.edit_profile(ant.profile)
-	await editor.closed
-	_update_ant_profile_section()
 
 
 func _on_view_influence_profile_pressed() -> void:
-	if not current_entity is Ant:
-		return
-	#var ant: Ant = current_entity as Ant
-
-	print("Influence profile not yet implemented")
-	#TODO
+	pass  # Retired with steering profiles; E3 routes this to the behavior editor.
 #endregion
 
 
@@ -613,24 +596,6 @@ func _on_colony_ant_profile_selected(_index: int) -> void:
 	edit_colony_ant_profile_button.disabled = false
 
 
-func _on_edit_colony_ant_profile_pressed() -> void:
-	var colony: Colony = current_entity as Colony
-	var selected_indices: PackedInt32Array = colony_ant_profiles_list.get_selected_items()
-	if selected_indices.is_empty() or not colony or not colony.profile:
-		return
-
-	var profile_idx: int = selected_indices[0]
-	if profile_idx < colony.profile.ant_profiles.size():
-		var ant_profile: AntProfile = colony.profile.ant_profiles[profile_idx]
-		_open_ant_profile_editor(ant_profile)
-
-
-func _open_ant_profile_editor(ant_profile: AntProfile) -> void:
-	var editor: AntProfileEditorPopup = AntProfileEditorPopup.new()
-	add_child(editor)
-	editor.edit_profile(ant_profile)
-	await editor.closed
-	_populate_colony_ant_profiles_list()
 #endregion
 
 
@@ -692,7 +657,7 @@ func _clear_legend() -> void:
 	_influence_colors.clear()
 
 
-func _update_legend(influences: Array) -> void:
+func _update_legend() -> void:
 	_clear_legend()
 
 	if not current_entity is Ant:
@@ -705,6 +670,8 @@ func _update_legend(influences: Array) -> void:
 	## Calculate total magnitude for normalization
 	var total_magnitude: float = 0.0
 	var influence_data: Array[Dictionary] = [] as Array[Dictionary]
+
+	var influences = ant.influence_manager.get_entries()
 
 	## First pass: collect data and calculate total magnitude
 	for influence: Influence in influences:
