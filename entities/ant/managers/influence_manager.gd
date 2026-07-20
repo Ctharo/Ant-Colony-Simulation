@@ -51,6 +51,23 @@ var _target_recalc_timer: float = 0.0
 ## The entity this influence manager is attached to
 var entity: Node
 
+## The movement winner's weighted influence entries, pushed by
+## BehaviorManager every tick. EMPTY = deliberate idle: no movement
+## behavior won the channel (or a blocking task is running), so the
+## integrator returns zero and the ant holds position. The old
+## forward-drift fallback is gone — standing still is now an authorable
+## outcome, and "always keep moving" is what the seeded wander fallback
+## expresses in data.
+var _entries: Array[InfluenceEntry] = []
+
+
+func set_entries(entries: Array[InfluenceEntry]) -> void:
+	_entries = entries
+
+
+func get_entries() -> Array[InfluenceEntry]:
+	return _entries
+
 ## Currently active influence profile
 var active_profile: InfluenceProfile:
 	set(value):
@@ -212,13 +229,7 @@ func _calculate_target_position() -> Vector2:
 		logger.trace("No entity")
 		return Vector2.ZERO
 
-	if not active_profile:
-		logger.trace("No active profile, using fallback movement")
-		# Fallback: basic forward movement
-		var fallback_direction = Vector2(1, 0).rotated(entity.global_rotation)
-		return entity.global_position + fallback_direction * TARGET_DISTANCE
-
-	var base_direction = _calculate_direction(active_profile.influences)
+	var base_direction: Vector2 = _calculate_direction()
 	if base_direction == Vector2.ZERO:
 		logger.trace("Base direction is zero")
 		return Vector2.ZERO
@@ -274,39 +285,25 @@ func _get_best_navigable_target(direction: Vector2, nav_region: NavigationRegion
 
 	return best_target
 
-func _calculate_direction(influences: Array[Logic]) -> Vector2:
-	# Filter valid influences (gate conditions evaluated via EvaluationSystem
-	# inside Influence.is_valid)
-	var valid_influences = influences.filter(func(influence):
-		return influence is Influence and influence.is_valid(entity)
-	)
+func _calculate_direction() -> Vector2:
+	if _entries.is_empty():
+		return Vector2.ZERO  # deliberate idle — no movement winner
 
-	logger.trace("Valid influences: %d/%d" % [valid_influences.size(), influences.size()])
+	var resultant: Vector2 = Vector2.ZERO
+	var contributing: int = 0
+	for entry: InfluenceEntry in _entries:
+		if entry == null or entry.influence == null:
+			continue
+		if not entry.is_active(entity):
+			continue
+		var vector: Vector2 = entry.weighted_vector(entity)
+		if vector == Vector2.ZERO:
+			continue
+		resultant += vector
+		contributing += 1
+		logger.trace("Influence '%s': %s" % [entry.influence.name, vector])
 
-	# Map influences to direction vectors with null checking
-	var direction_vectors = []
-	for influence in valid_influences:
-		var vector = EvaluationSystem.get_value(influence, entity)
-		if vector != null and vector is Vector2:
-			direction_vectors.append(vector)
-			logger.trace("Influence '%s': %s" % [influence.name, vector])
-		else:
-			logger.trace("Influence '%s' returned invalid vector: %s" % [influence.name, vector])
-
-	if direction_vectors.is_empty():
-		logger.trace("No valid direction vectors found, using fallback")
-		# Fallback: provide a basic forward movement
-		var fallback_direction = Vector2(1, 0).rotated(entity.global_rotation)
-		logger.trace("Fallback direction: %s" % fallback_direction)
-		return fallback_direction
-
-	# Reduce to a single resultant vector
-	var resultant = direction_vectors.reduce(
-		func(accum, vector): return accum + vector,
-		Vector2.ZERO
-	)
-
-	logger.trace("Resultant vector before normalization: %s" % resultant)
+	logger.trace("Contributing influences: %d/%d" % [contributing, _entries.size()])
 
 	if resultant.length_squared() < 0.001:
 		logger.trace("Resultant vector too small, returning zero")
@@ -331,40 +328,32 @@ func should_ignore_influence(influence: Logic) -> bool:
 	return influence_type in STYLE.INFLUENCE_SETTINGS.IGNORE_TYPES
 
 func draw_influences() -> void:
-	if not active_profile:
+	if _entries.is_empty():
 		return
 
 	# Collect influence data and calculate total magnitude
-	var total_magnitude = 0.0
-	var influence_data = []
+	var total_magnitude: float = 0.0
+	var influence_data: Array[Dictionary] = []
 
-	for influence in active_profile.influences:
-		if not influence is Influence:
+	for entry: InfluenceEntry in _entries:
+		if entry == null or entry.influence == null:
+			continue
+		if should_ignore_influence(entry.influence):
+			continue
+		if not entry.is_active(entity):
 			continue
 
-		if should_ignore_influence(influence):
-			continue
-
-		if not influence.is_valid(entity):
-			continue
-
-		var direction = EvaluationSystem.get_value(influence, entity)
-		if not direction is Vector2:
-			continue
-		var magnitude = direction.length()
-
+		var vector: Vector2 = entry.weighted_vector(entity)
+		var magnitude: float = vector.length()
 		if magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:
 			continue
 
 		total_magnitude += magnitude
-
-		var influence_color: Color = influence.color
-
 		influence_data.append({
 			"magnitude": magnitude,
-			"direction": direction.normalized(),
-			"color": influence_color,
-			"name": influence.name
+			"direction": vector.normalized(),
+			"color": entry.influence.color,
+			"name": entry.influence.name,
 		})
 
 	if total_magnitude < STYLE.INFLUENCE_SETTINGS.MIN_WEIGHT_THRESHOLD:

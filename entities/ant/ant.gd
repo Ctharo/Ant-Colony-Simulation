@@ -1,13 +1,17 @@
 @icon("res://assets/entities/Ant.svg")
 class_name Ant
 extends CharacterBody2D
-## A single colony member: senses the world, follows data-driven behavior
-## rules, and falls back to influence-driven wandering.
+## A single colony member: senses the world and runs a data-driven
+## BehaviorProfile — behaviors arbitrated across channels each tick, with
+## the movement channel's winner steering via weighted influence entries.
 ##
 ## Architecture overview:
-## - [BehaviorManager] evaluates AntRule resources each physics tick; the
-##   first matching rule invokes one of the whitelisted ACTION_API methods.
-## - [InfluenceManager] provides the default movement when no rule fires.
+## - [BehaviorManager] arbitrates the profile's behaviors across channels
+##   each physics tick (exclusive channels: highest-priority triggered
+##   behavior wins, with sticky holds; concurrent channels: every triggered
+##   behavior runs). Actions invoke the whitelisted ACTION_API methods.
+## - [InfluenceManager] integrates the movement winner's weighted influence
+##   entries into a steering target. Empty entries = deliberate idle.
 ## - [AntPerception] (own file) owns every spatial/sensor query — area
 ##   overlaps, nearest-item searches, colony proximity, pheromone sampling.
 ## - [AntSenses] is the read-only, value-type facade Logic expressions
@@ -19,7 +23,9 @@ extends CharacterBody2D
 ## This script deliberately contains NO derived behavior logic: conditions
 ## live in Logic resources under user://behavior, and the only hardcoded
 ## checks left are engine glue (e.g. "is recovery complete" inside
-## rest_until_full — a physical fact, not an authored decision).
+## rest_until_full — a physical fact, not an authored decision). Pheromone
+## emission is no longer hardcoded either: it is a signaling-channel
+## behavior calling emit_pheromone through ACTION_API.
 
 #region Signals
 signal spawned
@@ -40,16 +46,7 @@ const ACTION_API: Array[String] = [
 	"rest_until_full",
 	"move_to",
 	"stop_movement",
-]
-
-## Fallback rules (by ResourceLibrary id) preserving default behavior for
-## profiles that don't define their own behavior_rules. These are seeded
-## into user://behavior by DefaultLibrarySeeder on first run; if the user
-## has deleted one, it is simply skipped.
-const DEFAULT_RULE_IDS: Array[String] = [
-	"harvest_rule",
-	"store_rule",
-	"rest_rule",
+	"emit_pheromone",
 ]
 
 const ENERGY_MAX: float = 100.0
@@ -61,11 +58,6 @@ const ENERGY_DRAIN_FACTOR: float = 0.015
 const CARRY_DRAIN_FACTOR: float = 0.01
 ## Smoothing factor for velocity interpolation each physics tick.
 const VELOCITY_LERP_WEIGHT: float = 0.15
-#endregion
-
-
-#region Exports
-@export var pheromones: Array[Pheromone]
 #endregion
 
 
@@ -124,8 +116,11 @@ var vision_range: float = 100.0:
 
 
 #region Task State
-## True while a blocking action (harvest/store/rest) is running; suspends
-## rule evaluation and influence movement in _physics_process.
+## True while a blocking action (harvest/store/rest) is running. While true,
+## BehaviorManager suppresses exclusive channels (no claims, empty movement
+## entries — the ant holds position) but keeps CONCURRENT channels running,
+## so signaling behaviors emit even mid-task. Interim until the
+## current_task state machine replaces the await-based tasks.
 var doing_task: bool = false
 
 var _carried_food: Food
@@ -134,6 +129,10 @@ var is_carrying_food: bool:
 
 ## Profile stored before _ready() when init_profile() is called too early.
 var _profile_pending: AntProfile = null
+
+## Pheromone ids this ant referenced but the catalog lacks — warn once per
+## name per ant (log once at source; propagate silently).
+var _unknown_pheromones: Dictionary = {}
 #endregion
 
 
@@ -163,16 +162,19 @@ func _ready() -> void:
 	_duplicate_area_shapes()
 
 	influence_manager.initialize(self)
+	_setup_behavior_manager()
 
-	# Apply profile now that influence_manager exists; init_profile() may
-	# have run before we entered the tree.
+	# Apply profile now that BOTH managers exist; init_profile() may have
+	# run before we entered the tree. (Order matters: the old flow created
+	# the behavior manager after profile application, which silently
+	# skipped profile rules on the first pass — the new decision surface
+	# must land on an existing manager.)
 	if _profile_pending:
 		_apply_profile_internal(_profile_pending)
 		_profile_pending = null
 	elif profile:
 		_apply_profile_internal(profile)
 
-	_setup_behavior_manager()
 	register_to_heatmap()
 	_calibrate_reach_radius()
 
@@ -186,15 +188,12 @@ func _physics_process(delta: float) -> void:
 	_process_carrying()
 	_consume_energy(delta)
 
-	# A blocking action (harvest/store/rest) owns this ant until it clears.
-	if doing_task:
-		return
-
-	# Data-driven behavior: first matching rule (by priority) acts this tick.
-	if behavior_manager and behavior_manager.process_rules():
-		return
-
-	# Default fall-through: influence-driven movement.
+	# One decision point: channel arbitration (actions AND steering intake).
+	# No doing_task branch here — the manager suppresses exclusive channels
+	# and publishes empty movement entries while a task runs, which makes
+	# _process_movement idle naturally, while concurrent signaling
+	# behaviors keep running.
+	behavior_manager.process_tick()
 	_process_movement(delta)
 
 
@@ -211,12 +210,9 @@ func _setup_behavior_manager() -> void:
 	behavior_manager = BehaviorManager.new()
 	add_child(behavior_manager)
 	behavior_manager.initialize(self)
-	for rule_id: String in DEFAULT_RULE_IDS:
-		var rule: AntRule = ResourceLibrary.get_by_id(ResourceLibrary.KIND_RULE, rule_id)
-		if rule:
-			behavior_manager.add_rule(rule)
-		else:
-			logger.warn("Default rule '%s' not found in library (deleted?)" % rule_id)
+	# The decision surface arrives via _apply_profile_internal(); there are
+	# no built-in default rules anymore — a profile-less ant idles, warned
+	# once at profile application.
 
 
 ## Shrinks the reach radius so that food carried at the mouth marker still
@@ -235,24 +231,21 @@ func _calibrate_reach_radius() -> void:
 ## node isn't in the tree yet, application is deferred until _ready().
 func init_profile(p_profile: AntProfile) -> void:
 	profile = p_profile
-	if not is_inside_tree() or not influence_manager:
+	if not is_inside_tree() or not behavior_manager:
 		_profile_pending = p_profile
 		return
 	_apply_profile_internal(p_profile)
 
 
 func _apply_profile_internal(p_profile: AntProfile) -> void:
-	if not influence_manager:
-		push_error("Cannot apply profile - influence_manager not ready")
+	if not behavior_manager:
+		push_error("Cannot apply profile - behavior_manager not ready")
 		return
 
-	for influence: InfluenceProfile in p_profile.movement_influences:
-		influence_manager.add_profile(influence)
-
-	# Profile-defined rules replace the defaults; empty means keep defaults.
-	if behavior_manager and not p_profile.behavior_rules.is_empty():
-		behavior_manager.clear_rules()
-		behavior_manager.add_rules(p_profile.behavior_rules)
+	if p_profile.behavior_profile:
+		behavior_manager.set_profile(p_profile.behavior_profile)
+	else:
+		logger.warn("Profile '%s' has no behavior profile — ant will idle" % p_profile.name)
 #endregion
 
 
@@ -297,7 +290,7 @@ func store_food() -> void:
 ## Rests in place, recovering health and energy until both are full.
 ## The completion check is engine glue (a physical fact about recovery), not
 ## authored behavior — the *decision to start* resting is what belongs in a
-## rule condition, and does.
+## trigger condition, and does.
 func rest_until_full() -> void:
 	doing_task = true
 	is_resting = true
@@ -324,6 +317,23 @@ func move_to(target_pos: Vector2) -> bool:
 func stop_movement() -> void:
 	velocity = Vector2.ZERO
 	movement_completed.emit(false)
+
+
+## Deposits heat for the named pheromone this tick. The data-driven
+## signaling verb: emission gating lives in the calling behavior's trigger,
+## NOT here and NOT in Pheromone.condition (which this path deliberately
+## bypasses — the resource supplies deposit parameters only).
+func emit_pheromone(pheromone_name: String) -> void:
+	var pheromone: Pheromone = ResourceLibrary.get_by_id(
+		ResourceLibrary.KIND_PHEROMONE,
+		pheromone_name.to_snake_case(), false) as Pheromone
+	if not pheromone:
+		if not _unknown_pheromones.has(pheromone_name):
+			_unknown_pheromones[pheromone_name] = true
+			logger.warn("emit_pheromone: no pheromone '%s' in catalog" % pheromone_name)
+		return
+	HeatmapManager.update_entity_heat(self,
+		get_physics_process_delta_time(), pheromone.name)
 #endregion
 
 
@@ -354,12 +364,20 @@ func _recover_while_resting(delta: float) -> void:
 
 
 ## Influence-driven movement: recalculate the target when needed, then steer
-## toward the next path position with velocity smoothing.
-func _process_movement(delta: float) -> void:
+## toward the next path position with velocity smoothing. With no active
+## influence entries (no movement winner, or a blocking task), the ant
+## glides to a stop — idling is now an authorable outcome, and the guard
+## also keeps a zero steering direction from ever becoming a (0,0) nav
+## target.
+func _process_movement(_delta: float) -> void:
 	if not is_instance_valid(nav_agent):
 		return
 
-	_process_pheromones(delta)
+	if influence_manager.get_entries().is_empty():
+		velocity = velocity.lerp(Vector2.ZERO, VELOCITY_LERP_WEIGHT)
+		if velocity.length_squared() > 0.01:
+			move_and_slide()
+		return
 
 	if influence_manager.should_recalculate_target():
 		influence_manager.update_movement_target()
@@ -373,12 +391,6 @@ func _process_movement(delta: float) -> void:
 		nav_agent.velocity = target_velocity  # agent emits velocity_computed
 	else:
 		_on_navigation_agent_2d_velocity_computed(target_velocity)
-
-
-## Each pheromone checks its own emission condition.
-func _process_pheromones(delta: float) -> void:
-	for pheromone: Pheromone in pheromones:
-		pheromone.check_and_emit(self, delta)
 #endregion
 
 
@@ -425,10 +437,16 @@ func get_expression_context() -> Object:
 
 
 ## Registers self and pheromone heatmap types with [HeatmapManager].
+## Every CATALOGED pheromone gets its heat layer (creation is per type, so
+## repeats are harmless). The old per-ant export list is gone: emission is
+## behavior-authored now, so any pheromone in the catalog must be emittable
+## by any ant — including ones the user authors at runtime.
 func register_to_heatmap() -> void:
 	HeatmapManager.register_entity(self)
-	for pheromone: Pheromone in pheromones:
-		HeatmapManager.create_heatmap_type(pheromone)
+	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_PHEROMONE):
+		var pheromone: Pheromone = entry.resource as Pheromone
+		if pheromone:
+			HeatmapManager.create_heatmap_type(pheromone)
 #endregion
 
 
