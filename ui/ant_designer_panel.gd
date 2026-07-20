@@ -1,13 +1,17 @@
 class_name AntDesignerPanel
 extends ManagedWindow
-## Designs ant *types/roles*: an AntProfile bundles a name (role), combat and
-## movement stats, the pheromones it emits, the steering profiles it uses, and
-## the behavior rules it runs. Profiles are persisted through ResourceLibrary
-## (KIND_PROFILE) exactly like the Behavior Library's other resources.
+## Designs ant *types/roles*: an AntProfile bundles a name (role), combat
+## and movement stats, and the BehaviorProfile that is its complete decision
+## surface (behaviors, priorities, channels). Profiles are persisted through
+## ResourceLibrary (KIND_PROFILE) exactly like the Behavior Library's other
+## resources.
 ##
-## Every checklist is now fed by the ResourceLibrary catalog — pheromones
-## (KIND_PHEROMONE) and influence profiles (KIND_INFLUENCE_PROFILE) included.
-## The old directory-scanning discovery is gone.
+## E2: the influence-profile and behavior-rule checklists are gone — both
+## composition axes collapsed into the single behavior_profile reference.
+## The per-role pheromone checklist is gone too: emission is authored as
+## signaling behaviors and heat layers register from the full catalog
+## (AntProfile.pheromones is deprecated); the Manage... entry point into
+## the Pheromone Library survives.
 ##
 ## Opened from the sandbox debug menu ("Ant Roles"). Built entirely in code to
 ## match the project's runtime-UI convention (no separate .tscn).
@@ -33,9 +37,7 @@ var _damage_spin: SpinBox
 var _cooldown_spin: SpinBox
 var _combatant_check: CheckBox
 var _spawn_select: OptionButton
-var _pheromone_box: VBoxContainer
-var _influence_box: VBoxContainer
-var _rule_box: VBoxContainer
+var _behavior_profile_select: OptionButton
 var _status: Label
 var _save_btn: Button
 
@@ -64,14 +66,14 @@ func _ready() -> void:
 
 #region UI construction
 func _build_ui() -> void:
-	var root := HBoxContainer.new()
+	var root: HBoxContainer = HBoxContainer.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_theme_constant_override("separation", 10)
 	add_child(root)
 
 	root.add_child(_build_left_pane())
 
-	var right := ScrollContainer.new()
+	var right: ScrollContainer = ScrollContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	root.add_child(right)
@@ -79,15 +81,15 @@ func _build_ui() -> void:
 
 	watch([_name_edit, _role_select, _move_spin, _vision_spin, _size_spin,
 		_health_spin, _damage_spin, _cooldown_spin, _combatant_check,
-		_spawn_select])
+		_spawn_select, _behavior_profile_select])
 
 
 func _build_left_pane() -> Control:
-	var vbox := VBoxContainer.new()
+	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.custom_minimum_size = Vector2(200, 0)
 	vbox.add_theme_constant_override("separation", 6)
 
-	var header := Label.new()
+	var header: Label = Label.new()
 	header.text = "Roles"
 	vbox.add_child(header)
 
@@ -96,7 +98,7 @@ func _build_left_pane() -> Control:
 	_profile_list.item_selected.connect(_on_profile_selected)
 	vbox.add_child(_profile_list)
 
-	var buttons := HBoxContainer.new()
+	var buttons: HBoxContainer = HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 4)
 	vbox.add_child(buttons)
 
@@ -110,7 +112,7 @@ func _build_left_pane() -> Control:
 
 
 func _build_editor() -> Control:
-	var vbox := VBoxContainer.new()
+	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 8)
 
@@ -120,7 +122,7 @@ func _build_editor() -> Control:
 	vbox.add_child(_row("Name:", _name_edit))
 
 	_role_select = OptionButton.new()
-	for role in ROLE_TYPES:
+	for role: String in ROLE_TYPES:
 		_role_select.add_item(role.capitalize())
 	vbox.add_child(_row("Role type:", _role_select))
 
@@ -148,49 +150,37 @@ func _build_editor() -> Control:
 	vbox.add_child(_row("Spawn condition:", _spawn_select))
 	_populate_spawn_options()
 
-	# Pheromones: checklist fed by the catalog, plus a button into the editor.
-	var pher_header := HBoxContainer.new()
+	# The decision surface: one reference replaces the old influence-profile
+	# and behavior-rule checklists.
+	vbox.add_child(_section("Behavior"))
+	var bp_hint: Label = Label.new()
+	bp_hint.text = "The role's full decision surface: behaviors, priorities, channels."
+	bp_hint.add_theme_font_size_override("font_size", 11)
+	bp_hint.modulate = Color(1, 1, 1, 0.6)
+	vbox.add_child(bp_hint)
+	_behavior_profile_select = OptionButton.new()
+	_behavior_profile_select.tooltip_text = "Behavior profiles are authored in the Behavior Designer"
+	vbox.add_child(_row("Behavior profile:", _behavior_profile_select))
+	_populate_behavior_profile_options()
+
+	# Pheromone CRUD entry point stays; the per-role checklist is gone —
+	# emission is authored as signaling behaviors now, and heat layers
+	# register from the full catalog (AntProfile.pheromones is deprecated).
+	var pher_header: HBoxContainer = HBoxContainer.new()
 	pher_header.add_theme_constant_override("separation", 8)
-	var pher_label := _section("Pheromones")
+	var pher_label: Control = _section("Pheromones")
 	pher_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pher_header.add_child(pher_label)
-	var manage_btn := _mk_button("Manage...", _on_manage_pheromones)
+	var manage_btn: Button = _mk_button("Manage...", _on_manage_pheromones)
 	manage_btn.tooltip_text = "Create and edit pheromones in the Pheromone Library"
 	pher_header.add_child(manage_btn)
 	vbox.add_child(pher_header)
 
-	_pheromone_box = VBoxContainer.new()
-	vbox.add_child(_pheromone_box)
-	_populate_pheromone_checks()
-
-	var infl_header := HBoxContainer.new()
-	infl_header.add_theme_constant_override("separation", 8)
-	var infl_label := _section("Movement influences")
-	infl_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	infl_header.add_child(infl_label)
-	var infl_manage_btn := _mk_button("Manage...", _on_manage_influences)
-	infl_manage_btn.tooltip_text = "Create and edit influences and steering profiles in the Influence Library"
-	infl_header.add_child(infl_manage_btn)
-	vbox.add_child(infl_header)
-
-	var infl_hint := Label.new()
-	infl_hint.text = "Steering states, checked in list order: first eligible profile drives the ant."
-	infl_hint.add_theme_font_size_override("font_size", 11)
-	infl_hint.modulate = Color(1, 1, 1, 0.6)
-	vbox.add_child(infl_hint)
-	_influence_box = VBoxContainer.new()
-	vbox.add_child(_influence_box)
-	_populate_influence_checks()
-
-	vbox.add_child(_section("Behavior rules"))
-	var rules_hint := Label.new()
-	rules_hint.text = "Leave all unchecked to use the default rule set."
-	rules_hint.add_theme_font_size_override("font_size", 11)
-	rules_hint.modulate = Color(1, 1, 1, 0.6)
-	vbox.add_child(rules_hint)
-	_rule_box = VBoxContainer.new()
-	vbox.add_child(_rule_box)
-	_populate_rule_checks()
+	var pher_hint: Label = Label.new()
+	pher_hint.text = "Deposit parameters live in the Pheromone Library; emission is a signaling behavior."
+	pher_hint.add_theme_font_size_override("font_size", 11)
+	pher_hint.modulate = Color(1, 1, 1, 0.6)
+	vbox.add_child(pher_hint)
 
 	vbox.add_child(HSeparator.new())
 
@@ -212,14 +202,14 @@ func _build_editor() -> Control:
 
 #region Small UI helpers
 func _mk_button(text: String, handler: Callable) -> Button:
-	var b := Button.new()
+	var b: Button = Button.new()
 	b.text = text
 	b.pressed.connect(handler)
 	return b
 
 
 func _mk_spin(min_v: float, max_v: float, step: float) -> SpinBox:
-	var s := SpinBox.new()
+	var s: SpinBox = SpinBox.new()
 	s.min_value = min_v
 	s.max_value = max_v
 	s.step = step
@@ -228,9 +218,9 @@ func _mk_spin(min_v: float, max_v: float, step: float) -> SpinBox:
 
 
 func _row(label_text: String, control: Control) -> HBoxContainer:
-	var row := HBoxContainer.new()
+	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var label := Label.new()
+	var label: Label = Label.new()
 	label.text = label_text
 	label.custom_minimum_size = Vector2(150, 0)
 	row.add_child(label)
@@ -240,7 +230,7 @@ func _row(label_text: String, control: Control) -> HBoxContainer:
 
 
 func _section(text: String) -> Control:
-	var l := Label.new()
+	var l: Label = Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", 15)
 	l.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
@@ -249,56 +239,28 @@ func _section(text: String) -> Control:
 
 
 #region Catalog-fed option pools
-func _populate_pheromone_checks() -> void:
-	for child in _pheromone_box.get_children():
-		child.queue_free()
-	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_PHEROMONE):
-		_pheromone_box.add_child(_entry_check(entry))
-
-
-func _populate_influence_checks() -> void:
-	for child in _influence_box.get_children():
-		child.queue_free()
-	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_INFLUENCE_PROFILE):
-		_influence_box.add_child(_entry_check(entry))
-
-
-func _populate_rule_checks() -> void:
-	for child in _rule_box.get_children():
-		child.queue_free()
-	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_RULE):
-		var c := _entry_check(entry)
-		c.tooltip_text = entry.resource.get("description") if entry.resource.get("description") else ""
-		_rule_box.add_child(c)
-
-
-func _entry_check(entry: ResourceLibrary.Entry) -> CheckBox:
-	var c := CheckBox.new()
-	c.text = entry.display_name()
-	c.tooltip_text = entry.path
-	c.set_meta("path", entry.path)
-	c.set_meta("resource", entry.resource)
-	return c
-
-
 func _populate_spawn_options() -> void:
 	_spawn_select.clear()
 	_spawn_select.add_item("(never — placed only as initial ants)")
 	_spawn_select.set_item_metadata(0, null)
 	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_LOGIC):
-		var idx := _spawn_select.item_count
+		var idx: int = _spawn_select.item_count
 		_spawn_select.add_item(entry.display_name())
 		_spawn_select.set_item_metadata(idx, entry.resource)
 
 
+func _populate_behavior_profile_options() -> void:
+	_behavior_profile_select.clear()
+	_behavior_profile_select.add_item("(none — ant idles)")
+	_behavior_profile_select.set_item_metadata(0, null)
+	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_BEHAVIOR_PROFILE):
+		var idx: int = _behavior_profile_select.item_count
+		_behavior_profile_select.add_item(entry.display_name())
+		_behavior_profile_select.set_item_metadata(idx, entry.resource)
+
+
 func _on_manage_pheromones() -> void:
-	var panel := PheromoneLibraryPanel.new()
-	add_child(panel)
-	panel.present()
-
-
-func _on_manage_influences() -> void:
-	var panel := InfluenceLibraryPanel.new()
+	var panel: PheromoneLibraryPanel = PheromoneLibraryPanel.new()
 	add_child(panel)
 	panel.present()
 #endregion
@@ -308,7 +270,7 @@ func _on_manage_influences() -> void:
 func _refresh_profile_list() -> void:
 	_profile_list.clear()
 	for entry: ResourceLibrary.Entry in ResourceLibrary.get_entries(ResourceLibrary.KIND_PROFILE):
-		var idx := _profile_list.add_item(entry.display_name())
+		var idx: int = _profile_list.add_item(entry.display_name())
 		_profile_list.set_item_metadata(idx, entry)
 		_profile_list.set_item_tooltip(idx, entry.path)
 
@@ -317,23 +279,14 @@ func _on_library_changed(kind: String) -> void:
 	match kind:
 		ResourceLibrary.KIND_PROFILE:
 			_refresh_profile_list()
-		ResourceLibrary.KIND_RULE:
-			_populate_rule_checks()
-			if _editing:
-				_apply_rule_checks.call_deferred(_editing)
 		ResourceLibrary.KIND_LOGIC:
 			_populate_spawn_options()
 			if _editing:
 				_select_spawn(_editing.spawn_condition)
-		ResourceLibrary.KIND_PHEROMONE:
-			_populate_pheromone_checks()
+		ResourceLibrary.KIND_BEHAVIOR_PROFILE:
+			_populate_behavior_profile_options()
 			if _editing:
-				# queue_free'd checkboxes are gone next frame; apply then.
-				_apply_pheromone_checks.call_deferred(_editing)
-		ResourceLibrary.KIND_INFLUENCE_PROFILE:
-			_populate_influence_checks()
-			if _editing:
-				_apply_influence_checks.call_deferred(_editing)
+				_select_behavior_profile(_editing.behavior_profile)
 
 
 func _on_profile_selected(index: int) -> void:
@@ -370,7 +323,7 @@ func _new_profile() -> void:
 func _on_duplicate() -> void:
 	if not _editing:
 		return
-	var copy := ResourceLibrary.duplicate_for_edit(_editing) as AntProfile
+	var copy: AntProfile = ResourceLibrary.duplicate_for_edit(_editing) as AntProfile
 	copy.name = "%s copy" % _editing.name
 	_editing = copy
 	_editing_path = ""
@@ -381,7 +334,7 @@ func _on_duplicate() -> void:
 
 
 func _on_delete() -> void:
-	var sel := _profile_list.get_selected_items()
+	var sel: PackedInt32Array = _profile_list.get_selected_items()
 
 	if sel.is_empty():
 		return
@@ -393,7 +346,7 @@ func _on_delete() -> void:
 		return
 	_confirm.dialog_text = "Delete role '%s'?\nLive ants keep their in-memory copy until removed." % entry.resource.name
 
-	for conn in _confirm.confirmed.get_connections():
+	for conn: Dictionary in _confirm.confirmed.get_connections():
 		_confirm.confirmed.disconnect(conn.callable)
 
 	_confirm.confirmed.connect(func() -> void:
@@ -418,9 +371,7 @@ func _load_form_from(p: AntProfile) -> void:
 	_damage_spin.value = p.attack_damage
 	_cooldown_spin.value = p.attack_cooldown if p.attack_cooldown > 0.0 else 0.8
 
-	_apply_pheromone_checks(p)
-	_apply_influence_checks(p)
-	_apply_rule_checks(p)
+	_select_behavior_profile(p.behavior_profile)
 
 	_select_spawn(p.spawn_condition)
 	_set_status("", false)
@@ -440,31 +391,17 @@ func _apply_form_to(p: AntProfile) -> void:
 	p.attack_damage = _damage_spin.value
 	p.attack_cooldown = _cooldown_spin.value
 
-	var pheromones: Array[Pheromone] = []
-	for c in _pheromone_box.get_children():
-		if c is CheckBox and c.button_pressed:
-			pheromones.append(c.get_meta("resource"))
-	p.pheromones = pheromones
+	p.behavior_profile = _behavior_profile_select.get_item_metadata(_behavior_profile_select.selected) \
+		if _behavior_profile_select.selected >= 0 else null
 
-	var influences: Array[InfluenceProfile] = []
-	for c in _influence_box.get_children():
-		if c is CheckBox and c.button_pressed:
-			influences.append(c.get_meta("resource"))
-	p.movement_influences = influences
-
-	var rules: Array[AntRule] = []
-	for c in _rule_box.get_children():
-		if c is CheckBox and c.button_pressed:
-			rules.append(c.get_meta("resource"))
-	p.behavior_rules = rules
-
-	p.spawn_condition = _spawn_select.get_item_metadata(_spawn_select.selected) if _spawn_select.selected >= 0 else null
+	p.spawn_condition = _spawn_select.get_item_metadata(_spawn_select.selected) \
+		if _spawn_select.selected >= 0 else null
 #endregion
 
 
 #region Save
 func _on_save() -> void:
-	var name_text := _name_edit.text.strip_edges()
+	var name_text: String = _name_edit.text.strip_edges()
 	if name_text.is_empty():
 		_set_status("A role needs a name.", true)
 		return
@@ -476,7 +413,7 @@ func _on_save() -> void:
 		_set_status("Another role already uses the id '%s' — pick a different name." % _editing.id, true)
 		return
 
-	var prev := _editing_path if _editing_path.begins_with("user://") else ""
+	var prev: String = _editing_path if _editing_path.begins_with("user://") else ""
 	if ResourceLibrary.save_resource(_editing, ResourceLibrary.KIND_PROFILE, prev) != OK:
 		_set_status("Save failed — see log.", true)
 		return
@@ -492,27 +429,17 @@ func _on_save() -> void:
 	_editing_writable = true
 
 
-## Best-effort live update: any ant whose role matches this profile's id gets
-## the new steering profiles and rules without needing a respawn.
+## Best-effort live update: any ant whose role matches this profile's id
+## gets the new decision surface and stats without needing a respawn.
+## A null behavior_profile idles the ant (the manager handles it silently
+## here; the spawn path warns once).
 func _apply_to_live_ants(p: AntProfile) -> void:
-	var effective_rules: Array[AntRule] = []
-	if p.behavior_rules.is_empty():
-		for rule_id in Ant.DEFAULT_RULE_IDS:
-			var rule: AntRule = ResourceLibrary.get_by_id(ResourceLibrary.KIND_RULE, rule_id)
-			if rule:
-				effective_rules.append(rule)
-	else:
-		effective_rules.assign(p.behavior_rules)
-
-	var updated := 0
+	var updated: int = 0
 	for ant: Ant in AntManager.get_all():
 		if ant.role != p.id:
 			continue
 		if ant.behavior_manager:
-			ant.behavior_manager.set_rules(effective_rules)
-		if ant.influence_manager:
-			for prof: InfluenceProfile in p.movement_influences:
-				ant.influence_manager.add_profile(prof)
+			ant.behavior_manager.set_profile(p.behavior_profile)
 		ant.attack_damage = p.attack_damage
 		ant.attack_cooldown = p.attack_cooldown
 		ant.is_combatant = p.is_combatant
@@ -524,59 +451,8 @@ func _apply_to_live_ants(p: AntProfile) -> void:
 
 
 #region Selection utilities
-## Pheromone checkboxes match by path OR by name; influence-profile
-## checkboxes by path OR by id (name/basename derived). The fallbacks keep
-## profiles authored before the res://→user:// migrations from silently
-## losing their composition: the equivalent cataloged resource shows
-## checked, and the next Save upgrades the reference to the user:// copy.
-func _apply_pheromone_checks(p: AntProfile) -> void:
-	var wanted_paths := {}
-	var wanted_names := {}
-	for ph: Pheromone in p.pheromones:
-		if not ph:
-			continue
-		if not ph.resource_path.is_empty():
-			wanted_paths[ph.resource_path] = true
-		wanted_names[ph.name] = true
-	for c in _pheromone_box.get_children():
-		if c is CheckBox:
-			var res: Pheromone = c.get_meta("resource")
-			c.button_pressed = wanted_paths.has(c.get_meta("path")) \
-				or (res and wanted_names.has(res.name))
-
-
-func _apply_influence_checks(p: AntProfile) -> void:
-	var wanted_paths := {}
-	var wanted_ids := {}
-	for ip: InfluenceProfile in p.movement_influences:
-		if not ip:
-			continue
-		if not ip.resource_path.is_empty():
-			wanted_paths[ip.resource_path] = true
-		var key: String = ip.name.to_snake_case() if not ip.name.is_empty() \
-			else ip.resource_path.get_file().get_basename().to_snake_case()
-		if not key.is_empty():
-			wanted_ids[key] = true
-	for c in _influence_box.get_children():
-		if c is CheckBox:
-			var res: InfluenceProfile = c.get_meta("resource")
-			c.button_pressed = wanted_paths.has(c.get_meta("path")) \
-				or (res and wanted_ids.has(res.id))
-
-
-func _apply_rule_checks(p: AntProfile) -> void:
-	var rule_ids := {}
-	for r: AntRule in p.behavior_rules:
-		if r:
-			rule_ids[r.id] = true
-	for c in _rule_box.get_children():
-		if c is CheckBox:
-			var res: AntRule = c.get_meta("resource")
-			c.button_pressed = res and rule_ids.has(res.id)
-
-
 func _select_option_text(option: OptionButton, value: String) -> void:
-	for i in range(option.item_count):
+	for i: int in range(option.item_count):
 		if option.get_item_text(i).to_lower() == value.to_lower():
 			option.select(i)
 			return
@@ -587,10 +463,21 @@ func _select_spawn(cond: Logic) -> void:
 	_spawn_select.select(0)
 	if not cond:
 		return
-	for i in range(_spawn_select.item_count):
-		var meta = _spawn_select.get_item_metadata(i)
+	for i: int in range(_spawn_select.item_count):
+		var meta: Variant = _spawn_select.get_item_metadata(i)
 		if meta and meta is Logic and meta.id == cond.id:
 			_spawn_select.select(i)
+			return
+
+
+func _select_behavior_profile(bp: BehaviorProfile) -> void:
+	_behavior_profile_select.select(0)
+	if not bp:
+		return
+	for i: int in range(_behavior_profile_select.item_count):
+		var meta: Variant = _behavior_profile_select.get_item_metadata(i)
+		if meta and meta is BehaviorProfile and meta.id == bp.id:
+			_behavior_profile_select.select(i)
 			return
 
 
