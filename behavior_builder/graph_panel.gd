@@ -27,6 +27,8 @@ signal edited
 
 const PAN_SPEED: float = 900.0
 const LIVE_TICK_S: float = 0.2
+## Black beyond the grassy frame (see BBGraphFrame).
+const BACKDROP_COLOR: Color = Color(0.035, 0.05, 0.045)
 
 ## [label, node type, params]
 const ADD_ITEMS: Array[Array] = [
@@ -52,6 +54,7 @@ var world: RefCounted  # duck-typed: BBWorldState or AntWorldAdapter
 var library: BBGraphLibrary = BBGraphLibrary.shared()
 
 var graph: GraphEdit
+var _frame: BBGraphFrame
 var status: Label
 var lib_list: ItemList
 var add_menu: PopupMenu
@@ -288,9 +291,24 @@ func _build_ui() -> void:
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(split)
 
+	# Left cell stacks three layers: a black backdrop, the grassy frame that
+	# hugs the nodes, and the GraphEdit itself (transparent panel so the grass
+	# shows through behind its wires and nodes). See BBGraphFrame.
+	var left_cell: Control = Control.new()
+	left_cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_cell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left_cell.custom_minimum_size = Vector2(680, 0)
+	left_cell.clip_contents = true
+	split.add_child(left_cell)
+
+	var backdrop: ColorRect = ColorRect.new()
+	backdrop.color = BACKDROP_COLOR
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	left_cell.add_child(backdrop)
+
 	graph = GraphEdit.new()
-	graph.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	graph.custom_minimum_size = Vector2(680, 0)
+	graph.set_anchors_preset(Control.PRESET_FULL_RECT)
 	graph.minimap_enabled = true
 	graph.right_disconnects = true
 	graph.show_grid = settings.show_grid
@@ -298,7 +316,21 @@ func _build_ui() -> void:
 	_last_show_grid = graph.show_grid
 	_last_snapping = graph.snapping_enabled
 	graph.add_theme_color_override("activity", BBNode.COL_TRUE)
-	split.add_child(graph)
+	# Transparent background + invisible built-in grid: the grass (BBGraphFrame,
+	# behind) shows through, and the frame paints its own grid clipped to the
+	# green so lines never bleed onto the black outside. grid_major/grid_minor
+	# are the GraphEdit 4.x grid theme colors.
+	graph.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	graph.add_theme_color_override("grid_major", Color(0, 0, 0, 0))
+	graph.add_theme_color_override("grid_minor", Color(0, 0, 0, 0))
+
+	# Frame is added BEFORE the graph so it draws behind it, and AFTER the
+	# backdrop so it draws in front of the black.
+	_frame = BBGraphFrame.new()
+	_frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_frame.graph = graph
+	left_cell.add_child(_frame)
+	left_cell.add_child(graph)
 
 	var _e1: Error = graph.connection_request.connect(_on_connection_request)
 	var _e2: Error = graph.disconnection_request.connect(_on_disconnection_request)
